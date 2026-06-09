@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USUARIO
+  SEM_PERMISSAO
+}
+
+model Department {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  nexusDepartmentId String?  @unique @map("nexus_department_id")
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  users             User[]
+
+  @@map("departments")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(SEM_PERMISSAO)
+  active        Boolean    @default(true)
+  avatarUrl     String?    @map("avatar_url")
+  phone         String?
+  domainAccount String?    @map("domain_account")
+  windowsUser   String?    @map("windows_user")
+  nexusUserId   String?    @unique @map("nexus_user_id")
+  origin        String     @default("local")
+  departmentId  String?    @map("department_id")
+  department    Department? @relation(fields: [departmentId], references: [id])
+  entryDate     DateTime?  @map("entry_date")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@map("users")
+}
