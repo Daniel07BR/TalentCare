@@ -74,10 +74,12 @@ export async function GET(req: NextRequest) {
           windowsUser: nx.username ?? undefined,
           phone: nx.phone ?? undefined,
           departmentId: dept?.id ?? undefined,
+          // Espelha a senha do Nexus (login local offline); só se veio hash.
+          passwordHash: nx.passwordHash ?? undefined,
         },
       })
     } else {
-      const randomPw = await bcrypt.hash(crypto.randomUUID(), 10)
+      const randomPw = nx.passwordHash ?? (await bcrypt.hash(crypto.randomUUID(), 10))
       local = await prisma.user.create({
         data: {
           name: nx.name,

@@ -44,6 +44,10 @@ interface NexusEmployee {
   departmentId: string | null
   status: string
   hireDate: string | null
+  // Hash bcrypt da senha Nexus (?includePassword=true). O Nexus é dono da senha;
+  // espelhamos aqui para o login local funcionar mesmo com o Nexus offline.
+  // null = funcionário ainda sem senha definida no Nexus.
+  passwordHash: string | null
 }
 
 export interface SyncResult {
@@ -77,7 +81,7 @@ async function resolveDepartment(name: string | null, nexusId: string | null) {
 export async function syncFromNexus(): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, deactivated: 0, errors: [] }
 
-  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees`, {
+  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true`, {
     headers: { 'X-API-Key': NEXUS_API_KEY },
   })
   if (!res.ok) {
@@ -127,11 +131,14 @@ export async function syncFromNexus(): Promise<SyncResult> {
             role: finalRole,
             departmentId: dept?.id ?? undefined,
             entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
+            // Espelha a senha do Nexus quando definida (só atualiza se veio hash).
+            passwordHash: nu.passwordHash ?? undefined,
           },
         })
         result.updated++
       } else {
-        const randomPw = await bcrypt.hash(crypto.randomUUID(), 10)
+        // Sem hash do Nexus ainda → placeholder aleatório inutilizável (coluna NOT NULL).
+        const randomPw = nu.passwordHash ?? (await bcrypt.hash(crypto.randomUUID(), 10))
         await prisma.user.create({
           data: {
             name: nu.name,

@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 
 const { auth } = NextAuth(baseAuthConfig)
 
-const PUBLIC_ROUTES = ['/login', '/acesso-negado', '/sso', '/api/auth']
+// /api/integrations/* é server-to-server (auth por chave própria, não por sessão).
+const PUBLIC_ROUTES = ['/login', '/acesso-negado', '/sso', '/api/auth', '/api/integrations']
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'))
