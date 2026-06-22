@@ -1,7 +1,10 @@
 import { turnoverVM } from '@/lib/mock/turnover'
+import { getTalentData } from '@/lib/data/source'
 
-export default function TurnoverPage() {
-  const vm = turnoverVM()
+export const dynamic = 'force-dynamic'
+
+export default async function TurnoverPage() {
+  const vm = turnoverVM(await getTalentData())
   const kpis = [
     { label: 'Taxa de turnover', value: vm.rate + '%', color: 'var(--danger)' },
     { label: 'Headcount ativo', value: vm.headcount, color: 'var(--text)' },

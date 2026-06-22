@@ -37,7 +37,7 @@ async function resolveDepartment(name, nexusId) {
 }
 
 async function main() {
-  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true`, { headers: { 'X-API-Key': NEXUS_API_KEY } })
+  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true&includeAvatar=true`, { headers: { 'X-API-Key': NEXUS_API_KEY } })
   if (!res.ok) throw new Error(`Nexus ${res.status}: ${await res.text()}`)
   const employees = await res.json()
   const nexusIds = new Set(employees.map((e) => e.id))
@@ -67,6 +67,7 @@ async function main() {
         nexusUserId: nu.id, origin: 'nexus', name: nu.name, email: nu.email,
         domainAccount: nu.username, windowsUser: nu.username,
         phone: nu.phone ?? undefined, active: isActive, role: finalRole,
+        jobTitle: nu.role ?? undefined, avatarUrl: nu.avatar ?? undefined,
         departmentId: dept?.id ?? undefined,
         entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
         passwordHash: nu.passwordHash ?? undefined,
@@ -76,6 +77,7 @@ async function main() {
       const pw = nu.passwordHash ?? (await bcrypt.hash(crypto.randomUUID(), 10))
       await prisma.user.create({ data: {
         name: nu.name, email: nu.email, passwordHash: pw, role: computed, active: isActive,
+        jobTitle: nu.role ?? null, avatarUrl: nu.avatar ?? null,
         nexusUserId: nu.id, origin: 'nexus', domainAccount: nu.username ?? null,
         windowsUser: nu.username ?? null, phone: nu.phone ?? null, departmentId: dept?.id ?? null,
         entryDate: nu.hireDate ? new Date(nu.hireDate) : null,

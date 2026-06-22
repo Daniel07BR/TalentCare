@@ -8,7 +8,9 @@ import {
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
+import { TalentDataProvider } from '@/lib/ui/data'
 import type { Period } from '@/lib/mock/dashboard'
+import type { TalentData } from '@/lib/mock/data'
 
 const NAV_MAIN = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -76,7 +78,7 @@ function Topbar() {
   )
 }
 
-export default function AppShell({ name, roleLabel, children }: { name: string; roleLabel: string; children: React.ReactNode }) {
+export default function AppShell({ name, roleLabel, data, children }: { name: string; roleLabel: string; data: TalentData; children: React.ReactNode }) {
   const pathname = usePathname()
   const [settled, setSettled] = useState(false)
 
@@ -90,6 +92,7 @@ export default function AppShell({ name, roleLabel, children }: { name: string; 
 
   return (
     <PeriodProvider>
+     <TalentDataProvider value={data}>
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
         <aside style={{ width: 240, flex: 'none', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
           <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 11 }}>
@@ -140,6 +143,7 @@ export default function AppShell({ name, roleLabel, children }: { name: string; 
           <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px 56px' }}>{children}</main>
         </div>
       </div>
+     </TalentDataProvider>
     </PeriodProvider>
   )
 }

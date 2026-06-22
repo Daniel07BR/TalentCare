@@ -1,17 +1,19 @@
 'use client'
 import { useState } from 'react'
+import { useTalentData } from '@/lib/ui/data'
 import {
   sliders, weightsTotal, scorePreview, previewColor, systemsList,
   DEFAULT_WEIGHTS, CFG_ROLES, type Weights,
 } from '@/lib/mock/config'
 
 export default function ConfiguracoesPage() {
+  const data = useTalentData()
   const [weights, setWeights] = useState<Weights>({ ...DEFAULT_WEIGHTS })
   const [sysState, setSysState] = useState<Record<string, boolean>>({})
 
   const sl = sliders(weights)
   const total = weightsTotal(weights)
-  const preview = scorePreview(weights)
+  const preview = scorePreview(data, weights)
   const systems = systemsList(sysState)
 
   return (
@@ -45,7 +47,7 @@ export default function ConfiguracoesPage() {
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Pré-visualização</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Score médio da empresa com os pesos atuais</div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '20px 0' }}>
-            <div style={{ fontSize: 60, fontWeight: 800, letterSpacing: '-3px', lineHeight: 1, color: previewColor(weights) }}>{preview}</div>
+            <div style={{ fontSize: 60, fontWeight: 800, letterSpacing: '-3px', lineHeight: 1, color: previewColor(data, weights) }}>{preview}</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 8 }}>de 100 pontos</div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text-mute)', lineHeight: 1.55, borderTop: '1px solid var(--border)', paddingTop: 14 }}>Os pesos compõem o score de cada colaborador. Alterações refletem em dashboards, rankings e fichas.</div>

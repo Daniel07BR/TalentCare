@@ -1,10 +1,11 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import { useTalentData } from '@/lib/ui/data'
 import { deptListVM } from '@/lib/mock/departments'
 
 export default function DepartamentosPage() {
   const router = useRouter()
-  const vm = deptListVM()
+  const vm = deptListVM(useTalentData())
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
+import { getTalentData } from '@/lib/data/source'
 import AppShell from './AppShell'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -9,9 +10,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (role === 'SEM_PERMISSAO') redirect('/acesso-negado')
 
   const roleLabel = role === 'ADMIN' ? '4ª geração · Admin' : role === 'USUARIO' ? 'Usuário' : role ?? ''
+  const data = await getTalentData()
 
   return (
-    <AppShell name={session.user.name ?? 'Diretoria'} roleLabel={roleLabel}>
+    <AppShell name={session.user.name ?? 'Diretoria'} roleLabel={roleLabel} data={data}>
       {children}
     </AppShell>
   )

@@ -31,6 +31,7 @@ model User {
   email         String     @unique
   passwordHash  String     @map("password_hash")
   role          UserRole   @default(SEM_PERMISSAO)
+  jobTitle      String?    @map("job_title")
   active        Boolean    @default(true)
   avatarUrl     String?    @map("avatar_url")
   phone         String?

@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTalentData } from '@/lib/ui/data'
 import { leaderboard, comparison, cmpOptions, metricLabel, type RankMetric } from '@/lib/mock/ranking'
+import Avatar from '../Avatar'
 
 const METRICS: RankMetric[] = ['score', 'tarefas', 'assiduidade']
 
@@ -11,9 +13,10 @@ export default function RankingPage() {
   const [cmpA, setCmpA] = useState('e3')
   const [cmpB, setCmpB] = useState('e23')
 
-  const board = leaderboard(metric)
-  const cmp = comparison(cmpA, cmpB)
-  const opts = cmpOptions()
+  const data = useTalentData()
+  const board = leaderboard(data, metric)
+  const cmp = comparison(data, cmpA, cmpB)
+  const opts = cmpOptions(data)
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -35,7 +38,7 @@ export default function RankingPage() {
             {board.map((r) => (
               <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 9, borderRadius: 8, cursor: 'pointer' }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', background: r.medal, color: '#1a1205', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flex: 'none' }}>{r.rank}</span>
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: r.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flex: 'none' }}>{r.initials}</div>
+                <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={30} />
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</div><div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{r.dept}</div></div>
                 <div style={{ width: 90, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden', flex: 'none' }}><div style={{ height: '100%', width: r.pct, background: 'var(--accent)', borderRadius: 20 }} /></div>
                 <span style={{ width: 36, textAlign: 'right', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{r.val}</span>
@@ -59,7 +62,7 @@ export default function RankingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
                 {[cmp.aCard, cmp.bCard].map((c, i) => (
                   <div key={i} style={{ textAlign: 'center', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', margin: '0 auto 8px' }}>{c.initials}</div>
+                    <div style={{ width: 44, margin: '0 auto 8px', display: 'flex', justifyContent: 'center' }}><Avatar id={c.id} hasAvatar={c.hasAvatar} initials={c.initials} color={c.color} size={44} /></div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 8 }}>{c.cargo}</div>
                     <div style={{ fontSize: 26, fontWeight: 800, color: c.scoreColor }}>{c.score}</div>

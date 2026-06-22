@@ -1,7 +1,9 @@
 'use client'
 import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTalentData } from '@/lib/ui/data'
 import { buildEmployeeVM } from '@/lib/mock/employee'
+import Avatar from '../../Avatar'
 
 const TABS: [string, string][] = [
   ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
@@ -12,7 +14,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const { id } = use(params)
   const router = useRouter()
   const [tab, setTab] = useState('atividade')
-  const vm = buildEmployeeVM(id)
+  const data = useTalentData()
+  const vm = buildEmployeeVM(data, id)
 
   if (!vm) {
     return (
@@ -30,7 +33,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
       {/* Header: identidade + gauge + fatores */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, display: 'grid', gridTemplateColumns: '1fr auto', gap: 28, marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-          <div style={{ width: 84, height: 84, borderRadius: 22, background: vm.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 700, color: '#fff', flex: 'none' }}>{vm.initials}</div>
+          <Avatar id={vm.id} hasAvatar={vm.hasAvatar} initials={vm.initials} color={vm.color} size={84} radius={22} />
           <div style={{ paddingTop: 2 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: '-.5px' }}>{vm.name}</h1>

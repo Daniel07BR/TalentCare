@@ -44,6 +44,8 @@ interface NexusEmployee {
   departmentId: string | null
   status: string
   hireDate: string | null
+  // Foto (data URI webp base64) quando pedida com ?includeAvatar=true; null se sem foto.
+  avatar: string | null
   // Hash bcrypt da senha Nexus (?includePassword=true). O Nexus é dono da senha;
   // espelhamos aqui para o login local funcionar mesmo com o Nexus offline.
   // null = funcionário ainda sem senha definida no Nexus.
@@ -81,7 +83,7 @@ async function resolveDepartment(name: string | null, nexusId: string | null) {
 export async function syncFromNexus(): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, deactivated: 0, errors: [] }
 
-  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true`, {
+  const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true&includeAvatar=true`, {
     headers: { 'X-API-Key': NEXUS_API_KEY },
   })
   if (!res.ok) {
@@ -129,6 +131,8 @@ export async function syncFromNexus(): Promise<SyncResult> {
             phone: nu.phone ?? undefined,
             active: isActive,
             role: finalRole,
+            jobTitle: nu.role ?? undefined,
+            avatarUrl: nu.avatar ?? undefined,
             departmentId: dept?.id ?? undefined,
             entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
             // Espelha a senha do Nexus quando definida (só atualiza se veio hash).
@@ -145,6 +149,8 @@ export async function syncFromNexus(): Promise<SyncResult> {
             email: nu.email,
             passwordHash: randomPw,
             role: computed,
+            jobTitle: nu.role ?? null,
+            avatarUrl: nu.avatar ?? null,
             active: isActive,
             nexusUserId: nu.id,
             origin: 'nexus',

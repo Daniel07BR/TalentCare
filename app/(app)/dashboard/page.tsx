@@ -1,12 +1,15 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
+import { useTalentData } from '@/lib/ui/data'
 import { buildDashboard } from '@/lib/mock/dashboard'
+import Avatar from '../Avatar'
 
 export default function DashboardPage() {
   const { period } = usePeriod()
   const router = useRouter()
-  const vm = buildDashboard(period)
+  const data = useTalentData()
+  const vm = buildDashboard(data, period)
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -99,7 +102,7 @@ export default function DashboardPage() {
             {vm.rankList.map((r) => (
               <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
                 <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{r.rank}</span>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: r.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, color: '#fff', flex: 'none' }}>{r.initials}</div>
+                <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.cargo}</div>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { prisma } from '@/lib/db/prisma'
 import SyncButton from './SyncButton'
 
@@ -41,6 +42,7 @@ export default async function UsuariosPage() {
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
+                <th>Cargo</th>
                 <th>Setor</th>
                 <th>Acesso</th>
                 <th>Status</th>
@@ -50,12 +52,15 @@ export default async function UsuariosPage() {
               {users.map((u) => (
                 <tr key={u.id}>
                   <td>
-                    <span className="avatar">
-                      {u.avatarUrl ? <img src={u.avatarUrl} alt="" /> : initials(u.name)}
-                    </span>
-                    {u.name}
+                    <Link href={`/funcionarios/${u.id}`} style={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}>
+                      <span className="avatar">
+                        {u.avatarUrl ? <img src={u.avatarUrl} alt="" /> : initials(u.name)}
+                      </span>
+                      {u.name}
+                    </Link>
                   </td>
                   <td>{u.email}</td>
+                  <td>{u.jobTitle ?? '—'}</td>
                   <td>{u.department?.name ?? '—'}</td>
                   <td><RoleBadge role={u.role} /></td>
                   <td>

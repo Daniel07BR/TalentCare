@@ -2,7 +2,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
+import { useTalentData } from '@/lib/ui/data'
 import { filterDirectory, deptOptions, DIR_COLS, type DirFilters, type SortKey, type SortDir } from '@/lib/mock/directory'
+import Avatar from '../Avatar'
 
 const STATUS_CHIPS = ['Todos', 'Ativo', 'Férias', 'Afastado', 'Desligado']
 const FAIXA_CHIPS = ['Todos', '75–100', '50–74', '0–49']
@@ -13,8 +15,9 @@ export default function FuncionariosPage() {
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  const { rows, total } = filterDirectory(f, sortKey, sortDir)
-  const depts = deptOptions()
+  const data = useTalentData()
+  const { rows, total } = filterDirectory(data, f, sortKey, sortDir)
+  const depts = deptOptions(data)
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
     else { setSortKey(k); setSortDir('desc') }
@@ -59,7 +62,7 @@ export default function FuncionariosPage() {
         {rows.map((r) => (
           <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'grid', gridTemplateColumns: cols, gap: 12, alignItems: 'center', padding: '11px 18px', borderBottom: '1px solid var(--border-soft)', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: r.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flex: 'none' }}>{r.initials}</div>
+              <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={32} />
               <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</span>
             </div>
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.cargo}</span>

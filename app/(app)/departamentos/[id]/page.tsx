@@ -1,12 +1,14 @@
 'use client'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTalentData } from '@/lib/ui/data'
 import { deptDetailVM } from '@/lib/mock/departments'
+import Avatar from '../../Avatar'
 
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const vm = deptDetailVM(id)
+  const vm = deptDetailVM(useTalentData(), id)
 
   if (!vm) {
     return (
@@ -58,7 +60,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           {vm.ranking.map((r) => (
             <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 9, borderRadius: 8, cursor: 'pointer' }}>
               <span style={{ width: 20, fontSize: 12, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center', flex: 'none' }}>{r.rank}</span>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: r.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flex: 'none' }}>{r.initials}</div>
+              <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={30} />
               <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 600 }}>{r.nome}</div><div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{r.cargo}</div></div>
               <div style={{ width: 120, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden', flex: 'none' }}><div style={{ height: '100%', width: r.scorePct, background: r.scoreColor, borderRadius: 20 }} /></div>
               <span style={{ width: 32, textAlign: 'right', fontSize: 14, fontWeight: 700, color: r.scoreColor }}>{r.score}</span>

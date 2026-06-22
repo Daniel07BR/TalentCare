@@ -1,12 +1,11 @@
 /* ============================================================
-   TalentCare — view-model da Ficha 360° (porte do empVM + helpers)
-   Puro em função do empId (determinístico).
+   TalentCare — view-model da Ficha 360° (puro em função de data + empId)
    ============================================================ */
 import {
-  buildData, FACTORS, SYSTEMS, rnd, scoreColor, admissao, statusMeta, fmtTempo, sysColor, type Employee,
+  FACTORS, SYSTEMS, rnd, seedOf, scoreColor, admissao, statusMeta, fmtTempo, sysColor,
+  type Employee, type TalentData,
 } from './data'
 
-/* gauge semicircular (viewBox 0 0 200 116) */
 function geomGauge(score: number) {
   const cx = 100, cy = 100, r = 82
   const pol = (deg: number): [number, number] => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)]
@@ -19,25 +18,31 @@ function geomGauge(score: number) {
   return { track: arc(180, 0), value: arc(180, 180 - 180 * frac), color: scoreColor(score) }
 }
 
-export function compFactorAvg(): Record<string, number> {
-  const D = buildData()
-  const ats = D.employees.filter((e) => e.status !== 'Desligado')
+export function compFactorAvg(data: TalentData): Record<string, number> {
+  const ats = data.employees.filter((e) => e.status !== 'Desligado')
   const avg: Record<string, number> = {}
   FACTORS.forEach((f) => {
-    avg[f.key] = Math.round(ats.reduce((a, e) => a + (e.factors.find((x) => x.key === f.key)?.nota ?? 0), 0) / ats.length)
+    avg[f.key] = ats.length ? Math.round(ats.reduce((a, e) => a + (e.factors.find((x) => x.key === f.key)?.nota ?? 0), 0) / ats.length) : 0
   })
   return avg
 }
 
+export function deptName(data: TalentData, id: string): string {
+  return data.deptMeta[id] ?? '—'
+}
+export function findEmployee(data: TalentData, id: string): Employee | undefined {
+  return data.employees.find((e) => e.id === id)
+}
+
 function timelineFor(emp: Employee) {
-  const seed = parseInt(emp.id.slice(1))
+  const seed = seedOf(emp.id)
   const tpl = [
-    { sys: 'HelpDesk', act: 'Resolveu chamado #' + (4200 + seed * 7), det: 'SLA cumprido · 2h12 de atendimento' },
+    { sys: 'HelpDesk', act: 'Resolveu chamado #' + (4200 + (seed % 900)), det: 'SLA cumprido · 2h12 de atendimento' },
     { sys: 'ClassRoom', act: 'Concluiu "Compliance Tributário 2026"', det: 'Nota 9.4 · certificado emitido' },
     { sys: 'CIDE', act: 'Processou abertura de empresa', det: 'Alteração de quadro societário · 3 sócios' },
     { sys: 'Painel de Atendimento', act: 'Atendeu ' + (18 + seed % 14) + ' conversas no WhatsApp', det: 'Tempo médio de resposta 3m48' },
     { sys: 'Consultoria Plus', act: 'Publicou estudo "Reforma e Simples Nacional"', det: '12 visualizações da diretoria' },
-    { sys: 'HelpDesk', act: 'Chamado #' + (4180 + seed * 5) + ' fora do SLA', det: 'Resolvido com 4h de atraso' },
+    { sys: 'HelpDesk', act: 'Chamado #' + (4180 + (seed % 700)) + ' fora do SLA', det: 'Resolvido com 4h de atraso' },
     { sys: 'ClassRoom', act: 'Publicou Step by Step "Fechamento mensal"', det: 'Aprovado pela coordenação' },
     { sys: 'CIDE', act: 'Alteração contratual concluída', det: 'Empresa Itamarathy Holdings' },
     { sys: 'Painel de Atendimento', act: 'Pico de atendimento no período', det: (40 + seed % 30) + ' conversas em um dia' },
@@ -67,7 +72,7 @@ export function heatmapFor(seed: number, score: number) {
 
 function trajetoriaFor(emp: Employee) {
   const items: { tipo: string; titulo: string; detalhe: string; quando: string; dot: string }[] = []
-  const seed = parseInt(emp.id.slice(1))
+  const seed = seedOf(emp.id)
   items.push({ tipo: 'Admissão', titulo: 'Entrada na empresa', detalhe: 'Cargo inicial · ' + emp.cargo.replace(/Coordenador.*|Tech Lead|Gestor.*|Sênior/, 'Júnior'), quando: emp.admissao, dot: 'var(--text-mute)' })
   if (emp.tempoMeses > 24) items.push({ tipo: 'Promoção', titulo: 'Efetivação / mudança de cargo', detalhe: 'Reconhecimento por desempenho', quando: admissao(Math.round(emp.tempoMeses * 0.55)), dot: 'var(--chart-3)' })
   if (emp.tempoMeses > 14) items.push({ tipo: 'Ajuste salarial', titulo: 'Reajuste por mérito ' + (8 + Math.round(rnd(seed) * 9)) + '%', detalhe: 'Acima do dissídio da categoria', quando: admissao(Math.round(emp.tempoMeses * 0.3)), dot: 'var(--chart-2)' })
@@ -76,7 +81,7 @@ function trajetoriaFor(emp: Employee) {
 }
 
 function reconhecimentoFor(emp: Employee) {
-  const seed = parseInt(emp.id.slice(1))
+  const seed = seedOf(emp.id)
   const all = [
     { titulo: 'Destaque do trimestre', quando: 'Q1 2026', kind: 'var(--accent)' },
     { titulo: 'Certificação ClassRoom', quando: 'Mar 2026', kind: 'var(--chart-2)' },
@@ -88,7 +93,7 @@ function reconhecimentoFor(emp: Employee) {
 }
 
 function formacaoFor(emp: Employee) {
-  const seed = parseInt(emp.id.slice(1))
+  const seed = seedOf(emp.id)
   const pool = [
     { nome: 'Compliance Tributário 2026', quando: 'Mar 2026' },
     { nome: 'Excel Avançado para Análise', quando: 'Jan 2026' },
@@ -102,19 +107,18 @@ function formacaoFor(emp: Employee) {
   return { grau: emp.escolaridade, cursos, certs, totalHoras: 40 + Math.round(rnd(seed) * 120) }
 }
 
-function decisionFor(emp: Employee) {
-  const cfa = compFactorAvg()
+function decisionFor(data: TalentData, emp: Employee) {
+  const cfa = compFactorAvg(data)
   const strengths: { label: string; diff: string }[] = []
   const attention: { label: string; diff: string }[] = []
   emp.factors.forEach((f) => {
-    const diff = f.nota - cfa[f.key]
+    const diff = f.nota - (cfa[f.key] ?? 0)
     if (diff >= 4) strengths.push({ label: f.label, diff: '+' + diff })
     else if (diff <= -5) attention.push({ label: f.label, diff: '' + diff })
   })
   const trend = emp.hist[11] - emp.hist[5]
-  const D = buildData()
-  const deptEmps = D.employees.filter((e) => e.dept === emp.dept)
-  const deptAvg = Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length)
+  const deptEmps = data.employees.filter((e) => e.dept === emp.dept)
+  const deptAvg = deptEmps.length ? Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length) : emp.score
   let rec: string
   if (emp.status === 'Desligado') rec = 'Colaborador desligado — histórico mantido para consulta. Score final ' + emp.score + '.'
   else if (emp.score >= 85 && trend >= 0) rec = 'Score consistente acima de 85 e assiduidade exemplar — forte candidato a promoção ou bônus.'
@@ -125,22 +129,14 @@ function decisionFor(emp: Employee) {
   return { strengths, attention, trend, deptAvg, scoreVsDept: emp.score - deptAvg, recommendation: rec }
 }
 
-export function findEmployee(id: string): Employee | undefined {
-  return buildData().employees.find((e) => e.id === id)
-}
+export type EmployeeVM = NonNullable<ReturnType<typeof buildEmployeeVM>>
 
-export function deptName(id: string): string {
-  return buildData().deptMeta[id]
-}
-
-export type EmployeeVM = ReturnType<typeof buildEmployeeVM>
-
-export function buildEmployeeVM(empId: string) {
-  const emp = findEmployee(empId)
+export function buildEmployeeVM(data: TalentData, empId: string) {
+  const emp = findEmployee(data, empId)
   if (!emp) return null
   const g = geomGauge(emp.score)
   const sm = statusMeta(emp.status)
-  const seed = parseInt(emp.id.slice(1))
+  const seed = seedOf(emp.id)
 
   const totalP = emp.tasksDone + emp.tasksLate + emp.tasksPend
   const prodBar = [
@@ -162,11 +158,11 @@ export function buildEmployeeVM(empId: string) {
   const radioBars = emp.radioSemana.map((v, i) => ({ h: Math.round(v / radioMax * 100) + '%', sem: 'S' + (i + 1) }))
   const radioMedia = +(emp.radioSemana.reduce((a, b) => a + b, 0) / emp.radioSemana.length).toFixed(1)
 
-  const dec = decisionFor(emp)
+  const dec = decisionFor(data, emp)
 
   return {
-    id: emp.id,
-    name: emp.nome, cargo: emp.cargo, dept: deptName(emp.dept), initials: emp.initials, color: emp.color,
+    id: emp.id, hasAvatar: emp.hasAvatar,
+    name: emp.nome, cargo: emp.cargo, dept: deptName(data, emp.dept), initials: emp.initials, color: emp.color,
     status: emp.status, statusColor: sm.color, statusBg: sm.bg,
     tempo: fmtTempo(emp.tempoMeses), admissao: emp.admissao, esc: emp.escolaridade,
     score: emp.score, scoreColor: scoreColor(emp.score),

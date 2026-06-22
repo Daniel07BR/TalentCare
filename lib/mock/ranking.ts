@@ -1,7 +1,7 @@
 /* ============================================================
-   TalentCare — Ranking & Comparativo. Porte de rankVM/cmpCard.
+   TalentCare — Ranking & Comparativo. Puro em função de data.
    ============================================================ */
-import { buildData, FACTORS, scoreColor, fmtTempo, type Employee } from './data'
+import { FACTORS, scoreColor, fmtTempo, type Employee, type TalentData } from './data'
 import { deptName, findEmployee } from './employee'
 
 export type RankMetric = 'score' | 'tarefas' | 'assiduidade'
@@ -15,26 +15,25 @@ export function metricLabel(m: RankMetric): string {
   return ({ score: 'Score geral', tarefas: 'Tarefas concluídas', assiduidade: 'Assiduidade' })[m]
 }
 
-export function leaderboard(m: RankMetric) {
-  const D = buildData()
-  const list = D.employees.filter((e) => e.status !== 'Desligado').map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
+export function leaderboard(data: TalentData, m: RankMetric) {
+  const list = data.employees.filter((e) => e.status !== 'Desligado').map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
   const max = list[0] ? list[0].val : 1
   return list.map((x, i) => ({
-    rank: i + 1, id: x.e.id, nome: x.e.nome, cargo: x.e.cargo, dept: deptName(x.e.dept), initials: x.e.initials, color: x.e.color,
+    rank: i + 1, id: x.e.id, nome: x.e.nome, cargo: x.e.cargo, dept: deptName(data, x.e.dept), initials: x.e.initials, color: x.e.color, hasAvatar: x.e.hasAvatar,
     val: x.val, pct: Math.round(x.val / max * 100) + '%',
     medal: i === 0 ? 'var(--accent)' : i === 1 ? '#c9ccd1' : i === 2 ? '#c08457' : 'var(--text-mute)',
   }))
 }
 
-function cmpCard(e: Employee) {
-  return { nome: e.nome, cargo: e.cargo, dept: deptName(e.dept), initials: e.initials, color: e.color, score: e.score, scoreColor: scoreColor(e.score), tempo: fmtTempo(e.tempoMeses) }
+function cmpCard(data: TalentData, e: Employee) {
+  return { id: e.id, hasAvatar: e.hasAvatar, nome: e.nome, cargo: e.cargo, dept: deptName(data, e.dept), initials: e.initials, color: e.color, score: e.score, scoreColor: scoreColor(e.score), tempo: fmtTempo(e.tempoMeses) }
 }
 
-export function comparison(aId: string, bId: string) {
-  const a = findEmployee(aId), b = findEmployee(bId)
+export function comparison(data: TalentData, aId: string, bId: string) {
+  const a = findEmployee(data, aId), b = findEmployee(data, bId)
   if (!a || !b) return null
   return {
-    aCard: cmpCard(a), bCard: cmpCard(b),
+    aCard: cmpCard(data, a), bCard: cmpCard(data, b),
     rows: FACTORS.map((f) => {
       const na = a.factors.find((x) => x.key === f.key)!.nota
       const nb = b.factors.find((x) => x.key === f.key)!.nota
@@ -43,6 +42,6 @@ export function comparison(aId: string, bId: string) {
   }
 }
 
-export function cmpOptions() {
-  return buildData().employees.map((e) => ({ value: e.id, label: e.nome + ' · ' + deptName(e.dept) }))
+export function cmpOptions(data: TalentData) {
+  return data.employees.map((e) => ({ value: e.id, label: e.nome + ' · ' + deptName(data, e.dept) }))
 }

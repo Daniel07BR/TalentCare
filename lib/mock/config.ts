@@ -1,8 +1,8 @@
 /* ============================================================
-   TalentCare — Configurações. Porte de configVM.
-   Pesos e estado de sistemas vêm da página (estado cliente).
+   TalentCare — Configurações. Pesos/sistemas vêm do estado da página.
+   scorePreview usa o dataset real (média dos fatores).
    ============================================================ */
-import { FACTORS, PALETTE, sysColor, SYSTEMS, scoreColor } from './data'
+import { FACTORS, PALETTE, sysColor, SYSTEMS, scoreColor, type TalentData } from './data'
 import { compFactorAvg } from './employee'
 
 export type Weights = Record<string, number>
@@ -34,21 +34,17 @@ export function sliders(weights: Weights) {
     pct: Math.round((weights[f.key] || 0) / total * 100) + '%', color: PALETTE[i % 6],
   }))
 }
-
 export function weightsTotal(weights: Weights): number {
   return FACTORS.reduce((a, f) => a + (weights[f.key] || 0), 0)
 }
-
-export function scorePreview(weights: Weights): number {
+export function scorePreview(data: TalentData, weights: Weights): number {
   const total = weightsTotal(weights) || 1
-  const cfa = compFactorAvg()
-  return Math.round(FACTORS.reduce((a, f) => a + cfa[f.key] * (weights[f.key] || 0), 0) / total)
+  const cfa = compFactorAvg(data)
+  return Math.round(FACTORS.reduce((a, f) => a + (cfa[f.key] ?? 0) * (weights[f.key] || 0), 0) / total)
 }
-
-export function previewColor(weights: Weights): string {
-  return scoreColor(scorePreview(weights))
+export function previewColor(data: TalentData, weights: Weights): string {
+  return scoreColor(scorePreview(data, weights))
 }
-
 export function systemsList(state: Record<string, boolean>) {
   return SYSTEMS.map((s) => {
     const connected = state[s] !== false
