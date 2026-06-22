@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { buildDashboard } from '@/lib/mock/dashboard'
+import { classroomVM } from '@/lib/mock/classroom'
 import Avatar from '../Avatar'
 
 export default function DashboardPage() {
@@ -10,6 +11,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const data = useTalentData()
   const vm = buildDashboard(data, period)
+  const cvm = classroomVM(data)
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -154,6 +156,34 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ClassRoom — dados reais (frente B) */}
+      <div className="tc-card" onClick={() => router.push('/classroom')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom · vídeos concluídos por departamento
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{cvm.totals.videos.toLocaleString('pt-BR')} vídeos · {cvm.totals.courses.toLocaleString('pt-BR')} cursos concluídos · {cvm.totals.created.toLocaleString('pt-BR')} cursos criados</div>
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--chart-2)', fontWeight: 600 }}>ver resumo ›</span>
+        </div>
+        {cvm.deptBars.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '12px 0' }}>Sem dados do ClassRoom ainda — sincronize na página do ClassRoom.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 28px' }}>
+            {cvm.deptBars.map((d) => (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 96, flex: 'none', fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
+                <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
+                  <div className="cbar" style={{ height: '100%', width: d.pct, background: 'var(--chart-2)', borderRadius: 20 }} />
+                </div>
+                <div style={{ width: 36, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.videos}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

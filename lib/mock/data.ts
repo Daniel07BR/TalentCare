@@ -34,7 +34,11 @@ export type Employee = {
   radioHoras: number
   radioSemana: number[]
   admissao: string
+  classroom: ClassroomStat
 }
+
+/** Métricas REAIS do ClassRoom (frente B). */
+export type ClassroomStat = { videosCompleted: number; coursesCompleted: number; coursesCreated: number }
 
 export type Department = {
   id: string
@@ -45,6 +49,7 @@ export type Department = {
   spark: number[]
   color: string
   lider: string
+  classroom: ClassroomStat
 }
 
 export type TalentData = {
@@ -63,6 +68,7 @@ export type Identity = {
   active: boolean
   hasAvatar: boolean
   entryDate: Date | null
+  classroom: ClassroomStat
 }
 
 export const FACTORS = [
@@ -191,8 +197,11 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     admissao: id8.entryDate && !isNaN(id8.entryDate.getTime())
       ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
       : admissao(tempoMeses),
+    classroom: id8.classroom,
   }
 }
+
+const zeroClassroom = (): ClassroomStat => ({ videosCompleted: 0, coursesCompleted: 0, coursesCreated: 0 })
 
 /** Monta o TalentData (employees + departments) a partir das identidades reais. */
 export function assembleData(identities: Identity[]): TalentData {
@@ -220,9 +229,18 @@ export function assembleData(identities: Identity[]): TalentData {
         if (m === 11) v = score
         spark.push(v)
       }
+      const classroom = emps.reduce(
+        (a, e) => ({
+          videosCompleted: a.videosCompleted + e.classroom.videosCompleted,
+          coursesCompleted: a.coursesCompleted + e.classroom.coursesCompleted,
+          coursesCreated: a.coursesCreated + e.classroom.coursesCreated,
+        }),
+        zeroClassroom(),
+      )
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
         lider: (emps.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || emps.slice().sort((a, b) => b.score - a.score)[0]).nome,
+        classroom,
       }
     })
     .filter((d): d is Department => d !== null)

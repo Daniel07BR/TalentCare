@@ -47,3 +47,13 @@ model User {
 
   @@map("users")
 }
+
+model ClassroomStat {
+  nexusUserId      String   @id @map("nexus_user_id")
+  videosCompleted  Int      @default(0) @map("videos_completed")
+  coursesCompleted Int      @default(0) @map("courses_completed")
+  coursesCreated   Int      @default(0) @map("courses_created")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("classroom_stats")
+}
