@@ -10,6 +10,7 @@ import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
 import { TalentDataProvider } from '@/lib/ui/data'
 import Logo from './Logo'
+import Avatar from './Avatar'
 import type { Period } from '@/lib/mock/dashboard'
 import type { TalentData } from '@/lib/mock/data'
 
@@ -79,7 +80,7 @@ function Topbar() {
   )
 }
 
-export default function AppShell({ name, roleLabel, data, children }: { name: string; roleLabel: string; data: TalentData; children: React.ReactNode }) {
+export default function AppShell({ name, roleLabel, me, data, children }: { name: string; roleLabel: string; me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode }) {
   const pathname = usePathname()
   const [settled, setSettled] = useState(false)
 
@@ -129,10 +130,10 @@ export default function AppShell({ name, roleLabel, data, children }: { name: st
 
           <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 'var(--radius-sm)' }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,var(--chart-3),var(--chart-4))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#fff' }}>{initials.toUpperCase()}</div>
-              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+              <Avatar id={me.id} hasAvatar={me.hasAvatar} initials={initials.toUpperCase()} color="var(--chart-3)" size={34} />
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
                 <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{roleLabel}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{me.cargo ? `${me.cargo} · ${roleLabel}` : roleLabel}</div>
               </div>
               <button onClick={() => signOut({ callbackUrl: '/login' })} aria-label="Sair" title="Sair" className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-mute)', display: 'flex', cursor: 'pointer', padding: 2 }}><ChevronRight size={16} /></button>
             </div>
