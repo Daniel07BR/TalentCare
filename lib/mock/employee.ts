@@ -19,7 +19,7 @@ function geomGauge(score: number) {
   return { track: arc(180, 0), value: arc(180, 180 - 180 * frac), color: scoreColor(score) }
 }
 
-function compFactorAvg(): Record<string, number> {
+export function compFactorAvg(): Record<string, number> {
   const D = buildData()
   const ats = D.employees.filter((e) => e.status !== 'Desligado')
   const avg: Record<string, number> = {}
@@ -50,7 +50,7 @@ function timelineFor(emp: Employee) {
   return evs.slice(0, 8)
 }
 
-function heatmapFor(seed: number, score: number) {
+export function heatmapFor(seed: number, score: number) {
   const cells: { level: number; bg: string }[] = []
   const weeks = 18
   const bgs = ['var(--surface-2)', 'rgba(245,166,35,.28)', 'rgba(245,166,35,.5)', 'rgba(245,166,35,.72)', 'var(--accent)']
