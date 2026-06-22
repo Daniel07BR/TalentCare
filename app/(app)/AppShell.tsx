@@ -9,6 +9,7 @@ import {
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
 import { TalentDataProvider } from '@/lib/ui/data'
+import Logo from './Logo'
 import type { Period } from '@/lib/mock/dashboard'
 import type { TalentData } from '@/lib/mock/data'
 
@@ -96,7 +97,7 @@ export default function AppShell({ name, roleLabel, data, children }: { name: st
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
         <aside style={{ width: 240, flex: 'none', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
           <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 11 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent)', color: '#1a1205', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, letterSpacing: '-.5px' }}>TC</div>
+            <Logo size={34} radius={9} />
             <div style={{ lineHeight: 1.15 }}>
               <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-.2px' }}>TalentCare</div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Grupo Itamarathy</div>
