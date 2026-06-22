@@ -36,6 +36,8 @@ export type Employee = {
   radioSemana: number[]
   admissao: string
   birthDate: string | null
+  hireISO: string | null
+  leftISO: string | null
   classroom: ClassroomStat
 }
 
@@ -71,6 +73,7 @@ export type Identity = {
   active: boolean
   hasAvatar: boolean
   entryDate: Date | null
+  leftDate: Date | null
   birthDate: string | null
   classroom: ClassroomStat
   escolaridade: string | null
@@ -204,6 +207,8 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
       ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
       : admissao(tempoMeses),
     birthDate: id8.birthDate,
+    hireISO: id8.entryDate ? id8.entryDate.toISOString() : null,
+    leftISO: id8.leftDate ? id8.leftDate.toISOString() : null,
     classroom: id8.classroom,
   }
 }

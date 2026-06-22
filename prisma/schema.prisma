@@ -34,6 +34,7 @@ model User {
   jobTitle      String?    @map("job_title")
   birthDate     DateTime?  @map("birth_date")
   active        Boolean    @default(true)
+  leftAt        DateTime?  @map("left_at")
   avatarUrl     String?    @map("avatar_url")
   phone         String?
   domainAccount String?    @map("domain_account")

@@ -2,6 +2,7 @@
    TalentCare — distribuição de escolaridade (dados REAIS). Puro em função de data.
    ============================================================ */
 import type { Employee, TalentData } from './data'
+import { deptName } from './employee'
 
 export const ESC_RANK = [
   'Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)',
@@ -17,7 +18,7 @@ const lvl = (e: Employee) => e.escolaridade || 'Não informado'
 const rank = (k: string) => { const i = ESC_RANK.indexOf(k); return i < 0 ? 99 : i }
 
 export type EscSeg = { label: string; count: number; pct: number; color: string }
-export type EscPerson = { id: string; nome: string; username: string | null; initials: string; color: string; hasAvatar: boolean; level: string; levelColor: string }
+export type EscPerson = { id: string; nome: string; username: string | null; dept: string; initials: string; color: string; hasAvatar: boolean; level: string; levelColor: string }
 
 export function distribution(emps: Employee[]): { total: number; segs: EscSeg[]; informed: number } {
   const c: Record<string, number> = {}
@@ -30,11 +31,11 @@ export function distribution(emps: Employee[]): { total: number; segs: EscSeg[];
   return { total: emps.length, segs, informed }
 }
 
-function people(emps: Employee[]): EscPerson[] {
+function people(data: TalentData, emps: Employee[]): EscPerson[] {
   return [...emps]
     .sort((a, b) => rank(lvl(a)) - rank(lvl(b)) || a.nome.localeCompare(b.nome))
     .map((e) => ({
-      id: e.id, nome: e.nome, username: e.username, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar,
+      id: e.id, nome: e.nome, username: e.username, dept: deptName(data, e.dept), initials: e.initials, color: e.color, hasAvatar: e.hasAvatar,
       level: lvl(e), levelColor: ESC_COLOR[lvl(e)] ?? '#9aa1ac',
     }))
 }
@@ -46,7 +47,8 @@ export function educationByDept(data: TalentData) {
     .map((d) => {
       const emps = data.employees.filter((e) => e.dept === d.id)
       const dist = distribution(emps)
-      return { id: d.id, nome: d.nome, total: dist.total, informed: dist.informed, segs: dist.segs, people: people(emps) }
+      return { id: d.id, nome: d.nome, total: dist.total, informed: dist.informed, segs: dist.segs, people: people(data, emps) }
     })
-  return { overall, byDept }
+  const semInfo = people(data, data.employees.filter((e) => !e.escolaridade)).sort((a, b) => a.dept.localeCompare(b.dept) || a.nome.localeCompare(b.nome))
+  return { overall, byDept, semInfo }
 }

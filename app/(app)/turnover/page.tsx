@@ -50,29 +50,26 @@ export default async function TurnoverPage() {
           </div>
         </div>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Motivos de saída</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-            {vm.motivos.map((m) => (
-              <div key={m.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}><span style={{ color: 'var(--text-dim)' }}>{m.label}</span><span style={{ fontWeight: 600 }}>{m.pct}%</span></div>
-                <div style={{ height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: m.pct + '%', background: m.color, borderRadius: 20 }} /></div>
-              </div>
-            ))}
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Saídas por departamento</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Últimos 12 meses</div>
+          {vm.byDept.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Nenhuma saída registrada no período.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+              {vm.byDept.map((d) => (
+                <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 100, fontSize: 12.5, color: 'var(--text-dim)', flex: 'none' }}>{d.nome}</span>
+                  <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: d.pct, background: d.color, borderRadius: 20 }} /></div>
+                  <span style={{ width: 42, textAlign: 'right', fontSize: 13, fontWeight: 700, color: d.color }}>{d.exits}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Turnover por departamento</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          {vm.byDept.map((d) => (
-            <div key={d.nome} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 100, fontSize: 12.5, color: 'var(--text-dim)', flex: 'none' }}>{d.nome}</span>
-              <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: d.pct, background: d.color, borderRadius: 20 }} /></div>
-              <span style={{ width: 42, textAlign: 'right', fontSize: 13, fontWeight: 700, color: d.color }}>{d.turnover}%</span>
-            </div>
-          ))}
-        </div>
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, color: 'var(--text-dim)', fontSize: 12.5 }}>
+        Dados reais: <b style={{ color: 'var(--text)' }}>admissão</b> (data de contratação) e <b style={{ color: 'var(--text)' }}>saída</b> (quando o funcionário é inativado no Nexus). O <b style={{ color: 'var(--text)' }}>motivo</b> da saída ainda não é informado na origem — quando houver, entra aqui.
       </div>
     </div>
   )

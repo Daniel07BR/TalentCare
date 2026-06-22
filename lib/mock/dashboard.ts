@@ -29,7 +29,10 @@ export function buildDashboard(data: TalentData, period: Period) {
   const totalDone = emps.reduce((a, e) => a + e.tasksDone, 0) || 1
   const lateRate = +(emps.reduce((a, e) => a + e.tasksLate, 0) / totalDone * 100).toFixed(1)
   const faltas = Math.round(emps.reduce((a, e) => a + e.faltas, 0) * (pf / 3 + 0.5))
-  const turnoverNow = 8.4
+  const _tnow = new Date()
+  const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
+  const _exits12 = emps.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
+  const turnoverNow = ativos.length ? +((_exits12 / ativos.length) * 100).toFixed(1) : 0
 
   const sp = (seed: number, b: number): number[] => {
     const a: number[] = []

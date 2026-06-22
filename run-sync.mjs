@@ -63,10 +63,15 @@ async function main() {
 
     if (local) {
       const finalRole = resolveRole(computed, local.role)
+      let leftAt = local.leftAt
+      if (!isActive) {
+        if (local.active) leftAt = new Date()
+        else if (!local.leftAt) leftAt = nu.updatedAt ? new Date(nu.updatedAt) : new Date()
+      } else { leftAt = null }
       await prisma.user.update({ where: { id: local.id }, data: {
         nexusUserId: nu.id, origin: 'nexus', name: nu.name, email: nu.email,
         domainAccount: nu.username, windowsUser: nu.username,
-        phone: nu.phone ?? undefined, active: isActive, role: finalRole,
+        phone: nu.phone ?? undefined, active: isActive, role: finalRole, leftAt,
         jobTitle: nu.role ?? undefined, avatarUrl: nu.avatar ?? undefined,
         departmentId: dept?.id ?? undefined,
         entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
@@ -77,6 +82,7 @@ async function main() {
       const pw = nu.passwordHash ?? (await bcrypt.hash(crypto.randomUUID(), 10))
       await prisma.user.create({ data: {
         name: nu.name, email: nu.email, passwordHash: pw, role: computed, active: isActive,
+        leftAt: isActive ? null : (nu.updatedAt ? new Date(nu.updatedAt) : new Date()),
         jobTitle: nu.role ?? null, avatarUrl: nu.avatar ?? null,
         nexusUserId: nu.id, origin: 'nexus', domainAccount: nu.username ?? null,
         windowsUser: nu.username ?? null, phone: nu.phone ?? null, departmentId: dept?.id ?? null,
@@ -90,7 +96,7 @@ async function main() {
     where: { nexusUserId: { not: null }, origin: 'nexus', active: true, NOT: { nexusUserId: { in: [...nexusIds] } } },
   })
   for (const o of orphans) {
-    await prisma.user.update({ where: { id: o.id }, data: { active: false } })
+    await prisma.user.update({ where: { id: o.id }, data: { active: false, leftAt: o.leftAt ?? new Date() } })
     deactivated++
   }
 

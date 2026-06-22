@@ -44,6 +44,7 @@ interface NexusEmployee {
   departmentId: string | null
   status: string
   hireDate: string | null
+  updatedAt: string | null
   // Foto (data URI webp base64) quando pedida com ?includeAvatar=true; null se sem foto.
   avatar: string | null
   // Hash bcrypt da senha Nexus (?includePassword=true). O Nexus é dono da senha;
@@ -119,6 +120,15 @@ export async function syncFromNexus(): Promise<SyncResult> {
 
       if (local) {
         const finalRole = resolveRole(computed, local.role)
+        // Data de saída (turnover): carimba na transição ativo→inativo; backfill
+        // dos já inativos sem data via updatedAt do Nexus; limpa se voltou a ativo.
+        let leftAt = local.leftAt
+        if (!isActive) {
+          if (local.active) leftAt = new Date()
+          else if (!local.leftAt) leftAt = nu.updatedAt ? new Date(nu.updatedAt) : new Date()
+        } else {
+          leftAt = null
+        }
         await prisma.user.update({
           where: { id: local.id },
           data: {
@@ -130,6 +140,7 @@ export async function syncFromNexus(): Promise<SyncResult> {
             windowsUser: nu.username,
             phone: nu.phone ?? undefined,
             active: isActive,
+            leftAt,
             role: finalRole,
             jobTitle: nu.role ?? undefined,
             avatarUrl: nu.avatar ?? undefined,
@@ -152,6 +163,7 @@ export async function syncFromNexus(): Promise<SyncResult> {
             jobTitle: nu.role ?? null,
             avatarUrl: nu.avatar ?? null,
             active: isActive,
+            leftAt: isActive ? null : (nu.updatedAt ? new Date(nu.updatedAt) : new Date()),
             nexusUserId: nu.id,
             origin: 'nexus',
             domainAccount: nu.username ?? null,
@@ -173,7 +185,7 @@ export async function syncFromNexus(): Promise<SyncResult> {
     where: { nexusUserId: { not: null }, origin: 'nexus', active: true, NOT: { nexusUserId: { in: [...nexusIds] } } },
   })
   for (const o of orphans) {
-    await prisma.user.update({ where: { id: o.id }, data: { active: false } })
+    await prisma.user.update({ where: { id: o.id }, data: { active: false, leftAt: o.leftAt ?? new Date() } })
     result.deactivated++
   }
 

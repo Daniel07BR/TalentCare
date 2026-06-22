@@ -74,6 +74,28 @@ export default function FormacaoPage() {
           </div>
         ))}
       </div>
+
+      {vm.semInfo.length > 0 && (
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 18, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 3, background: '#9aa1ac' }} />
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Sem escolaridade informada <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {vm.semInfo.length}</span></div>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Funcionários ainda sem vínculo na planilha — pendentes de informação</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px 24px' }}>
+            {vm.semInfo.map((p) => (
+              <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+                <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+                  {p.username && <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>{p.username}</div>}
+                </div>
+                <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{p.dept}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
