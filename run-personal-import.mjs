@@ -45,7 +45,7 @@ async function main() {
     if (confidence === 'strong') {
       strong++
       const birth = parseBR(r.nasc), adm = parseBR(r.adm)
-      await prisma.user.update({ where: { nexusUserId: matched }, data: { birthDate: birth ?? undefined, entryDate: best.e.entryDate ? undefined : adm ?? undefined } })
+      await prisma.user.update({ where: { nexusUserId: matched }, data: { birthDate: birth ?? undefined, gender: r.sexo || undefined, entryDate: best.e.entryDate ? undefined : adm ?? undefined } })
     } else if (confidence === 'review') review++
     else none++
   }

@@ -33,6 +33,7 @@ model User {
   role          UserRole   @default(SEM_PERMISSAO)
   jobTitle      String?    @map("job_title")
   birthDate     DateTime?  @map("birth_date")
+  gender        String?
   active        Boolean    @default(true)
   leftAt        DateTime?  @map("left_at")
   avatarUrl     String?    @map("avatar_url")

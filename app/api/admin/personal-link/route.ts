@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.findUnique({ where: { nexusUserId }, select: { entryDate: true } })
     await prisma.user.update({
       where: { nexusUserId },
-      data: { birthDate: birth ?? undefined, entryDate: user?.entryDate ? undefined : adm ?? undefined },
+      data: { birthDate: birth ?? undefined, gender: row.sexo ?? undefined, entryDate: user?.entryDate ? undefined : adm ?? undefined },
     })
     if (row.matchedNexusId && row.matchedNexusId !== nexusUserId) {
       await prisma.user.updateMany({ where: { nexusUserId: row.matchedNexusId }, data: { birthDate: null } })

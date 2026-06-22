@@ -4,6 +4,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { buildDashboard } from '@/lib/mock/dashboard'
 import { classroomVM } from '@/lib/mock/classroom'
+import { generationsVM, genderVM } from '@/lib/mock/demographics'
 import Avatar from '../Avatar'
 
 export default function DashboardPage() {
@@ -14,6 +15,8 @@ export default function DashboardPage() {
   const cvm = classroomVM(data)
   const ccBars = [...cvm.deptBars].sort((a, b) => b.created - a.created)
   const ccMax = Math.max(1, ...ccBars.map((d) => d.created))
+  const gen = generationsVM(data).overall
+  const gend = genderVM(data).overall
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -148,20 +151,62 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Alertas &amp; marcos</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Eventos do período</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {vm.alerts.map((a, i) => (
-              <div key={i} style={{ display: 'flex', gap: 11 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, marginTop: 5, flex: 'none', boxShadow: `0 0 0 4px ${a.glow}` }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.4 }}>{a.text}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 2 }}>{a.when}</div>
-                </div>
+        <div className="tc-card" onClick={() => router.push('/geracoes')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Gerações</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Idade média: <b style={{ color: 'var(--text)' }}>{gen.avg ?? '—'}</b> anos</div>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>ver ›</span>
+          </div>
+          <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)', margin: '16px 0 14px' }}>
+            {gen.segs.map((s) => <div key={s.key} title={`${s.label} · ${s.desc}`} style={{ width: `${s.pct}%`, background: s.color }} />)}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {gen.segs.map((s) => (
+              <div key={s.key} title={s.desc} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'help' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
+                <span style={{ flex: 1, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                <span style={{ fontWeight: 600 }}>{s.count}</span>
+                <span style={{ color: 'var(--text-mute)', width: 34, textAlign: 'right' }}>{s.pct}%</span>
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Comparativo por gênero */}
+      <div className="tc-card" onClick={() => router.push('/genero')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Comparativo por gênero</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Quadro ativo · {gend.m + gend.f} com gênero informado{gend.ni ? ` · ${gend.ni} sem informação` : ''}</div>
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>ver ›</span>
+        </div>
+        <div style={{ display: 'flex', height: 12, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)', marginBottom: 16 }}>
+          <div title={`Masculino: ${gend.m}`} style={{ width: `${gend.mPct}%`, background: 'var(--info)' }} />
+          <div title={`Feminino: ${gend.f}`} style={{ width: `${gend.fPct}%`, background: 'var(--chart-5)' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {[
+            { label: 'Masculino', color: 'var(--info)', count: gend.m, pct: gend.mPct, age: gend.avgM, score: gend.scoreM },
+            { label: 'Feminino', color: 'var(--chart-5)', count: gend.f, pct: gend.fPct, age: gend.avgF, score: gend.scoreF },
+          ].map((g) => (
+            <div key={g.label} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: g.color }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{g.label}</span>
+                </div>
+                <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: g.color, lineHeight: 1.1 }}>{g.count} <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>· {g.pct}%</span></div>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 18 }}>
+                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Idade média</div><div style={{ fontSize: 15, fontWeight: 700 }}>{g.age ?? '—'}</div></div>
+                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 15, fontWeight: 700 }}>{g.score}</div></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
