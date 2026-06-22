@@ -32,6 +32,7 @@ model User {
   passwordHash  String     @map("password_hash")
   role          UserRole   @default(SEM_PERMISSAO)
   jobTitle      String?    @map("job_title")
+  birthDate     DateTime?  @map("birth_date")
   active        Boolean    @default(true)
   avatarUrl     String?    @map("avatar_url")
   phone         String?
@@ -46,6 +47,24 @@ model User {
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+// Linhas cruas da planilha de cadastro (admissão/nascimento) + vínculo.
+model PersonalStaging {
+  id                String   @id @default(cuid())
+  nome              String
+  norm              String
+  birthRaw          String?  @map("birth_raw")
+  admRaw            String?  @map("adm_raw")
+  sexo              String?
+  situacao          String?
+  suggestionNexusId String?  @map("suggestion_nexus_id")
+  confidence        String   @default("none")
+  matchedNexusId    String?  @map("matched_nexus_id")
+  status            String   @default("pending")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("personal_staging")
 }
 
 // Escolaridade REAL (vinda da planilha de RH), por funcionário.

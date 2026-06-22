@@ -165,6 +165,8 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     name: emp.nome, cargo: emp.cargo, dept: deptName(data, emp.dept), initials: emp.initials, color: emp.color,
     status: emp.status, statusColor: sm.color, statusBg: sm.bg,
     tempo: fmtTempo(emp.tempoMeses), admissao: emp.admissao, esc: emp.escolaridade,
+    nascimento: emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('pt-BR') : null,
+    idade: emp.birthDate ? (() => { const b = new Date(emp.birthDate); const t = new Date(); return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0) })() : null,
     score: emp.score, scoreColor: scoreColor(emp.score),
     delta: (emp.delta >= 0 ? '▲ +' : '▼ ') + Math.abs(emp.delta), deltaColor: emp.delta >= 0 ? 'var(--success)' : 'var(--danger)',
     gaugeTrack: g.track, gaugeValue: g.value, gaugeColor: g.color,

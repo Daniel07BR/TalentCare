@@ -30,6 +30,7 @@ export async function getTalentData(): Promise<TalentData> {
       active: u.active,
       hasAvatar: !!u.avatarUrl,
       entryDate: u.entryDate,
+      birthDate: u.birthDate ? u.birthDate.toISOString() : null,
       escolaridade: (u.nexusUserId ? eduByNexus.get(u.nexusUserId) : null) ?? null,
       classroom: {
         videosCompleted: cs?.videosCompleted ?? 0,

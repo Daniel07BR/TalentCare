@@ -8,7 +8,7 @@ type Row = {
 }
 type Opt = { id: string; label: string }
 
-export default function EducationLinker({ rows, options, nameById }: { rows: Row[]; options: Opt[]; nameById: Record<string, string> }) {
+export default function EducationLinker({ rows, options, nameById, endpoint = '/api/admin/education-link', kicker = 'Importação · planilha de RH', title = 'Escolaridade — vínculo' }: { rows: Row[]; options: Opt[]; nameById: Record<string, string>; endpoint?: string; kicker?: string; title?: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [sel, setSel] = useState<Record<string, string>>(
@@ -18,7 +18,7 @@ export default function EducationLinker({ rows, options, nameById }: { rows: Row
   async function link(id: string, nexusUserId: string | null) {
     setBusy(id)
     try {
-      await fetch('/api/admin/education-link', {
+      await fetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stagingId: id, nexusUserId }),
       })
@@ -73,8 +73,8 @@ export default function EducationLinker({ rows, options, nameById }: { rows: Row
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Importação · planilha de RH</div>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Escolaridade — vínculo</h1>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>{kicker}</div>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>{title}</h1>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>

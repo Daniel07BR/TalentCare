@@ -34,6 +34,7 @@ export type Employee = {
   radioHoras: number
   radioSemana: number[]
   admissao: string
+  birthDate: string | null
   classroom: ClassroomStat
 }
 
@@ -68,6 +69,7 @@ export type Identity = {
   active: boolean
   hasAvatar: boolean
   entryDate: Date | null
+  birthDate: string | null
   classroom: ClassroomStat
   escolaridade: string | null
 }
@@ -198,6 +200,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     admissao: id8.entryDate && !isNaN(id8.entryDate.getTime())
       ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
       : admissao(tempoMeses),
+    birthDate: id8.birthDate,
     classroom: id8.classroom,
   }
 }
