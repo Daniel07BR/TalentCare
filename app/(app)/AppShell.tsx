@@ -34,21 +34,21 @@ function isActive(pathname: string, href: string): boolean {
 
 function Topbar() {
   const { period, setPeriod } = usePeriod()
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>('light')
   const [search, setSearch] = useState('')
 
-  // aplica/persiste o tema no wrapper .app (sobe pela árvore)
+  // O tema vive no <html data-theme> (aplicado antes da pintura pelo script inline).
+  // Aqui só sincronizamos o estado do ícone com o que já está no DOM.
   useEffect(() => {
-    try {
-      const t = localStorage.getItem('tc-theme')
-      if (t === 'light' || t === 'dark') setTheme(t)
-    } catch { /* noop */ }
+    const t = document.documentElement.getAttribute('data-theme')
+    if (t === 'light' || t === 'dark') setTheme(t)
   }, [])
-  useEffect(() => {
-    const el = document.querySelector('.app')
-    if (el) el.classList.toggle('light', theme === 'light')
-    try { localStorage.setItem('tc-theme', theme) } catch { /* noop */ }
-  }, [theme])
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    try { localStorage.setItem('tc-theme', next) } catch { /* noop */ }
+    setTheme(next)
+  }
 
   return (
     <header style={{ height: 60, flex: 'none', borderBottom: '1px solid var(--border)', background: 'var(--header-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 16, padding: '0 28px' }}>
@@ -67,7 +67,7 @@ function Topbar() {
           <button key={p} className={'seg' + (period === p ? ' on' : '')} onClick={() => setPeriod(p)} style={{ fontSize: 12, padding: '6px 11px' }}>{p}</button>
         ))}
       </div>
-      <button onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} className="tc-btn" aria-label="Alternar tema" style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer' }}>
+      <button onClick={toggleTheme} className="tc-btn" aria-label="Alternar tema" style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer' }}>
         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
       </button>
       <button className="tc-btn" aria-label="Notificações" style={{ position: 'relative', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer' }}>
