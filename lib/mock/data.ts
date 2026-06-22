@@ -12,6 +12,7 @@ export type Factor = { key: string; label: string; peso: number; nota: number }
 export type Employee = {
   id: string
   nome: string
+  username: string | null
   dept: string          // = departmentId real
   cargo: string
   status: string        // Ativo | Férias | Afastado | Desligado
@@ -63,6 +64,7 @@ export type TalentData = {
 export type Identity = {
   id: string
   nome: string
+  username: string | null
   cargo: string | null
   deptId: string | null
   deptName: string | null
@@ -171,7 +173,8 @@ function monthsSince(d: Date | null, seed: number): number {
 function simulateEmployee(id8: Identity, idx: number): Employee {
   const seed = seedOf(id8.id)
   const score = 48 + Math.round(rnd(seed * 1.7) * 48) // 48..96
-  const escolaridade = id8.escolaridade ?? ESC_ORDER[Math.floor(rnd(seed * 2.3) * ESC_ORDER.length)] ?? 'Superior Completo'
+  // Escolaridade é dado REAL (planilha). Sem vínculo → "Não informado" (nada simulado).
+  const escolaridade = id8.escolaridade ?? 'Não informado'
   const tempoMeses = monthsSince(id8.entryDate, seed)
   const status = id8.active ? 'Ativo' : 'Desligado'
 
@@ -189,7 +192,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
   }
   const tasksDone = 24 + Math.round(rnd(seed * 3) * 120)
   return {
-    id: id8.id, nome: id8.nome, dept: id8.deptId ?? 'sem', cargo: id8.cargo || 'Colaborador',
+    id: id8.id, nome: id8.nome, username: id8.username, dept: id8.deptId ?? 'sem', cargo: id8.cargo || 'Colaborador',
     status, escolaridade, tempoMeses, score, factors, hist,
     initials: ini(id8.nome), color: PALETTE[seed % 6], delta: score - hist[10], hasAvatar: id8.hasAvatar,
     tasksDone, tasksLate: Math.round(tasksDone * (0.03 + rnd(seed * 5) * 0.13)), tasksPend: Math.round(rnd(seed * 4) * 16),

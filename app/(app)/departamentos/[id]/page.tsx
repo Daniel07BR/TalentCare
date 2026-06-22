@@ -4,13 +4,16 @@ import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptDetailVM } from '@/lib/mock/departments'
+import { educationByDept } from '@/lib/mock/education'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const vm = deptDetailVM(useTalentData(), id)
+  const data = useTalentData()
+  const vm = deptDetailVM(data, id)
+  const edu = educationByDept(data).byDept.find((d) => d.id === id)
 
   if (!vm) {
     return (
@@ -46,6 +49,25 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           { icon: PlayCircle, label: 'Vídeos assistidos', value: vm.classroom.videos, color: 'var(--info)' },
         ]} />
       </div>
+
+      {edu && (
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Escolaridade do setor</div>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{edu.informed} de {edu.total} informados</span>
+          </div>
+          <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)' }}>
+            {edu.segs.map((s) => <div key={s.label} title={`${s.label}: ${s.count} (${s.pct}%)`} style={{ width: `${s.pct}%`, background: s.color }} />)}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px 16px', marginTop: 14 }}>
+            {edu.segs.map((s) => (
+              <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-dim)' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color }} /> {s.label} <b style={{ color: 'var(--text)' }}>{s.count}</b> <span style={{ color: 'var(--text-mute)' }}>({s.pct}%)</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>

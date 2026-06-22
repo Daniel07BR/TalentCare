@@ -24,6 +24,7 @@ export async function getTalentData(): Promise<TalentData> {
     return {
       id: u.id,
       nome: u.name,
+      username: u.domainAccount ?? u.windowsUser ?? null,
       cargo: u.jobTitle,
       deptId: u.departmentId,
       deptName: u.department?.name ?? null,

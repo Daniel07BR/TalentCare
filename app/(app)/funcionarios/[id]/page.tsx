@@ -41,6 +41,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: '-.5px' }}>{vm.name}</h1>
               <span style={{ fontSize: 11.5, fontWeight: 600, color: vm.statusColor, background: vm.statusBg, padding: '3px 10px', borderRadius: 20 }}>{vm.status}</span>
             </div>
+            {vm.username && <div style={{ fontSize: 12.5, color: 'var(--text-mute)', marginBottom: 8 }}>{vm.username}</div>}
             <div style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 16 }}>{vm.cargo} · {vm.dept}</div>
             <div style={{ display: 'flex', gap: 26 }}>
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Tempo de casa</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.tempo}</div></div>

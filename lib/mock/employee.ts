@@ -162,7 +162,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
 
   return {
     id: emp.id, hasAvatar: emp.hasAvatar,
-    name: emp.nome, cargo: emp.cargo, dept: deptName(data, emp.dept), initials: emp.initials, color: emp.color,
+    name: emp.nome, username: emp.username, cargo: emp.cargo, dept: deptName(data, emp.dept), initials: emp.initials, color: emp.color,
     status: emp.status, statusColor: sm.color, statusBg: sm.bg,
     tempo: fmtTempo(emp.tempoMeses), admissao: emp.admissao, esc: emp.escolaridade,
     nascimento: emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('pt-BR') : null,

@@ -117,9 +117,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ alignSelf: 'flex-start', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Distribuição por escolaridade</div>
-          <div style={{ alignSelf: 'flex-start', fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{vm.headcountTotal} colaboradores</div>
+        <div className="tc-card" onClick={() => router.push('/formacao')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+          <div style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Distribuição por escolaridade</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{vm.headcountTotal} colaboradores</div>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap' }}>ver ›</span>
+          </div>
           <div style={{ position: 'relative', width: 150, height: 150 }}>
             <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
               <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface-2)" strokeWidth="13" />
