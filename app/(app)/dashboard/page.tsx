@@ -97,7 +97,7 @@ export default function DashboardPage() {
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Top &amp; bottom por score</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             {vm.rankList.map((r) => (
-              <div key={r.id} className="tc-row" onClick={() => router.push('/funcionarios')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+              <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
                 <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{r.rank}</span>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: r.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, color: '#fff', flex: 'none' }}>{r.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
