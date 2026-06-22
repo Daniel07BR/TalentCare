@@ -34,5 +34,10 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   return {
     name: dep.nome, kpis, ranking, histLine: hl.line, histArea: hl.area, compAvg, score: dep.score,
     barSelf: dep.score + '%', barComp: compAvg + '%', heat: heatmapFor(seedOf(dep.id), dep.score),
+    classroom: {
+      criados: dep.classroom.coursesCreated,
+      assistidos: dep.classroom.coursesCompleted,
+      videos: dep.classroom.videosCompleted,
+    },
   }
 }

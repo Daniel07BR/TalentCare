@@ -12,6 +12,8 @@ export default function DashboardPage() {
   const data = useTalentData()
   const vm = buildDashboard(data, period)
   const cvm = classroomVM(data)
+  const ccBars = [...cvm.deptBars].sort((a, b) => b.created - a.created)
+  const ccMax = Math.max(1, ...ccBars.map((d) => d.created))
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -163,9 +165,9 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom · vídeos concluídos por departamento
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom · cursos criados por departamento
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{cvm.totals.videos.toLocaleString('pt-BR')} vídeos · {cvm.totals.courses.toLocaleString('pt-BR')} cursos concluídos · {cvm.totals.created.toLocaleString('pt-BR')} cursos criados</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{cvm.totals.created.toLocaleString('pt-BR')} cursos criados · {cvm.totals.courses.toLocaleString('pt-BR')} concluídos · {cvm.totals.videos.toLocaleString('pt-BR')} vídeos assistidos</div>
           </div>
           <span style={{ fontSize: 12, color: 'var(--chart-2)', fontWeight: 600 }}>ver resumo ›</span>
         </div>
@@ -173,13 +175,13 @@ export default function DashboardPage() {
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '12px 0' }}>Sem dados do ClassRoom ainda — sincronize na página do ClassRoom.</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '11px 28px' }}>
-            {cvm.deptBars.map((d) => (
+            {ccBars.map((d) => (
               <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 96, flex: 'none', fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
                 <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-                  <div className="cbar" style={{ height: '100%', width: d.pct, background: 'var(--chart-2)', borderRadius: 20 }} />
+                  <div className="cbar" style={{ height: '100%', width: `${(d.created / ccMax) * 100}%`, background: 'var(--accent)', borderRadius: 20 }} />
                 </div>
-                <div style={{ width: 36, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.videos}</div>
+                <div style={{ width: 36, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.created}</div>
               </div>
             ))}
           </div>

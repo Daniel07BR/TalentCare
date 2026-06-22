@@ -1,9 +1,11 @@
 'use client'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
+import { PenLine, GraduationCap, PlayCircle } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptDetailVM } from '@/lib/mock/departments'
 import Avatar from '../../Avatar'
+import ClassroomStats from '../../ClassroomStats'
 
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -31,6 +33,18 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-1px', color: k.color }}>{k.value}</span><span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{k.unit}</span></div>
           </div>
         ))}
+      </div>
+
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Atividade da equipe na plataforma de treinamento</div>
+        <ClassroomStats stats={[
+          { icon: PenLine, label: 'Cursos criados', value: vm.classroom.criados, color: 'var(--accent)' },
+          { icon: GraduationCap, label: 'Cursos assistidos', value: vm.classroom.assistidos, color: 'var(--chart-2)' },
+          { icon: PlayCircle, label: 'Vídeos assistidos', value: vm.classroom.videos, color: 'var(--info)' },
+        ]} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

@@ -176,6 +176,12 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     heat: heatmapFor(seed, emp.score),
     radioHoras: emp.radioHoras, radioMedia, radioBars,
     grau: fm.grau, cursos: fm.cursos, certs: fm.certs, horas: fm.totalHoras,
+    classroom: {
+      criados: emp.classroom.coursesCreated,
+      assistidos: emp.classroom.coursesCompleted,
+      videos: emp.classroom.videosCompleted,
+      total: emp.classroom.coursesCreated + emp.classroom.coursesCompleted,
+    },
     traj: trajetoriaFor(emp),
     recon: reconhecimentoFor(emp), reconEmpty: reconhecimentoFor(emp).length === 0,
     decRec: dec.recommendation,

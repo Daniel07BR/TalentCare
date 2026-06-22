@@ -1,9 +1,11 @@
 'use client'
 import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { buildEmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
+import ClassroomStats from '../../ClassroomStats'
 
 const TABS: [string, string][] = [
   ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
@@ -187,6 +189,17 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 
             {tab === 'formacao' && (
               <>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais</span>
+                </div>
+                <div style={{ marginBottom: 22 }}>
+                  <ClassroomStats stats={[
+                    { icon: GraduationCap, label: 'Cursos assistidos', value: vm.classroom.assistidos, color: 'var(--chart-2)' },
+                    { icon: PenLine, label: 'Cursos criados', value: vm.classroom.criados, color: 'var(--accent)' },
+                    { icon: PlayCircle, label: 'Vídeos assistidos', value: vm.classroom.videos, color: 'var(--info)' },
+                    { icon: BookOpen, label: 'Total', value: vm.classroom.total, color: 'var(--text)' },
+                  ]} />
+                </div>
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
                   <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{vm.grau}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Escolaridade</div></div>
                   <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{vm.horas}h</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Treinamento (12m)</div></div>
