@@ -69,6 +69,7 @@ export type Identity = {
   hasAvatar: boolean
   entryDate: Date | null
   classroom: ClassroomStat
+  escolaridade: string | null
 }
 
 export const FACTORS = [
@@ -168,7 +169,7 @@ function monthsSince(d: Date | null, seed: number): number {
 function simulateEmployee(id8: Identity, idx: number): Employee {
   const seed = seedOf(id8.id)
   const score = 48 + Math.round(rnd(seed * 1.7) * 48) // 48..96
-  const escolaridade = ESC_ORDER[Math.floor(rnd(seed * 2.3) * ESC_ORDER.length)] ?? 'Superior Completo'
+  const escolaridade = id8.escolaridade ?? ESC_ORDER[Math.floor(rnd(seed * 2.3) * ESC_ORDER.length)] ?? 'Superior Completo'
   const tempoMeses = monthsSince(id8.entryDate, seed)
   const status = id8.active ? 'Ativo' : 'Desligado'
 

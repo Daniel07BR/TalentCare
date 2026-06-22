@@ -48,6 +48,37 @@ model User {
   @@map("users")
 }
 
+// Escolaridade REAL (vinda da planilha de RH), por funcionário.
+model EmployeeEducation {
+  nexusUserId String   @id @map("nexus_user_id")
+  level       String?
+  sexo        String?
+  detail      String?
+  raw         Json?
+  source      String   @default("planilha")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("employee_education")
+}
+
+// Linhas cruas da planilha + estado do vínculo (alimenta a tela de vínculo).
+model EducationStaging {
+  id                String   @id @default(cuid())
+  nome              String
+  norm              String
+  level             String?
+  sexo              String?
+  detail            String?
+  raw               Json?
+  suggestionNexusId String?  @map("suggestion_nexus_id")
+  confidence        String   @default("none")
+  matchedNexusId    String?  @map("matched_nexus_id")
+  status            String   @default("pending")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("education_staging")
+}
+
 model ClassroomStat {
   nexusUserId      String   @id @map("nexus_user_id")
   videosCompleted  Int      @default(0) @map("videos_completed")

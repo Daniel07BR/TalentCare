@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap,
+  LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, Sun, Moon, UserCog,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
@@ -23,6 +23,7 @@ const NAV_MAIN = [
   { href: '/classroom', label: 'ClassRoom', icon: GraduationCap },
 ]
 const NAV_SYS = [
+  { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
   { href: '/relatorios', label: 'Relatórios', icon: FileText },
   { href: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal },
   { href: '/usuarios', label: 'Usuários', icon: UserCog },
