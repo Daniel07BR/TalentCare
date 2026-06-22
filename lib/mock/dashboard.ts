@@ -1,7 +1,7 @@
 /* ============================================================
    TalentCare — view-model do Dashboard (puro em função de data + período).
    ============================================================ */
-import { geomSpark, geomLine, scoreColor, rnd, ESC_ORDER, PALETTE, type TalentData } from './data'
+import { geomSpark, geomLine, scoreColor, rnd, PALETTE, type TalentData } from './data'
 
 export type Period = '7d' | '30d' | 'Trimestre' | 'Ano'
 
@@ -64,10 +64,13 @@ export function buildDashboard(data: TalentData, period: Period) {
     ...bot3.map((e, i) => ({ pos: emps.length - 2 + i, e })),
   ].map(({ pos, e }) => ({ rank: pos, id: e.id, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, nome: e.nome, cargo: e.cargo, score: e.score, scoreColor: scoreColor(e.score) }))
 
+  const ESC_RANK = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio', 'Ensino Fundamental', 'Não informado']
   const escCounts: Record<string, number> = {}
-  ESC_ORDER.forEach((x) => (escCounts[x] = 0))
-  emps.forEach((e) => { escCounts[e.escolaridade] = (escCounts[e.escolaridade] ?? 0) + 1 })
-  const escUsed = ESC_ORDER.filter((x) => escCounts[x] > 0)
+  emps.forEach((e) => { const k = e.escolaridade || 'Não informado'; escCounts[k] = (escCounts[k] ?? 0) + 1 })
+  const escUsed = Object.keys(escCounts).sort((a, b) => {
+    const ia = ESC_RANK.indexOf(a), ib = ESC_RANK.indexOf(b)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
   const escTotal = emps.length || 1
   const C = 2 * Math.PI * 46
   let acc = 0
