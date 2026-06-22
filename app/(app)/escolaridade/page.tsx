@@ -1,16 +1,18 @@
 import { prisma } from '@/lib/db/prisma'
 import EducationLinker from './EducationLinker'
+import EducationManual, { type ManualPerson } from './EducationManual'
 
 export const dynamic = 'force-dynamic'
 
 export default async function EscolaridadePage() {
-  const [staging, emps] = await Promise.all([
+  const [staging, emps, edu] = await Promise.all([
     prisma.educationStaging.findMany({ orderBy: [{ nome: 'asc' }] }),
     prisma.user.findMany({
       where: { origin: 'nexus' },
-      select: { nexusUserId: true, name: true, jobTitle: true, department: { select: { name: true } } },
+      select: { nexusUserId: true, name: true, active: true, domainAccount: true, windowsUser: true, department: { select: { name: true } } },
       orderBy: { name: 'asc' },
     }),
+    prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
   ])
 
   const options = emps
@@ -24,5 +26,23 @@ export default async function EscolaridadePage() {
     suggestionNexusId: s.suggestionNexusId, matchedNexusId: s.matchedNexusId,
   }))
 
-  return <EducationLinker rows={rows} options={options} nameById={nameById} />
+  const eduMap = new Map(edu.map((e) => [e.nexusUserId, e]))
+  const people: ManualPerson[] = emps
+    .filter((e) => e.nexusUserId && e.active)
+    .map((e) => {
+      const cur = eduMap.get(e.nexusUserId as string)
+      return {
+        id: e.nexusUserId as string, name: e.name,
+        username: e.domainAccount ?? e.windowsUser ?? null,
+        dept: e.department?.name ?? '—',
+        level: cur?.level ?? '', detail: cur?.detail ?? '',
+      }
+    })
+
+  return (
+    <>
+      <EducationLinker rows={rows} options={options} nameById={nameById} />
+      <EducationManual people={people} />
+    </>
+  )
 }
