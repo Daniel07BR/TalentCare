@@ -1,7 +1,7 @@
 /* ============================================================
    TalentCare — view-model do Dashboard (puro em função de data + período).
    ============================================================ */
-import { geomSpark, geomLine, scoreColor, rnd, PALETTE, type TalentData } from './data'
+import { geomSpark, geomLine, scoreColor, rnd, PALETTE, type TalentData, type Employee } from './data'
 
 export type Period = '7d' | '30d' | 'Trimestre' | 'Ano'
 
@@ -19,20 +19,24 @@ export type EscSegment = { label: string; count: number; color: string; dash: st
 export type Alert = { text: string; when: string; color: string; glow: string }
 
 export function buildDashboard(data: TalentData, period: Period) {
-  const emps = data.employees
-  const ativos = emps.filter((e) => e.status !== 'Desligado')
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
   const pf = periodFactor(period)
-  const n = ativos.length || 1
 
-  const compScore = Math.round(ativos.reduce((a, e) => a + e.score, 0) / n)
-  const totalTasks = Math.round(emps.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
-  const totalDone = emps.reduce((a, e) => a + e.tasksDone, 0) || 1
-  const lateRate = +(emps.reduce((a, e) => a + e.tasksLate, 0) / totalDone * 100).toFixed(1)
-  const faltas = Math.round(emps.reduce((a, e) => a + e.faltas, 0) * (pf / 3 + 0.5))
+  // Resumo executivo: só ATIVOS e SEM a Diretoria (donos). O ClassRoom é exceção (card próprio, todos).
+  const perf = data.employees.filter((e) => e.status !== 'Desligado' && !isDir(e.dept))
+  const nonDir = data.employees.filter((e) => !isDir(e.dept)) // turnover: inclui as saídas
+  const n = perf.length || 1
+
+  const compScore = Math.round(perf.reduce((a, e) => a + e.score, 0) / n)
+  const totalTasks = Math.round(perf.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
+  const totalDone = perf.reduce((a, e) => a + e.tasksDone, 0) || 1
+  const lateRate = +(perf.reduce((a, e) => a + e.tasksLate, 0) / totalDone * 100).toFixed(1)
+  const faltas = Math.round(perf.reduce((a, e) => a + e.faltas, 0) * (pf / 3 + 0.5))
   const _tnow = new Date()
   const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
-  const _exits12 = emps.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
-  const turnoverNow = ativos.length ? +((_exits12 / ativos.length) * 100).toFixed(1) : 0
+  const _exits12 = nonDir.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
+  const turnoverNow = perf.length ? +((_exits12 / perf.length) * 100).toFixed(1) : 0
 
   const sp = (seed: number, b: number): number[] => {
     const a: number[] = []
@@ -41,7 +45,7 @@ export function buildDashboard(data: TalentData, period: Period) {
     return a
   }
   const kdef = [
-    { label: 'Headcount', value: ativos.length, unit: '', delta: '+3', up: true, vals: sp(1, ativos.length - 3), color: 'var(--info)' },
+    { label: 'Headcount', value: perf.length, unit: '', delta: '+3', up: true, vals: sp(1, perf.length - 3), color: 'var(--info)' },
     { label: 'Turnover', value: turnoverNow, unit: '%', delta: '-1.2 p.p.', up: true, vals: [11, 10.4, 10.9, 9.8, 9.2, 9.5, 8.9, 9.1, 8.6, 8.8, 8.5, 8.4], color: 'var(--success)' },
     { label: 'Tarefas concluídas', value: totalTasks.toLocaleString('pt-BR'), unit: '', delta: '+12%', up: true, vals: sp(3, totalTasks * 0.8), color: 'var(--chart-2)' },
     { label: '% de atrasos', value: lateRate, unit: '%', delta: '+0.8 p.p.', up: false, vals: sp(4, lateRate - 1), color: 'var(--danger)' },
@@ -54,27 +58,32 @@ export function buildDashboard(data: TalentData, period: Period) {
     spark: geomSpark(k.vals, 64, 24), sparkColor: k.color,
   }))
 
-  const sortedDepts = [...data.departments].sort((a, b) => b.score - a.score)
-  const deptBars: DeptBar[] = sortedDepts.map((d) => ({ id: d.id, nome: d.nome, score: d.score, pct: d.score + '%', color: d.color }))
+  const deptColorById = new Map(data.departments.map((d) => [d.id, d.color]))
+  const byDeptMap = new Map<string, Employee[]>()
+  perf.forEach((e) => { const l = byDeptMap.get(e.dept) ?? []; l.push(e); byDeptMap.set(e.dept, l) })
+  const deptBars: DeptBar[] = [...byDeptMap.entries()].map(([id, list]) => {
+    const score = Math.round(list.reduce((a, e) => a + e.score, 0) / list.length)
+    return { id, nome: data.deptMeta[id] ?? id, score, pct: score + '%', color: deptColorById.get(id) ?? 'var(--accent)' }
+  }).sort((a, b) => b.score - a.score)
 
   const tvals = [12.1, 11.4, 10.8, 11.2, 10.1, 9.6, 9.9, 9.0, 8.7, 9.1, 8.5, 8.4]
   const tg = geomLine(tvals, 320, 150, 8)
 
-  const ranked = [...emps].sort((a, b) => b.score - a.score)
+  const ranked = [...perf].sort((a, b) => b.score - a.score)
   const top3 = ranked.slice(0, 3), bot3 = ranked.slice(-3).reverse()
   const rankList: RankRow[] = [
     ...top3.map((e, i) => ({ pos: i + 1, e })),
-    ...bot3.map((e, i) => ({ pos: emps.length - 2 + i, e })),
+    ...bot3.map((e, i) => ({ pos: perf.length - 2 + i, e })),
   ].map(({ pos, e }) => ({ rank: pos, id: e.id, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, nome: e.nome, cargo: e.cargo, score: e.score, scoreColor: scoreColor(e.score) }))
 
   const ESC_RANK = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio', 'Ensino Fundamental', 'Não informado']
   const escCounts: Record<string, number> = {}
-  emps.forEach((e) => { const k = e.escolaridade || 'Não informado'; escCounts[k] = (escCounts[k] ?? 0) + 1 })
+  perf.forEach((e) => { const k = e.escolaridade || 'Não informado'; escCounts[k] = (escCounts[k] ?? 0) + 1 })
   const escUsed = Object.keys(escCounts).sort((a, b) => {
     const ia = ESC_RANK.indexOf(a), ib = ESC_RANK.indexOf(b)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
-  const escTotal = emps.length || 1
+  const escTotal = perf.length || 1
   const C = 2 * Math.PI * 46
   let acc = 0
   const escSegments: EscSegment[] = escUsed.map((label, i) => {
@@ -89,11 +98,10 @@ export function buildDashboard(data: TalentData, period: Period) {
   const alertColor: Record<string, string> = { success: 'var(--success)', danger: 'var(--danger)', info: 'var(--info)', warning: 'var(--warning)' }
   const alertGlow: Record<string, string> = { success: 'rgba(63,178,85,.15)', danger: 'rgba(229,72,77,.15)', info: 'rgba(91,157,240,.15)', warning: 'rgba(245,166,35,.15)' }
   const topPerson = ranked[0]
-  const bottomDept = [...data.departments].sort((a, b) => b.turnover - a.turnover)[0]
-  const bestDept = [...data.departments].sort((a, b) => b.score - a.score)[0]
+  const bestDept = deptBars[0]
   const alertsRaw = [
     topPerson ? { text: `${topPerson.nome} lidera o ranking com score ${topPerson.score}.`, when: 'há 2 dias', kind: 'success' } : null,
-    bottomDept ? { text: `Turnover de ${bottomDept.nome} está em ${bottomDept.turnover}% no período.`, when: 'há 4 dias', kind: 'danger' } : null,
+    _exits12 > 0 ? { text: `${_exits12} ${_exits12 === 1 ? 'saída registrada' : 'saídas registradas'} nos últimos 12 meses.`, when: 'há 4 dias', kind: 'danger' } : null,
     { text: 'Novas certificações concluídas no ClassRoom neste período.', when: 'há 5 dias', kind: 'info' },
     bestDept ? { text: `Departamento ${bestDept.nome} lidera o ranking de performance.`, when: 'há 1 semana', kind: 'success' } : null,
   ].filter(Boolean) as { text: string; when: string; kind: string }[]
@@ -101,9 +109,9 @@ export function buildDashboard(data: TalentData, period: Period) {
 
   return {
     periodLabel: PERIOD_LABEL[period],
-    kpis, deptBars, deptCount: data.departments.length,
+    kpis, deptBars, deptCount: deptBars.length,
     turnoverLine: tg.line, turnoverArea: tg.area, turnoverNow,
-    rankList, headcountTotal: emps.length,
+    rankList, headcountTotal: perf.length,
     escSegments, escTopPct: Math.round(escTop.c / escTotal * 100), escTopLabel: escTop.l.replace('Superior ', 'Sup. '),
     alerts,
   }
