@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { classroomVM } from '@/lib/mock/classroom'
 import Avatar from '../Avatar'
+import Donut from '../Donut'
 import SyncClassroomButton from './SyncButton'
 
 export default function ClassroomPage() {
@@ -38,25 +39,32 @@ export default function ClassroomPage() {
 
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por departamento</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Vídeos concluídos · cursos concluídos · cursos criados</div>
-        {vm.deptBars.length === 0 ? (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Distribuição de cada métrica entre os setores</div>
+        {vm.legend.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem dados ainda. Clique em “Sincronizar ClassRoom”.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {vm.deptBars.map((d) => (
-              <div key={d.id} className="tc-row" onClick={() => router.push(`/departamentos/${d.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 6, padding: '3px 4px', margin: '-3px -4px' }}>
-                <div style={{ width: 110, flex: 'none', fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
-                <div style={{ flex: 1, height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-                  <div className="cbar" style={{ height: '100%', width: d.pct, background: 'var(--chart-2)', borderRadius: 20 }} />
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, justifyItems: 'center' }}>
+              {[
+                { d: vm.donuts.videos, label: 'Vídeos concluídos', center: 'vídeos' },
+                { d: vm.donuts.cursos, label: 'Cursos concluídos', center: 'cursos' },
+                { d: vm.donuts.criados, label: 'Cursos criados', center: 'criados' },
+              ].map((c) => (
+                <div key={c.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</div>
+                  <Donut segments={c.d.segments} total={c.d.total} centerLabel={c.center} />
                 </div>
-                <div style={{ width: 150, flex: 'none', display: 'flex', justifyContent: 'flex-end', gap: 12, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
-                  <span title="vídeos concluídos" style={{ fontWeight: 700, color: 'var(--chart-2)' }}>{d.videos}▸</span>
-                  <span title="cursos concluídos" style={{ color: 'var(--text-dim)' }}>{d.courses} cur</span>
-                  <span title="cursos criados" style={{ color: 'var(--accent)' }}>{d.created} cri</span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-soft)' }}>
+              {vm.legend.map((l) => (
+                <div key={l.id} className="tc-row" onClick={() => router.push(`/departamentos/${l.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, cursor: 'pointer', borderRadius: 6, padding: '2px 6px' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: l.color, flex: 'none' }} />
+                  <span style={{ color: 'var(--text-dim)' }}>{l.nome}</span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

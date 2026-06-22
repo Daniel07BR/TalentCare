@@ -42,6 +42,24 @@ export function classroomVM(data: TalentData) {
     .sort((a, b) => b.classroom.videosCompleted - a.classroom.videosCompleted).slice(0, 8)
     .map((e) => person(e, e.classroom.videosCompleted))
 
+  // Cor distinta por departamento (mesma cor nos 3 donuts).
+  const DONUT_COLORS = ['#f5a623', '#36b9a6', '#a78bfa', '#56c5e8', '#f1788a', '#b6d957', '#5b9df0', '#e0857a', '#3fb255', '#c9a227', '#7c8ff0']
+  const deptColor = new Map<string, string>()
+  data.departments.forEach((d, i) => deptColor.set(d.id, DONUT_COLORS[i % DONUT_COLORS.length]))
+  const seg = (pick: (d: typeof data.departments[number]) => number) =>
+    data.departments
+      .map((d) => ({ id: d.id, nome: d.nome, value: pick(d), color: deptColor.get(d.id)! }))
+      .filter((s) => s.value > 0)
+      .sort((a, b) => b.value - a.value)
+  const donuts = {
+    videos: { segments: seg((d) => d.classroom.videosCompleted), total: totals.videos },
+    cursos: { segments: seg((d) => d.classroom.coursesCompleted), total: totals.courses },
+    criados: { segments: seg((d) => d.classroom.coursesCreated), total: totals.created },
+  }
+  const legend = data.departments
+    .filter((d) => d.classroom.videosCompleted + d.classroom.coursesCompleted + d.classroom.coursesCreated > 0)
+    .map((d) => ({ id: d.id, nome: d.nome, color: deptColor.get(d.id)! }))
+
   void scoreColor
-  return { totals, deptBars, topCreators, topLearners, deptCount: deptBars.length }
+  return { totals, deptBars, topCreators, topLearners, deptCount: deptBars.length, donuts, legend }
 }
