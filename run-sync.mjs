@@ -63,9 +63,13 @@ async function main() {
 
     if (local) {
       const finalRole = resolveRole(computed, local.role)
+      // Data de saída real do Nexus (terminationDate) tem prioridade; sem ela,
+      // mantém a inferência antiga (carimba na transição / backfill por updatedAt).
+      const nexusLeft = nu.terminationDate ? new Date(nu.terminationDate) : null
       let leftAt = local.leftAt
       if (!isActive) {
-        if (local.active) leftAt = new Date()
+        if (nexusLeft) leftAt = nexusLeft
+        else if (local.active) leftAt = new Date()
         else if (!local.leftAt) leftAt = nu.updatedAt ? new Date(nu.updatedAt) : new Date()
       } else { leftAt = null }
       await prisma.user.update({ where: { id: local.id }, data: {
@@ -82,7 +86,7 @@ async function main() {
       const pw = nu.passwordHash ?? (await bcrypt.hash(crypto.randomUUID(), 10))
       await prisma.user.create({ data: {
         name: nu.name, email: nu.email, passwordHash: pw, role: computed, active: isActive,
-        leftAt: isActive ? null : (nu.updatedAt ? new Date(nu.updatedAt) : new Date()),
+        leftAt: isActive ? null : (nu.terminationDate ? new Date(nu.terminationDate) : (nu.updatedAt ? new Date(nu.updatedAt) : new Date())),
         jobTitle: nu.role ?? null, avatarUrl: nu.avatar ?? null,
         nexusUserId: nu.id, origin: 'nexus', domainAccount: nu.username ?? null,
         windowsUser: nu.username ?? null, phone: nu.phone ?? null, departmentId: dept?.id ?? null,
