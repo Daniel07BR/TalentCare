@@ -44,6 +44,9 @@ interface NexusEmployee {
   departmentId: string | null
   status: string
   hireDate: string | null
+  // Data de saída/desligamento definida no Nexus (fonte real de turnover). null se
+  // ainda ativo ou se foi inativado sem data. Espelhada em User.leftAt.
+  terminationDate: string | null
   updatedAt: string | null
   // Foto (data URI webp base64) quando pedida com ?includeAvatar=true; null se sem foto.
   avatar: string | null
@@ -120,11 +123,14 @@ export async function syncFromNexus(): Promise<SyncResult> {
 
       if (local) {
         const finalRole = resolveRole(computed, local.role)
-        // Data de saída (turnover): carimba na transição ativo→inativo; backfill
-        // dos já inativos sem data via updatedAt do Nexus; limpa se voltou a ativo.
+        // Data de saída (turnover): a data REAL definida no Nexus tem prioridade.
+        // Sem ela, mantém o comportamento antigo: carimba na transição ativo→inativo
+        // e faz backfill dos já inativos via updatedAt. Limpa se voltou a ativo.
+        const nexusLeft = nu.terminationDate ? new Date(nu.terminationDate) : null
         let leftAt = local.leftAt
         if (!isActive) {
-          if (local.active) leftAt = new Date()
+          if (nexusLeft) leftAt = nexusLeft
+          else if (local.active) leftAt = new Date()
           else if (!local.leftAt) leftAt = nu.updatedAt ? new Date(nu.updatedAt) : new Date()
         } else {
           leftAt = null
@@ -163,7 +169,9 @@ export async function syncFromNexus(): Promise<SyncResult> {
             jobTitle: nu.role ?? null,
             avatarUrl: nu.avatar ?? null,
             active: isActive,
-            leftAt: isActive ? null : (nu.updatedAt ? new Date(nu.updatedAt) : new Date()),
+            leftAt: isActive
+              ? null
+              : (nu.terminationDate ? new Date(nu.terminationDate) : (nu.updatedAt ? new Date(nu.updatedAt) : new Date())),
             nexusUserId: nu.id,
             origin: 'nexus',
             domainAccount: nu.username ?? null,

@@ -46,6 +46,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             <div style={{ display: 'flex', gap: 26 }}>
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Tempo de casa</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.tempo}</div></div>
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Admissão</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.admissao}</div></div>
+              {vm.dataSaida && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Data de saída</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>{vm.dataSaida}</div></div>}
               {vm.idade != null && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Idade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.idade} anos</div></div>}
               {vm.nascimento && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Nascimento</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.nascimento}</div></div>}
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Escolaridade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.esc}</div></div>
