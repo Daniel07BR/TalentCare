@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
+import { isHiddenDept } from '@/lib/hidden-depts'
 import EducationLinker from '../escolaridade/EducationLinker'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +15,7 @@ export default async function CadastroPage() {
   ])
 
   const options = emps
-    .filter((e) => e.nexusUserId)
+    .filter((e) => e.nexusUserId && !isHiddenDept(e.department?.name))
     .map((e) => ({ id: e.nexusUserId as string, label: e.name + (e.department?.name ? ` · ${e.department.name}` : '') }))
   const nameById = Object.fromEntries(options.map((o) => [o.id, o.label]))
 

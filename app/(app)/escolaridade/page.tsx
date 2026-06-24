@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
+import { isHiddenDept } from '@/lib/hidden-depts'
 import EducationLinker from './EducationLinker'
 import EducationManual, { type ManualPerson } from './EducationManual'
 
@@ -15,7 +16,9 @@ export default async function EscolaridadePage() {
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true, raw: true } }),
   ])
 
-  const options = emps
+  const visiveis = emps.filter((e) => !isHiddenDept(e.department?.name))
+
+  const options = visiveis
     .filter((e) => e.nexusUserId)
     .map((e) => ({ id: e.nexusUserId as string, label: e.name + (e.department?.name ? ` · ${e.department.name}` : '') }))
   const nameById = Object.fromEntries(options.map((o) => [o.id, o.label]))
@@ -27,7 +30,7 @@ export default async function EscolaridadePage() {
   }))
 
   const eduMap = new Map(edu.map((e) => [e.nexusUserId, e]))
-  const people: ManualPerson[] = emps
+  const people: ManualPerson[] = visiveis
     .filter((e) => e.nexusUserId && e.active)
     .map((e) => {
       const cur = eduMap.get(e.nexusUserId as string)

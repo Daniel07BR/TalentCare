@@ -1,20 +1,12 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { assembleData, type Identity, type TalentData } from '@/lib/mock/data'
+import { isHiddenDept } from '@/lib/hidden-depts'
 
 /**
  * Dataset do TalentCare: IDENTIDADE real (Nexus) + MÉTRICAS simuladas (até a frente B).
  * Lê os funcionários sincronizados (origin=nexus) e monta employees/departments.
  */
-// Setores que NÃO entram na população avaliada do painel. Diretoria continua
-// logando (ADMIN, via SSO) — só não aparece como funcionário avaliado/ranqueado.
-// Sistemas é defensivo (contas de rede/admin; o Nexus já as omite do diretório).
-const norm = (s: string | null | undefined) =>
-  (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-const HIDDEN_DEPARTMENTS = ['diretoria', 'sistemas']
-const isHiddenDept = (name: string | null | undefined) =>
-  HIDDEN_DEPARTMENTS.some((d) => norm(name).includes(d))
-
 export async function getTalentData(): Promise<TalentData> {
   const [usersRaw, stats, edu] = await Promise.all([
     prisma.user.findMany({

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/db/prisma'
+import { isHiddenDept } from '@/lib/hidden-depts'
 import SyncButton from './SyncButton'
 
 export const dynamic = 'force-dynamic'
@@ -15,10 +16,12 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 export default async function UsuariosPage() {
-  const users = await prisma.user.findMany({
+  const allUsers = await prisma.user.findMany({
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
     include: { department: { select: { name: true } } },
   })
+  // Não apresenta Diretoria/Sistemas (login da Diretoria segue intacto via SSO).
+  const users = allUsers.filter((u) => !isHiddenDept(u.department?.name))
 
   return (
     <div>
