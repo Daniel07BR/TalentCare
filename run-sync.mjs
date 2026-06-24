@@ -78,7 +78,8 @@ async function main() {
         phone: nu.phone ?? undefined, active: isActive, role: finalRole, leftAt,
         jobTitle: nu.role ?? undefined, avatarUrl: nu.avatar ?? undefined,
         departmentId: dept?.id ?? undefined,
-        entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
+        // Admissão não sobrescreve correção local (planilha RH > hireDate do Nexus).
+        entryDate: local.entryDate ?? (nu.hireDate ? new Date(nu.hireDate) : undefined),
         passwordHash: nu.passwordHash ?? undefined,
       } })
       updated++

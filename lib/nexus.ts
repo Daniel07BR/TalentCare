@@ -151,7 +151,9 @@ export async function syncFromNexus(): Promise<SyncResult> {
             jobTitle: nu.role ?? undefined,
             avatarUrl: nu.avatar ?? undefined,
             departmentId: dept?.id ?? undefined,
-            entryDate: nu.hireDate ? new Date(nu.hireDate) : undefined,
+            // Admissão: NÃO sobrescreve valor já existente (correção manual / planilha RH
+            // prevalece; o hireDate do Nexus é pouco confiável). Só preenche se vazio.
+            entryDate: local.entryDate ?? (nu.hireDate ? new Date(nu.hireDate) : undefined),
             // Espelha a senha do Nexus quando definida (só atualiza se veio hash).
             passwordHash: nu.passwordHash ?? undefined,
           },

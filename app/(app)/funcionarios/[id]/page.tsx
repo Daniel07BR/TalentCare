@@ -7,6 +7,7 @@ import { buildEmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
+import DadosEditor from './DadosEditor'
 
 const TABS: [string, string][] = [
   ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
@@ -52,6 +53,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               {vm.nascimento && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Nascimento</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.nascimento}</div></div>}
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Escolaridade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.esc}</div></div>
             </div>
+            <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 26, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 28 }}>

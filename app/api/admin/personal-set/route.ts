@@ -1,0 +1,34 @@
+import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth/config'
+import { prisma } from '@/lib/db/prisma'
+
+// Edita dados pessoais (nascimento / admissão) de uma pessoa, por nexus_user_id.
+// Nascimento é exclusivo do TalentCare; admissão "gruda" (o sync não sobrescreve).
+export async function POST(req: Request) {
+  const session = await auth()
+  const role = (session?.user as { role?: string } | undefined)?.role
+  if (!session?.user || role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+  const body = (await req.json().catch(() => null)) as
+    | { nexusUserId?: string; birthDate?: string | null; entryDate?: string | null }
+    | null
+  const nexusUserId = (body?.nexusUserId ?? '').trim()
+  if (!nexusUserId) return NextResponse.json({ error: 'nexusUserId obrigatório' }, { status: 400 })
+
+  // 'YYYY-MM-DD' → Date (meio-dia local evita virar o dia por fuso); '' → null (limpa).
+  const toDate = (v: string | null | undefined) => {
+    const s = (v ?? '').trim()
+    if (!s) return null
+    const d = new Date(`${s}T12:00:00`)
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  const data: { birthDate?: Date | null; entryDate?: Date | null } = {}
+  if ('birthDate' in (body ?? {})) data.birthDate = toDate(body?.birthDate)
+  if ('entryDate' in (body ?? {})) data.entryDate = toDate(body?.entryDate)
+  if (Object.keys(data).length === 0) return NextResponse.json({ ok: true })
+
+  const r = await prisma.user.updateMany({ where: { nexusUserId }, data })
+  return NextResponse.json({ ok: true, updated: r.count })
+}
