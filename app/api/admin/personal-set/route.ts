@@ -16,11 +16,12 @@ export async function POST(req: Request) {
   const nexusUserId = (body?.nexusUserId ?? '').trim()
   if (!nexusUserId) return NextResponse.json({ error: 'nexusUserId obrigatório' }, { status: 400 })
 
-  // 'YYYY-MM-DD' → Date (meio-dia local evita virar o dia por fuso); '' → null (limpa).
+  // 'YYYY-MM-DD' → Date no meio-dia UTC (casa com a exibição em UTC e não vira o
+  // dia por fuso, independente do fuso do servidor); '' → null (limpa o campo).
   const toDate = (v: string | null | undefined) => {
     const s = (v ?? '').trim()
     if (!s) return null
-    const d = new Date(`${s}T12:00:00`)
+    const d = new Date(`${s}T12:00:00Z`)
     return isNaN(d.getTime()) ? null : d
   }
 

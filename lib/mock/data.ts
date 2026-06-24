@@ -228,7 +228,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     radioHoras: +(28 + rnd(seed * 4.7) * 92).toFixed(0),
     radioSemana: Array.from({ length: 8 }, (_, w) => +((2 + rnd(seed * 3 + w * 1.7) * 7)).toFixed(1)),
     admissao: id8.entryDate && !isNaN(id8.entryDate.getTime())
-      ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+      ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
       : admissao(tempoMeses),
     birthDate: id8.birthDate,
     gender: id8.gender,
