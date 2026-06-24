@@ -73,11 +73,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column' }}>
+        <div className="tc-card" onClick={() => router.push('/turnover')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Curva de turnover</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Últimos 12 meses</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Últimos 12 meses · ver relatório</div>
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{vm.turnoverNow}%</span>
           </div>

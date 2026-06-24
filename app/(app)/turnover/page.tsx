@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { turnoverVM } from '@/lib/mock/turnover'
 import { getTalentData } from '@/lib/data/source'
 
@@ -66,6 +67,50 @@ export default async function TurnoverPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Relatório por departamento */}
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Relatório por departamento</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Movimentação dos últimos 12 meses · headcount atual (ativos)</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr .8fr .8fr .8fr .9fr', gap: 0, fontSize: 12.5 }}>
+          {['Setor', 'Headcount', 'Entradas', 'Saídas', 'Turnover'].map((h, i) => (
+            <div key={h} style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, textTransform: 'uppercase', padding: '0 0 10px', textAlign: i === 0 ? 'left' : 'right' }}>{h}</div>
+          ))}
+          {vm.deptReport.map((d) => (
+            <div key={d.id} style={{ display: 'contents' }}>
+              <Link href={`/departamentos/${d.id}`} style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text)' }}>{d.nome}</Link>
+              <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right' }}>{d.headcount}</div>
+              <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: d.ent ? 'var(--success)' : 'var(--text-dim)' }}>{d.ent ? '+' + d.ent : '0'}</div>
+              <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: d.sai ? 'var(--danger)' : 'var(--text-dim)' }}>{d.sai ? '−' + d.sai : '0'}</div>
+              <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', fontWeight: 700, color: d.rate >= 20 ? 'var(--danger)' : d.rate > 0 ? 'var(--warning)' : 'var(--text-dim)' }}>{d.rate}%</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desligados (todos os que temos, com datas) */}
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Desligados <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-mute)' }}>· {vm.totalDesligados}</span></div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Saídas registradas, com admissão e data de saída</div>
+        {vm.leavers.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum desligamento registrado.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr .9fr .9fr .9fr', gap: 0, fontSize: 12.5 }}>
+            {['Funcionário', 'Setor', 'Admissão', 'Saída', 'Tempo de casa'].map((h, i) => (
+              <div key={h} style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, textTransform: 'uppercase', padding: '0 0 10px', textAlign: i === 0 ? 'left' : i === 1 ? 'left' : 'right' }}>{h}</div>
+            ))}
+            {vm.leavers.map((p) => (
+              <div key={p.id} style={{ display: 'contents' }}>
+                <Link href={`/funcionarios/${p.id}`} style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text)' }}>{p.nome}</Link>
+                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', color: 'var(--text-dim)' }}>{p.dept}</div>
+                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right' }}>{p.admissao}</div>
+                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{p.saida}</div>
+                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: 'var(--text-dim)' }}>{p.tempo}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, color: 'var(--text-dim)', fontSize: 12.5 }}>
