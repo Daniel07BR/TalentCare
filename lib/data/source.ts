@@ -14,7 +14,11 @@ export async function getTalentData(): Promise<TalentData> {
       include: { department: { select: { id: true, name: true } } },
       orderBy: { name: 'asc' },
     }),
-    prisma.classroomStat.findMany(),
+    // ClassRoom ACUMULADO somado do espelho diário classroom_daily.
+    prisma.classroomDaily.groupBy({
+      by: ['nexusUserId'],
+      _sum: { videos: true, courses: true, created: true },
+    }),
     // Rádio ACUMULADA (todo o histórico) somada do espelho diário radio_daily.
     prisma.radioDaily.groupBy({
       by: ['nexusUserId'],
@@ -55,9 +59,9 @@ export async function getTalentData(): Promise<TalentData> {
       treinoCursos: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.cursos : null),
       treinoCerts: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.certs : null),
       classroom: {
-        videosCompleted: cs?.videosCompleted ?? 0,
-        coursesCompleted: cs?.coursesCompleted ?? 0,
-        coursesCreated: cs?.coursesCreated ?? 0,
+        videosCompleted: cs?._sum.videos ?? 0,
+        coursesCompleted: cs?._sum.courses ?? 0,
+        coursesCreated: cs?._sum.created ?? 0,
       },
       radio: {
         totalSeconds: rs?._sum.seconds ?? 0,

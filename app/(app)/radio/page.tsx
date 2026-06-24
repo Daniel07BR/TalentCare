@@ -6,7 +6,6 @@ import { usePeriod } from '@/lib/ui/period'
 import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { radioVM, type RadioPerson } from '@/lib/mock/radio'
 import Avatar from '../Avatar'
-import SyncRadioButton from './SyncButton'
 
 const RadioIcon = ({ size = 17, color = 'var(--chart-2)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -41,7 +40,6 @@ export default function RadioPage() {
             <RadioIcon size={24} /> Rádio Itamarathy
           </h1>
         </div>
-        <SyncRadioButton />
       </div>
 
       {/* Top 5 — quem mais escuta */}

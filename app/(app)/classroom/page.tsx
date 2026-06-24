@@ -1,15 +1,19 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
+import { useClassroomPeriod } from '@/lib/ui/classroom-period'
+import { usePeriod } from '@/lib/ui/period'
+import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { classroomVM } from '@/lib/mock/classroom'
 import Avatar from '../Avatar'
 import Donut from '../Donut'
-import SyncClassroomButton from './SyncButton'
 
 export default function ClassroomPage() {
   const router = useRouter()
   const data = useTalentData()
-  const vm = classroomVM(data)
+  const { period } = usePeriod()
+  const { map } = useClassroomPeriod()
+  const vm = classroomVM(data, map ?? undefined)
 
   const kpis = [
     { label: 'Vídeos concluídos', value: vm.totals.videos, color: 'var(--chart-2)' },
@@ -22,10 +26,9 @@ export default function ClassroomPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>ClassRoom</h1>
         </div>
-        <SyncClassroomButton />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>

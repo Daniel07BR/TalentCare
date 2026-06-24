@@ -121,6 +121,21 @@ model ClassroomStat {
   @@map("classroom_stats")
 }
 
+// Espelho diário do ClassRoom (por usuário × dia). videos/courses/created no dia.
+// Mesmo modelo de radio_daily/whatsapp_daily (sync incremental idempotente).
+model ClassroomDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10) // YYYY-MM-DD
+  videos      Int      @default(0)
+  courses     Int      @default(0)
+  created     Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("classroom_daily")
+}
+
 model RadioStat {
   nexusUserId    String    @id @map("nexus_user_id")
   totalSeconds   Int       @default(0) @map("total_seconds")
