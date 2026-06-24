@@ -35,6 +35,7 @@ export async function getTalentData(): Promise<TalentData> {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined
     return {
       id: u.id,
+      nexusUserId: u.nexusUserId,
       nome: u.name,
       username: u.domainAccount ?? u.windowsUser ?? null,
       cargo: u.jobTitle,

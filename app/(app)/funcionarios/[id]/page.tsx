@@ -6,6 +6,7 @@ import { useTalentData } from '@/lib/ui/data'
 import { buildEmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
+import FormacaoEditor from './FormacaoEditor'
 
 const TABS: [string, string][] = [
   ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
@@ -218,8 +219,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     ))}
                   </div>
                 ) : (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 22 }}>Sem cursos informados no cadastro.</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>
                 )}
+                <FormacaoEditor nexusUserId={vm.nexusUserId} level={vm.grau} detail={vm.eduDetail} />
               </>
             )}
 

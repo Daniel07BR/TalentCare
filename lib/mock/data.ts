@@ -39,6 +39,8 @@ export type Employee = {
   gender: string | null
   hireISO: string | null
   leftISO: string | null
+  nexusUserId: string | null
+  eduDetail: string | null
   eduCursos: EduCurso[]
   classroom: ClassroomStat
 }
@@ -67,6 +69,7 @@ export type TalentData = {
 /** Identidade real de um funcionário (vinda do Nexus via Prisma). */
 export type Identity = {
   id: string
+  nexusUserId: string | null
   nome: string
   username: string | null
   cargo: string | null
@@ -231,6 +234,8 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     gender: id8.gender,
     hireISO: id8.entryDate ? id8.entryDate.toISOString() : null,
     leftISO: id8.leftDate ? id8.leftDate.toISOString() : null,
+    nexusUserId: id8.nexusUserId,
+    eduDetail: id8.eduDetail,
     eduCursos: parseEduDetail(id8.eduDetail),
     classroom: id8.classroom,
   }
