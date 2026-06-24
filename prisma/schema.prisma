@@ -146,6 +146,20 @@ model RadioDaily {
   @@map("radio_daily")
 }
 
+// Espelho diário do WhatsApp/OneCode (por departamento × dia). abertos = chamados
+// criados no dia. color = cor da fila/depto (denormalizada). Mesmo modelo da rádio.
+model WhatsappDaily {
+  dept      String
+  day       String   @db.VarChar(10) // YYYY-MM-DD
+  abertos   Int      @default(0)
+  color     String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([dept, day])
+  @@index([day])
+  @@map("whatsapp_daily")
+}
+
 // Marcador de última sincronização por fonte (sync incremental).
 model SyncWatermark {
   source       String   @id
