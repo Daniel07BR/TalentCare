@@ -12,7 +12,7 @@ export default async function EscolaridadePage() {
       select: { nexusUserId: true, name: true, active: true, domainAccount: true, windowsUser: true, department: { select: { name: true } } },
       orderBy: { name: 'asc' },
     }),
-    prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
+    prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true, raw: true } }),
   ])
 
   const options = emps
@@ -36,6 +36,7 @@ export default async function EscolaridadePage() {
         username: e.domainAccount ?? e.windowsUser ?? null,
         dept: e.department?.name ?? '—',
         level: cur?.level ?? '', detail: cur?.detail ?? '',
+        raw: cur?.raw ?? null,
       }
     })
 

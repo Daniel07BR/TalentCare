@@ -94,8 +94,8 @@ export function parseEduDetail(detail: string | null | undefined): EduCurso[] {
     const i = seg.indexOf(': ')
     const tipo = i >= 0 ? seg.slice(0, i).trim() : 'Formação'
     let rest = (i >= 0 ? seg.slice(i + 2) : seg).trim()
-    const cursando = /p\/\s*concluir/i.test(rest)
-    rest = rest.replace(/\s*\([^)]*p\/\s*concluir\)\s*/i, '').trim()
+    const cursando = /(p\/\s*concluir|cursando)/i.test(rest)
+    rest = rest.replace(/\s*\([^)]*(p\/\s*concluir|cursando)\)\s*/i, '').trim()
     return { tipo, nome: rest, status: cursando ? 'Cursando' : 'Concluído' } as EduCurso
   }).filter((c) => c.nome)
 }
