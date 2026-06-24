@@ -149,9 +149,10 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
   for (let k = 0; k < emp.advertencias; k++) disc.push({ tipo: 'Advertência', cor: 'var(--warning)', bg: 'rgba(245,166,35,.13)', motivo: ['Atraso reincidente', 'Falta não justificada', 'Descumprimento de prazo'][k % 3], quando: admissao(Math.round(emp.tempoMeses * (0.6 - k * 0.15))) })
   for (let k = 0; k < emp.suspensoes; k++) disc.push({ tipo: 'Suspensão', cor: 'var(--danger)', bg: 'rgba(229,72,77,.13)', motivo: 'Conduta · 1 dia', quando: admissao(Math.round(emp.tempoMeses * 0.25)) })
 
-  const radioMax = Math.max(...emp.radioSemana, 1)
-  const radioBars = emp.radioSemana.map((v, i) => ({ h: Math.round(v / radioMax * 100) + '%', sem: 'S' + (i + 1) }))
-  const radioMedia = +(emp.radioSemana.reduce((a, b) => a + b, 0) / emp.radioSemana.length).toFixed(1)
+  // Rádio Itamarathy (dados REAIS via .68): horas acumuladas, sessões e última escuta.
+  const radioUltima = emp.radioUltima
+    ? new Date(emp.radioUltima).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+    : null
 
   const dec = decisionFor(data, emp)
 
@@ -172,7 +173,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     assid: Math.max(0, 100 - emp.faltas * 5 - emp.atrasos * 2), atrasos: emp.atrasos, faltas: emp.faltas,
     advert: emp.advertencias, susp: emp.suspensoes, disc, discEmpty: disc.length === 0,
     heat: heatmapFor(seed, emp.score),
-    radioHoras: emp.radioHoras, radioMedia, radioBars,
+    radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima,
     grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
     treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,

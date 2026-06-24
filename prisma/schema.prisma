@@ -120,3 +120,37 @@ model ClassroomStat {
 
   @@map("classroom_stats")
 }
+
+model RadioStat {
+  nexusUserId    String    @id @map("nexus_user_id")
+  totalSeconds   Int       @default(0) @map("total_seconds")
+  sessions       Int       @default(0)
+  lastListenedAt DateTime? @map("last_listened_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("radio_stats")
+}
+
+// Espelho diário do uso da rádio (por usuário × dia) — base dos filtros de
+// período. day = data local (America/Sao_Paulo) vinda do .68. Upsert SET por dia
+// torna o sync incremental idempotente.
+model RadioDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10) // YYYY-MM-DD
+  seconds     Int      @default(0)
+  sessions    Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("radio_daily")
+}
+
+// Marcador de última sincronização por fonte (sync incremental).
+model SyncWatermark {
+  source       String   @id
+  lastSyncedAt DateTime @map("last_synced_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("sync_watermark")
+}

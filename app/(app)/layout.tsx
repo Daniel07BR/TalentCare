@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { getTalentData } from '@/lib/data/source'
 import AppShell from './AppShell'
+import PrepareGate from './PrepareGate'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       me={{ id: me?.id ?? uid ?? '', cargo: me?.jobTitle ?? null, hasAvatar: !!me?.avatarUrl }}
       data={data}
     >
+      <PrepareGate />
       {children}
     </AppShell>
   )

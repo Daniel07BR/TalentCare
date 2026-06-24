@@ -32,8 +32,9 @@ export type Employee = {
   atrasos: number
   advertencias: number
   suspensoes: number
-  radioHoras: number
-  radioSemana: number[]
+  radioHoras: number          // horas de rádio ouvidas (REAL, acumulado)
+  radioSessoes: number        // nº de sessões de rádio (REAL)
+  radioUltima: string | null  // ISO da última escuta (REAL)
   admissao: string
   birthDate: string | null
   gender: string | null
@@ -50,6 +51,9 @@ export type Employee = {
 /** Métricas REAIS do ClassRoom (frente B). */
 export type ClassroomStat = { videosCompleted: number; coursesCompleted: number; coursesCreated: number }
 
+/** Métricas REAIS da Rádio Itamarathy (frente B). */
+export type RadioStat = { totalSeconds: number; sessions: number; lastListenedAt: string | null }
+
 export type Department = {
   id: string
   nome: string
@@ -60,6 +64,8 @@ export type Department = {
   color: string
   lider: string
   classroom: ClassroomStat
+  radioHoras: number    // soma de horas de rádio do depto (REAL)
+  radioSessoes: number  // soma de sessões de rádio do depto (REAL)
 }
 
 export type TalentData = {
@@ -84,6 +90,7 @@ export type Identity = {
   birthDate: string | null
   gender: string | null
   classroom: ClassroomStat
+  radio: RadioStat
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
@@ -233,8 +240,9 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     tasksDone, tasksLate: Math.round(tasksDone * (0.03 + rnd(seed * 5) * 0.13)), tasksPend: Math.round(rnd(seed * 4) * 16),
     faltas: Math.round(rnd(seed * 9) * 4), atrasos: Math.round(rnd(seed * 11) * 9),
     advertencias: Math.round(rnd(seed * 6.3) * 3), suspensoes: rnd(seed * 8.1) > 0.82 ? 1 : 0,
-    radioHoras: +(28 + rnd(seed * 4.7) * 92).toFixed(0),
-    radioSemana: Array.from({ length: 8 }, (_, w) => +((2 + rnd(seed * 3 + w * 1.7) * 7)).toFixed(1)),
+    radioHoras: Math.round(id8.radio.totalSeconds / 3600),
+    radioSessoes: id8.radio.sessions,
+    radioUltima: id8.radio.lastListenedAt,
     admissao: id8.entryDate && !isNaN(id8.entryDate.getTime())
       ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
       : admissao(tempoMeses),
@@ -291,8 +299,12 @@ export function assembleData(identities: Identity[]): TalentData {
         }),
         zeroClassroom(),
       )
+      // Rádio (horas/sessões) SOMA todos, inclusive desligados.
+      const radioHoras = all.reduce((a, e) => a + e.radioHoras, 0)
+      const radioSessoes = all.reduce((a, e) => a + e.radioSessoes, 0)
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
+        radioHoras, radioSessoes,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }

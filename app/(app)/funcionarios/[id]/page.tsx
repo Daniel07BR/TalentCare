@@ -53,6 +53,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               {vm.idade != null && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Idade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.idade} anos</div></div>}
               {vm.nascimento && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Nascimento</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.nascimento}</div></div>}
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Escolaridade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.esc}</div></div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Rádio</div>
+                <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--chart-2)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M16.5 4 7 8" /><rect x="3" y="8" width="18" height="12" rx="2" /><circle cx="8" cy="14" r="3" /><path d="M16 12h.01M18 16h.01" />
+                  </svg>
+                  {vm.radioHoras.toLocaleString('pt-BR')}h
+                </div>
+              </div>
             </div>
             <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
           </div>
@@ -160,16 +169,26 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--accent)' }} /> Mais
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 13, fontWeight: 600 }}>Rádio da empresa</span><span style={{ fontSize: 11, color: 'var(--text-mute)' }}>8 semanas</span></div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 14 }}><span className="cnum" style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-1px', color: 'var(--chart-2)' }}>{vm.radioHoras}h</span><span style={{ fontSize: 12, color: 'var(--text-dim)' }}>· média {vm.radioMedia}h/sem</span></div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 74 }}>
-                      {vm.radioBars.map((b, i) => (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
-                          <div className="crise" style={{ width: '100%', height: b.h, background: 'var(--chart-2)', borderRadius: '3px 3px 0 0', minHeight: 3 }} />
-                          <span style={{ fontSize: 9.5, color: 'var(--text-mute)' }}>{b.sem}</span>
-                        </div>
-                      ))}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--chart-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M16.5 4 7 8" />
+                          <rect x="3" y="8" width="18" height="12" rx="2" />
+                          <circle cx="8" cy="14" r="3" />
+                          <path d="M16 12h.01M18 16h.01" />
+                        </svg>
+                        Rádio Itamarathy
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>acumulado</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                      <span className="cnum" style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--chart-2)' }}>{vm.radioHoras}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
+                      {vm.radioSessoes.toLocaleString('pt-BR')} {vm.radioSessoes === 1 ? 'sessão' : 'sessões'}
+                      {vm.radioUltima ? <> · última escuta {vm.radioUltima}</> : null}
                     </div>
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>

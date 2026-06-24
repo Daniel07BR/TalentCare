@@ -6,6 +6,8 @@ import { buildDashboard } from '@/lib/mock/dashboard'
 import { classroomVM } from '@/lib/mock/classroom'
 import { generationsVM, genderVM } from '@/lib/mock/demographics'
 import Avatar from '../Avatar'
+import WhatsappDeptCard from './WhatsappDeptCard'
+import RadioDeptCard from './RadioDeptCard'
 
 export default function DashboardPage() {
   const { period } = usePeriod()
@@ -50,28 +52,9 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Performance por departamento + Curva de turnover */}
+      {/* Atendimentos por departamento (WhatsApp) + Curva de turnover */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Performance por departamento</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Score médio agregado (0–100)</div>
-            </div>
-            <span style={{ fontSize: 11, color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 20, padding: '3px 10px' }}>{vm.deptCount} setores</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {vm.deptBars.map((d) => (
-              <div key={d.id} className="tc-row" onClick={() => router.push(`/departamentos/${d.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 6, padding: '2px 4px', margin: '-2px -4px' }}>
-                <div style={{ width: 96, flex: 'none', fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
-                <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-                  <div className="cbar" style={{ height: '100%', width: d.pct, background: d.color, borderRadius: 20 }} />
-                </div>
-                <div style={{ width: 34, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.score}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <WhatsappDeptCard />
 
         <div className="tc-card" onClick={() => router.push('/turnover')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -237,6 +220,9 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Rádio Itamarathy — horas por departamento NO PERÍODO (dados reais, frente B) */}
+      <RadioDeptCard />
     </div>
   )
 }
