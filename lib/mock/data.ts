@@ -39,6 +39,7 @@ export type Employee = {
   gender: string | null
   hireISO: string | null
   leftISO: string | null
+  eduCursos: EduCurso[]
   classroom: ClassroomStat
 }
 
@@ -79,6 +80,24 @@ export type Identity = {
   gender: string | null
   classroom: ClassroomStat
   escolaridade: string | null
+  // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
+  eduDetail: string | null
+}
+
+/** Curso de formação acadêmica (dado real do RH). */
+export type EduCurso = { tipo: string; nome: string; status: 'Concluído' | 'Cursando' }
+
+/** Quebra o detail "Tipo: Nome (N anos p/ concluir) · ..." em cursos estruturados. */
+export function parseEduDetail(detail: string | null | undefined): EduCurso[] {
+  if (!detail) return []
+  return detail.split(' · ').map((seg) => {
+    const i = seg.indexOf(': ')
+    const tipo = i >= 0 ? seg.slice(0, i).trim() : 'Formação'
+    let rest = (i >= 0 ? seg.slice(i + 2) : seg).trim()
+    const cursando = /p\/\s*concluir/i.test(rest)
+    rest = rest.replace(/\s*\([^)]*p\/\s*concluir\)\s*/i, '').trim()
+    return { tipo, nome: rest, status: cursando ? 'Cursando' : 'Concluído' } as EduCurso
+  }).filter((c) => c.nome)
 }
 
 export const FACTORS = [
@@ -212,6 +231,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     gender: id8.gender,
     hireISO: id8.entryDate ? id8.entryDate.toISOString() : null,
     leftISO: id8.leftDate ? id8.leftDate.toISOString() : null,
+    eduCursos: parseEduDetail(id8.eduDetail),
     classroom: id8.classroom,
   }
 }

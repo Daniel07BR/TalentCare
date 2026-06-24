@@ -23,12 +23,13 @@ export async function getTalentData(): Promise<TalentData> {
       orderBy: { name: 'asc' },
     }),
     prisma.classroomStat.findMany(),
-    prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true } }),
+    prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
   ])
   // Oculta Diretoria/Sistemas do painel (mantém o login deles intacto).
   const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name))
   const statByNexus = new Map(stats.map((s) => [s.nexusUserId, s]))
   const eduByNexus = new Map(edu.map((e) => [e.nexusUserId, e.level]))
+  const eduDetailByNexus = new Map(edu.map((e) => [e.nexusUserId, e.detail]))
 
   const identities: Identity[] = users.map((u) => {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined
@@ -46,6 +47,7 @@ export async function getTalentData(): Promise<TalentData> {
       birthDate: u.birthDate ? u.birthDate.toISOString() : null,
       gender: u.gender ?? null,
       escolaridade: (u.nexusUserId ? eduByNexus.get(u.nexusUserId) : null) ?? null,
+      eduDetail: (u.nexusUserId ? eduDetailByNexus.get(u.nexusUserId) : null) ?? null,
       classroom: {
         videosCompleted: cs?.videosCompleted ?? 0,
         coursesCompleted: cs?.coursesCompleted ?? 0,

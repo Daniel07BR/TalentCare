@@ -93,18 +93,13 @@ function reconhecimentoFor(emp: Employee) {
 }
 
 function formacaoFor(emp: Employee) {
-  const seed = seedOf(emp.id)
-  const pool = [
-    { nome: 'Compliance Tributário 2026', quando: 'Mar 2026' },
-    { nome: 'Excel Avançado para Análise', quando: 'Jan 2026' },
-    { nome: 'Liderança & Feedback', quando: 'Nov 2025' },
-    { nome: 'LGPD na prática', quando: 'Set 2025' },
-    { nome: 'Power BI — Dashboards', quando: 'Em andamento' },
-  ]
-  const cursos = pool.filter((_, i) => rnd(seed + i) > 0.35)
-  const certs = [{ nome: 'Certificação Itamarathy Academy', quando: '2025' }]
-  if (emp.score >= 80) certs.push({ nome: 'Gestão de Processos — Nível II', quando: '2026' })
-  return { grau: emp.escolaridade, cursos, certs, totalHoras: 40 + Math.round(rnd(seed) * 120) }
+  // Formação acadêmica REAL (cadastro RH): graduação/pós/médio técnico etc.
+  // Substitui os cursos fictícios. Quem não tem dado → lista vazia (sem inventar).
+  const cursos = emp.eduCursos.map((c) => ({
+    nome: c.nome,
+    quando: c.status === 'Cursando' ? `${c.tipo} · cursando` : c.tipo,
+  }))
+  return { grau: emp.escolaridade, cursos, certs: [] as { nome: string; quando: string }[] }
 }
 
 function decisionFor(data: TalentData, emp: Employee) {
@@ -178,7 +173,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     advert: emp.advertencias, susp: emp.suspensoes, disc, discEmpty: disc.length === 0,
     heat: heatmapFor(seed, emp.score),
     radioHoras: emp.radioHoras, radioMedia, radioBars,
-    grau: fm.grau, cursos: fm.cursos, certs: fm.certs, horas: fm.totalHoras,
+    grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
     classroom: {
       criados: emp.classroom.coursesCreated,
       assistidos: emp.classroom.coursesCompleted,

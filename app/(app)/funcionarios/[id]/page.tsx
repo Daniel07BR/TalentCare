@@ -206,27 +206,20 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 </div>
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
                   <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{vm.grau}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Escolaridade</div></div>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{vm.horas}h</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Treinamento (12m)</div></div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Cursos &amp; treinamentos</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
-                  {vm.cursos.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>{c.nome}</span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{c.quando}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Certificações</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {vm.certs.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '9px 13px' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flex: 'none' }} />
-                      <span style={{ fontSize: 12.5, fontWeight: 500 }}>{c.nome}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{c.quando}</span>
-                    </div>
-                  ))}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Formação acadêmica <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· cadastro RH</span></div>
+                {vm.cursos.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
+                    {vm.cursos.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
+                        <span style={{ fontSize: 13, fontWeight: 500 }}>{c.nome}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{c.quando}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 22 }}>Sem cursos informados no cadastro.</div>
+                )}
               </>
             )}
 
