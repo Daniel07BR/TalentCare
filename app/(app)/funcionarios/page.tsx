@@ -11,7 +11,7 @@ const FAIXA_CHIPS = ['Todos', '75–100', '50–74', '0–49']
 
 export default function FuncionariosPage() {
   const router = useRouter()
-  const [f, setF] = useState<DirFilters>({ search: '', dept: 'Todos', status: 'Todos', faixa: 'Todos' })
+  const [f, setF] = useState<DirFilters>({ search: '', dept: 'Todos', status: 'Ativo', faixa: 'Todos' })
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 

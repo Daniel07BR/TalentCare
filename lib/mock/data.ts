@@ -265,10 +265,13 @@ export function assembleData(identities: Identity[]): TalentData {
 
   const departments: Department[] = Object.keys(deptMeta)
     .map((id) => {
-      const emps = employees.filter((e) => e.dept === id)
-      if (!emps.length) return null
-      const hc = emps.length
-      const score = Math.round(emps.reduce((a, e) => a + e.score, 0) / hc)
+      const all = employees.filter((e) => e.dept === id)
+      if (!all.length) return null
+      // Headcount e score do setor consideram só ATIVOS (desligados não contam).
+      const ativos = all.filter((e) => e.status !== 'Desligado')
+      const base = ativos.length ? ativos : all
+      const hc = ativos.length
+      const score = Math.round(base.reduce((a, e) => a + e.score, 0) / base.length)
       const dseed = seedOf(id)
       const turnover = +(3.5 + rnd(dseed * 5.3) * 13).toFixed(1)
       const spark: number[] = []
@@ -279,7 +282,8 @@ export function assembleData(identities: Identity[]): TalentData {
         if (m === 11) v = score
         spark.push(v)
       }
-      const classroom = emps.reduce(
+      // ClassRoom (vídeos/cursos) SOMA todos, inclusive desligados.
+      const classroom = all.reduce(
         (a, e) => ({
           videosCompleted: a.videosCompleted + e.classroom.videosCompleted,
           coursesCompleted: a.coursesCompleted + e.classroom.coursesCompleted,
@@ -289,7 +293,7 @@ export function assembleData(identities: Identity[]): TalentData {
       )
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
-        lider: (emps.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || emps.slice().sort((a, b) => b.score - a.score)[0]).nome,
+        lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }
     })

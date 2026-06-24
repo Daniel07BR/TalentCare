@@ -43,5 +43,5 @@ export function comparison(data: TalentData, aId: string, bId: string) {
 }
 
 export function cmpOptions(data: TalentData) {
-  return data.employees.map((e) => ({ value: e.id, label: e.nome + ' · ' + deptName(data, e.dept) }))
+  return data.employees.filter((e) => e.status !== 'Desligado').map((e) => ({ value: e.id, label: e.nome + ' · ' + deptName(data, e.dept) }))
 }

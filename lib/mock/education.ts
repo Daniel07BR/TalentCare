@@ -41,14 +41,17 @@ function people(data: TalentData, emps: Employee[]): EscPerson[] {
 }
 
 export function educationByDept(data: TalentData) {
-  const overall = distribution(data.employees)
+  // Escolaridade considera apenas ATIVOS (desligados não entram na distribuição).
+  const ativos = data.employees.filter((e) => e.status !== 'Desligado')
+  const overall = distribution(ativos)
   const byDept = [...data.departments]
     .sort((a, b) => b.headcount - a.headcount)
     .map((d) => {
-      const emps = data.employees.filter((e) => e.dept === d.id)
+      const emps = ativos.filter((e) => e.dept === d.id)
       const dist = distribution(emps)
       return { id: d.id, nome: d.nome, total: dist.total, informed: dist.informed, segs: dist.segs, people: people(data, emps) }
     })
-  const semInfo = people(data, data.employees.filter((e) => !e.escolaridade)).sort((a, b) => a.dept.localeCompare(b.dept) || a.nome.localeCompare(b.nome))
+    .filter((d) => d.total > 0)
+  const semInfo = people(data, ativos.filter((e) => !e.escolaridade)).sort((a, b) => a.dept.localeCompare(b.dept) || a.nome.localeCompare(b.nome))
   return { overall, byDept, semInfo }
 }

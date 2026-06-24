@@ -9,15 +9,17 @@ export function deptListVM(data: TalentData) {
     id: d.id, nome: d.nome, score: d.score, scoreColor: scoreColor(d.score), headcount: d.headcount,
     turnover: d.turnover, lider: d.lider, color: d.color, spark: geomSpark(d.spark, 120, 28),
   }))
-  const totalHc = data.employees.length || 1
-  const avgScore = Math.round(data.departments.reduce((a, d) => a + d.score * d.headcount, 0) / totalHc)
-  return { cards, totalHc: data.employees.length, avgScore, n: data.departments.length }
+  // Totais consideram só ativos (headcount do dept já é ativo).
+  const totalHc = data.departments.reduce((a, d) => a + d.headcount, 0)
+  const avgScore = totalHc ? Math.round(data.departments.reduce((a, d) => a + d.score * d.headcount, 0) / totalHc) : 0
+  return { cards, totalHc, avgScore, n: data.departments.length }
 }
 
 export function deptDetailVM(data: TalentData, deptId: string) {
   const dep = data.departments.find((d) => d.id === deptId)
   if (!dep) return null
-  const emps = data.employees.filter((e) => e.dept === dep.id).sort((a, b) => b.score - a.score)
+  // Ranking de pessoas do setor: só ativos (desligados não entram).
+  const emps = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado').sort((a, b) => b.score - a.score)
   const ativos = data.employees.filter((e) => e.status !== 'Desligado')
   const compAvg = ativos.length ? Math.round(ativos.reduce((a, e) => a + e.score, 0) / ativos.length) : dep.score
   const hl = geomLine(dep.spark, 300, 84, 8)
