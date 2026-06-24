@@ -42,6 +42,8 @@ export type Employee = {
   nexusUserId: string | null
   eduDetail: string | null
   eduCursos: EduCurso[]
+  treinoCursos: TrainingItem[]
+  treinoCerts: TrainingItem[]
   classroom: ClassroomStat
 }
 
@@ -85,10 +87,16 @@ export type Identity = {
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
+  // Cursos/treinamentos e certificações (listas livres editadas na ficha).
+  treinoCursos: TrainingItem[]
+  treinoCerts: TrainingItem[]
 }
 
 /** Curso de formação acadêmica (dado real do RH). */
 export type EduCurso = { tipo: string; nome: string; status: 'Concluído' | 'Cursando' }
+
+/** Item de curso/treinamento ou certificação (lista livre editável). */
+export type TrainingItem = { nome: string; ano: string }
 
 /** Quebra o detail "Tipo: Nome (N anos p/ concluir) · ..." em cursos estruturados. */
 export function parseEduDetail(detail: string | null | undefined): EduCurso[] {
@@ -237,6 +245,8 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     nexusUserId: id8.nexusUserId,
     eduDetail: id8.eduDetail,
     eduCursos: parseEduDetail(id8.eduDetail),
+    treinoCursos: id8.treinoCursos,
+    treinoCerts: id8.treinoCerts,
     classroom: id8.classroom,
   }
 }

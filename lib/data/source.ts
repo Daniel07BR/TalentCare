@@ -1,6 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
-import { assembleData, type Identity, type TalentData } from '@/lib/mock/data'
+import { assembleData, type Identity, type TalentData, type TrainingItem } from '@/lib/mock/data'
 import { isHiddenDept } from '@/lib/hidden-depts'
 
 /**
@@ -8,7 +8,7 @@ import { isHiddenDept } from '@/lib/hidden-depts'
  * Lê os funcionários sincronizados (origin=nexus) e monta employees/departments.
  */
 export async function getTalentData(): Promise<TalentData> {
-  const [usersRaw, stats, edu] = await Promise.all([
+  const [usersRaw, stats, edu, train] = await Promise.all([
     prisma.user.findMany({
       where: { origin: 'nexus' },
       include: { department: { select: { id: true, name: true } } },
@@ -16,12 +16,15 @@ export async function getTalentData(): Promise<TalentData> {
     }),
     prisma.classroomStat.findMany(),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
+    prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
   ])
   // Oculta Diretoria/Sistemas do painel (mantém o login deles intacto).
   const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name))
   const statByNexus = new Map(stats.map((s) => [s.nexusUserId, s]))
   const eduByNexus = new Map(edu.map((e) => [e.nexusUserId, e.level]))
   const eduDetailByNexus = new Map(edu.map((e) => [e.nexusUserId, e.detail]))
+  const asItems = (v: unknown): TrainingItem[] => Array.isArray(v) ? (v as TrainingItem[]) : []
+  const trainByNexus = new Map(train.map((t) => [t.nexusUserId, t]))
 
   const identities: Identity[] = users.map((u) => {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined
@@ -41,6 +44,8 @@ export async function getTalentData(): Promise<TalentData> {
       gender: u.gender ?? null,
       escolaridade: (u.nexusUserId ? eduByNexus.get(u.nexusUserId) : null) ?? null,
       eduDetail: (u.nexusUserId ? eduDetailByNexus.get(u.nexusUserId) : null) ?? null,
+      treinoCursos: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.cursos : null),
+      treinoCerts: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.certs : null),
       classroom: {
         videosCompleted: cs?.videosCompleted ?? 0,
         coursesCompleted: cs?.coursesCompleted ?? 0,

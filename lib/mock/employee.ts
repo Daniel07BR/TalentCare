@@ -175,6 +175,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     radioHoras: emp.radioHoras, radioMedia, radioBars,
     grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
+    treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,
     birthISO: emp.birthDate ? emp.birthDate.slice(0, 10) : '', hireISO: emp.hireISO ? emp.hireISO.slice(0, 10) : '',
     classroom: {
       criados: emp.classroom.coursesCreated,

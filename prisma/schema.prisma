@@ -82,6 +82,17 @@ model EmployeeEducation {
   @@map("employee_education")
 }
 
+// Cursos/treinamentos e certificações (listas livres, editadas na ficha).
+// Independente da escolaridade. Json = [{ nome: string, ano?: string }].
+model EmployeeTraining {
+  nexusUserId String   @id @map("nexus_user_id")
+  cursos      Json     @default("[]")
+  certs       Json     @default("[]")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("employee_training")
+}
+
 // Linhas cruas da planilha + estado do vínculo (alimenta a tela de vínculo).
 model EducationStaging {
   id                String   @id @default(cuid())
