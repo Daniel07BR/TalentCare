@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
 
 type DeptRow = { name: string; color: string | null; abertos: number }
 
 export default function WhatsappDeptCard() {
+  const router = useRouter()
   const { period } = usePeriod()
   const [rows, setRows] = useState<DeptRow[] | null>(null)
-  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
 
@@ -23,7 +24,6 @@ export default function WhatsappDeptCard() {
       .then((d: { departments: DeptRow[]; totalAbertos: number }) => {
         if (!alive) return
         setRows([...d.departments].filter((x) => x.abertos > 0).sort((a, b) => b.abertos - a.abertos))
-        setTotal(d.totalAbertos)
       })
       .catch((e) => alive && setErr((e as Error).message))
       .finally(() => alive && setLoading(false))
@@ -35,7 +35,7 @@ export default function WhatsappDeptCard() {
   const max = Math.max(1, ...(rows ?? []).map((d) => d.abertos))
 
   return (
-    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
+    <div className="tc-card" onClick={() => router.push('/whatsapp')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -46,9 +46,7 @@ export default function WhatsappDeptCard() {
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>WhatsApp · chamados abertos no período</div>
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 20, padding: '3px 10px' }}>
-          {loading ? '…' : `${total.toLocaleString('pt-BR')} chamados`}
-        </span>
+        <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>ver resumo ›</span>
       </div>
 
       {loading ? (

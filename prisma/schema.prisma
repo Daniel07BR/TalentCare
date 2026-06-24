@@ -164,15 +164,39 @@ model RadioDaily {
 // Espelho diário do WhatsApp/OneCode (por departamento × dia). abertos = chamados
 // criados no dia. color = cor da fila/depto (denormalizada). Mesmo modelo da rádio.
 model WhatsappDaily {
-  dept      String
-  day       String   @db.VarChar(10) // YYYY-MM-DD
-  abertos   Int      @default(0)
-  color     String?
-  updatedAt DateTime @updatedAt @map("updated_at")
+  dept        String
+  day         String   @db.VarChar(10) // YYYY-MM-DD
+  abertos     Int      @default(0)
+  finalizados Int      @default(0)
+  handleSum   Int      @default(0) @map("handle_sum") // soma de handle_seconds dos finalizados no dia
+  color       String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([dept, day])
   @@index([day])
   @@map("whatsapp_daily")
+}
+
+// Atendimentos abertos por atendente × dia (p/ ranking de atendentes no período).
+model WhatsappAttendantDaily {
+  name      String
+  day       String   @db.VarChar(10)
+  abertos   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([name, day])
+  @@index([day])
+  @@map("whatsapp_attendant_daily")
+}
+
+// Snapshot "agora" do WhatsApp (não é por período): backlog/abertos atuais.
+model WhatsappSnapshot {
+  id         Int      @id @default(1)
+  pendingNow Int      @default(0) @map("pending_now")
+  openNow    Int      @default(0) @map("open_now")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_snapshot")
 }
 
 // Marcador de última sincronização por fonte (sync incremental).

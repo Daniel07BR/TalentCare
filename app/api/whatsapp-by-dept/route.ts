@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { fromDay, toDay } = periodDays(period)
   const rows = await prisma.whatsappDaily.groupBy({
     by: ['dept'],
-    where: { day: { gte: fromDay, lte: toDay } },
+    where: { day: { gte: fromDay, lte: toDay }, dept: { not: 'Sem fila' } },
     _sum: { abertos: true },
     _max: { color: true },
   })
