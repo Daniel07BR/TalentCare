@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { getTalentData } from '@/lib/data/source'
+import { isOwnerEmail } from '@/lib/nexus'
 import AppShell from './AppShell'
 import PrepareGate from './PrepareGate'
 
@@ -17,11 +18,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? await prisma.user.findUnique({ where: { id: uid }, select: { id: true, jobTitle: true, avatarUrl: true } })
     : null
   const data = await getTalentData()
+  const isOwner = isOwnerEmail(session.user.email)
 
   return (
     <AppShell
       name={session.user.name ?? 'Diretoria'}
       roleLabel={roleLabel}
+      isOwner={isOwner}
       me={{ id: me?.id ?? uid ?? '', cargo: me?.jobTitle ?? null, hasAvatar: !!me?.avatarUrl }}
       data={data}
     >

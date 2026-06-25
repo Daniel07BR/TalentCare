@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+import { isOwnerEmail } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 import { deriveLevelAndDetail, type EduItem } from '@/lib/education-edit'
 
 export async function POST(req: Request) {
   const session = await auth()
-  const role = (session?.user as { role?: string } | undefined)?.role
-  if (!session?.user || role !== 'ADMIN') {
+  if (!isOwnerEmail(session?.user?.email)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
   const body = (await req.json().catch(() => null)) as

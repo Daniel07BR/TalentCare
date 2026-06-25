@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { auth } from '@/lib/auth/config'
+import { isOwnerEmail } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 
 // Cadastro de colaboradores STAFF: pessoas reais SEM usuário no Nexus
@@ -8,9 +9,8 @@ import { prisma } from '@/lib/db/prisma'
 // (role SEM_PERMISSAO, senha inutilizável). Identidade real; métricas de sistema
 // ficam zeradas (não usam os sistemas) e o ponto/disciplina casa por nome/CPF.
 
-function isAdmin(session: Awaited<ReturnType<typeof auth>>) {
-  const role = (session?.user as { role?: string } | undefined)?.role
-  return !!session?.user && role === 'ADMIN'
+function isOwner(session: Awaited<ReturnType<typeof auth>>) {
+  return isOwnerEmail(session?.user?.email)
 }
 
 // 'YYYY-MM-DD' → meio-dia UTC (não vira o dia por fuso); '' → null.
@@ -44,7 +44,7 @@ export async function resolveDepartment(departmentId?: string | null, newDepartm
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!isAdmin(session)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  if (!isOwner(session)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const name = String(body?.name ?? '').trim()

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserPlus, Pencil, X } from 'lucide-react'
-import Avatar from '../Avatar'
+import Avatar from '../../Avatar'
 
 type Staff = {
   id: string; name: string; cpf: string; jobTitle: string; deptId: string; deptName: string

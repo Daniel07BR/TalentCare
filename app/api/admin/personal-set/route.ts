@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
+import { isOwnerEmail } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 
 // Edita dados pessoais (nascimento / admissão) de uma pessoa, por nexus_user_id.
 // Nascimento é exclusivo do TalentCare; admissão "gruda" (o sync não sobrescreve).
 export async function POST(req: Request) {
   const session = await auth()
-  const role = (session?.user as { role?: string } | undefined)?.role
-  if (!session?.user || role !== 'ADMIN') {
+  if (!isOwnerEmail(session?.user?.email)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
   const body = (await req.json().catch(() => null)) as

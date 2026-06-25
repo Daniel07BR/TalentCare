@@ -19,6 +19,13 @@ const ADMIN_EMAILS = (process.env.TALENTCARE_ADMIN_EMAILS ?? '')
 export const norm = (s: string | null | undefined) =>
   (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
 
+// "Dono" do sistema = e-mail na allowlist manual (quem administra/constrói o
+// TalentCare), distinto da Diretoria que ganha ADMIN só pelo setor. Usado p/
+// liberar a área de administração no menu.
+export function isOwnerEmail(email: string | null | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
 // Setor "Diretoria" ou email na allowlist → ADMIN. Caso contrário, SEM_PERMISSAO
 // (a pessoa existe no sistema p/ aparecer na lista, mas não acessa).
 export function mapRole(email: string | null, setor: string | null): UserRole {

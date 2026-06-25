@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
-  FileText, SlidersHorizontal, Search, Bell, ChevronRight, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock,
+  FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
+  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -15,11 +15,15 @@ import Avatar from './Avatar'
 import type { Period } from '@/lib/mock/dashboard'
 import type { TalentData } from '@/lib/mock/data'
 
+// Visão geral: só até Ranking aparece direto no topo.
 const NAV_MAIN = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/funcionarios', label: 'Funcionários', icon: Users },
   { href: '/departamentos', label: 'Departamentos', icon: Building2 },
   { href: '/ranking', label: 'Ranking', icon: Trophy },
+]
+// Resumos dos sistemas integrados (Turnover p/ baixo) ficam dentro do grupo "Sistemas".
+const NAV_SYSTEMS = [
   { href: '/turnover', label: 'Turnover', icon: TrendingUp },
   { href: '/assiduidade', label: 'Assiduidade', icon: AlarmClock },
   { href: '/classroom', label: 'ClassRoom', icon: GraduationCap },
@@ -29,7 +33,8 @@ const NAV_MAIN = [
   { href: '/helpdesk', label: 'HelpDesk', icon: LifeBuoy },
   { href: '/cide', label: 'CIDE', icon: Landmark },
 ]
-const NAV_SYS = [
+// Administração: visível apenas para o dono/admin que mantém o sistema.
+const NAV_ADMIN = [
   { href: '/equipe', label: 'Equipe interna', icon: UserPlus },
   { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
   { href: '/ponto', label: 'Casar ponto', icon: AlarmClock },
@@ -91,15 +96,22 @@ function Topbar() {
   )
 }
 
-export default function AppShell({ name, roleLabel, me, data, children }: { name: string; roleLabel: string; me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode }) {
+export default function AppShell({ name, roleLabel, isOwner = false, me, data, children }: { name: string; roleLabel: string; isOwner?: boolean; me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode }) {
   const pathname = usePathname()
   const [settled, setSettled] = useState(false)
+  const systemsActive = NAV_SYSTEMS.some((it) => isActive(pathname, it.href))
+  const [systemsOpen, setSystemsOpen] = useState(systemsActive)
 
   useEffect(() => {
     setSettled(false)
     const t = setTimeout(() => setSettled(true), 1400)
     return () => clearTimeout(t)
   }, [pathname])
+
+  // Mantém o grupo aberto ao navegar para um resumo de sistema.
+  useEffect(() => {
+    if (systemsActive) setSystemsOpen(true)
+  }, [systemsActive])
 
   const initials = (name.split(' ')[0]?.[0] ?? '') + (name.split(' ').slice(-1)[0]?.[0] ?? '')
 
@@ -127,16 +139,42 @@ export default function AppShell({ name, roleLabel, me, data, children }: { name
                 </Link>
               )
             })}
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '.7px', textTransform: 'uppercase', color: 'var(--text-mute)', padding: '16px 12px 6px' }}>Sistema</div>
-            {NAV_SYS.map((it) => {
+
+            <button
+              type="button"
+              onClick={() => setSystemsOpen((v) => !v)}
+              aria-expanded={systemsOpen}
+              className={'tc-nav' + (!systemsOpen && systemsActive ? ' on' : '')}
+              style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', fontSize: 13, fontWeight: 500, padding: '9px 12px', borderRadius: 8, color: 'var(--text-dim)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginTop: 6 }}
+            >
+              <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}><Boxes size={18} /></span>
+              <span style={{ flex: 1, textAlign: 'left' }}>Sistemas</span>
+              <span style={{ display: 'flex', transition: 'transform .18s', transform: systemsOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}><ChevronDown size={16} /></span>
+            </button>
+            {systemsOpen && NAV_SYSTEMS.map((it) => {
               const Icon = it.icon
               return (
-                <Link key={it.href} href={it.href} className={'tc-nav' + (isActive(pathname, it.href) ? ' on' : '')} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', fontSize: 13, fontWeight: 500, padding: '9px 12px', borderRadius: 8, color: 'var(--text-dim)' }}>
+                <Link key={it.href} href={it.href} className={'tc-nav' + (isActive(pathname, it.href) ? ' on' : '')} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', fontSize: 13, fontWeight: 500, padding: '9px 12px 9px 28px', borderRadius: 8, color: 'var(--text-dim)' }}>
                   <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}><Icon size={18} /></span>
                   <span style={{ flex: 1, textAlign: 'left' }}>{it.label}</span>
                 </Link>
               )
             })}
+
+            {isOwner && (
+              <>
+                <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '.7px', textTransform: 'uppercase', color: 'var(--text-mute)', padding: '16px 12px 6px' }}>Administração</div>
+                {NAV_ADMIN.map((it) => {
+                  const Icon = it.icon
+                  return (
+                    <Link key={it.href} href={it.href} className={'tc-nav' + (isActive(pathname, it.href) ? ' on' : '')} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', fontSize: 13, fontWeight: 500, padding: '9px 12px', borderRadius: 8, color: 'var(--text-dim)' }}>
+                      <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}><Icon size={18} /></span>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{it.label}</span>
+                    </Link>
+                  )
+                })}
+              </>
+            )}
           </nav>
 
           <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
