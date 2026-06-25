@@ -8,6 +8,7 @@ export type EmployeeMetrics = {
   whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
   helpdesk: { has: boolean; opened: number; resolved: number; formalized: number; tempoMedio: string }
+  cide: { has: boolean; atividades: number }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

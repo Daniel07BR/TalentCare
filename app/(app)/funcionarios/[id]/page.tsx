@@ -49,16 +49,17 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const wpp = m ? m.whatsapp : vm.whatsapp
   const cons = m?.consultoria ?? null
   const hd = m?.helpdesk ?? null
+  const cd = m?.cide ?? null
   const periodo = PERIOD_LABEL[period]
 
-  // "Atividade por sistema": REAL (period-aware via m) para os sistemas já
-  // integrados à frente B; MOCK para os que ainda não integramos (só CIDE agora).
-  // Conforme cada sistema entra, sua barra deixa de ser simulada. Marca real/simulado.
+  // "Atividade por sistema": agora TODAS as 5 fontes são REAIS (period-aware via m).
+  // Mantido o mecanismo real/simulado caso entre algum sistema novo no futuro.
   const realBySystem: Record<string, number | null> = {
     HelpDesk: m ? m.helpdesk.opened + m.helpdesk.resolved : null,
     ClassRoom: m ? m.classroom.videos + m.classroom.courses + m.classroom.created : null,
     'Painel de Atendimento': m ? m.whatsapp.abertos : null,
     'Consultoria Plus': m ? m.consultoria.total : null,
+    CIDE: m ? m.cide.atividades : null,
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
@@ -238,6 +239,24 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no HelpDesk neste período.</div>
+                    )}
+                  </div>
+                )}
+
+                {cd && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 4v16" />
+                      </svg>
+                      CIDE · cadastro geral <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                    </div>
+                    {cd.has ? (
+                      <div style={{ display: 'flex', gap: 14 }}>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-5)' }}>{cd.atividades.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Atividades registradas <span style={{ color: 'var(--text-mute)' }}>(alterações)</span></div></div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no CIDE neste período.</div>
                     )}
                   </div>
                 )}

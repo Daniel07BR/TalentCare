@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText, IdCard,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy,
+  MessagesSquare, LifeBuoy, Landmark,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -26,6 +26,7 @@ const NAV_MAIN = [
   { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { href: '/consultoria', label: 'Consultoria Plus', icon: MessagesSquare },
   { href: '/helpdesk', label: 'HelpDesk', icon: LifeBuoy },
+  { href: '/cide', label: 'CIDE', icon: Landmark },
 ]
 const NAV_SYS = [
   { href: '/cadastro', label: 'Cadastro', icon: IdCard },

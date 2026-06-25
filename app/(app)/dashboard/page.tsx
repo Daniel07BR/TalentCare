@@ -10,6 +10,7 @@ import RadioDeptCard from './RadioDeptCard'
 import ClassroomDeptCard from './ClassroomDeptCard'
 import ConsultoriaDeptCard from './ConsultoriaDeptCard'
 import HelpdeskDeptCard from './HelpdeskDeptCard'
+import CideDeptCard from './CideDeptCard'
 
 export default function DashboardPage() {
   const { period } = usePeriod()
@@ -203,6 +204,9 @@ export default function DashboardPage() {
 
       {/* HelpDesk — chamados por departamento NO PERÍODO (dados reais, frente B) */}
       <HelpdeskDeptCard />
+
+      {/* CIDE — atividades registradas por departamento NO PERÍODO (dados reais, frente B) */}
+      <CideDeptCard />
     </div>
   )
 }

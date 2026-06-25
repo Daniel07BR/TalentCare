@@ -177,6 +177,21 @@ model WhatsappDaily {
   @@map("whatsapp_daily")
 }
 
+// Espelho diário da atividade do CIDE (por usuário × dia): atividades = nº de
+// alterações registradas no histórico do CIDE atribuídas à pessoa (responsável),
+// excluindo eventos automáticos ("Sistema"). day = data local (America/Sao_Paulo)
+// pelo created_at (quando registrada). Sync incremental idempotente (SET).
+model CideDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10) // YYYY-MM-DD
+  atividades  Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("cide_daily")
+}
+
 // Espelho diário da atividade do HelpDesk (por usuário × dia):
 //   opened  = chamados abertos pela pessoa (solicitante, por created_at)
 //   resolved = chamados resolvidos pela pessoa (responsável, DONE, por closed_at)

@@ -49,6 +49,7 @@ export type Employee = {
   whatsapp: WhatsappStat
   consultoria: ConsultoriaStat
   helpdesk: HelpdeskStat
+  cide: CideStat
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -68,6 +69,9 @@ export type ConsultoriaStat = { studies: number; tickets: number; messages: numb
  *  (também contam como resolvidos, mas fora do tempo médio). */
 export type HelpdeskStat = { opened: number; resolved: number; formalized: number; resolvedSeconds: number }
 
+/** Métricas REAIS do CIDE (frente B): alterações/atividades registradas por pessoa. */
+export type CideStat = { atividades: number }
+
 export type Department = {
   id: string
   nome: string
@@ -82,6 +86,7 @@ export type Department = {
   radioSessoes: number  // soma de sessões de rádio do depto (REAL)
   consultoria: ConsultoriaStat // soma da atividade do Consultoria Plus do depto (REAL)
   helpdesk: HelpdeskStat // soma da atividade do HelpDesk do depto (REAL)
+  cide: CideStat // soma da atividade do CIDE do depto (REAL)
 }
 
 export type TalentData = {
@@ -110,6 +115,7 @@ export type Identity = {
   whatsapp: WhatsappStat
   consultoria: ConsultoriaStat
   helpdesk: HelpdeskStat
+  cide: CideStat
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
@@ -278,12 +284,14 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     whatsapp: id8.whatsapp,
     consultoria: id8.consultoria,
     helpdesk: id8.helpdesk,
+    cide: id8.cide,
   }
 }
 
 const zeroClassroom = (): ClassroomStat => ({ videosCompleted: 0, coursesCompleted: 0, coursesCreated: 0 })
 const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messages: 0, comments: 0 })
 const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 0, resolvedSeconds: 0 })
+const zeroCide = (): CideStat => ({ atividades: 0 })
 
 /** Monta o TalentData (employees + departments) a partir das identidades reais. */
 export function assembleData(identities: Identity[]): TalentData {
@@ -346,9 +354,11 @@ export function assembleData(identities: Identity[]): TalentData {
         }),
         zeroHelpdesk(),
       )
+      // CIDE (atividades) SOMA todos, inclusive desligados.
+      const cide = all.reduce((a, e) => ({ atividades: a.atividades + e.cide.atividades }), zeroCide())
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
-        radioHoras, radioSessoes, consultoria, helpdesk,
+        radioHoras, radioSessoes, consultoria, helpdesk, cide,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }
