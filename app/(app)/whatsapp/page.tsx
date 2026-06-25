@@ -123,7 +123,13 @@ export default function WhatsappPage() {
                 {ov.attendants.map((a, i) => {
                   const emp = empByName.get(norm(a.name))
                   return (
-                    <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <div
+                      key={a.name}
+                      className={emp ? 'tc-row' : undefined}
+                      onClick={emp ? () => router.push(`/funcionarios/${emp.id}`) : undefined}
+                      title={emp ? 'Ver perfil' : 'Atendente sem ficha no TalentCare'}
+                      style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: emp ? 'pointer' : 'default', borderRadius: 8, padding: '3px 6px', margin: '-3px -6px' }}
+                    >
                       <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>
                       {emp ? (
                         <Avatar id={emp.id} hasAvatar={emp.hasAvatar} initials={initialsOf(a.name)} color={emp.color} size={26} />
