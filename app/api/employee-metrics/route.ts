@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id }, select: { nexusUserId: true, name: true } })
   if (!user) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
 
-  const [radio, classroom, wpp] = await Promise.all([
+  const [radio, classroom, wpp, cons] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
       ? prisma.classroomDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { videos: true, courses: true, created: true } })
       : null,
     prisma.whatsappAttendantDaily.aggregate({ where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true, handleSum: true } }),
+    user.nexusUserId
+      ? prisma.consultoriaDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } })
+      : null,
   ])
 
   const rSec = radio?._sum.seconds ?? 0
@@ -42,11 +45,17 @@ export async function GET(req: NextRequest) {
   const wAb = wpp._sum.abertos ?? 0
   const wFi = wpp._sum.finalizados ?? 0
   const wHs = wpp._sum.handleSum ?? 0
+  const cStu = cons?._sum.studies ?? 0
+  const cTic = cons?._sum.tickets ?? 0
+  const cMsg = cons?._sum.messages ?? 0
+  const cCom = cons?._sum.comments ?? 0
+  const cTotal = cStu + cTic + cMsg + cCom
 
   return NextResponse.json({
     period, fromDay, toDay,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: { has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0) },
+    consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
   })
 }

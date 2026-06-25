@@ -8,7 +8,7 @@ import { isHiddenDept } from '@/lib/hidden-depts'
  * Lê os funcionários sincronizados (origin=nexus) e monta employees/departments.
  */
 export async function getTalentData(): Promise<TalentData> {
-  const [usersRaw, stats, radioStats, whatsappAtt, edu, train] = await Promise.all([
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, edu, train] = await Promise.all([
     prisma.user.findMany({
       where: { origin: 'nexus' },
       include: { department: { select: { id: true, name: true } } },
@@ -30,6 +30,11 @@ export async function getTalentData(): Promise<TalentData> {
       by: ['name'],
       _sum: { abertos: true, finalizados: true, handleSum: true },
     }),
+    // Consultoria Plus ACUMULADO (todo o histórico) somado do espelho diário.
+    prisma.consultoriaDaily.groupBy({
+      by: ['nexusUserId'],
+      _sum: { studies: true, tickets: true, messages: true, comments: true },
+    }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
   ])
@@ -37,6 +42,7 @@ export async function getTalentData(): Promise<TalentData> {
   const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name))
   const statByNexus = new Map(stats.map((s) => [s.nexusUserId, s]))
   const radioByNexus = new Map(radioStats.map((r) => [r.nexusUserId, r]))
+  const consultoriaByNexus = new Map(consultoriaStats.map((c) => [c.nexusUserId, c]))
   // WhatsApp por nome normalizado (atendente → funcionário).
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const whatsappByName = new Map(whatsappAtt.map((w) => [normName(w.name), w]))
@@ -48,6 +54,7 @@ export async function getTalentData(): Promise<TalentData> {
   const identities: Identity[] = users.map((u) => {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined
     const rs = u.nexusUserId ? radioByNexus.get(u.nexusUserId) : undefined
+    const cps = u.nexusUserId ? consultoriaByNexus.get(u.nexusUserId) : undefined
     const ws = whatsappByName.get(normName(u.name))
     return {
       id: u.id,
@@ -82,6 +89,12 @@ export async function getTalentData(): Promise<TalentData> {
         abertos: ws?._sum.abertos ?? 0,
         finalizados: ws?._sum.finalizados ?? 0,
         handleSum: ws?._sum.handleSum ?? 0,
+      },
+      consultoria: {
+        studies: cps?._sum.studies ?? 0,
+        tickets: cps?._sum.tickets ?? 0,
+        messages: cps?._sum.messages ?? 0,
+        comments: cps?._sum.comments ?? 0,
       },
     }
   })

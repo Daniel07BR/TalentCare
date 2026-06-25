@@ -6,6 +6,7 @@ export type EmployeeMetrics = {
   radio: { horas: number; sessoes: number; ultimaDay: string | null }
   classroom: { videos: number; courses: number; created: number; total: number }
   whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
+  consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

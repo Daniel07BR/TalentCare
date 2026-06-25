@@ -177,6 +177,24 @@ model WhatsappDaily {
   @@map("whatsapp_daily")
 }
 
+// Espelho diário da atividade do Consultoria Plus (por usuário × dia). Quatro
+// contagens por createdAt: estudos publicados, chamados abertos, mensagens em
+// chamados, comentários em estudos. day = data local (America/Sao_Paulo) vinda
+// do .68. Mesmo modelo da rádio/classroom (sync incremental idempotente, SET).
+model ConsultoriaDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10) // YYYY-MM-DD
+  studies     Int      @default(0)
+  tickets     Int      @default(0)
+  messages    Int      @default(0)
+  comments    Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("consultoria_daily")
+}
+
 // Atendimentos abertos por (departamento, atendente, dia) — ranking de atendentes
 // no período, geral e por departamento (do ticket/fila).
 model WhatsappAttendantDaily {

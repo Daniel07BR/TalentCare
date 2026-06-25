@@ -8,6 +8,7 @@ import Avatar from '../Avatar'
 import WhatsappDeptCard from './WhatsappDeptCard'
 import RadioDeptCard from './RadioDeptCard'
 import ClassroomDeptCard from './ClassroomDeptCard'
+import ConsultoriaDeptCard from './ConsultoriaDeptCard'
 
 export default function DashboardPage() {
   const { period } = usePeriod()
@@ -195,6 +196,9 @@ export default function DashboardPage() {
 
       {/* Rádio Itamarathy — horas por departamento NO PERÍODO (dados reais, frente B) */}
       <RadioDeptCard />
+
+      {/* Consultoria Plus — atividade por departamento NO PERÍODO (dados reais, frente B) */}
+      <ConsultoriaDeptCard />
     </div>
   )
 }

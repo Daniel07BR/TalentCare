@@ -47,6 +47,7 @@ export type Employee = {
   treinoCerts: TrainingItem[]
   classroom: ClassroomStat
   whatsapp: WhatsappStat
+  consultoria: ConsultoriaStat
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -57,6 +58,9 @@ export type RadioStat = { totalSeconds: number; sessions: number; lastListenedAt
 
 /** Métricas REAIS do WhatsApp/OneCode por atendente (frente B). */
 export type WhatsappStat = { abertos: number; finalizados: number; handleSum: number }
+
+/** Métricas REAIS do Consultoria Plus (frente B): atividade por pessoa. */
+export type ConsultoriaStat = { studies: number; tickets: number; messages: number; comments: number }
 
 export type Department = {
   id: string
@@ -70,6 +74,7 @@ export type Department = {
   classroom: ClassroomStat
   radioHoras: number    // soma de horas de rádio do depto (REAL)
   radioSessoes: number  // soma de sessões de rádio do depto (REAL)
+  consultoria: ConsultoriaStat // soma da atividade do Consultoria Plus do depto (REAL)
 }
 
 export type TalentData = {
@@ -96,6 +101,7 @@ export type Identity = {
   classroom: ClassroomStat
   radio: RadioStat
   whatsapp: WhatsappStat
+  consultoria: ConsultoriaStat
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
@@ -262,10 +268,12 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     treinoCerts: id8.treinoCerts,
     classroom: id8.classroom,
     whatsapp: id8.whatsapp,
+    consultoria: id8.consultoria,
   }
 }
 
 const zeroClassroom = (): ClassroomStat => ({ videosCompleted: 0, coursesCompleted: 0, coursesCreated: 0 })
+const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messages: 0, comments: 0 })
 
 /** Monta o TalentData (employees + departments) a partir das identidades reais. */
 export function assembleData(identities: Identity[]): TalentData {
@@ -308,9 +316,19 @@ export function assembleData(identities: Identity[]): TalentData {
       // Rádio (horas/sessões) SOMA todos, inclusive desligados.
       const radioHoras = all.reduce((a, e) => a + e.radioHoras, 0)
       const radioSessoes = all.reduce((a, e) => a + e.radioSessoes, 0)
+      // Consultoria Plus (atividade) SOMA todos, inclusive desligados.
+      const consultoria = all.reduce(
+        (a, e) => ({
+          studies: a.studies + e.consultoria.studies,
+          tickets: a.tickets + e.consultoria.tickets,
+          messages: a.messages + e.consultoria.messages,
+          comments: a.comments + e.consultoria.comments,
+        }),
+        zeroConsultoria(),
+      )
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
-        radioHoras, radioSessoes,
+        radioHoras, radioSessoes, consultoria,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }
