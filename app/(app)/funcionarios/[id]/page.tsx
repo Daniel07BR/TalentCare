@@ -52,6 +52,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const cons = m?.consultoria ?? null
   const hd = m?.helpdesk ?? null
   const cd = m?.cide ?? null
+  // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
+  const ass = m ? m.assiduidade : { assid: vm.assid, atrasos: vm.atrasos, atrasosAbon: vm.atrasosAbon, minutos: vm.minutosAtraso, advertencias: vm.advert, faltas: null, suspensoes: null }
   const periodo = PERIOD_LABEL[period]
 
   // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
@@ -298,23 +300,37 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 
             {tab === 'assiduidade' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{vm.assid}%</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Assiduidade</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{vm.atrasos}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Atrasos</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{vm.faltas}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Faltas</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{vm.advert}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{vm.susp}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>Ponto eletrônico · {periodo}</span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Mapa de presença · últimas 18 semanas</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ass.assid}%</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Assiduidade</div></div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                    <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.atrasos}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Atrasos</div>
+                    {ass.minutos > 0 || ass.atrasosAbon > 0 ? (
+                      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>
+                        {ass.minutos > 0 ? `${ass.minutos} min` : null}
+                        {ass.minutos > 0 && ass.atrasosAbon > 0 ? ' · ' : null}
+                        {ass.atrasosAbon > 0 ? `${ass.atrasosAbon} abonado${ass.atrasosAbon > 1 ? 's' : ''}` : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Faltas</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div></div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mapa de ocorrências · últimas 18 semanas</div>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12 }}>Cada quadro é um dia; a cor indica atraso (mais escuro = mais minutos). Dia limpo = sem ocorrência.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 4 }}>
-                  {vm.heat.map((c, i) => <div key={i} style={{ aspectRatio: '1', borderRadius: 3, background: c.bg }} />)}
+                  {vm.heat.map((c, i) => <div key={i} title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}${c.minutos > 0 ? ` · ${c.minutos} min` : ''}` : `${c.iso}: sem ocorrência`} style={{ aspectRatio: '1', borderRadius: 3, background: c.bg, opacity: c.future ? 0 : 1 }} />)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', marginTop: 12, fontSize: 11, color: 'var(--text-mute)' }}>
-                  Menos
+                  Sem atraso
                   <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--surface-2)' }} />
                   <div style={{ width: 11, height: 11, borderRadius: 3, background: 'rgba(245,166,35,.3)' }} />
                   <div style={{ width: 11, height: 11, borderRadius: 3, background: 'rgba(245,166,35,.55)' }} />
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--accent)' }} /> Mais
+                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--accent)' }} /> Mais minutos
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column' }}>
@@ -346,7 +362,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     )}
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Advertências &amp; suspensões</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
                     {vm.discEmpty ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 96, textAlign: 'center', gap: 6 }}>
                         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(63,178,85,.13)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✓</div>

@@ -32,7 +32,9 @@ export function buildDashboard(data: TalentData, period: Period) {
   const totalTasks = Math.round(perf.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
   const totalDone = perf.reduce((a, e) => a + e.tasksDone, 0) || 1
   const lateRate = +(perf.reduce((a, e) => a + e.tasksLate, 0) / totalDone * 100).toFixed(1)
-  const faltas = Math.round(perf.reduce((a, e) => a + e.faltas, 0) * (pf / 3 + 0.5))
+  // Atrasos do ponto (REAL, acumulado) — substitui o antigo KPI de "Faltas" (a
+  // fonte de ponto não reporta falta; ver aba Assiduidade da ficha).
+  const atrasosPonto = perf.reduce((a, e) => a + e.atrasos, 0)
   const _tnow = new Date()
   const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
   const _exits12 = nonDir.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
@@ -49,7 +51,7 @@ export function buildDashboard(data: TalentData, period: Period) {
     { label: 'Turnover', value: turnoverNow, unit: '%', delta: '-1.2 p.p.', up: true, vals: [11, 10.4, 10.9, 9.8, 9.2, 9.5, 8.9, 9.1, 8.6, 8.8, 8.5, 8.4], color: 'var(--success)' },
     { label: 'Tarefas concluídas', value: totalTasks.toLocaleString('pt-BR'), unit: '', delta: '+12%', up: true, vals: sp(3, totalTasks * 0.8), color: 'var(--chart-2)' },
     { label: '% de atrasos', value: lateRate, unit: '%', delta: '+0.8 p.p.', up: false, vals: sp(4, lateRate - 1), color: 'var(--danger)' },
-    { label: 'Faltas', value: faltas, unit: '', delta: '-4', up: true, vals: sp(5, faltas + 3), color: 'var(--chart-5)' },
+    { label: 'Atrasos (ponto)', value: atrasosPonto, unit: '', delta: 'total', up: true, vals: sp(5, atrasosPonto / 12 + 3), color: 'var(--chart-5)' },
     { label: 'Score médio', value: compScore, unit: '/100', delta: '+2', up: true, vals: [74, 75, 74, 76, 77, 76, 78, 77, 79, 78, 79, compScore], color: 'var(--accent)' },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({

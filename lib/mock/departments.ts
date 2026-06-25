@@ -1,7 +1,7 @@
 /* ============================================================
    TalentCare — Departamentos (lista + detalhe). Puro em função de data.
    ============================================================ */
-import { geomSpark, geomLine, scoreColor, seedOf, type TalentData } from './data'
+import { geomSpark, geomLine, scoreColor, type TalentData } from './data'
 import { heatmapFor } from './employee'
 
 export function deptListVM(data: TalentData) {
@@ -23,6 +23,15 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   const ativos = data.employees.filter((e) => e.status !== 'Desligado')
   const compAvg = ativos.length ? Math.round(ativos.reduce((a, e) => a + e.score, 0) / ativos.length) : dep.score
   const hl = geomLine(dep.spark, 300, 84, 8)
+  // Heatmap de OCORRÊNCIAS do setor = soma dos atrasos dos membros por dia (real).
+  const deptDays = new Map<string, { day: string; atrasos: number; minutos: number }>()
+  for (const e of data.employees.filter((e) => e.dept === dep.id)) {
+    for (const d of e.assidDays) {
+      const cur = deptDays.get(d.day) ?? { day: d.day, atrasos: 0, minutos: 0 }
+      cur.atrasos += d.atrasos; cur.minutos += d.minutos
+      deptDays.set(d.day, cur)
+    }
+  }
   const ranking = emps.map((e, i) => ({
     rank: i + 1, id: e.id, nome: e.nome, cargo: e.cargo, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar,
     score: e.score, scoreColor: scoreColor(e.score), scorePct: e.score + '%',
@@ -35,7 +44,7 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   ]
   return {
     name: dep.nome, kpis, ranking, histLine: hl.line, histArea: hl.area, compAvg, score: dep.score,
-    barSelf: dep.score + '%', barComp: compAvg + '%', heat: heatmapFor(seedOf(dep.id), dep.score),
+    barSelf: dep.score + '%', barComp: compAvg + '%', heat: heatmapFor([...deptDays.values()]),
     classroom: {
       criados: dep.classroom.coursesCreated,
       assistidos: dep.classroom.coursesCompleted,

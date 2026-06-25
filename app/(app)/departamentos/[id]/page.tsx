@@ -85,8 +85,9 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
             <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}><span>{vm.name}</span><span style={{ fontWeight: 700, color: 'var(--accent)' }}>{vm.score}</span></div><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: vm.barSelf, background: 'var(--accent)', borderRadius: 20 }} /></div></div>
             <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}><span style={{ color: 'var(--text-dim)' }}>Média da empresa</span><span style={{ fontWeight: 700 }}>{vm.compAvg}</span></div><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: vm.barComp, background: 'var(--text-mute)', borderRadius: 20 }} /></div></div>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, margin: '22px 0 12px' }}>Mapa de atividade do setor</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 3 }}>{vm.heat.map((c, i) => <div key={i} style={{ aspectRatio: '1', borderRadius: 2, background: c.bg }} />)}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '22px 0 4px' }}>Atrasos do setor · últimas 18 semanas</div>
+          <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12 }}>Soma dos atrasos dos membros por dia; mais escuro = mais minutos.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 3 }}>{vm.heat.map((c, i) => <div key={i} title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}` : `${c.iso}: sem ocorrência`} style={{ aspectRatio: '1', borderRadius: 2, background: c.bg, opacity: c.future ? 0 : 1 }} />)}</div>
         </div>
       </div>
 

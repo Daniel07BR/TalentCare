@@ -8,7 +8,8 @@ export type RankMetric = 'score' | 'tarefas' | 'assiduidade'
 
 export function metricVal(e: Employee, m: RankMetric): number {
   if (m === 'tarefas') return e.tasksDone
-  if (m === 'assiduidade') return Math.max(0, 100 - e.faltas * 5 - e.atrasos * 2)
+  // Assiduidade REAL (ponto): 100 − atrasos·2 − advertências·5 (faltas sem fonte).
+  if (m === 'assiduidade') return Math.max(0, 100 - e.atrasos * 2 - e.advertencias * 5)
   return e.score
 }
 export function metricLabel(m: RankMetric): string {

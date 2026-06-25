@@ -28,10 +28,14 @@ export type Employee = {
   tasksDone: number
   tasksLate: number
   tasksPend: number
-  faltas: number
-  atrasos: number
-  advertencias: number
-  suspensoes: number
+  faltas: number          // SEM FONTE (dump não traz falta) → 0; ficha mostra "—"
+  atrasos: number         // REAL (ponto): nº de atrasos não abonados (acumulado)
+  atrasosAbon: number     // REAL: atrasos abonados (justificados, não punem)
+  minutosAtraso: number   // REAL: soma de minutos de atraso (não abonados)
+  advertencias: number    // REAL (ponto): nº de advertências (acumulado)
+  suspensoes: number      // SEM FONTE (dump não traz suspensão) → 0; ficha mostra "—"
+  assidDays: AssidDay[]   // dias com ocorrência (últimas ~18 semanas) p/ heatmap
+  discEventos: DiscEvento[] // eventos de disciplina reais (advertências), desc
   radioHoras: number          // horas de rádio ouvidas (REAL, acumulado)
   radioSessoes: number        // nº de sessões de rádio (REAL)
   radioUltima: string | null  // ISO da última escuta (REAL)
@@ -71,6 +75,14 @@ export type HelpdeskStat = { opened: number; resolved: number; formalized: numbe
 
 /** Métricas REAIS do CIDE (frente B): alterações/atividades registradas por pessoa. */
 export type CideStat = { atividades: number }
+
+/** Assiduidade REAL (ponto, dump do Nexo). Só atrasos+advertências têm fonte;
+ *  faltas/suspensões NÃO vêm na origem → tratadas como "sem fonte" na ficha. */
+export type AssidStat = { atrasos: number; atrasosAbon: number; minutos: number; advertencias: number }
+/** Um dia com ocorrência de atraso (p/ o heatmap de ocorrências). */
+export type AssidDay = { day: string; atrasos: number; minutos: number }
+/** Evento de disciplina real (advertência; suspensão não vem na fonte). */
+export type DiscEvento = { data: string; tipo: string; motivo: string | null; dias: number | null }
 
 export type Department = {
   id: string
@@ -116,6 +128,9 @@ export type Identity = {
   consultoria: ConsultoriaStat
   helpdesk: HelpdeskStat
   cide: CideStat
+  assid: AssidStat
+  assidDays: AssidDay[]
+  discEventos: DiscEvento[]
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
@@ -263,8 +278,11 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     status, escolaridade, tempoMeses, score, factors, hist,
     initials: ini(id8.nome), color: PALETTE[seed % 6], delta: score - hist[10], hasAvatar: id8.hasAvatar,
     tasksDone, tasksLate: Math.round(tasksDone * (0.03 + rnd(seed * 5) * 0.13)), tasksPend: Math.round(rnd(seed * 4) * 16),
-    faltas: Math.round(rnd(seed * 9) * 4), atrasos: Math.round(rnd(seed * 11) * 9),
-    advertencias: Math.round(rnd(seed * 6.3) * 3), suspensoes: rnd(seed * 8.1) > 0.82 ? 1 : 0,
+    // ASSIDUIDADE REAL (ponto). faltas/suspensoes = 0 (sem fonte; a ficha mostra "—").
+    faltas: 0, atrasos: id8.assid.atrasos,
+    atrasosAbon: id8.assid.atrasosAbon, minutosAtraso: id8.assid.minutos,
+    advertencias: id8.assid.advertencias, suspensoes: 0,
+    assidDays: id8.assidDays, discEventos: id8.discEventos,
     radioHoras: Math.round(id8.radio.totalSeconds / 3600),
     radioSessoes: id8.radio.sessions,
     radioUltima: id8.radio.lastListenedAt,

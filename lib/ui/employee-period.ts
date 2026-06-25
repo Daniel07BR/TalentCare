@@ -9,6 +9,7 @@ export type EmployeeMetrics = {
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
   helpdesk: { has: boolean; opened: number; resolved: number; formalized: number; tempoMedio: string }
   cide: { has: boolean; atividades: number }
+  assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

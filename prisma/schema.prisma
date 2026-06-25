@@ -261,6 +261,72 @@ model WhatsappSnapshot {
   @@map("whatsapp_snapshot")
 }
 
+// Espelho diário de ASSIDUIDADE (ponto) por pessoa × dia. Importado do dump do
+// sistema de ponto "Nexo" (axis_db) — NÃO é pull S2S (não há sistema vivo), é
+// import idempotente de arquivo (run-ponto-import.mjs). A chave é personKey =
+// nexus_user_id (quando a pessoa tem conta no Nexus) OU user.id local (STAFF/
+// Limpeza sem Nexus), mesma convenção da Formação. O dump só traz ATRASOS — não
+// há falta nem presença na origem; por isso aqui não há coluna de faltas (faltas
+// ficam "sem fonte" na ficha, não zero fabricado).
+//   atrasos       = nº de atrasos NÃO abonados no dia (punem a assiduidade)
+//   atrasosAbon   = nº de atrasos abonados (justificados — NÃO punem, só exibidos)
+//   minutosAtraso = soma dos minutos de atraso (só dos não abonados)
+// day = data local (AAAA-MM-DD). Upsert SET por (pessoa,dia) → re-import não duplica.
+model AssiduidadeDaily {
+  personKey     String   @map("person_key")
+  day           String   @db.VarChar(10) // YYYY-MM-DD
+  atrasos       Int      @default(0)
+  atrasosAbon   Int      @default(0) @map("atrasos_abonados")
+  minutosAtraso Int      @default(0) @map("minutos_atraso")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@id([personKey, day])
+  @@index([day])
+  @@map("assiduidade_daily")
+}
+
+// Eventos de DISCIPLINA (advertências). 1 linha por evento, com motivo. O dump do
+// Nexo não traz suspensão (e o dono optou por NÃO derivar de regra) — então só há
+// tipo 'advertencia' por ora; o campo tipo/dias deixa o modelo pronto p/ suspensão
+// futura. Idempotente por (source, sourceId) = id do evento na origem → re-import
+// não duplica. personKey idem AssiduidadeDaily.
+model DisciplinaEvento {
+  id        String   @id @default(cuid())
+  personKey String   @map("person_key")
+  source    String   @default("nexo")
+  sourceId  String   @map("source_id")
+  data      String   @db.VarChar(10) // YYYY-MM-DD
+  tipo      String   // 'advertencia' | 'suspensao'
+  motivo    String?
+  dias      Int? // duração (suspensão); null p/ advertência
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([source, sourceId])
+  @@index([personKey])
+  @@map("disciplina_evento")
+}
+
+// Linhas do roster do Nexo (uma por usuário do ponto) + estado do vínculo à pessoa
+// do TalentCare. Auditoria do casamento por nome (com depto como desempatador) e
+// base de uma futura tela de revisão (como /escolaridade). Recriada a cada import.
+model PontoStaging {
+  id                  String   @id @default(cuid())
+  nexoUserId          String   @map("nexo_user_id")
+  nome                String
+  norm                String
+  depto               String?
+  email               String?
+  atrasos             Int      @default(0)
+  advertencias        Int      @default(0)
+  suggestionPersonKey String?  @map("suggestion_person_key")
+  confidence          String   @default("none")
+  matchedPersonKey    String?  @map("matched_person_key")
+  status              String   @default("pending")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("ponto_staging")
+}
+
 // Marcador de última sincronização por fonte (sync incremental).
 model SyncWatermark {
   source       String   @id

@@ -24,8 +24,10 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { id }, select: { nexusUserId: true, name: true } })
   if (!user) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
+  // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
+  const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, assid, advert] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -42,6 +44,9 @@ export async function GET(req: NextRequest) {
     user.nexusUserId
       ? prisma.cideDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { atividades: true } })
       : null,
+    // ASSIDUIDADE (ponto) no período: soma atrasos/minutos + advertências no range.
+    prisma.assiduidadeDaily.aggregate({ where: { personKey, ...range }, _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true } }),
+    prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
   ])
 
   const rSec = radio?._sum.seconds ?? 0
@@ -70,5 +75,17 @@ export async function GET(req: NextRequest) {
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
     helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, formalized: hForm, tempoMedio: fmtDur(hResNormal ? Math.round(hSec / hResNormal) : 0) },
     cide: { has: (cd?._sum.atividades ?? 0) > 0, atividades: cd?._sum.atividades ?? 0 },
+    assiduidade: (() => {
+      const atr = assid._sum.atrasos ?? 0
+      const abon = assid._sum.atrasosAbon ?? 0
+      const min = assid._sum.minutosAtraso ?? 0
+      return {
+        // mesma fórmula do VM: 100 − atrasos·2 − advertências·5 (abonados fora).
+        assid: Math.max(0, 100 - atr * 2 - advert * 5),
+        atrasos: atr, atrasosAbon: abon, minutos: min, advertencias: advert,
+        // faltas/suspensões: sem fonte na origem (null → ficha mostra "—").
+        faltas: null as number | null, suspensoes: null as number | null,
+      }
+    })(),
   })
 }

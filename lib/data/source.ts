@@ -8,7 +8,9 @@ import { isHiddenDept } from '@/lib/hidden-depts'
  * Lê os funcionários sincronizados (origin=nexus) e monta employees/departments.
  */
 export async function getTalentData(): Promise<TalentData> {
-  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, edu, train] = await Promise.all([
+  // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
+  const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
     prisma.user.findMany({
       // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
       // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
@@ -49,6 +51,21 @@ export async function getTalentData(): Promise<TalentData> {
     }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
+    // ASSIDUIDADE (ponto) ACUMULADA por pessoa — espelho do dump do Nexo.
+    prisma.assiduidadeDaily.groupBy({
+      by: ['personKey'],
+      _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true },
+    }),
+    // Dias com ocorrência nas últimas ~18 semanas — alimenta o heatmap.
+    prisma.assiduidadeDaily.findMany({
+      where: { day: { gte: heatCutoff } },
+      select: { personKey: true, day: true, atrasos: true, minutosAtraso: true },
+    }),
+    // Eventos de disciplina (advertências) — lista real da ficha + contagem.
+    prisma.disciplinaEvento.findMany({
+      select: { personKey: true, data: true, tipo: true, motivo: true, dias: true },
+      orderBy: { data: 'desc' },
+    }),
   ])
   // Oculta Diretoria/Sistemas do painel (mantém o login deles intacto).
   const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name))
@@ -64,6 +81,20 @@ export async function getTalentData(): Promise<TalentData> {
   const eduDetailByNexus = new Map(edu.map((e) => [e.nexusUserId, e.detail]))
   const asItems = (v: unknown): TrainingItem[] => Array.isArray(v) ? (v as TrainingItem[]) : []
   const trainByNexus = new Map(train.map((t) => [t.nexusUserId, t]))
+  // Assiduidade/disciplina por personKey (= nexusUserId ?? id, cobre STAFF).
+  const assidTotByKey = new Map(assidTot.map((a) => [a.personKey, a._sum]))
+  const assidDaysByKey = new Map<string, { day: string; atrasos: number; minutos: number }[]>()
+  for (const r of assidRecent) {
+    const arr = assidDaysByKey.get(r.personKey) ?? []
+    arr.push({ day: r.day, atrasos: r.atrasos, minutos: r.minutosAtraso })
+    assidDaysByKey.set(r.personKey, arr)
+  }
+  const discByKey = new Map<string, { data: string; tipo: string; motivo: string | null; dias: number | null }[]>()
+  for (const e of discAll) {
+    const arr = discByKey.get(e.personKey) ?? []
+    arr.push({ data: e.data, tipo: e.tipo, motivo: e.motivo, dias: e.dias })
+    discByKey.set(e.personKey, arr)
+  }
 
   const identities: Identity[] = users.map((u) => {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined
@@ -75,6 +106,8 @@ export async function getTalentData(): Promise<TalentData> {
     // Escolaridade/cursos/certificados são preenchíveis MANUALMENTE p/ todos
     // (inclusive STAFF sem Nexus): a chave é nexus_user_id quando existe, senão o id.
     const personKey = u.nexusUserId ?? u.id
+    const at = assidTotByKey.get(personKey)
+    const disc = discByKey.get(personKey) ?? []
     return {
       id: u.id,
       nexusUserId: u.nexusUserId,
@@ -124,6 +157,16 @@ export async function getTalentData(): Promise<TalentData> {
       cide: {
         atividades: cds?._sum.atividades ?? 0,
       },
+      // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
+      // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.
+      assid: {
+        atrasos: at?.atrasos ?? 0,
+        atrasosAbon: at?.atrasosAbon ?? 0,
+        minutos: at?.minutosAtraso ?? 0,
+        advertencias: disc.filter((d) => d.tipo === 'advertencia').length,
+      },
+      assidDays: assidDaysByKey.get(personKey) ?? [],
+      discEventos: disc,
     }
   })
 

@@ -55,16 +55,35 @@ function timelineFor(emp: Employee) {
   return evs.slice(0, 8)
 }
 
-export function heatmapFor(seed: number, score: number) {
-  const cells: { level: number; bg: string }[] = []
+// Mapa de OCORRÊNCIAS (atrasos) das últimas 18 semanas. Sem dado de presença na
+// fonte, o heatmap não é mais "presença": cada célula é um dia, colorida pela
+// intensidade do atraso (minutos). Dia sem ocorrência = vazio (limpo). Linhas =
+// dia da semana (seg→dom), colunas = semanas (mais antiga → atual).
+export type HeatCell = { level: number; bg: string; iso: string; atrasos: number; minutos: number; future: boolean }
+export function heatmapFor(days: { day: string; atrasos: number; minutos: number }[]): HeatCell[] {
+  const byDay = new Map(days.map((d) => [d.day, d]))
+  const bgs = ['var(--surface-2)', 'rgba(245,166,35,.30)', 'rgba(245,166,35,.55)', 'rgba(245,166,35,.78)', 'var(--accent)']
   const weeks = 18
-  const bgs = ['var(--surface-2)', 'rgba(245,166,35,.28)', 'rgba(245,166,35,.5)', 'rgba(245,166,35,.72)', 'var(--accent)']
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const dow = (today.getDay() + 6) % 7 // 0 = segunda
+  const startMonday = new Date(today)
+  startMonday.setDate(today.getDate() - dow - (weeks - 1) * 7)
+  const cells: HeatCell[] = []
   for (let d = 0; d < 7; d++) {
     for (let w = 0; w < weeks; w++) {
-      const noise = rnd(seed * 5 + d * 0.7 + w * 1.3)
-      let lvl = (d === 0 || d === 6) ? (noise > 0.85 ? 1 : 0) : Math.floor(noise * (1 + score / 30))
-      lvl = Math.max(0, Math.min(4, lvl))
-      cells.push({ level: lvl, bg: bgs[lvl] })
+      const date = new Date(startMonday)
+      date.setDate(startMonday.getDate() + w * 7 + d)
+      const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      const future = date.getTime() > today.getTime()
+      const rec = byDay.get(iso)
+      let level = 0
+      if (!future && rec) {
+        const m = rec.minutos, n = rec.atrasos
+        level = m > 30 ? 4 : m > 15 ? 3 : m > 5 ? 2 : (n > 0 ? 1 : 0)
+        if (level === 0 && n > 0) level = 1
+      }
+      cells.push({ level, bg: future ? 'transparent' : bgs[level], iso, atrasos: rec?.atrasos ?? 0, minutos: rec?.minutos ?? 0, future })
     }
   }
   return cells
@@ -145,9 +164,20 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
 
   const fm = formacaoFor(emp)
 
-  const disc: { tipo: string; cor: string; bg: string; motivo: string; quando: string }[] = []
-  for (let k = 0; k < emp.advertencias; k++) disc.push({ tipo: 'Advertência', cor: 'var(--warning)', bg: 'rgba(245,166,35,.13)', motivo: ['Atraso reincidente', 'Falta não justificada', 'Descumprimento de prazo'][k % 3], quando: admissao(Math.round(emp.tempoMeses * (0.6 - k * 0.15))) })
-  for (let k = 0; k < emp.suspensoes; k++) disc.push({ tipo: 'Suspensão', cor: 'var(--danger)', bg: 'rgba(229,72,77,.13)', motivo: 'Conduta · 1 dia', quando: admissao(Math.round(emp.tempoMeses * 0.25)) })
+  // Disciplina REAL (eventos do ponto): advertências com data e motivo. Suspensão
+  // não vem na fonte (e o dono optou por não derivar) → não há eventos de suspensão.
+  const fmtDiaEvt = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const disc = emp.discEventos.map((e) => {
+    const susp = e.tipo === 'suspensao'
+    return {
+      tipo: susp ? 'Suspensão' : 'Advertência',
+      cor: susp ? 'var(--danger)' : 'var(--warning)',
+      bg: susp ? 'rgba(229,72,77,.13)' : 'rgba(245,166,35,.13)',
+      motivo: e.motivo || (susp ? 'Suspensão' : 'Advertência'),
+      quando: fmtDiaEvt(e.data),
+    }
+  })
 
   // Rádio Itamarathy (dados REAIS via .68): horas acumuladas, sessões e última escuta.
   const radioUltima = emp.radioUltima
@@ -179,9 +209,13 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     factors: emp.factors.map((f) => ({ label: f.label, peso: f.peso, nota: f.nota, pct: f.nota + '%', color: scoreColor(f.nota) })),
     timeline: timelineFor(emp),
     tasksDone: emp.tasksDone, tasksLate: emp.tasksLate, tasksPend: emp.tasksPend, prodBar, bySystem,
-    assid: Math.max(0, 100 - emp.faltas * 5 - emp.atrasos * 2), atrasos: emp.atrasos, faltas: emp.faltas,
-    advert: emp.advertencias, susp: emp.suspensoes, disc, discEmpty: disc.length === 0,
-    heat: heatmapFor(seed, emp.score),
+    // Assiduidade REAL: 100 − atrasos·2 − advertências·5 (atraso abonado já fora).
+    // faltas/suspensões = null = "sem fonte" (a ficha mostra "—", não 0).
+    assid: Math.max(0, 100 - emp.atrasos * 2 - emp.advertencias * 5),
+    atrasos: emp.atrasos, atrasosAbon: emp.atrasosAbon, minutosAtraso: emp.minutosAtraso,
+    faltas: null as number | null, advert: emp.advertencias, susp: null as number | null,
+    disc, discEmpty: disc.length === 0,
+    heat: heatmapFor(emp.assidDays),
     radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima, whatsapp,
     grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
