@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { toDate, resolveDepartment } from '../route'
+import { toDate, resolveDepartment, avatarFromBody } from '../route'
 
 // Edita um colaborador STAFF (ou ativa/inativa). Só atua sobre origin='staff'
 // (não toca usuários do Nexus). Inativar carimba a data de saída (leftAt).
@@ -28,6 +28,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ('birthDate' in (body ?? {})) data.birthDate = toDate(body?.birthDate as string)
   if (body?.departmentId != null || body?.newDepartment != null) {
     data.departmentId = await resolveDepartment(body?.departmentId as string, body?.newDepartment as string)
+  }
+  // Foto: nova imagem (data-URI) substitui; null explícito remove; ausente = mantém.
+  if ('avatar' in (body ?? {})) {
+    if (body?.avatar === null) data.avatarUrl = null
+    else { const a = avatarFromBody(body?.avatar); if (a) data.avatarUrl = a }
   }
   // Ativar/inativar: inativar carimba leftAt (hoje, se vazio); reativar limpa.
   if (typeof body?.active === 'boolean') {

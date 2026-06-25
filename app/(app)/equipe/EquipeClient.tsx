@@ -14,6 +14,28 @@ const emptyForm = { name: '', cpf: '', jobTitle: '', deptId: '', newDepartment: 
 type Form = typeof emptyForm
 
 const ini = (n: string) => n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '?'
+
+// Redimensiona a imagem escolhida (máx 256px) e exporta webp leve (data-URI),
+// p/ não inflar o banco. Tudo no cliente — nenhuma lib no servidor.
+function fileToAvatar(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const max = 256
+      const scale = Math.min(1, max / Math.max(img.width, img.height))
+      const w = Math.max(1, Math.round(img.width * scale))
+      const h = Math.max(1, Math.round(img.height * scale))
+      const c = document.createElement('canvas')
+      c.width = w; c.height = h
+      c.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(c.toDataURL('image/webp', 0.85))
+    }
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e) }
+    img.src = url
+  })
+}
 const fmtDate = (iso: string) => (iso ? new Date(`${iso}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—')
 
 const lbl: React.CSSProperties = { fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 4, display: 'block', fontWeight: 500 }
@@ -24,25 +46,33 @@ export default function EquipeClient({ staff, departments }: { staff: Staff[]; d
   const [form, setForm] = useState<Form>(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newDept, setNewDept] = useState(false)
+  const [avatar, setAvatar] = useState('') // nova foto (data-URI) selecionada; '' = não mexer
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const editingStaff = editingId ? staff.find((s) => s.id === editingId) : null
 
-  const reset = () => { setForm(emptyForm); setEditingId(null); setNewDept(false); setError(null) }
+  const reset = () => { setForm(emptyForm); setEditingId(null); setNewDept(false); setAvatar(''); setError(null) }
 
   const startEdit = (s: Staff) => {
     setEditingId(s.id)
     setNewDept(false)
+    setAvatar('')
     setError(null)
     setForm({ name: s.name, cpf: s.cpf, jobTitle: s.jobTitle, deptId: s.deptId, newDepartment: '', entryDate: s.entryDate, birthDate: s.birthDate, gender: s.gender, phone: s.phone })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const onPickPhoto = async (file?: File) => {
+    if (!file) return
+    try { setAvatar(await fileToAvatar(file)) } catch { setError('Não consegui ler essa imagem.') }
+  }
+
   const submit = async () => {
     if (!form.name.trim()) { setError('Informe o nome.'); return }
     setSaving(true); setError(null)
-    const payload = { ...form, newDepartment: newDept ? form.newDepartment : '' }
+    const payload = { ...form, newDepartment: newDept ? form.newDepartment : '', ...(avatar ? { avatar } : {}) }
     const url = editingId ? `/api/admin/staff/${editingId}` : '/api/admin/staff'
     const res = await fetch(url, { method: editingId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     const data = await res.json().catch(() => ({}))
@@ -73,6 +103,28 @@ export default function EquipeClient({ staff, departments }: { staff: Staff[]; d
       {/* Formulário */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>{editingId ? 'Editar colaborador' : 'Novo colaborador'}</div>
+
+        {/* Foto */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt="prévia" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flex: 'none', border: '1px solid var(--border)' }} />
+          ) : editingStaff?.hasAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/avatar/${editingStaff.id}`} alt="foto atual" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flex: 'none', border: '1px solid var(--border)' }} />
+          ) : (
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--chart-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff', flex: 'none' }}>{ini(form.name)}</div>
+          )}
+          <div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 12.5, fontWeight: 600, color: 'var(--text-dim)', cursor: 'pointer' }}>
+              <UserPlus size={14} /> {avatar || editingStaff?.hasAvatar ? 'Trocar foto' : 'Escolher foto'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onPickPhoto(e.target.files?.[0])} />
+            </label>
+            {avatar && <button onClick={() => setAvatar('')} style={{ marginLeft: 8, height: 34, padding: '0 10px', background: 'transparent', border: 'none', color: 'var(--text-mute)', fontSize: 12, cursor: 'pointer' }}>Remover seleção</button>}
+            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 5 }}>JPG/PNG · ajustada automaticamente</div>
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
           <div><label style={lbl}>Nome completo *</label><input style={inp} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Maria da Silva" /></div>
           <div><label style={lbl}>CPF</label><input style={inp} value={form.cpf} onChange={(e) => set('cpf', e.target.value)} placeholder="só números" inputMode="numeric" /></div>

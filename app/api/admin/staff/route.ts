@@ -21,6 +21,15 @@ export function toDate(v: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+// Valida/aceita o avatar (data-URI de imagem, já redimensionado no cliente).
+// Limite de tamanho p/ não inflar o banco/payload. '' ou inválido → undefined.
+export function avatarFromBody(v: unknown): string | undefined {
+  const s = typeof v === 'string' ? v : ''
+  if (!/^data:image\/(png|jpeg|jpg|webp);base64,/.test(s)) return undefined
+  if (s.length > 600_000) return undefined // ~450KB de imagem; cliente manda ~10-30KB
+  return s
+}
+
 // Resolve o setor: id existente OU nome novo (cria depto local sem nexus).
 export async function resolveDepartment(departmentId?: string | null, newDepartment?: string | null): Promise<string | null> {
   const novo = (newDepartment ?? '').trim()
@@ -46,6 +55,7 @@ export async function POST(req: Request) {
   const gender = String(body?.gender ?? '').trim() || null
   const phone = String(body?.phone ?? '').trim() || null
   const departmentId = await resolveDepartment(body?.departmentId as string, body?.newDepartment as string)
+  const avatarUrl = avatarFromBody(body?.avatar)
 
   // E-mail e hash são obrigatórios no schema, mas o staff não loga: gera valores
   // únicos e inutilizáveis (a senha nunca casa num bcrypt.compare).
@@ -60,6 +70,7 @@ export async function POST(req: Request) {
         role: 'SEM_PERMISSAO',
         origin: 'staff',
         active: true,
+        avatarUrl,
         departmentId,
         entryDate: toDate(body?.entryDate as string),
         birthDate: toDate(body?.birthDate as string),
