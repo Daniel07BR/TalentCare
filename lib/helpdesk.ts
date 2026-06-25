@@ -14,6 +14,7 @@ interface DailyRow {
   day: string // YYYY-MM-DD
   opened: number | string
   resolved: number | string
+  formalized: number | string
   resolvedSeconds: number | string
 }
 
@@ -58,12 +59,13 @@ export async function syncHelpdesk(): Promise<HelpdeskSyncResult> {
     if (!r.userId || !r.day) continue
     const opened = Number(r.opened) || 0
     const resolved = Number(r.resolved) || 0
+    const formalized = Number(r.formalized) || 0
     const resolvedSeconds = Math.round(Number(r.resolvedSeconds) || 0)
     try {
       await prisma.helpdeskDaily.upsert({
         where: { nexusUserId_day: { nexusUserId: r.userId, day: r.day } },
-        create: { nexusUserId: r.userId, day: r.day, opened, resolved, resolvedSeconds },
-        update: { opened, resolved, resolvedSeconds }, // SET → idempotente
+        create: { nexusUserId: r.userId, day: r.day, opened, resolved, formalized, resolvedSeconds },
+        update: { opened, resolved, formalized, resolvedSeconds }, // SET → idempotente
       })
       result.synced++
     } catch (e) {

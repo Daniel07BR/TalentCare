@@ -15,10 +15,10 @@ export function useHelpdeskPeriod(): { map: HelpdeskUsage | null; loading: boole
     setLoading(true)
     fetch(`/api/helpdesk-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d: { byUser: { nexusUserId: string; opened: number; resolved: number; resolvedSeconds: number }[] }) => {
+      .then((d: { byUser: { nexusUserId: string; opened: number; resolved: number; formalized: number; resolvedSeconds: number }[] }) => {
         if (!alive) return
         const m: HelpdeskUsage = new Map()
-        for (const u of d.byUser) m.set(u.nexusUserId, { opened: u.opened, resolved: u.resolved, resolvedSeconds: u.resolvedSeconds })
+        for (const u of d.byUser) m.set(u.nexusUserId, { opened: u.opened, resolved: u.resolved, formalized: u.formalized, resolvedSeconds: u.resolvedSeconds })
         setMap(m)
       })
       .catch(() => alive && setMap(new Map()))

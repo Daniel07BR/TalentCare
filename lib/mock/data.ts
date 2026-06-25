@@ -63,8 +63,10 @@ export type WhatsappStat = { abertos: number; finalizados: number; handleSum: nu
 /** Métricas REAIS do Consultoria Plus (frente B): atividade por pessoa. */
 export type ConsultoriaStat = { studies: number; tickets: number; messages: number; comments: number }
 
-/** Métricas REAIS do HelpDesk (frente B): chamados por pessoa. */
-export type HelpdeskStat = { opened: number; resolved: number; resolvedSeconds: number }
+/** Métricas REAIS do HelpDesk (frente B): chamados por pessoa.
+ *  resolved = resolvidos no fluxo normal; formalized = serviços formalizados
+ *  (também contam como resolvidos, mas fora do tempo médio). */
+export type HelpdeskStat = { opened: number; resolved: number; formalized: number; resolvedSeconds: number }
 
 export type Department = {
   id: string
@@ -281,7 +283,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
 
 const zeroClassroom = (): ClassroomStat => ({ videosCompleted: 0, coursesCompleted: 0, coursesCreated: 0 })
 const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messages: 0, comments: 0 })
-const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, resolvedSeconds: 0 })
+const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 0, resolvedSeconds: 0 })
 
 /** Monta o TalentData (employees + departments) a partir das identidades reais. */
 export function assembleData(identities: Identity[]): TalentData {
@@ -339,6 +341,7 @@ export function assembleData(identities: Identity[]): TalentData {
         (a, e) => ({
           opened: a.opened + e.helpdesk.opened,
           resolved: a.resolved + e.helpdesk.resolved,
+          formalized: a.formalized + e.helpdesk.formalized,
           resolvedSeconds: a.resolvedSeconds + e.helpdesk.resolvedSeconds,
         }),
         zeroHelpdesk(),

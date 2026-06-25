@@ -30,11 +30,12 @@ async function main() {
     if (!r.userId || !r.day) continue
     const opened = Number(r.opened) || 0
     const resolved = Number(r.resolved) || 0
+    const formalized = Number(r.formalized) || 0
     const resolvedSeconds = Math.round(Number(r.resolvedSeconds) || 0)
     await prisma.helpdeskDaily.upsert({
       where: { nexusUserId_day: { nexusUserId: r.userId, day: r.day } },
-      create: { nexusUserId: r.userId, day: r.day, opened, resolved, resolvedSeconds },
-      update: { opened, resolved, resolvedSeconds },
+      create: { nexusUserId: r.userId, day: r.day, opened, resolved, formalized, resolvedSeconds },
+      update: { opened, resolved, formalized, resolvedSeconds },
     })
     synced++
   }

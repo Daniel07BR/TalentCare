@@ -7,7 +7,7 @@ export type EmployeeMetrics = {
   classroom: { videos: number; courses: number; created: number; total: number }
   whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
-  helpdesk: { has: boolean; opened: number; resolved: number; tempoMedio: string }
+  helpdesk: { has: boolean; opened: number; resolved: number; formalized: number; tempoMedio: string }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

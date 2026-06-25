@@ -233,7 +233,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     {hd.has ? (
                       <div style={{ display: 'flex', gap: 14 }}>
                         <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{hd.opened.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{hd.resolved.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Resolvidos</div></div>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{hd.resolved.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Resolvidos{hd.formalized > 0 ? <span style={{ color: 'var(--text-mute)' }}> · {hd.formalized} formaliz.</span> : null}</div></div>
                         <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-4)' }}>{hd.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio de resolução</div></div>
                       </div>
                     ) : (

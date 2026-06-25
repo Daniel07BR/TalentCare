@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       ? prisma.consultoriaDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } })
       : null,
     user.nexusUserId
-      ? prisma.helpdeskDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { opened: true, resolved: true, resolvedSeconds: true } })
+      ? prisma.helpdeskDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true } })
       : null,
   ])
 
@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
   const cCom = cons?._sum.comments ?? 0
   const cTotal = cStu + cTic + cMsg + cCom
   const hOpen = hd?._sum.opened ?? 0
-  const hRes = hd?._sum.resolved ?? 0
+  const hResNormal = hd?._sum.resolved ?? 0
+  const hForm = hd?._sum.formalized ?? 0
+  const hRes = hResNormal + hForm // formalizado conta como resolvido
   const hSec = hd?._sum.resolvedSeconds ?? 0
 
   return NextResponse.json({
@@ -63,6 +65,6 @@ export async function GET(req: NextRequest) {
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: { has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0) },
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
-    helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, tempoMedio: fmtDur(hRes ? Math.round(hSec / hRes) : 0) },
+    helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, formalized: hForm, tempoMedio: fmtDur(hResNormal ? Math.round(hSec / hResNormal) : 0) },
   })
 }

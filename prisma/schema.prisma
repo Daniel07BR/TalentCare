@@ -186,9 +186,10 @@ model HelpdeskDaily {
   nexusUserId     String   @map("nexus_user_id")
   day             String   @db.VarChar(10) // YYYY-MM-DD
   opened          Int      @default(0)
-  resolved        Int      @default(0)
-  // Soma do tempo de resolução do dia (segundos). Int basta: o valor por
-  // (pessoa,dia) é pequeno; a acumulação no read usa SUM no banco.
+  resolved        Int      @default(0) // resolvidos no fluxo normal (responsável)
+  formalized      Int      @default(0) // serviços formalizados (crédito de quem formalizou)
+  // Soma do tempo de resolução do dia (segundos), só dos resolvidos NORMAIS.
+  // Int basta: o valor por (pessoa,dia) é pequeno; a acumulação no read usa SUM no banco.
   resolvedSeconds Int      @default(0) @map("resolved_seconds")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

@@ -38,7 +38,7 @@ export async function getTalentData(): Promise<TalentData> {
     // HelpDesk ACUMULADO (todo o histórico) somado do espelho diário.
     prisma.helpdeskDaily.groupBy({
       by: ['nexusUserId'],
-      _sum: { opened: true, resolved: true, resolvedSeconds: true },
+      _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true },
     }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
@@ -106,6 +106,7 @@ export async function getTalentData(): Promise<TalentData> {
       helpdesk: {
         opened: hds?._sum.opened ?? 0,
         resolved: hds?._sum.resolved ?? 0,
+        formalized: hds?._sum.formalized ?? 0,
         resolvedSeconds: hds?._sum.resolvedSeconds ?? 0,
       },
     }
