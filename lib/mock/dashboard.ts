@@ -2,6 +2,7 @@
    TalentCare — view-model do Dashboard (puro em função de data + período).
    ============================================================ */
 import { geomSpark, geomLine, scoreColor, rnd, PALETTE, type TalentData, type Employee } from './data'
+import type { PeriodAssid } from './assiduidade'
 
 export type Period = '7d' | '30d' | 'Trimestre' | 'Ano'
 
@@ -12,13 +13,52 @@ function periodFactor(p: Period): number {
   return ({ '7d': 0.55, '30d': 1, Trimestre: 2.6, Ano: 9 }[p]) || 1
 }
 
+// Série REAL de turnover (saídas por bucket) no período selecionado. Buckets:
+// 7d = diário, 30d = a cada 5 dias, Trimestre = mensal (3), Ano = mensal (12).
+// Taxa = saídas no período ÷ headcount atual. Substitui a curva fixa/fake antiga.
+function turnoverSeries(emps: Employee[], period: Period) {
+  const now = new Date()
+  const headcount = emps.filter((e) => e.status !== 'Desligado').length
+  const monthLabel = (d: Date) => d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
+  const buckets: { start: Date; end: Date; label: string }[] = []
+  if (period === 'Ano' || period === 'Trimestre') {
+    const n = period === 'Ano' ? 12 : 3
+    for (let i = n - 1; i >= 0; i--) {
+      const s = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const e = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      buckets.push({ start: s, end: e, label: monthLabel(s) })
+    }
+  } else {
+    const groupDays = period === '7d' ? 1 : 5
+    const n = period === '7d' ? 7 : 6
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    for (let i = n - 1; i >= 0; i--) {
+      const s = new Date(today); s.setDate(today.getDate() - (i + 1) * groupDays + 1)
+      const e = new Date(today); e.setDate(today.getDate() - i * groupDays + 1)
+      buckets.push({ start: s, end: e, label: `${s.getDate()}/${s.getMonth() + 1}` })
+    }
+  }
+  const vals = buckets.map((b) => emps.filter((e) => {
+    if (!e.leftISO) return false
+    const d = new Date(e.leftISO)
+    return d >= b.start && d < b.end
+  }).length)
+  const winStart = buckets[0].start
+  const exitsWin = emps.filter((e) => e.leftISO && new Date(e.leftISO) >= winStart).length
+  const rate = headcount ? +((exitsWin / headcount) * 100).toFixed(1) : 0
+  const labels = buckets.length <= 6
+    ? buckets.map((b) => b.label)
+    : [0, 0.25, 0.5, 0.75, 1].map((f) => buckets[Math.round(f * (buckets.length - 1))].label)
+  return { vals, rate, labels, sub: PERIOD_LABEL[period] }
+}
+
 export type Kpi = { label: string; value: string | number; unit: string; delta: string; deltaColor: string; deltaArrow: string; spark: string; sparkColor: string }
 export type DeptBar = { id: string; nome: string; score: number; pct: string; color: string }
 export type RankRow = { rank: number; id: string; initials: string; color: string; hasAvatar: boolean; nome: string; cargo: string; score: number; scoreColor: string }
 export type EscSegment = { label: string; count: number; color: string; dash: string; offset: string }
 export type Alert = { text: string; when: string; color: string; glow: string }
 
-export function buildDashboard(data: TalentData, period: Period) {
+export function buildDashboard(data: TalentData, period: Period, assidMap?: PeriodAssid) {
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
   const pf = periodFactor(period)
@@ -30,11 +70,15 @@ export function buildDashboard(data: TalentData, period: Period) {
 
   const compScore = Math.round(perf.reduce((a, e) => a + e.score, 0) / n)
   const totalTasks = Math.round(perf.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
-  // Ponto (REAL, acumulado) — atrasos e advertências do quadro ativo. Substituem
-  // o antigo "Faltas" (sem fonte) e o "% de atrasos" (mock de atraso de tarefa,
-  // que confundia com o atraso de ponto). Ver aba Assiduidade da ficha / página /assiduidade.
-  const atrasosPonto = perf.reduce((a, e) => a + e.atrasos, 0)
-  const advertPonto = perf.reduce((a, e) => a + e.advertencias, 0)
+  // Ponto (REAL) — atrasos e advertências do quadro ativo. Period-aware quando o
+  // assidMap (do /api/assiduidade-metrics) é passado; sem ele, cai no acumulado.
+  const pk = (e: Employee) => e.nexusUserId ?? e.id
+  const atrasosPonto = assidMap
+    ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.atrasos ?? 0), 0)
+    : perf.reduce((a, e) => a + e.atrasos, 0)
+  const advertPonto = assidMap
+    ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.advertencias ?? 0), 0)
+    : perf.reduce((a, e) => a + e.advertencias, 0)
   const _tnow = new Date()
   const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
   const _exits12 = nonDir.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
@@ -50,8 +94,8 @@ export function buildDashboard(data: TalentData, period: Period) {
     { label: 'Headcount', value: perf.length, unit: '', delta: '+3', up: true, vals: sp(1, perf.length - 3), color: 'var(--info)' },
     { label: 'Turnover', value: turnoverNow, unit: '%', delta: '-1.2 p.p.', up: true, vals: [11, 10.4, 10.9, 9.8, 9.2, 9.5, 8.9, 9.1, 8.6, 8.8, 8.5, 8.4], color: 'var(--success)' },
     { label: 'Tarefas concluídas', value: totalTasks.toLocaleString('pt-BR'), unit: '', delta: '+12%', up: true, vals: sp(3, totalTasks * 0.8), color: 'var(--chart-2)' },
-    { label: 'Advertências (ponto)', value: advertPonto, unit: '', delta: 'total', up: false, vals: sp(4, advertPonto / 12 + 2), color: 'var(--danger)' },
-    { label: 'Atrasos (ponto)', value: atrasosPonto, unit: '', delta: 'total', up: false, vals: sp(5, atrasosPonto / 12 + 3), color: 'var(--chart-5)' },
+    { label: 'Advertências', value: advertPonto, unit: '', delta: '', up: false, vals: sp(4, advertPonto / 12 + 2), color: 'var(--danger)' },
+    { label: 'Atrasos', value: atrasosPonto, unit: '', delta: '', up: false, vals: sp(5, atrasosPonto / 12 + 3), color: 'var(--chart-5)' },
     { label: 'Score médio', value: compScore, unit: '/100', delta: '+2', up: true, vals: [74, 75, 74, 76, 77, 76, 78, 77, 79, 78, 79, compScore], color: 'var(--accent)' },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({
@@ -68,8 +112,10 @@ export function buildDashboard(data: TalentData, period: Period) {
     return { id, nome: data.deptMeta[id] ?? id, score, pct: score + '%', color: deptColorById.get(id) ?? 'var(--accent)' }
   }).sort((a, b) => b.score - a.score)
 
-  const tvals = [12.1, 11.4, 10.8, 11.2, 10.1, 9.6, 9.9, 9.0, 8.7, 9.1, 8.5, 8.4]
-  const tg = geomLine(tvals, 320, 150, 8)
+  // Curva de turnover REAL e period-aware (saídas por bucket no período). nonDir
+  // = quadro sem a Diretoria (donos não contam como rotatividade).
+  const tser = turnoverSeries(nonDir, period)
+  const tg = geomLine(tser.vals.length > 1 ? tser.vals : [0, 0], 320, 150, 8)
 
   const ranked = [...perf].sort((a, b) => b.score - a.score)
   const top3 = ranked.slice(0, 3), bot3 = ranked.slice(-3).reverse()
@@ -113,6 +159,7 @@ export function buildDashboard(data: TalentData, period: Period) {
     periodLabel: PERIOD_LABEL[period],
     kpis, deptBars, deptCount: deptBars.length,
     turnoverLine: tg.line, turnoverArea: tg.area, turnoverNow,
+    turnoverWinRate: tser.rate, turnoverLabels: tser.labels, turnoverSub: tser.sub,
     rankList, headcountTotal: perf.length,
     escSegments, escTopPct: Math.round(escTop.c / escTotal * 100), escTopLabel: escTop.l.replace('Superior ', 'Sup. '),
     alerts,

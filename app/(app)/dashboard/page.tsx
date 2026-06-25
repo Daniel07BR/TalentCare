@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
+import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { buildDashboard } from '@/lib/mock/dashboard'
 import { generationsVM, genderVM } from '@/lib/mock/demographics'
 import Avatar from '../Avatar'
@@ -16,7 +17,8 @@ export default function DashboardPage() {
   const { period } = usePeriod()
   const router = useRouter()
   const data = useTalentData()
-  const vm = buildDashboard(data, period)
+  const { map: assidMap } = useAssiduidadePeriod()
+  const vm = buildDashboard(data, period, assidMap ?? undefined)
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall
 
@@ -43,7 +45,7 @@ export default function DashboardPage() {
               <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>{k.unit}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: k.deltaColor, display: 'inline-flex', alignItems: 'center', gap: 2 }}>{k.deltaArrow} {k.delta}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: k.deltaColor, display: 'inline-flex', alignItems: 'center', gap: 2 }}>{k.delta ? `${k.deltaArrow} ${k.delta}` : ''}</span>
               <svg width="64" height="26" viewBox="0 0 64 26" style={{ overflow: 'visible' }}>
                 <polyline points={k.spark} fill="none" stroke={k.sparkColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -60,9 +62,9 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Curva de turnover</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Últimos 12 meses · ver relatório</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.turnoverSub} · saídas · ver relatório</div>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{vm.turnoverNow}%</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{vm.turnoverWinRate}%</span>
           </div>
           <svg viewBox="0 0 320 150" preserveAspectRatio="none" style={{ width: '100%', height: 160, marginTop: 'auto' }}>
             <line x1="0" y1="37" x2="320" y2="37" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" />
@@ -78,7 +80,7 @@ export default function DashboardPage() {
             </defs>
           </svg>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-mute)', marginTop: 6 }}>
-            <span>Jul</span><span>Out</span><span>Jan</span><span>Abr</span><span>Jun</span>
+            {vm.turnoverLabels.map((l, i) => <span key={i}>{l}</span>)}
           </div>
         </div>
       </div>
