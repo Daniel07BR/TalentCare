@@ -177,6 +177,26 @@ model WhatsappDaily {
   @@map("whatsapp_daily")
 }
 
+// Espelho diário da atividade do HelpDesk (por usuário × dia):
+//   opened  = chamados abertos pela pessoa (solicitante, por created_at)
+//   resolved = chamados resolvidos pela pessoa (responsável, DONE, por closed_at)
+//   resolvedSeconds = soma do tempo de resolução dos resolvidos (p/ tempo médio)
+// day = data local (America/Sao_Paulo). Sync incremental idempotente (SET).
+model HelpdeskDaily {
+  nexusUserId     String   @map("nexus_user_id")
+  day             String   @db.VarChar(10) // YYYY-MM-DD
+  opened          Int      @default(0)
+  resolved        Int      @default(0)
+  // Soma do tempo de resolução do dia (segundos). Int basta: o valor por
+  // (pessoa,dia) é pequeno; a acumulação no read usa SUM no banco.
+  resolvedSeconds Int      @default(0) @map("resolved_seconds")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("helpdesk_daily")
+}
+
 // Espelho diário da atividade do Consultoria Plus (por usuário × dia). Quatro
 // contagens por createdAt: estudos publicados, chamados abertos, mensagens em
 // chamados, comentários em estudos. day = data local (America/Sao_Paulo) vinda

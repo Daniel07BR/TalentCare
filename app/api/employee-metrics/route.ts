@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id }, select: { nexusUserId: true, name: true } })
   if (!user) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
 
-  const [radio, classroom, wpp, cons] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
     prisma.whatsappAttendantDaily.aggregate({ where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true, handleSum: true } }),
     user.nexusUserId
       ? prisma.consultoriaDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } })
+      : null,
+    user.nexusUserId
+      ? prisma.helpdeskDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { opened: true, resolved: true, resolvedSeconds: true } })
       : null,
   ])
 
@@ -50,6 +53,9 @@ export async function GET(req: NextRequest) {
   const cMsg = cons?._sum.messages ?? 0
   const cCom = cons?._sum.comments ?? 0
   const cTotal = cStu + cTic + cMsg + cCom
+  const hOpen = hd?._sum.opened ?? 0
+  const hRes = hd?._sum.resolved ?? 0
+  const hSec = hd?._sum.resolvedSeconds ?? 0
 
   return NextResponse.json({
     period, fromDay, toDay,
@@ -57,5 +63,6 @@ export async function GET(req: NextRequest) {
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: { has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0) },
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
+    helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, tempoMedio: fmtDur(hRes ? Math.round(hSec / hRes) : 0) },
   })
 }

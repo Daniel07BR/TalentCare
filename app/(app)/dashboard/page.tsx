@@ -9,6 +9,7 @@ import WhatsappDeptCard from './WhatsappDeptCard'
 import RadioDeptCard from './RadioDeptCard'
 import ClassroomDeptCard from './ClassroomDeptCard'
 import ConsultoriaDeptCard from './ConsultoriaDeptCard'
+import HelpdeskDeptCard from './HelpdeskDeptCard'
 
 export default function DashboardPage() {
   const { period } = usePeriod()
@@ -199,6 +200,9 @@ export default function DashboardPage() {
 
       {/* Consultoria Plus — atividade por departamento NO PERÍODO (dados reais, frente B) */}
       <ConsultoriaDeptCard />
+
+      {/* HelpDesk — chamados por departamento NO PERÍODO (dados reais, frente B) */}
+      <HelpdeskDeptCard />
     </div>
   )
 }

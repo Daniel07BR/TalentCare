@@ -48,12 +48,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     : vm.classroom
   const wpp = m ? m.whatsapp : vm.whatsapp
   const cons = m?.consultoria ?? null
+  const hd = m?.helpdesk ?? null
   const periodo = PERIOD_LABEL[period]
 
-  // "Tarefas por sistema": REAL (period-aware via m) para os sistemas já
-  // integrados à frente B; MOCK para os que ainda não integramos (HelpDesk, CIDE).
+  // "Atividade por sistema": REAL (period-aware via m) para os sistemas já
+  // integrados à frente B; MOCK para os que ainda não integramos (só CIDE agora).
   // Conforme cada sistema entra, sua barra deixa de ser simulada. Marca real/simulado.
   const realBySystem: Record<string, number | null> = {
+    HelpDesk: m ? m.helpdesk.opened + m.helpdesk.resolved : null,
     ClassRoom: m ? m.classroom.videos + m.classroom.courses + m.classroom.created : null,
     'Painel de Atendimento': m ? m.whatsapp.abertos : null,
     'Consultoria Plus': m ? m.consultoria.total : null,
@@ -216,6 +218,26 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no Consultoria Plus neste período.</div>
+                    )}
+                  </div>
+                )}
+
+                {hd && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M3 12a9 9 0 0 1 18 0" /><path d="M21 12v3a2 2 0 0 1-2 2h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h3Z" /><path d="M3 12v3a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H3Z" />
+                      </svg>
+                      HelpDesk · chamados <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                    </div>
+                    {hd.has ? (
+                      <div style={{ display: 'flex', gap: 14 }}>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{hd.opened.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos</div></div>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{hd.resolved.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Resolvidos</div></div>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-4)' }}>{hd.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio de resolução</div></div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no HelpDesk neste período.</div>
                     )}
                   </div>
                 )}
