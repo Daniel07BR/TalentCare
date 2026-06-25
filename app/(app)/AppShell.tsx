@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy, Landmark, UserPlus,
+  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -21,6 +21,7 @@ const NAV_MAIN = [
   { href: '/departamentos', label: 'Departamentos', icon: Building2 },
   { href: '/ranking', label: 'Ranking', icon: Trophy },
   { href: '/turnover', label: 'Turnover', icon: TrendingUp },
+  { href: '/assiduidade', label: 'Assiduidade', icon: AlarmClock },
   { href: '/classroom', label: 'ClassRoom', icon: GraduationCap },
   { href: '/radio', label: 'Rádio', icon: Radio },
   { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
