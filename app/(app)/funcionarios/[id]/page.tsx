@@ -131,7 +131,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             <div style={{ position: 'absolute', top: 36, left: 0, right: 0 }}>
               <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.hasScore ? vm.scoreColor : 'var(--text-mute)' }}>{vm.scoreLabel}</div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>
-                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : 'Sem dados suficientes'}
+                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : vm.scoreNote}
               </div>
             </div>
           </div>

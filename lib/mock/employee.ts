@@ -137,7 +137,9 @@ function decisionFor(data: TalentData, emp: Employee) {
   const deptEmps = data.employees.filter((e) => e.dept === emp.dept && e.hasScore)
   const deptAvg = deptEmps.length ? Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length) : emp.score
   let rec: string
-  if (!emp.hasScore) rec = 'Sem dados suficientes para um score — esta pessoa não tem atividade nos sistemas, formação cadastrada nem registro de ponto. Score real depende de pelo menos uma dessas fontes.'
+  if (!emp.hasScore) rec = (emp.atrasos > 0 || emp.advertencias > 0)
+    ? 'Avaliação parcial — há apenas registro de assiduidade (sem produtividade nos sistemas e sem formação cadastrada). Assiduidade isolada não compõe um score comparável; avaliar esta função por critérios próprios.'
+    : 'Sem dados suficientes para um score — sem atividade nos sistemas, formação cadastrada ou registro de ponto.'
   else if (emp.status === 'Desligado') rec = 'Colaborador desligado — histórico mantido para consulta. Score final ' + emp.score + '.'
   else if (emp.score >= 85 && trend >= 0) rec = 'Score consistente acima de 85 e assiduidade exemplar — forte candidato a promoção ou bônus.'
   else if (emp.score >= 75) rec = 'Desempenho sólido e estável. Recomenda-se reajuste por mérito e plano de desenvolvimento.'
@@ -209,6 +211,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     idade: emp.birthDate ? (() => { const b = new Date(emp.birthDate); const t = new Date(); return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0) })() : null,
     score: emp.score, scoreColor: scoreColor(emp.score),
     hasScore: emp.hasScore, scoreLabel: emp.hasScore ? String(emp.score) : '—',
+    scoreNote: emp.hasScore ? null : ((emp.atrasos > 0 || emp.advertencias > 0) ? 'Avaliação parcial' : 'Sem dados suficientes'),
     delta: (emp.delta >= 0 ? '▲ +' : '▼ ') + Math.abs(emp.delta), deltaColor: emp.delta >= 0 ? 'var(--success)' : 'var(--danger)',
     gaugeTrack: g.track, gaugeValue: g.value, gaugeColor: g.color,
     factors: emp.factors.map((f) => ({

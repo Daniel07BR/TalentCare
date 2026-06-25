@@ -388,8 +388,12 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
     const nAtr = atr.get(e.id) ?? 0, nAdv = adv.get(e.id) ?? 0
     const aN = assidNotaFrom(nAtr, nAdv)
     const fN = formacaoNota(e.escolaridade)
-    // Avaliável só se há ALGUM sinal real (produtividade, formação ou registro de ponto).
-    const hasScore = pN != null || fN != null || nAtr > 0 || nAdv > 0
+    // Score COMPARÁVEL só com fator de PERFORMANCE real: produtividade (atividade
+    // em sistema) OU formação. Assiduidade sozinha (higiene/presença) NÃO basta —
+    // senão uma faxineira com presença exemplar e nada mais lideraria o ranking.
+    // Quem cai aqui (staff de Limpeza/Cozinha/Entregas sem formação) = "avaliação
+    // parcial": fora de ranking/médias; a ficha mostra a assiduidade, sem score.
+    const hasScore = pN != null || fN != null
     const parts: { w: number; nota: number }[] = []
     if (pN != null) parts.push({ w: SCORE_W.prod, nota: pN })
     parts.push({ w: SCORE_W.assid, nota: aN })
