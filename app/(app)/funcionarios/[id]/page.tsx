@@ -401,8 +401,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 ) : (
                   <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>
                 )}
-                <FormacaoEditor nexusUserId={vm.nexusUserId} level={vm.grau} detail={vm.eduDetail} />
-                <TreinamentosEditor nexusUserId={vm.nexusUserId} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
+                <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
+                <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
               </>
             )}
 

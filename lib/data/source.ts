@@ -72,6 +72,9 @@ export async function getTalentData(): Promise<TalentData> {
     const hds = u.nexusUserId ? helpdeskByNexus.get(u.nexusUserId) : undefined
     const cds = u.nexusUserId ? cideByNexus.get(u.nexusUserId) : undefined
     const ws = whatsappByName.get(normName(u.name))
+    // Escolaridade/cursos/certificados são preenchíveis MANUALMENTE p/ todos
+    // (inclusive STAFF sem Nexus): a chave é nexus_user_id quando existe, senão o id.
+    const personKey = u.nexusUserId ?? u.id
     return {
       id: u.id,
       nexusUserId: u.nexusUserId,
@@ -86,10 +89,10 @@ export async function getTalentData(): Promise<TalentData> {
       leftDate: u.leftAt,
       birthDate: u.birthDate ? u.birthDate.toISOString() : null,
       gender: u.gender ?? null,
-      escolaridade: (u.nexusUserId ? eduByNexus.get(u.nexusUserId) : null) ?? null,
-      eduDetail: (u.nexusUserId ? eduDetailByNexus.get(u.nexusUserId) : null) ?? null,
-      treinoCursos: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.cursos : null),
-      treinoCerts: asItems(u.nexusUserId ? trainByNexus.get(u.nexusUserId)?.certs : null),
+      escolaridade: eduByNexus.get(personKey) ?? null,
+      eduDetail: eduDetailByNexus.get(personKey) ?? null,
+      treinoCursos: asItems(trainByNexus.get(personKey)?.cursos),
+      treinoCerts: asItems(trainByNexus.get(personKey)?.certs),
       classroom: {
         videosCompleted: cs?._sum.videos ?? 0,
         coursesCompleted: cs?._sum.courses ?? 0,
