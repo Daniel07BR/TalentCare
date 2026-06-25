@@ -46,6 +46,7 @@ export type Employee = {
   treinoCursos: TrainingItem[]
   treinoCerts: TrainingItem[]
   classroom: ClassroomStat
+  whatsapp: WhatsappStat
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -53,6 +54,9 @@ export type ClassroomStat = { videosCompleted: number; coursesCompleted: number;
 
 /** Métricas REAIS da Rádio Itamarathy (frente B). */
 export type RadioStat = { totalSeconds: number; sessions: number; lastListenedAt: string | null }
+
+/** Métricas REAIS do WhatsApp/OneCode por atendente (frente B). */
+export type WhatsappStat = { abertos: number; finalizados: number; handleSum: number }
 
 export type Department = {
   id: string
@@ -91,6 +95,7 @@ export type Identity = {
   gender: string | null
   classroom: ClassroomStat
   radio: RadioStat
+  whatsapp: WhatsappStat
   escolaridade: string | null
   // Cursos reais (cadastro RH): "Graduação: X · Médio técnico: Y · Pós: Z" ou null.
   eduDetail: string | null
@@ -256,6 +261,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     treinoCursos: id8.treinoCursos,
     treinoCerts: id8.treinoCerts,
     classroom: id8.classroom,
+    whatsapp: id8.whatsapp,
   }
 }
 

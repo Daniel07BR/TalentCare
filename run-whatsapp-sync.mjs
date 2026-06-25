@@ -42,10 +42,12 @@ async function main() {
   for (const a of data.attendants) {
     if (!a.dept || !a.name || !a.day) continue
     const abertos = Number(a.abertos) || 0
+    const finalizados = Number(a.finalizados) || 0
+    const handleSum = Number(a.handleSum) || 0
     await prisma.whatsappAttendantDaily.upsert({
       where: { dept_name_day: { dept: a.dept, name: a.name, day: a.day } },
-      create: { dept: a.dept, name: a.name, day: a.day, abertos },
-      update: { abertos },
+      create: { dept: a.dept, name: a.name, day: a.day, abertos, finalizados, handleSum },
+      update: { abertos, finalizados, handleSum },
     })
     att++
   }

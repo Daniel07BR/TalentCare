@@ -9,7 +9,7 @@ const KEY = process.env.PAINEL_API_KEY!
 const SOURCE = 'whatsapp'
 
 interface DayRow { dept: string; day: string; abertos: number | string; finalizados: number | string; handleSum: number | string; color: string | null }
-interface AttRow { dept: string; name: string; day: string; abertos: number | string }
+interface AttRow { dept: string; name: string; day: string; abertos: number | string; finalizados: number | string; handleSum: number | string }
 interface Overview { days: DayRow[]; attendants: AttRow[]; snapshot: { pendingNow: number; openNow: number } }
 
 export interface WhatsappSyncResult {
@@ -65,11 +65,13 @@ export async function syncWhatsapp(): Promise<WhatsappSyncResult> {
   for (const a of data.attendants) {
     if (!a.dept || !a.name || !a.day) continue
     const abertos = Number(a.abertos) || 0
+    const finalizados = Number(a.finalizados) || 0
+    const handleSum = Number(a.handleSum) || 0
     try {
       await prisma.whatsappAttendantDaily.upsert({
         where: { dept_name_day: { dept: a.dept, name: a.name, day: a.day } },
-        create: { dept: a.dept, name: a.name, day: a.day, abertos },
-        update: { abertos },
+        create: { dept: a.dept, name: a.name, day: a.day, abertos, finalizados, handleSum },
+        update: { abertos, finalizados, handleSum },
       })
       result.syncedAtt++
     } catch (e) {

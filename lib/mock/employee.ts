@@ -154,6 +154,15 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     ? new Date(emp.radioUltima).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
     : null
 
+  // WhatsApp (atendimentos reais da pessoa, acumulado). tempo médio = handle/finalizados.
+  const wppAvgSec = emp.whatsapp.finalizados ? Math.round(emp.whatsapp.handleSum / emp.whatsapp.finalizados) : 0
+  const whatsapp = {
+    has: emp.whatsapp.abertos > 0 || emp.whatsapp.finalizados > 0,
+    abertos: emp.whatsapp.abertos,
+    finalizados: emp.whatsapp.finalizados,
+    tempoMedio: wppAvgSec ? (wppAvgSec >= 3600 ? `${Math.floor(wppAvgSec / 3600)}h ${String(Math.round((wppAvgSec % 3600) / 60)).padStart(2, '0')}min` : `${Math.round(wppAvgSec / 60)}min`) : '—',
+  }
+
   const dec = decisionFor(data, emp)
 
   return {
@@ -173,7 +182,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     assid: Math.max(0, 100 - emp.faltas * 5 - emp.atrasos * 2), atrasos: emp.atrasos, faltas: emp.faltas,
     advert: emp.advertencias, susp: emp.suspensoes, disc, discEmpty: disc.length === 0,
     heat: heatmapFor(seed, emp.score),
-    radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima,
+    radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima, whatsapp,
     grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
     treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,

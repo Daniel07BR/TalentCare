@@ -180,14 +180,17 @@ model WhatsappDaily {
 // Atendimentos abertos por (departamento, atendente, dia) — ranking de atendentes
 // no período, geral e por departamento (do ticket/fila).
 model WhatsappAttendantDaily {
-  dept      String
-  name      String
-  day       String   @db.VarChar(10)
-  abertos   Int      @default(0)
-  updatedAt DateTime @updatedAt @map("updated_at")
+  dept        String
+  name        String
+  day         String   @db.VarChar(10)
+  abertos     Int      @default(0)
+  finalizados Int      @default(0)
+  handleSum   Int      @default(0) @map("handle_sum")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([dept, name, day])
   @@index([day])
+  @@index([name])
   @@map("whatsapp_attendant_daily")
 }
 
