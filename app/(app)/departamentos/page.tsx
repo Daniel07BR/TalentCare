@@ -1,11 +1,14 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { deptListVM } from '@/lib/mock/departments'
 
 export default function DepartamentosPage() {
   const router = useRouter()
-  const vm = deptListVM(useTalentData())
+  const { signals } = useScoreSignals()
+  const vm = deptListVM(withRealScores(useTalentData(), signals))
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>

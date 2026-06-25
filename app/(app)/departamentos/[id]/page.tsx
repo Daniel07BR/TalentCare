@@ -3,6 +3,8 @@ import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { deptDetailVM } from '@/lib/mock/departments'
 import { educationByDept } from '@/lib/mock/education'
 import Avatar from '../../Avatar'
@@ -11,7 +13,8 @@ import ClassroomStats from '../../ClassroomStats'
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const data = useTalentData()
+  const { signals } = useScoreSignals()
+  const data = withRealScores(useTalentData(), signals)
   const vm = deptDetailVM(data, id)
   const edu = educationByDept(data).byDept.find((d) => d.id === id)
 

@@ -3,6 +3,8 @@ import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { useEmployeePeriod } from '@/lib/ui/employee-period'
 import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
@@ -23,7 +25,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const { id } = use(params)
   const router = useRouter()
   const [tab, setTab] = useState('atividade')
-  const data = useTalentData()
+  const { signals } = useScoreSignals()
+  const data = withRealScores(useTalentData(), signals)
   const { period } = usePeriod()
   const { m } = useEmployeePeriod(id)
   const { events: timeline } = useEmployeeTimeline(id)
@@ -126,8 +129,10 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               <path d={vm.gaugeValue} fill="none" stroke={vm.gaugeColor} strokeWidth="14" strokeLinecap="round" />
             </svg>
             <div style={{ position: 'absolute', top: 36, left: 0, right: 0 }}>
-              <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.scoreColor }}>{vm.score}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></div>
+              <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.hasScore ? vm.scoreColor : 'var(--text-mute)' }}>{vm.scoreLabel}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>
+                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : 'Sem dados suficientes'}
+              </div>
             </div>
           </div>
           <div style={{ width: 206, display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -135,7 +140,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               <div key={f.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 3 }}>
                   <span style={{ color: 'var(--text-dim)' }}>{f.label} <span style={{ color: 'var(--text-mute)' }}>· {f.peso}%</span></span>
-                  <span style={{ fontWeight: 700, color: f.color }}>{f.nota}</span>
+                  <span style={{ fontWeight: 700, color: f.color, fontSize: f.semFonte ? 10 : undefined }}>{f.notaLabel}</span>
                 </div>
                 <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: f.pct, background: f.color, borderRadius: 20 }} /></div>
               </div>

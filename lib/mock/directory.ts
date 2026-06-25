@@ -10,7 +10,7 @@ export type SortDir = 'asc' | 'desc'
 
 export type DirRow = {
   id: string; nome: string; cargo: string; dept: string; initials: string; color: string; hasAvatar: boolean
-  score: number; scoreColor: string; scorePct: string; status: string; statusColor: string; statusBg: string; tempo: string
+  score: number; hasScore: boolean; scoreLabel: string; scoreColor: string; scorePct: string; status: string; statusColor: string; statusBg: string; tempo: string
 }
 
 export const DIR_COLS: { key: SortKey; label: string }[] = [
@@ -27,6 +27,7 @@ export function filterDirectory(data: TalentData, f: DirFilters, sortKey: SortKe
   let rows = data.employees.filter((e) => {
     if (f.dept !== 'Todos' && e.dept !== f.dept) return false
     if (f.status !== 'Todos' && e.status !== f.status) return false
+    if (f.faixa !== 'Todos' && !e.hasScore) return false // sem score real → fora das faixas
     if (f.faixa === '75–100' && e.score < 75) return false
     if (f.faixa === '50–74' && (e.score < 50 || e.score > 74)) return false
     if (f.faixa === '0–49' && e.score >= 50) return false
@@ -40,6 +41,7 @@ export function filterDirectory(data: TalentData, f: DirFilters, sortKey: SortKe
     else if (sortKey === 'cargo') { va = a.cargo; vb = b.cargo }
     else if (sortKey === 'dept') { va = deptName(data, a.dept); vb = deptName(data, b.dept) }
     else if (sortKey === 'status') { va = a.status; vb = b.status }
+    else if (sortKey === 'score') { va = a.hasScore ? a.score : -1; vb = b.hasScore ? b.score : -1 }
     else { va = a[sortKey] as number; vb = b[sortKey] as number }
     if (typeof va === 'string') return va.localeCompare(vb as string) * dir
     return (va - (vb as number)) * dir
@@ -48,7 +50,8 @@ export function filterDirectory(data: TalentData, f: DirFilters, sortKey: SortKe
     const sm = statusMeta(e.status)
     return {
       id: e.id, nome: e.nome, cargo: e.cargo, dept: deptName(data, e.dept), initials: e.initials, color: e.color, hasAvatar: e.hasAvatar,
-      score: e.score, scoreColor: scoreColor(e.score), scorePct: e.score + '%',
+      score: e.score, hasScore: e.hasScore, scoreLabel: e.hasScore ? String(e.score) : '—',
+      scoreColor: e.hasScore ? scoreColor(e.score) : 'var(--text-mute)', scorePct: e.hasScore ? e.score + '%' : '0%',
       status: e.status, statusColor: sm.color, statusBg: sm.bg, tempo: fmtTempo(e.tempoMeses),
     }
   })

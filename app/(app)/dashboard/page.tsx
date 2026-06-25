@@ -3,6 +3,8 @@ import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { buildDashboard } from '@/lib/mock/dashboard'
 import { generationsVM, genderVM } from '@/lib/mock/demographics'
 import Avatar from '../Avatar'
@@ -16,7 +18,8 @@ import CideDeptCard from './CideDeptCard'
 export default function DashboardPage() {
   const { period } = usePeriod()
   const router = useRouter()
-  const data = useTalentData()
+  const { signals } = useScoreSignals()
+  const data = withRealScores(useTalentData(), signals)
   const { map: assidMap } = useAssiduidadePeriod()
   const vm = buildDashboard(data, period, assidMap ?? undefined)
   const gen = generationsVM(data).overall

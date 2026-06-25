@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { filterDirectory, deptOptions, DIR_COLS, type DirFilters, type SortKey, type SortDir } from '@/lib/mock/directory'
 import Avatar from '../Avatar'
 
@@ -15,7 +17,8 @@ export default function FuncionariosPage() {
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  const data = useTalentData()
+  const { signals } = useScoreSignals()
+  const data = withRealScores(useTalentData(), signals)
   const { rows, total } = filterDirectory(data, f, sortKey, sortDir)
   const depts = deptOptions(data)
   const toggleSort = (k: SortKey) => {
@@ -70,7 +73,7 @@ export default function FuncionariosPage() {
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{r.tempo}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 44, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: r.scorePct, background: r.scoreColor, borderRadius: 20 }} /></div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.score}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.scoreLabel}</span>
             </div>
             <span style={{ justifySelf: 'start', fontSize: 11.5, fontWeight: 600, color: r.statusColor, background: r.statusBg, padding: '3px 10px', borderRadius: 20 }}>{r.status}</span>
           </div>

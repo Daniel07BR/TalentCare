@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
+import { useScoreSignals } from '@/lib/ui/score-period'
+import { withRealScores } from '@/lib/mock/score'
 import { leaderboard, comparison, cmpOptions, metricLabel, type RankMetric } from '@/lib/mock/ranking'
 import Avatar from '../Avatar'
 
@@ -13,7 +15,8 @@ export default function RankingPage() {
   const [cmpA, setCmpA] = useState('e3')
   const [cmpB, setCmpB] = useState('e23')
 
-  const data = useTalentData()
+  const { signals } = useScoreSignals()
+  const data = withRealScores(useTalentData(), signals)
   const board = leaderboard(data, metric)
   const cmp = comparison(data, cmpA, cmpB)
   const opts = cmpOptions(data)

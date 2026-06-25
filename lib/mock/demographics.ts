@@ -81,7 +81,7 @@ function genderStats(emps: Employee[]) {
   const f = emps.filter((e) => gNorm(e.gender) === 'F')
   const ni = emps.filter((e) => gNorm(e.gender) === '?')
   const avg = (list: Employee[]) => { const a = list.map((e) => ageOf(e.birthDate)).filter((x): x is number => x != null); return a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : null }
-  const score = (list: Employee[]) => list.length ? Math.round(list.reduce((s, e) => s + e.score, 0) / list.length) : 0
+  const score = (list: Employee[]) => { const sc = list.filter((e) => e.hasScore); return sc.length ? Math.round(sc.reduce((s, e) => s + e.score, 0) / sc.length) : 0 }
   const total = m.length + f.length || 1
   return {
     m: m.length, f: f.length, ni: ni.length,

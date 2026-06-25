@@ -68,7 +68,9 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   const nonDir = data.employees.filter((e) => !isDir(e.dept)) // turnover: inclui as saídas
   const n = perf.length || 1
 
-  const compScore = Math.round(perf.reduce((a, e) => a + e.score, 0) / n)
+  // Score médio/ranking só com quem é avaliável (hasScore) — exclui sem-dado.
+  const scored = perf.filter((e) => e.hasScore)
+  const compScore = scored.length ? Math.round(scored.reduce((a, e) => a + e.score, 0) / scored.length) : 0
   const totalTasks = Math.round(perf.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
   // Ponto (REAL) — atrasos e advertências do quadro ativo. Period-aware quando o
   // assidMap (do /api/assiduidade-metrics) é passado; sem ele, cai no acumulado.
@@ -110,17 +112,18 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   const byDeptMap = new Map<string, Employee[]>()
   perf.forEach((e) => { const l = byDeptMap.get(e.dept) ?? []; l.push(e); byDeptMap.set(e.dept, l) })
   const deptBars: DeptBar[] = [...byDeptMap.entries()].map(([id, list]) => {
-    const score = Math.round(list.reduce((a, e) => a + e.score, 0) / list.length)
+    const sc = list.filter((e) => e.hasScore)
+    const score = sc.length ? Math.round(sc.reduce((a, e) => a + e.score, 0) / sc.length) : 0
     return { id, nome: data.deptMeta[id] ?? id, score, pct: score + '%', color: deptColorById.get(id) ?? 'var(--accent)' }
   }).sort((a, b) => b.score - a.score)
 
   const tg = geomLine(tser.vals.length > 1 ? tser.vals : [0, 0], 320, 150, 8)
 
-  const ranked = [...perf].sort((a, b) => b.score - a.score)
+  const ranked = [...scored].sort((a, b) => b.score - a.score)
   const top3 = ranked.slice(0, 3), bot3 = ranked.slice(-3).reverse()
   const rankList: RankRow[] = [
     ...top3.map((e, i) => ({ pos: i + 1, e })),
-    ...bot3.map((e, i) => ({ pos: perf.length - 2 + i, e })),
+    ...bot3.map((e, i) => ({ pos: ranked.length - 2 + i, e })),
   ].map(({ pos, e }) => ({ rank: pos, id: e.id, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, nome: e.nome, cargo: e.cargo, score: e.score, scoreColor: scoreColor(e.score) }))
 
   const ESC_RANK = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio', 'Ensino Fundamental', 'Não informado']

@@ -7,7 +7,9 @@
    (ingestão de métricas reais). Mesmas assinaturas de VM serão mantidas.
    ============================================================ */
 
-export type Factor = { key: string; label: string; peso: number; nota: number }
+// nota = null → fator SEM FONTE real (ex.: Prazos/Colaboração hoje) → não entra no
+// cálculo do score (peso redistribuído) e aparece como "sem fonte" na ficha.
+export type Factor = { key: string; label: string; peso: number; nota: number | null }
 
 export type Employee = {
   id: string
@@ -19,6 +21,7 @@ export type Employee = {
   escolaridade: string
   tempoMeses: number
   score: number
+  hasScore: boolean     // false = sem sinal real p/ avaliar (fora de ranking/médias)
   factors: Factor[]
   hist: number[]
   initials: string
@@ -275,7 +278,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
   const tasksDone = 24 + Math.round(rnd(seed * 3) * 120)
   return {
     id: id8.id, nome: id8.nome, username: id8.username, dept: id8.deptId ?? 'sem', cargo: id8.cargo || 'Colaborador',
-    status, escolaridade, tempoMeses, score, factors, hist,
+    status, escolaridade, tempoMeses, score, hasScore: true, factors, hist,
     initials: ini(id8.nome), color: PALETTE[seed % 6], delta: score - hist[10], hasAvatar: id8.hasAvatar,
     tasksDone, tasksLate: Math.round(tasksDone * (0.03 + rnd(seed * 5) * 0.13)), tasksPend: Math.round(rnd(seed * 4) * 16),
     // ASSIDUIDADE REAL (ponto). faltas/suspensoes = 0 (sem fonte; a ficha mostra "—").
@@ -311,9 +314,110 @@ const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messag
 const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 0, resolvedSeconds: 0 })
 const zeroCide = (): CideStat => ({ atividades: 0 })
 
+/* ============================================================
+   SCORE REAL (substitui o seed). Fatores com fonte: Produtividade (atividade nos
+   sistemas, RELATIVA por departamento), Assiduidade (ponto) e Formação
+   (escolaridade). Prazos e Colaboração ainda NÃO têm fonte → ficam de fora
+   (peso redistribuído por normalização). Period-aware via signals (overrides).
+   ============================================================ */
+
+// Escolaridade → nota 0..100. "Não informado"/desconhecido → null (não se aplica).
+const FORM_NOTA: Record<string, number> = {
+  'Doutorado': 100, 'Mestrado': 95, 'MBA': 90, 'Pós-graduação': 85,
+  'Superior Completo': 75, 'Superior (cursando)': 62, 'Superior Incompleto': 55,
+  'Médio Técnico': 50, 'Técnico': 48, 'Ensino Médio': 40, 'Ensino Fundamental': 25,
+}
+export function formacaoNota(esc: string | null | undefined): number | null {
+  if (!esc) return null
+  return FORM_NOTA[esc] ?? null
+}
+
+// Volume de ATIVIDADE de uma pessoa (acumulado) nos sistemas que medem trabalho.
+// Rádio (escuta) NÃO entra. Usado quando não há override por período.
+export function activityOf(e: Employee): number {
+  const c = e.classroom, h = e.helpdesk, k = e.cide, p = e.consultoria, w = e.whatsapp
+  return c.videosCompleted + c.coursesCompleted + c.coursesCreated
+    + h.opened + h.resolved + k.atividades
+    + p.studies + p.tickets + p.messages + p.comments
+    + w.finalizados
+}
+
+// Sinais por pessoa NO PERÍODO (do /api/score-metrics) p/ o score period-aware.
+export type ScoreSignals = Map<string, { activity: number; atrasos: number; advertencias: number }>
+
+// Pesos-base dos fatores COM fonte. Prazos(25)/Colaboração(10) ficam fora; a
+// normalização (÷ soma dos pesos aplicáveis) redistribui o peso deles.
+const SCORE_W = { prod: 30, assid: 20, form: 15 }
+
+export function assidNotaFrom(atrasos: number, advert: number): number {
+  return Math.max(0, Math.min(100, 100 - atrasos * 2 - advert * 5))
+}
+
+/** Calcula score + factors REAIS por funcionário. signals = override por período.
+ *  hasScore=false quando a pessoa não tem NENHUM sinal real (sem produtividade
+ *  aplicável, sem formação e sem registro de ponto) — assiduidade=100 por ausência
+ *  de dado NÃO é avaliação. Esses ficam fora de ranking/médias (ficha: "sem dados"). */
+export function computeScores(employees: Employee[], signals?: ScoreSignals | null): Map<string, { score: number; factors: Factor[]; hasScore: boolean }> {
+  const act = new Map<string, number>(), atr = new Map<string, number>(), adv = new Map<string, number>()
+  for (const e of employees) {
+    const s = signals?.get(e.id)
+    act.set(e.id, s ? s.activity : activityOf(e))
+    atr.set(e.id, s ? s.atrasos : e.atrasos)
+    adv.set(e.id, s ? s.advertencias : e.advertencias)
+  }
+  // Produtividade = percentil dentro do DEPARTAMENTO. Se o setor inteiro não tem
+  // atividade de sistema (ex.: Limpeza/Cozinha) → produtividade "não se aplica" (null).
+  const byDept = new Map<string, Employee[]>()
+  for (const e of employees) { const l = byDept.get(e.dept) ?? []; l.push(e); byDept.set(e.dept, l) }
+  const prodNota = new Map<string, number | null>()
+  for (const [, list] of byDept) {
+    const total = list.reduce((a, e) => a + (act.get(e.id) ?? 0), 0)
+    if (total <= 0) { for (const e of list) prodNota.set(e.id, null); continue }
+    const vals = list.map((e) => act.get(e.id) ?? 0)
+    for (const e of list) {
+      const v = act.get(e.id) ?? 0
+      const less = vals.filter((x) => x < v).length
+      const eq = vals.filter((x) => x === v).length
+      const pct = list.length <= 1 ? 100 : ((less + (eq - 1) / 2) / (list.length - 1)) * 100
+      prodNota.set(e.id, Math.max(0, Math.min(100, Math.round(pct))))
+    }
+  }
+  const out = new Map<string, { score: number; factors: Factor[]; hasScore: boolean }>()
+  for (const e of employees) {
+    const pN = prodNota.get(e.id) ?? null
+    const nAtr = atr.get(e.id) ?? 0, nAdv = adv.get(e.id) ?? 0
+    const aN = assidNotaFrom(nAtr, nAdv)
+    const fN = formacaoNota(e.escolaridade)
+    // Avaliável só se há ALGUM sinal real (produtividade, formação ou registro de ponto).
+    const hasScore = pN != null || fN != null || nAtr > 0 || nAdv > 0
+    const parts: { w: number; nota: number }[] = []
+    if (pN != null) parts.push({ w: SCORE_W.prod, nota: pN })
+    parts.push({ w: SCORE_W.assid, nota: aN })
+    if (fN != null) parts.push({ w: SCORE_W.form, nota: fN })
+    const sumW = parts.reduce((a, p) => a + p.w, 0) || 1
+    const score = Math.round(parts.reduce((a, p) => a + p.w * p.nota, 0) / sumW)
+    const factors: Factor[] = [
+      { key: 'prod', label: 'Produtividade', peso: 30, nota: pN },
+      { key: 'prazo', label: 'Prazos', peso: 25, nota: null },
+      { key: 'assid', label: 'Assiduidade', peso: 20, nota: aN },
+      { key: 'form', label: 'Formação', peso: 15, nota: fN },
+      { key: 'colab', label: 'Colaboração', peso: 10, nota: null },
+    ]
+    out.set(e.id, { score, factors, hasScore })
+  }
+  return out
+}
+
 /** Monta o TalentData (employees + departments) a partir das identidades reais. */
 export function assembleData(identities: Identity[]): TalentData {
-  const employees = identities.map((id8, i) => simulateEmployee(id8, i))
+  const employees0 = identities.map((id8, i) => simulateEmployee(id8, i))
+  // Score REAL (acumulado) embutido na base — todas as telas já mostram real;
+  // a versão period-aware é aplicada por withRealScores nas páginas.
+  const sm = computeScores(employees0, null)
+  const employees = employees0.map((e) => {
+    const rs = sm.get(e.id)
+    return rs ? { ...e, score: rs.score, hasScore: rs.hasScore, factors: rs.factors, hist: Array(12).fill(rs.score), delta: 0 } : e
+  })
 
   const deptMeta: Record<string, string> = {}
   for (const id8 of identities) {
@@ -329,7 +433,9 @@ export function assembleData(identities: Identity[]): TalentData {
       const ativos = all.filter((e) => e.status !== 'Desligado')
       const base = ativos.length ? ativos : all
       const hc = ativos.length
-      const score = Math.round(base.reduce((a, e) => a + e.score, 0) / base.length)
+      // Média do setor só com quem é avaliável (hasScore) — não infla com staff sem dado.
+      const scored = base.filter((e) => e.hasScore)
+      const score = scored.length ? Math.round(scored.reduce((a, e) => a + e.score, 0) / scored.length) : 0
       const dseed = seedOf(id)
       const turnover = +(3.5 + rnd(dseed * 5.3) * 13).toFixed(1)
       const spark: number[] = []

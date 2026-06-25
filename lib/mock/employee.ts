@@ -19,10 +19,12 @@ function geomGauge(score: number) {
 }
 
 export function compFactorAvg(data: TalentData): Record<string, number> {
-  const ats = data.employees.filter((e) => e.status !== 'Desligado')
+  const ats = data.employees.filter((e) => e.status !== 'Desligado' && e.hasScore)
   const avg: Record<string, number> = {}
   FACTORS.forEach((f) => {
-    avg[f.key] = ats.length ? Math.round(ats.reduce((a, e) => a + (e.factors.find((x) => x.key === f.key)?.nota ?? 0), 0) / ats.length) : 0
+    // Média só dos que TÊM nota (fator sem fonte = null não entra).
+    const notas = ats.map((e) => e.factors.find((x) => x.key === f.key)?.nota).filter((n): n is number => n != null)
+    avg[f.key] = notas.length ? Math.round(notas.reduce((a, n) => a + n, 0) / notas.length) : 0
   })
   return avg
 }
@@ -126,15 +128,17 @@ function decisionFor(data: TalentData, emp: Employee) {
   const strengths: { label: string; diff: string }[] = []
   const attention: { label: string; diff: string }[] = []
   emp.factors.forEach((f) => {
+    if (f.nota == null) return // fator sem fonte não entra em forças/atenção
     const diff = f.nota - (cfa[f.key] ?? 0)
     if (diff >= 4) strengths.push({ label: f.label, diff: '+' + diff })
     else if (diff <= -5) attention.push({ label: f.label, diff: '' + diff })
   })
   const trend = emp.hist[11] - emp.hist[5]
-  const deptEmps = data.employees.filter((e) => e.dept === emp.dept)
+  const deptEmps = data.employees.filter((e) => e.dept === emp.dept && e.hasScore)
   const deptAvg = deptEmps.length ? Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length) : emp.score
   let rec: string
-  if (emp.status === 'Desligado') rec = 'Colaborador desligado — histórico mantido para consulta. Score final ' + emp.score + '.'
+  if (!emp.hasScore) rec = 'Sem dados suficientes para um score — esta pessoa não tem atividade nos sistemas, formação cadastrada nem registro de ponto. Score real depende de pelo menos uma dessas fontes.'
+  else if (emp.status === 'Desligado') rec = 'Colaborador desligado — histórico mantido para consulta. Score final ' + emp.score + '.'
   else if (emp.score >= 85 && trend >= 0) rec = 'Score consistente acima de 85 e assiduidade exemplar — forte candidato a promoção ou bônus.'
   else if (emp.score >= 75) rec = 'Desempenho sólido e estável. Recomenda-se reajuste por mérito e plano de desenvolvimento.'
   else if (trend >= 5) rec = 'Em evolução clara nos últimos 6 meses — manter acompanhamento e mentoria.'
@@ -148,7 +152,7 @@ export type EmployeeVM = NonNullable<ReturnType<typeof buildEmployeeVM>>
 export function buildEmployeeVM(data: TalentData, empId: string) {
   const emp = findEmployee(data, empId)
   if (!emp) return null
-  const g = geomGauge(emp.score)
+  const g = geomGauge(emp.hasScore ? emp.score : 0)
   const sm = statusMeta(emp.status)
   const seed = seedOf(emp.id)
 
@@ -204,9 +208,16 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     nascimento: emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : null,
     idade: emp.birthDate ? (() => { const b = new Date(emp.birthDate); const t = new Date(); return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0) })() : null,
     score: emp.score, scoreColor: scoreColor(emp.score),
+    hasScore: emp.hasScore, scoreLabel: emp.hasScore ? String(emp.score) : '—',
     delta: (emp.delta >= 0 ? '▲ +' : '▼ ') + Math.abs(emp.delta), deltaColor: emp.delta >= 0 ? 'var(--success)' : 'var(--danger)',
     gaugeTrack: g.track, gaugeValue: g.value, gaugeColor: g.color,
-    factors: emp.factors.map((f) => ({ label: f.label, peso: f.peso, nota: f.nota, pct: f.nota + '%', color: scoreColor(f.nota) })),
+    factors: emp.factors.map((f) => ({
+      label: f.label, peso: f.peso, nota: f.nota,
+      notaLabel: f.nota == null ? 'sem fonte' : String(f.nota),
+      pct: f.nota == null ? '0%' : f.nota + '%',
+      color: f.nota == null ? 'var(--text-mute)' : scoreColor(f.nota),
+      semFonte: f.nota == null,
+    })),
     timeline: timelineFor(emp),
     tasksDone: emp.tasksDone, tasksLate: emp.tasksLate, tasksPend: emp.tasksPend, prodBar, bySystem,
     // Assiduidade REAL: 100 − atrasos·2 − advertências·5 (atraso abonado já fora).

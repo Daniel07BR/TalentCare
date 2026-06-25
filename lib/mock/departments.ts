@@ -19,8 +19,8 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   const dep = data.departments.find((d) => d.id === deptId)
   if (!dep) return null
   // Ranking de pessoas do setor: só ativos (desligados não entram).
-  const emps = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado').sort((a, b) => b.score - a.score)
-  const ativos = data.employees.filter((e) => e.status !== 'Desligado')
+  const emps = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado' && e.hasScore).sort((a, b) => b.score - a.score)
+  const ativos = data.employees.filter((e) => e.status !== 'Desligado' && e.hasScore)
   const compAvg = ativos.length ? Math.round(ativos.reduce((a, e) => a + e.score, 0) / ativos.length) : dep.score
   const hl = geomLine(dep.spark, 300, 84, 8)
   // Heatmap de OCORRÊNCIAS do setor = soma dos atrasos dos membros por dia (real).

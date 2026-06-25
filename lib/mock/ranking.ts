@@ -17,7 +17,9 @@ export function metricLabel(m: RankMetric): string {
 }
 
 export function leaderboard(data: TalentData, m: RankMetric) {
-  const list = data.employees.filter((e) => e.status !== 'Desligado').map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
+  // No ranking por SCORE, só entra quem é avaliável (hasScore) — evita que pessoas
+  // sem dado real (assiduidade=100 por ausência) liderem o ranking.
+  const list = data.employees.filter((e) => e.status !== 'Desligado' && (m !== 'score' || e.hasScore)).map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
   const max = list[0] ? list[0].val : 1
   return list.map((x, i) => ({
     rank: i + 1, id: x.e.id, nome: x.e.nome, cargo: x.e.cargo, dept: deptName(data, x.e.dept), initials: x.e.initials, color: x.e.color, hasAvatar: x.e.hasAvatar,
@@ -36,9 +38,16 @@ export function comparison(data: TalentData, aId: string, bId: string) {
   return {
     aCard: cmpCard(data, a), bCard: cmpCard(data, b),
     rows: FACTORS.map((f) => {
-      const na = a.factors.find((x) => x.key === f.key)!.nota
-      const nb = b.factors.find((x) => x.key === f.key)!.nota
-      return { label: f.label, na, nb, naPct: na + '%', nbPct: nb + '%', naColor: scoreColor(na), nbColor: scoreColor(nb) }
+      const na = a.factors.find((x) => x.key === f.key)?.nota ?? null
+      const nb = b.factors.find((x) => x.key === f.key)?.nota ?? null
+      // Fator sem fonte (null) → exibe "—" e barra zerada, cor neutra.
+      return {
+        label: f.label,
+        na: na ?? '—', nb: nb ?? '—',
+        naPct: na == null ? '0%' : na + '%', nbPct: nb == null ? '0%' : nb + '%',
+        naColor: na == null ? 'var(--text-mute)' : scoreColor(na),
+        nbColor: nb == null ? 'var(--text-mute)' : scoreColor(nb),
+      }
     }),
   }
 }
