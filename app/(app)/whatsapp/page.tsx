@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { usePeriod } from '@/lib/ui/period'
 import { PERIOD_LABEL } from '@/lib/mock/dashboard'
+import { deptName } from '@/lib/mock/employee'
 import Avatar from '../Avatar'
 
 type Att = { dept: string; name: string; abertos: number }
@@ -51,40 +52,45 @@ export default function WhatsappPage() {
 
   // Casa o nome do atendente com um funcionário (p/ foto), por nome normalizado.
   const empByName = useMemo(() => {
-    const m = new Map<string, { id: string; hasAvatar: boolean; color: string }>()
-    for (const e of data.employees) m.set(norm(e.nome), { id: e.id, hasAvatar: e.hasAvatar, color: e.color })
+    const m = new Map<string, { id: string; hasAvatar: boolean; color: string; dept: string }>()
+    for (const e of data.employees) m.set(norm(e.nome), { id: e.id, hasAvatar: e.hasAvatar, color: e.color, dept: deptName(data, e.dept) })
     return m
   }, [data])
 
   const kpis = ov?.kpis
   const maxBar = Math.max(1, ...(ov?.series ?? []).map((s) => s.abertos))
 
-  // Abas: "Geral" + um por departamento (do ticket), ordenadas por volume.
+  // Total de atendimentos por atendente (soma as filas que ele atendeu).
+  const nameTotals = useMemo(() => {
+    const m = new Map<string, number>()
+    if (ov) for (const a of ov.attendants) m.set(a.name, (m.get(a.name) ?? 0) + a.abertos)
+    return m
+  }, [ov])
+
+  // Abas: "Geral" + um por DEPARTAMENTO DO ATENDENTE (setor dele no diretório),
+  // não pela fila do ticket — Bianca (Recepção) só aparece em Recepção.
   const tabs = useMemo(() => {
-    if (!ov) return ['Geral']
     const totals = new Map<string, number>()
-    for (const a of ov.attendants) {
-      if (a.dept === 'Sem fila') continue
-      totals.set(a.dept, (totals.get(a.dept) ?? 0) + a.abertos)
+    for (const [name, ab] of nameTotals) {
+      const emp = empByName.get(norm(name))
+      if (!emp) continue
+      totals.set(emp.dept, (totals.get(emp.dept) ?? 0) + ab)
     }
     const depts = [...totals.entries()].sort((x, y) => y[1] - x[1]).map(([d]) => d)
     return ['Geral', ...depts]
-  }, [ov])
+  }, [nameTotals, empByName])
   const activeTab = tabs.includes(tab) ? tab : 'Geral'
 
-  // Top 10 da aba ativa (Geral = soma por nome em todos os deptos; aba = só o depto).
+  // Top 10 da aba: Geral = todos; aba = atendentes daquele setor (home dept).
   const topList = useMemo(() => {
-    if (!ov) return [] as { name: string; abertos: number }[]
-    let rows: { name: string; abertos: number }[]
-    if (activeTab === 'Geral') {
-      const byName = new Map<string, number>()
-      for (const a of ov.attendants) byName.set(a.name, (byName.get(a.name) ?? 0) + a.abertos)
-      rows = [...byName.entries()].map(([name, abertos]) => ({ name, abertos }))
-    } else {
-      rows = ov.attendants.filter((a) => a.dept === activeTab).map((a) => ({ name: a.name, abertos: a.abertos }))
+    const rows: { name: string; abertos: number }[] = []
+    for (const [name, ab] of nameTotals) {
+      if (activeTab === 'Geral') { rows.push({ name, abertos: ab }); continue }
+      const emp = empByName.get(norm(name))
+      if (emp && emp.dept === activeTab) rows.push({ name, abertos: ab })
     }
     return rows.filter((r) => r.abertos > 0).sort((a, b) => b.abertos - a.abertos).slice(0, 10)
-  }, [ov, activeTab])
+  }, [nameTotals, empByName, activeTab])
   const maxAtt = Math.max(1, ...topList.map((a) => a.abertos))
 
   const KPI = ({ label, value, accent }: { label: string; value: string | number; accent: string }) => (
