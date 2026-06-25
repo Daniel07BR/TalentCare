@@ -6,10 +6,11 @@ import { usePeriod } from '@/lib/ui/period'
 import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import Avatar from '../Avatar'
 
+type Att = { dept: string; name: string; abertos: number }
 type Overview = {
   kpis: { pendingNow: number; openNow: number; abertos: number; finalizados: number; avgHandleSeconds: number }
   series: { day: string; abertos: number }[]
-  attendants: { name: string; abertos: number }[]
+  attendants: Att[]
 }
 
 const WppIcon = ({ size = 22 }: { size?: number }) => (
@@ -35,6 +36,7 @@ export default function WhatsappPage() {
   const { period } = usePeriod()
   const [ov, setOv] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('Geral')
 
   useEffect(() => {
     let alive = true
@@ -56,7 +58,34 @@ export default function WhatsappPage() {
 
   const kpis = ov?.kpis
   const maxBar = Math.max(1, ...(ov?.series ?? []).map((s) => s.abertos))
-  const maxAtt = Math.max(1, ...(ov?.attendants ?? []).map((a) => a.abertos))
+
+  // Abas: "Geral" + um por departamento (do ticket), ordenadas por volume.
+  const tabs = useMemo(() => {
+    if (!ov) return ['Geral']
+    const totals = new Map<string, number>()
+    for (const a of ov.attendants) {
+      if (a.dept === 'Sem fila') continue
+      totals.set(a.dept, (totals.get(a.dept) ?? 0) + a.abertos)
+    }
+    const depts = [...totals.entries()].sort((x, y) => y[1] - x[1]).map(([d]) => d)
+    return ['Geral', ...depts]
+  }, [ov])
+  const activeTab = tabs.includes(tab) ? tab : 'Geral'
+
+  // Top 10 da aba ativa (Geral = soma por nome em todos os deptos; aba = só o depto).
+  const topList = useMemo(() => {
+    if (!ov) return [] as { name: string; abertos: number }[]
+    let rows: { name: string; abertos: number }[]
+    if (activeTab === 'Geral') {
+      const byName = new Map<string, number>()
+      for (const a of ov.attendants) byName.set(a.name, (byName.get(a.name) ?? 0) + a.abertos)
+      rows = [...byName.entries()].map(([name, abertos]) => ({ name, abertos }))
+    } else {
+      rows = ov.attendants.filter((a) => a.dept === activeTab).map((a) => ({ name: a.name, abertos: a.abertos }))
+    }
+    return rows.filter((r) => r.abertos > 0).sort((a, b) => b.abertos - a.abertos).slice(0, 10)
+  }, [ov, activeTab])
+  const maxAtt = Math.max(1, ...topList.map((a) => a.abertos))
 
   const KPI = ({ label, value, accent }: { label: string; value: string | number; accent: string }) => (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 'var(--radius)', padding: '16px 18px' }}>
@@ -112,15 +141,35 @@ export default function WhatsappPage() {
             )}
           </div>
 
-          {/* Top atendentes */}
+          {/* Top atendentes — Geral + abas por departamento */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Top atendentes</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Atendimentos abertos no período</div>
-            {ov.attendants.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>
+              Atendimentos abertos no período · {activeTab === 'Geral' ? 'todos os departamentos' : activeTab}
+            </div>
+            {/* abas */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+              {tabs.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className="tc-btn"
+                  style={{
+                    fontFamily: 'inherit', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border)',
+                    background: t === activeTab ? 'var(--accent)' : 'var(--surface-2)',
+                    color: t === activeTab ? '#1a1205' : 'var(--text-dim)',
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {topList.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Sem dados no período.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {ov.attendants.map((a, i) => {
+                {topList.map((a, i) => {
                   const emp = empByName.get(norm(a.name))
                   return (
                     <div

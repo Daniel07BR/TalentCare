@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const [dayRows, attRows, snap] = await Promise.all([
     prisma.whatsappDaily.findMany({ where, select: { day: true, abertos: true, finalizados: true, handleSum: true } }),
-    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where, _sum: { abertos: true } }),
+    prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where, _sum: { abertos: true } }),
     prisma.whatsappSnapshot.findUnique({ where: { id: 1 } }),
   ])
 
@@ -31,11 +31,10 @@ export async function GET(req: NextRequest) {
     byDay.set(r.day, (byDay.get(r.day) ?? 0) + r.abertos)
   }
   const series = [...byDay.entries()].map(([day, n]) => ({ day, abertos: n })).sort((a, b) => a.day.localeCompare(b.day))
+  // Atendentes por (depto, nome) no período — a página monta o ranking geral e as abas.
   const attendants = attRows
-    .map((r) => ({ name: r.name, abertos: r._sum.abertos ?? 0 }))
+    .map((r) => ({ dept: r.dept, name: r.name, abertos: r._sum.abertos ?? 0 }))
     .filter((a) => a.abertos > 0)
-    .sort((a, b) => b.abertos - a.abertos)
-    .slice(0, 15)
 
   return NextResponse.json({
     period, fromDay, toDay,
