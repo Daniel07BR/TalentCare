@@ -54,6 +54,19 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const cd = m?.cide ?? null
   const periodo = PERIOD_LABEL[period]
 
+  // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
+  // integrados. Atrasadas/Pendentes não têm fonte (SLA vazio / sem estado) → ocultas.
+  const concluidasParts = m
+    ? [
+        { label: 'chamados resolvidos', sys: 'HelpDesk', n: m.helpdesk.resolved },
+        { label: 'cursos (concluídos/criados)', sys: 'ClassRoom', n: m.classroom.total },
+        { label: 'alterações', sys: 'CIDE', n: m.cide.atividades },
+        { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
+        { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
+      ].filter((p) => p.n > 0)
+    : []
+  const concluidas = m ? concluidasParts.reduce((a, p) => a + p.n, 0) : null
+
   // "Atividade por sistema": agora TODAS as 5 fontes são REAIS (period-aware via m).
   // Mantido o mecanismo real/simulado caso entre algum sistema novo no futuro.
   const realBySystem: Record<string, number | null> = {
@@ -168,18 +181,32 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 
             {tab === 'produtividade' && (
               <>
-                <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{vm.tasksDone}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Concluídas</div></div>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{vm.tasksLate}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Atrasadas</div></div>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-dim)' }}>{vm.tasksPend}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Pendentes</div></div>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Distribuição</div>
-                <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', marginBottom: 24 }}>
-                  {vm.prodBar.map((p, i) => <div key={i} style={{ width: p.w, background: p.color }} />)}
+                {/* Concluídas REAL no período (soma das atividades concluídas nos sistemas).
+                    Atrasadas/Pendentes não têm fonte → ocultas. */}
+                <div style={{ display: 'flex', gap: 14, marginBottom: 22, alignItems: 'stretch' }}>
+                  <div style={{ flex: 'none', minWidth: 150, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div className="cnum" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: 'var(--success)' }}>{(concluidas ?? 0).toLocaleString('pt-BR')}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Atividades concluídas <span style={{ color: 'var(--text-mute)' }}>· {periodo}</span></div>
+                  </div>
+                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    {concluidas && concluidasParts.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px' }}>
+                        {concluidasParts.map((p) => (
+                          <div key={p.sys} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12.5 }}>
+                            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.n.toLocaleString('pt-BR')}</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{p.label}</span>
+                            <span style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>({p.sys})</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>Sem atividades concluídas neste período.</div>
+                    )}
+                  </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Atividade por sistema</div>
                 <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginBottom: 14 }}>
-                  Sistemas integrados mostram dados reais no período ({periodo}); os demais seguem simulados até integrar.
+                  Volume de atividade por sistema no período ({periodo}) · dados reais.
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
                   {bySystem.map((s) => (
