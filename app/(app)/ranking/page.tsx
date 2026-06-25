@@ -12,14 +12,18 @@ const METRICS: RankMetric[] = ['score', 'tarefas', 'assiduidade']
 export default function RankingPage() {
   const router = useRouter()
   const [metric, setMetric] = useState<RankMetric>('score')
+  const [dept, setDept] = useState('Todos')
   const [cmpA, setCmpA] = useState('e3')
   const [cmpB, setCmpB] = useState('e23')
 
   const { signals } = useScoreSignals()
   const data = withRealScores(useTalentData(), signals)
-  const board = leaderboard(data, metric)
+  const board = leaderboard(data, metric, dept)
   const cmp = comparison(data, cmpA, cmpB)
   const opts = cmpOptions(data)
+  // Score é relativo ao departamento → misturar setores no ranking por score não compara.
+  const scoreCrossDept = metric === 'score' && dept === 'Todos'
+  const cmpCrossDept = !!cmp && metric === 'score' && cmp.aCard.dept !== cmp.bCard.dept
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -28,15 +32,26 @@ export default function RankingPage() {
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Comparativo</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Ranking &amp; Comparativo</h1>
         </div>
-        <div style={{ display: 'flex', gap: 3, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
-          {METRICS.map((m) => <button key={m} className={'seg' + (metric === m ? ' on' : '')} onClick={() => setMetric(m)} style={{ fontSize: 12.5, padding: '7px 13px' }}>{metricLabel(m)}</button>)}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={dept} onChange={(e) => setDept(e.target.value)} style={{ height: 36, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}>
+            <option value="Todos">Todos os setores</option>
+            {[...data.departments].sort((a, b) => a.nome.localeCompare(b.nome)).map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 3, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
+            {METRICS.map((m) => <button key={m} className={'seg' + (metric === m ? ' on' : '')} onClick={() => setMetric(m)} style={{ fontSize: 12.5, padding: '7px 13px' }}>{metricLabel(m)}</button>)}
+          </div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Leaderboard</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Ordenado por {metricLabel(metric)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Ordenado por {metricLabel(metric)}{dept !== 'Todos' ? ` · ${data.deptMeta[dept] ?? ''}` : ''}</div>
+          {scoreCrossDept && (
+            <div style={{ fontSize: 12, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+              ⚠ O score é <b>relativo ao departamento</b> (produtividade é percentil interno). Comparar pessoas de setores diferentes não é direto — selecione um setor acima para um ranking comparável.
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {board.map((r) => (
               <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 9, borderRadius: 8, cursor: 'pointer' }}>
@@ -52,6 +67,11 @@ export default function RankingPage() {
 
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Comparação lado a lado</div>
+          {cmpCrossDept && (
+            <div style={{ fontSize: 11.5, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', marginBottom: 12, lineHeight: 1.45 }}>
+              ⚠ Setores diferentes — a produtividade é relativa a cada depto, então o score não é diretamente comparável.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
             <select value={cmpA} onChange={(e) => setCmpA(e.target.value)} style={{ flex: 1, height: 36, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0 10px', fontSize: 12, fontFamily: 'inherit', outline: 'none', cursor: 'pointer', minWidth: 0 }}>
               {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

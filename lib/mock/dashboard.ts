@@ -57,6 +57,7 @@ export type DeptBar = { id: string; nome: string; score: number; pct: string; co
 export type RankRow = { rank: number; id: string; initials: string; color: string; hasAvatar: boolean; nome: string; cargo: string; score: number; scoreColor: string }
 export type EscSegment = { label: string; count: number; color: string; dash: string; offset: string }
 export type Alert = { text: string; when: string; color: string; glow: string }
+export type DeptHighlight = { deptId: string; deptNome: string; color: string; id: string; nome: string; cargo: string; initials: string; hasAvatar: boolean; score: number; scoreColor: string }
 
 export function buildDashboard(data: TalentData, period: Period, assidMap?: PeriodAssid) {
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -126,6 +127,20 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
     ...bot3.map((e, i) => ({ pos: ranked.length - 2 + i, e })),
   ].map(({ pos, e }) => ({ rank: pos, id: e.id, initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, nome: e.nome, cargo: e.cargo, score: e.score, scoreColor: scoreColor(e.score) }))
 
+  // Destaque por departamento: o MELHOR de cada setor (cada um comparado só com o
+  // próprio depto). Score é relativo ao depto (produtividade percentil) → não faz
+  // sentido um ranking de pessoas misturando setores na home.
+  const byDeptScored = new Map<string, Employee[]>()
+  for (const e of scored) { const l = byDeptScored.get(e.dept) ?? []; l.push(e); byDeptScored.set(e.dept, l) }
+  const deptHighlights: DeptHighlight[] = [...byDeptScored.entries()].map(([id, list]) => {
+    const top = list.slice().sort((a, b) => b.score - a.score)[0]
+    return {
+      deptId: id, deptNome: data.deptMeta[id] ?? id, color: deptColorById.get(id) ?? 'var(--accent)',
+      id: top.id, nome: top.nome, cargo: top.cargo, initials: top.initials, hasAvatar: top.hasAvatar,
+      score: top.score, scoreColor: scoreColor(top.score),
+    }
+  }).sort((a, b) => b.score - a.score)
+
   const ESC_RANK = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio', 'Ensino Fundamental', 'Não informado']
   const escCounts: Record<string, number> = {}
   perf.forEach((e) => { const k = e.escolaridade || 'Não informado'; escCounts[k] = (escCounts[k] ?? 0) + 1 })
@@ -162,7 +177,7 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
     kpis, deptBars, deptCount: deptBars.length,
     turnoverLine: tg.line, turnoverArea: tg.area, turnoverNow,
     turnoverWinRate: tser.rate, turnoverLabels: tser.labels, turnoverSub: tser.sub,
-    rankList, headcountTotal: perf.length,
+    rankList, deptHighlights, headcountTotal: perf.length,
     escSegments, escTopPct: Math.round(escTop.c / escTotal * 100), escTopLabel: escTop.l.replace('Superior ', 'Sup. '),
     alerts,
   }

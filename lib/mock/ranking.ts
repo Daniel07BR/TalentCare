@@ -16,10 +16,13 @@ export function metricLabel(m: RankMetric): string {
   return ({ score: 'Score geral', tarefas: 'Tarefas concluídas', assiduidade: 'Assiduidade' })[m]
 }
 
-export function leaderboard(data: TalentData, m: RankMetric) {
+export function leaderboard(data: TalentData, m: RankMetric, deptId?: string) {
   // No ranking por SCORE, só entra quem é avaliável (hasScore) — evita que pessoas
-  // sem dado real (assiduidade=100 por ausência) liderem o ranking.
-  const list = data.employees.filter((e) => e.status !== 'Desligado' && (m !== 'score' || e.hasScore)).map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
+  // sem dado real (assiduidade=100 por ausência) liderem o ranking. deptId filtra
+  // por setor (o score é relativo ao depto → comparação válida só dentro do setor).
+  const list = data.employees
+    .filter((e) => e.status !== 'Desligado' && (m !== 'score' || e.hasScore) && (!deptId || deptId === 'Todos' || e.dept === deptId))
+    .map((e) => ({ e, val: metricVal(e, m) })).sort((a, b) => b.val - a.val)
   const max = list[0] ? list[0].val : 1
   return list.map((x, i) => ({
     rank: i + 1, id: x.e.id, nome: x.e.nome, cargo: x.e.cargo, dept: deptName(data, x.e.dept), initials: x.e.initials, color: x.e.color, hasAvatar: x.e.hasAvatar,
