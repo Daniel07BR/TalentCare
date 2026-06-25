@@ -24,8 +24,8 @@ export default function DashboardPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Painel Executivo</div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Visão da Diretoria</h1>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Painel de</div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Indicadores Grupo Itamarathy</h1>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.5 }}>
           <div>Período: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{vm.periodLabel}</span></div>

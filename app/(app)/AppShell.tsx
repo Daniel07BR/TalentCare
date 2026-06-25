@@ -110,7 +110,7 @@ export default function AppShell({ name, roleLabel, me, data, children }: { name
             <Logo size={34} radius={9} />
             <div style={{ lineHeight: 1.15 }}>
               <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-.2px' }}>TalentCare</div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Grupo Itamarathy</div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Indicadores</div>
             </div>
           </div>
 
