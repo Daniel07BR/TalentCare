@@ -83,6 +83,8 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
   const _exits12 = nonDir.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length
   const turnoverNow = perf.length ? +((_exits12 / perf.length) * 100).toFixed(1) : 0
+  // Turnover REAL period-aware (saídas no período ÷ headcount). nonDir = sem Diretoria.
+  const tser = turnoverSeries(nonDir, period)
 
   const sp = (seed: number, b: number): number[] => {
     const a: number[] = []
@@ -92,7 +94,7 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   }
   const kdef = [
     { label: 'Headcount', value: perf.length, unit: '', delta: '+3', up: true, vals: sp(1, perf.length - 3), color: 'var(--info)' },
-    { label: 'Turnover', value: turnoverNow, unit: '%', delta: '-1.2 p.p.', up: true, vals: [11, 10.4, 10.9, 9.8, 9.2, 9.5, 8.9, 9.1, 8.6, 8.8, 8.5, 8.4], color: 'var(--success)' },
+    { label: 'Turnover', value: tser.rate, unit: '%', delta: '', up: false, vals: tser.vals.length > 1 ? tser.vals : [0, 0], color: 'var(--success)' },
     { label: 'Tarefas concluídas', value: totalTasks.toLocaleString('pt-BR'), unit: '', delta: '+12%', up: true, vals: sp(3, totalTasks * 0.8), color: 'var(--chart-2)' },
     { label: 'Advertências', value: advertPonto, unit: '', delta: '', up: false, vals: sp(4, advertPonto / 12 + 2), color: 'var(--danger)' },
     { label: 'Atrasos', value: atrasosPonto, unit: '', delta: '', up: false, vals: sp(5, atrasosPonto / 12 + 3), color: 'var(--chart-5)' },
@@ -112,9 +114,6 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
     return { id, nome: data.deptMeta[id] ?? id, score, pct: score + '%', color: deptColorById.get(id) ?? 'var(--accent)' }
   }).sort((a, b) => b.score - a.score)
 
-  // Curva de turnover REAL e period-aware (saídas por bucket no período). nonDir
-  // = quadro sem a Diretoria (donos não contam como rotatividade).
-  const tser = turnoverSeries(nonDir, period)
   const tg = geomLine(tser.vals.length > 1 ? tser.vals : [0, 0], 320, 150, 8)
 
   const ranked = [...perf].sort((a, b) => b.score - a.score)
