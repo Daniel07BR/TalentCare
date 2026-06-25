@@ -50,6 +50,20 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const cons = m?.consultoria ?? null
   const periodo = PERIOD_LABEL[period]
 
+  // "Tarefas por sistema": REAL (period-aware via m) para os sistemas já
+  // integrados à frente B; MOCK para os que ainda não integramos (HelpDesk, CIDE).
+  // Conforme cada sistema entra, sua barra deixa de ser simulada. Marca real/simulado.
+  const realBySystem: Record<string, number | null> = {
+    ClassRoom: m ? m.classroom.videos + m.classroom.courses + m.classroom.created : null,
+    'Painel de Atendimento': m ? m.whatsapp.abertos : null,
+    'Consultoria Plus': m ? m.consultoria.total : null,
+  }
+  const bySystem = vm.bySystem.map((b) => {
+    const real = b.sys in realBySystem
+    return { sys: b.sys, color: b.color, real, value: real ? (realBySystem[b.sys] ?? 0) : b.value }
+  })
+  const maxSys = Math.max(1, ...bySystem.map((b) => b.value))
+
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <button onClick={() => router.push('/funcionarios')} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar ao diretório</button>
@@ -154,13 +168,19 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', marginBottom: 24 }}>
                   {vm.prodBar.map((p, i) => <div key={i} style={{ width: p.w, background: p.color }} />)}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Tarefas por sistema</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Atividade por sistema</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginBottom: 14 }}>
+                  Sistemas integrados mostram dados reais no período ({periodo}); os demais seguem simulados até integrar.
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                  {vm.bySystem.map((s) => (
+                  {bySystem.map((s) => (
                     <div key={s.sys} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ width: 150, fontSize: 12.5, color: 'var(--text-dim)', flex: 'none' }}>{s.sys}</span>
-                      <div style={{ flex: 1, height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: s.pct, background: s.color, borderRadius: 20 }} /></div>
-                      <span style={{ width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700 }}>{s.value}</span>
+                      <span style={{ width: 168, fontSize: 12.5, color: 'var(--text-dim)', flex: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {s.sys}
+                        <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.3px', textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, color: s.real ? 'var(--success)' : 'var(--text-mute)', background: s.real ? 'rgba(63,178,85,.13)' : 'var(--surface-2)' }}>{s.real ? 'real' : 'simulado'}</span>
+                      </span>
+                      <div style={{ flex: 1, height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: `${(s.value / maxSys) * 100}%`, background: s.color, borderRadius: 20, opacity: s.real ? 1 : 0.5 }} /></div>
+                      <span style={{ width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, color: s.real ? 'var(--text)' : 'var(--text-mute)' }}>{s.value}</span>
                     </div>
                   ))}
                 </div>
