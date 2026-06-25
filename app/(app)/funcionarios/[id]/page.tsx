@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { useEmployeePeriod } from '@/lib/ui/employee-period'
+import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
 import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { buildEmployeeVM } from '@/lib/mock/employee'
@@ -25,6 +26,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const data = useTalentData()
   const { period } = usePeriod()
   const { m } = useEmployeePeriod(id)
+  const { events: timeline } = useEmployeeTimeline(id)
   const vm = buildEmployeeVM(data, id)
 
   if (!vm) {
@@ -138,9 +140,12 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
           <div style={{ padding: 22 }}>
             {tab === 'atividade' && (
               <>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18 }}>Linha do tempo cross-sistema — integrada ao Nexus</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18 }}>Linha do tempo cross-sistema · dados reais · {periodo}</div>
+                {timeline !== null && timeline.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Sem atividade registrada nos sistemas integrados neste período.</div>
+                ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {vm.timeline.map((ev, i) => (
+                  {(timeline ?? []).map((ev, i) => (
                     <div key={i} style={{ display: 'flex', gap: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ width: 11, height: 11, borderRadius: '50%', background: ev.color, marginTop: 4, flex: 'none' }} />
@@ -157,6 +162,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     </div>
                   ))}
                 </div>
+                )}
               </>
             )}
 
