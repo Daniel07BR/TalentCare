@@ -214,14 +214,20 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{periodo}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-                      <span className="cnum" style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--chart-2)' }}>{radioHoras}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
-                      {radioSessoes.toLocaleString('pt-BR')} {radioSessoes === 1 ? 'sessão' : 'sessões'}
-                      {radioUltima ? <> · última escuta {radioUltima}</> : null}
-                    </div>
+                    {radioHoras === 0 && radioSessoes === 0 ? (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', marginTop: 'auto', marginBottom: 'auto' }}>Sem escuta no período.</div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                          <span className="cnum" style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--chart-2)' }}>{radioHoras}</span>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
+                          {radioSessoes.toLocaleString('pt-BR')} {radioSessoes === 1 ? 'sessão' : 'sessões'}
+                          {radioUltima ? <> · última escuta {radioUltima}</> : null}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Advertências &amp; suspensões</div>
@@ -252,12 +258,16 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                 </div>
                 <div style={{ marginBottom: 22 }}>
-                  <ClassroomStats stats={[
-                    { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos, color: 'var(--chart-2)' },
-                    { icon: PenLine, label: 'Cursos criados', value: cr.criados, color: 'var(--accent)' },
-                    { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos, color: 'var(--info)' },
-                    { icon: BookOpen, label: 'Total', value: cr.total, color: 'var(--text)' },
-                  ]} />
+                  {cr.total + cr.videos > 0 ? (
+                    <ClassroomStats stats={[
+                      { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos, color: 'var(--chart-2)' },
+                      { icon: PenLine, label: 'Cursos criados', value: cr.criados, color: 'var(--accent)' },
+                      { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos, color: 'var(--info)' },
+                      { icon: BookOpen, label: 'Total', value: cr.total, color: 'var(--text)' },
+                    ]} />
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no ClassRoom neste período.</div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
                   <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{vm.grau}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Escolaridade</div></div>
