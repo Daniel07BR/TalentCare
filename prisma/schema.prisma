@@ -322,9 +322,23 @@ model PontoStaging {
   confidence          String   @default("none")
   matchedPersonKey    String?  @map("matched_person_key")
   status              String   @default("pending")
+  // Ocorrências cruas desta pessoa do Nexo (p/ aplicar o vínculo manual sem o dump):
+  // { atrasos: [{day, minutos, abonado}], adverts: [{sourceId, day, motivo}] }.
+  occ                 Json?
   createdAt           DateTime @default(now()) @map("created_at")
 
   @@map("ponto_staging")
+}
+
+// Vínculos MANUAIS nexo_user_id → personKey (resolvidos na tela /ponto). Duráveis:
+// o import consulta isto e atribui as ocorrências à pessoa certa em re-cargas.
+model PontoMatch {
+  nexoUserId String   @id @map("nexo_user_id")
+  personKey  String   @map("person_key")
+  nome       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("ponto_match")
 }
 
 // Marcador de última sincronização por fonte (sync incremental).

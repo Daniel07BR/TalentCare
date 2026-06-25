@@ -32,6 +32,7 @@ const NAV_MAIN = [
 const NAV_SYS = [
   { href: '/equipe', label: 'Equipe interna', icon: UserPlus },
   { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
+  { href: '/ponto', label: 'Casar ponto', icon: AlarmClock },
   { href: '/relatorios', label: 'Relatórios', icon: FileText },
   { href: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal },
   { href: '/usuarios', label: 'Usuários', icon: UserCog },

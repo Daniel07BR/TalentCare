@@ -24,11 +24,14 @@ export function assiduidadeVM(data: TalentData, period?: PeriodAssid) {
   const colorOf = new Map(data.departments.map((d) => [d.id, d.color]))
 
   const stat = (e: TalentData['employees'][number]) => {
+    // Advertência = registro disciplinar CUMULATIVO → sempre acumulado (não filtra
+    // por período; senão o histórico — que praticamente parou em abr/2026 — some).
+    const advertencias = e.advertencias
     if (period) {
       const p = period.get(personKeyOf(e))
-      return { atrasos: p?.atrasos ?? 0, abonados: p?.abonados ?? 0, minutos: p?.minutos ?? 0, advertencias: p?.advertencias ?? 0 }
+      return { atrasos: p?.atrasos ?? 0, abonados: p?.abonados ?? 0, minutos: p?.minutos ?? 0, advertencias }
     }
-    return { atrasos: e.atrasos, abonados: e.atrasosAbon, minutos: e.minutosAtraso, advertencias: e.advertencias }
+    return { atrasos: e.atrasos, abonados: e.atrasosAbon, minutos: e.minutosAtraso, advertencias }
   }
 
   // Só o quadro ATIVO (desligado não entra no painel de assiduidade).

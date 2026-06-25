@@ -79,9 +79,8 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   const atrasosPonto = assidMap
     ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.atrasos ?? 0), 0)
     : perf.reduce((a, e) => a + e.atrasos, 0)
-  const advertPonto = assidMap
-    ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.advertencias ?? 0), 0)
-    : perf.reduce((a, e) => a + e.advertencias, 0)
+  // Advertências = registro cumulativo → SEMPRE acumulado (não por período).
+  const advertPonto = perf.reduce((a, e) => a + e.advertencias, 0)
   const _tnow = new Date()
   const _cutoff = new Date(_tnow.getFullYear() - 1, _tnow.getMonth(), 1)
   const _exits12 = nonDir.filter((e) => e.leftISO && new Date(e.leftISO) >= _cutoff).length

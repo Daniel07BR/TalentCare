@@ -21,7 +21,7 @@ export default function AssiduidadePage() {
     { label: 'Assiduidade média', value: `${vm.assidMedio}%`, color: scoreColor(vm.assidMedio) },
     { label: 'Atrasos', value: vm.totalAtrasos.toLocaleString('pt-BR'), color: 'var(--warning)' },
     { label: 'Tempo atrasado', value: fmtMin(vm.totalMinutos), color: 'var(--warning)' },
-    { label: 'Advertências', value: vm.totalAdvert.toLocaleString('pt-BR'), color: 'var(--danger)' },
+    { label: 'Advertências (total)', value: vm.totalAdvert.toLocaleString('pt-BR'), color: 'var(--danger)' },
     { label: 'Atrasos abonados', value: vm.totalAbonados.toLocaleString('pt-BR'), color: 'var(--text-mute)' },
     { label: 'Pessoas c/ ocorrência', value: vm.pessoas.toLocaleString('pt-BR'), color: 'var(--info)' },
   ]
@@ -30,7 +30,7 @@ export default function AssiduidadePage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Ponto eletrônico · dados reais · {PERIOD_LABEL[period]}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Ponto eletrônico · atrasos no {PERIOD_LABEL[period].toLowerCase()} · advertências acumuladas</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <AlarmClock size={24} color="var(--warning)" /> Assiduidade
           </h1>
@@ -49,7 +49,7 @@ export default function AssiduidadePage() {
       {/* Dois leaderboards: mais atrasou / mais advertências */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <Leaderboard title="Top 5 · quem mais atrasou" subtitle="Nº de atrasos no período" people={vm.topAtrasos} metric="atrasos" color="var(--warning)" router={router} />
-        <Leaderboard title="Top 5 · mais advertências" subtitle="Advertências no período" people={vm.topAdvert} metric="advertencias" color="var(--danger)" router={router} />
+        <Leaderboard title="Top 5 · mais advertências" subtitle="Advertências · histórico total (acumulado)" people={vm.topAdvert} metric="advertencias" color="var(--danger)" router={router} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
