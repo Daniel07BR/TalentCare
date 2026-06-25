@@ -27,6 +27,7 @@ export default async function EquipePage() {
     gender: u.gender ?? '',
     phone: u.phone ?? '',
     active: u.active,
+    hasAvatar: !!u.avatarUrl,
   }))
 
   return <EquipeClient staff={staff} departments={depsRaw} />

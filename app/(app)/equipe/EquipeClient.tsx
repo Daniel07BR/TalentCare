@@ -6,7 +6,7 @@ import Avatar from '../Avatar'
 
 type Staff = {
   id: string; name: string; cpf: string; jobTitle: string; deptId: string; deptName: string
-  entryDate: string; birthDate: string; gender: string; phone: string; active: boolean
+  entryDate: string; birthDate: string; gender: string; phone: string; active: boolean; hasAvatar: boolean
 }
 type Dept = { id: string; name: string }
 
@@ -132,7 +132,7 @@ export default function EquipeClient({ staff, departments }: { staff: Staff[]; d
             {staff.map((s) => (
               <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.2fr 1fr 0.9fr 120px', gap: 10, padding: '9px 6px', borderBottom: '1px solid var(--border-soft)', alignItems: 'center', opacity: s.active ? 1 : 0.55 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <Avatar id={s.id} hasAvatar={false} initials={ini(s.name)} color="var(--chart-3)" size={30} />
+                  <Avatar id={s.id} hasAvatar={s.hasAvatar} initials={ini(s.name)} color="var(--chart-3)" size={30} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
                     {s.cpf && <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>{s.cpf}</div>}
