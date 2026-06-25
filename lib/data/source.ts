@@ -10,7 +10,9 @@ import { isHiddenDept } from '@/lib/hidden-depts'
 export async function getTalentData(): Promise<TalentData> {
   const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, edu, train] = await Promise.all([
     prisma.user.findMany({
-      where: { origin: 'nexus' },
+      // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
+      // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
+      where: { origin: { in: ['nexus', 'staff'] } },
       include: { department: { select: { id: true, name: true } } },
       orderBy: { name: 'asc' },
     }),

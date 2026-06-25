@@ -34,6 +34,9 @@ model User {
   jobTitle      String?    @map("job_title")
   birthDate     DateTime?  @map("birth_date")
   gender        String?
+  // CPF (só dígitos). Usado p/ colaboradores STAFF sem Nexus e como chave de
+  // casamento na futura importação de ponto/disciplina. Nullable.
+  cpf           String?
   active        Boolean    @default(true)
   leftAt        DateTime?  @map("left_at")
   avatarUrl     String?    @map("avatar_url")

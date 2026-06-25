@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText, IdCard,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy, Landmark,
+  MessagesSquare, LifeBuoy, Landmark, UserPlus,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -29,6 +29,7 @@ const NAV_MAIN = [
   { href: '/cide', label: 'CIDE', icon: Landmark },
 ]
 const NAV_SYS = [
+  { href: '/equipe', label: 'Equipe interna', icon: UserPlus },
   { href: '/cadastro', label: 'Cadastro', icon: IdCard },
   { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
   { href: '/relatorios', label: 'Relatórios', icon: FileText },
