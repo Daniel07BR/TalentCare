@@ -14,22 +14,21 @@ const CPIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?
   </svg>
 )
 
+// As quatro métricas, sempre apresentadas SEPARADAS (não somadas num total bruto).
+type MetricKey = 'studies' | 'tickets' | 'messages' | 'comments'
+const METRICS: { key: MetricKey; label: string; short: string; color: string; desc: string }[] = [
+  { key: 'studies', label: 'Estudos postados', short: 'Estudos', color: 'var(--accent)', desc: 'Estudos publicados no feed' },
+  { key: 'tickets', label: 'Chamados abertos', short: 'Chamados', color: 'var(--info)', desc: 'Chamados abertos' },
+  { key: 'messages', label: 'Mensagens em chamados', short: 'Mensagens', color: 'var(--chart-2)', desc: 'Respostas/mensagens em chamados' },
+  { key: 'comments', label: 'Comentários em estudos', short: 'Comentários', color: 'var(--chart-5)', desc: 'Comentários nas postagens de estudos' },
+]
+
 export default function ConsultoriaPage() {
   const router = useRouter()
   const data = useTalentData()
   const { period } = usePeriod()
   const { map } = useConsultoriaPeriod()
   const vm = consultoriaVM(data, map ?? undefined)
-  const max = Math.max(1, ...vm.deptBars.map((d) => d.total))
-
-  const kpis = [
-    { label: 'Atividade total', value: vm.totals.total, color: 'var(--chart-3)' },
-    { label: 'Estudos publicados', value: vm.totals.studies, color: 'var(--accent)' },
-    { label: 'Chamados abertos', value: vm.totals.tickets, color: 'var(--info)' },
-    { label: 'Mensagens', value: vm.totals.messages, color: 'var(--chart-2)' },
-    { label: 'Comentários', value: vm.totals.comments, color: 'var(--chart-5)' },
-    { label: 'Pessoas ativas', value: vm.ativos, color: 'var(--text)' },
-  ]
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -42,120 +41,157 @@ export default function ConsultoriaPage() {
         </div>
       </div>
 
-      {/* Top 5 — quem mais contribui */}
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Top 5 · quem mais contribui</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Atividade total (estudos + chamados + mensagens + comentários)</div>
-        {vm.top5.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${vm.top5.length}, 1fr)`, gap: 12 }}>
-            {vm.top5.map((p, i) => (
-              <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', cursor: 'pointer', padding: '14px 8px', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', background: i === 0 ? 'rgba(167,139,250,.08)' : 'transparent' }}>
-                <div style={{ position: 'relative' }}>
-                  <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={52} />
-                  <span style={{ position: 'absolute', top: -4, left: -4, width: 20, height: 20, borderRadius: '50%', background: i === 0 ? 'var(--chart-3)' : 'var(--surface-2)', color: i === 0 ? '#fff' : 'var(--text-dim)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--surface)' }}>{i + 1}</span>
-                </div>
-                <div style={{ minWidth: 0, width: '100%' }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.dept}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span className="cnum" style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-1px', color: 'var(--chart-3)' }}>{p.total}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600 }}>ações</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 14, marginBottom: 16 }}>
-        {kpis.map((k) => (
-          <div key={k.label} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 8 }}>{k.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-1px', color: k.color }}>{k.value.toLocaleString('pt-BR')}</div>
+      {/* KPIs — uma métrica por card (separadas) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
+        {METRICS.map((mt) => (
+          <div key={mt.key} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: mt.color, flex: 'none' }} />{mt.label}
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-1px', color: mt.color }}>{vm.totals[mt.key].toLocaleString('pt-BR')}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 4 }}>{mt.desc}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-        {/* Por departamento */}
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por departamento</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Total de ações por setor</div>
-          {vm.deptBars.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-              {vm.deptBars.map((d) => (
-                <div key={d.id} className="tc-row" onClick={() => router.push(`/departamentos/${d.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 8, padding: '3px 5px', margin: '0 -5px' }}>
-                  <div style={{ width: 92, flex: 'none', fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
-                  <div style={{ flex: 1, height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-                    <div className="cbar" style={{ height: '100%', width: `${(d.total / max) * 100}%`, background: 'var(--chart-3)', borderRadius: 20 }} />
-                  </div>
-                  <div style={{ width: 40, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.total.toLocaleString('pt-BR')}</div>
+      {/* Leaderboards por tipo — quem mais faz cada coisa (separado) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16, alignItems: 'start' }}>
+        {METRICS.map((mt) => {
+          const rows = vm.byUser.filter((p) => p[mt.key] > 0).sort((a, b) => b[mt.key] - a[mt.key]).slice(0, 5)
+          return (
+            <div key={mt.key} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: mt.color, flex: 'none' }} />{mt.short}
+              </div>
+              {rows.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--text-mute)', padding: '4px 0' }}>Sem registros no período.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {rows.map((p) => (
+                    <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', borderRadius: 8, padding: 4, margin: '-1px -4px' }}>
+                      <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={26} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.dept}</div>
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: mt.color, fontVariantNumeric: 'tabular-nums' }}>{p[mt.key]}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Por usuário */}
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por usuário</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{vm.ativos} pessoas · ordenadas por atividade</div>
-          {vm.byUser.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 520, overflowY: 'auto' }}>
-              {vm.byUser.map((p, i) => <UserRow key={p.id} p={p} rank={i + 1} router={router} />)}
-            </div>
-          )}
-        </div>
+          )
+        })}
       </div>
 
-      {/* Usuários divididos por departamento */}
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Usuários por departamento</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Atividade de cada funcionário no Consultoria Plus, agrupada por setor</div>
-        {vm.byDept.length === 0 ? (
+      {/* Por departamento — tabela com uma coluna por tipo */}
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por departamento</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Cada tipo de atividade detalhado por setor</div>
+        {vm.deptBars.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '20px 28px', alignItems: 'start' }}>
-            {vm.byDept.map((d) => (
-              <div key={d.id}>
-                <div className="tc-row" onClick={() => router.push(`/departamentos/${d.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', paddingBottom: 9, marginBottom: 4, borderBottom: '1px solid var(--border-soft)' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flex: 'none' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{d.nome}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{d.users.length} {d.users.length === 1 ? 'pessoa' : 'pessoas'} · {d.total.toLocaleString('pt-BR')} ações</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {d.users.map((p) => <UserRow key={p.id} p={p} router={router} />)}
-                </div>
-              </div>
-            ))}
-          </div>
+          <MetricTable
+            rows={vm.deptBars.map((d) => ({ id: d.id, nome: d.nome, color: d.color, studies: d.studies, tickets: d.tickets, messages: d.messages, comments: d.comments }))}
+            totals={vm.totals}
+            onRow={(id) => router.push(`/departamentos/${id}`)}
+            firstColLabel="Departamento"
+          />
+        )}
+      </div>
+
+      {/* Por usuário — tabela com uma coluna por tipo */}
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por usuário</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{vm.ativos} pessoas com atividade no período</div>
+        {vm.byUser.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
+        ) : (
+          <UserMetricTable rows={vm.byUser} totals={vm.totals} onRow={(id) => router.push(`/funcionarios/${id}`)} />
         )}
       </div>
     </div>
   )
 }
 
-function UserRow({ p, rank, router }: { p: ConsultoriaPerson; rank?: number; router: ReturnType<typeof useRouter> }) {
+const COLS: { key: MetricKey; label: string; color: string }[] = METRICS.map((m) => ({ key: m.key, label: m.short, color: m.color }))
+
+function HeaderRow({ firstColLabel, grid }: { firstColLabel: string; grid: string }) {
   return (
-    <div className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
-      {rank != null && <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{rank}</span>}
-      <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.cargo} · {p.dept}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '0 6px 9px', borderBottom: '1px solid var(--border-soft)' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)' }}>{firstColLabel}</div>
+      {COLS.map((c) => (
+        <div key={c.key} style={{ textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, flex: 'none' }} />{c.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TotalsRow({ totals, grid }: { totals: Record<MetricKey, number>; grid: string }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '10px 6px 0' }}>
+      <div style={{ fontSize: 12, fontWeight: 700 }}>Total</div>
+      {COLS.map((c) => (
+        <div key={c.key} style={{ textAlign: 'right', fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: c.color }}>{totals[c.key].toLocaleString('pt-BR')}</div>
+      ))}
+    </div>
+  )
+}
+
+type MetricRow = { id: string; nome: string; color: string } & Record<MetricKey, number>
+
+function MetricTable({ rows, totals, onRow, firstColLabel }: {
+  rows: MetricRow[]
+  totals: Record<MetricKey, number>; onRow: (id: string) => void; firstColLabel: string
+}) {
+  const grid = '1fr repeat(4, 96px)'
+  return (
+    <div>
+      <HeaderRow firstColLabel={firstColLabel} grid={grid} />
+      {rows.map((d) => (
+        <div key={d.id} className="tc-row" onClick={() => onRow(d.id)} style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '9px 6px', borderBottom: '1px solid var(--border-soft)', alignItems: 'center', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 3, background: d.color, flex: 'none' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</span>
+          </div>
+          {COLS.map((c) => (
+            <div key={c.key} style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: d[c.key] > 0 ? 'var(--text)' : 'var(--text-mute)' }}>
+              {d[c.key].toLocaleString('pt-BR')}
+            </div>
+          ))}
+        </div>
+      ))}
+      <TotalsRow totals={totals} grid={grid} />
+    </div>
+  )
+}
+
+function UserMetricTable({ rows, totals, onRow }: { rows: ConsultoriaPerson[]; totals: Record<MetricKey, number>; onRow: (id: string) => void }) {
+  const grid = '1fr repeat(4, 96px)'
+  return (
+    <div>
+      <HeaderRow firstColLabel="Funcionário" grid={grid} />
+      <div style={{ maxHeight: 560, overflowY: 'auto' }}>
+        {rows.map((p) => (
+          <div key={p.id} className="tc-row" onClick={() => onRow(p.id)} style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '8px 6px', borderBottom: '1px solid var(--border-soft)', alignItems: 'center', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.cargo} · {p.dept}</div>
+              </div>
+            </div>
+            {COLS.map((c) => (
+              <div key={c.key} style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: p[c.key] > 0 ? 'var(--text)' : 'var(--text-mute)' }}>
+                {p[c.key].toLocaleString('pt-BR')}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
-      <div style={{ textAlign: 'right', flex: 'none' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.total}<span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}> ações</span></div>
-        <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{p.studies}E · {p.tickets}C · {p.messages}M · {p.comments}c</div>
-      </div>
+      <TotalsRow totals={totals} grid={grid} />
     </div>
   )
 }
