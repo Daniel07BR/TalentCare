@@ -130,7 +130,10 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   // próprio depto). Score é relativo ao depto (produtividade percentil) → não faz
   // sentido um ranking de pessoas misturando setores na home.
   const byDeptScored = new Map<string, Employee[]>()
-  for (const e of scored) { const l = byDeptScored.get(e.dept) ?? []; l.push(e); byDeptScored.set(e.dept, l) }
+  for (const e of scored) {
+    if (e.cargo.toLowerCase().includes('gestor')) continue // destaque é do time — gestores não entram
+    const l = byDeptScored.get(e.dept) ?? []; l.push(e); byDeptScored.set(e.dept, l)
+  }
   const deptHighlights: DeptHighlight[] = [...byDeptScored.entries()].map(([id, list]) => {
     const top = list.slice().sort((a, b) => b.score - a.score)[0]
     return {

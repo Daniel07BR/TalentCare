@@ -155,6 +155,7 @@ export default function DashboardPage() {
               <div key={s.key} title={s.desc} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'help' }}>
                 <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
                 <span style={{ flex: 1, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                {s.ages && <span style={{ color: 'var(--text-mute)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{s.ages} anos</span>}
                 <span style={{ fontWeight: 600 }}>{s.count}</span>
                 <span style={{ color: 'var(--text-mute)', width: 34, textAlign: 'right' }}>{s.pct}%</span>
               </div>

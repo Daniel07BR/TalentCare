@@ -38,14 +38,14 @@ export function genRange(g: Gen): string {
   return `${g.from}–${g.to} · ${NOW_YEAR - g.to}–${NOW_YEAR - g.from} anos`
 }
 
-export type GenSeg = { key: string; label: string; count: number; pct: number; color: string; desc: string }
+export type GenSeg = { key: string; label: string; count: number; pct: number; color: string; desc: string; ages: string }
 
 function genDist(emps: Employee[]): { segs: GenSeg[]; total: number; withDob: number; avg: number | null } {
   const order = [...GENERATIONS, NI]
   const total = emps.length || 1
   const segs: GenSeg[] = order.map((g) => {
     const count = emps.filter((e) => genOf(e.birthDate).key === g.key).length
-    return { key: g.key, label: g.label, count, pct: Math.round((count / total) * 100), color: g.color, desc: g.key === 'ni' ? 'Sem data de nascimento' : genRange(g as Gen) }
+    return { key: g.key, label: g.label, count, pct: Math.round((count / total) * 100), color: g.color, desc: g.key === 'ni' ? 'Sem data de nascimento' : genRange(g as Gen), ages: g.key === 'ni' ? '' : `${NOW_YEAR - (g as Gen).to}–${NOW_YEAR - (g as Gen).from}` }
   }).filter((s) => s.count > 0)
   const ages = emps.map((e) => ageOf(e.birthDate)).filter((a): a is number => a != null)
   const avg = ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : null
