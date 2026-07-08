@@ -21,6 +21,20 @@ const TABS: [string, string][] = [
   ['formacao', 'Formação'], ['trajetoria', 'Trajetória'], ['reconhecimento', 'Reconhecimento'],
 ]
 
+// Cor de destaque por nível de formação (chave = rótulo exibido no card, sem acento).
+const FORM_COR: Record<string, string> = {
+  graduacao: '#159b87', superior: '#159b87',
+  pos: '#a78bfa', 'pos-graduacao': '#a78bfa',
+  extensao: '#2f9fd6',
+  mba: '#f5a623',
+  mestrado: '#7c8cf0', doutorado: '#7c5cf0',
+  'medio tecnico': '#b6d957', tecnico: '#8aab2e',
+  'ensino medio': '#e0857a', 'ensino fundamental': '#f1788a',
+}
+const FORM_PALETTE = ['#159b87', '#a78bfa', '#2f9fd6', '#f5a623', '#e0857a', '#b6d957']
+const normLbl = (s: string) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+const formCor = (label: string, i: number) => FORM_COR[normLbl(label)] ?? FORM_PALETTE[i % FORM_PALETTE.length]
+
 export default function FichaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -412,12 +426,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Formação acadêmica <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· cadastro RH</span></div>
                 {vm.cursos.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
-                    {vm.cursos.map((c, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
-                        <span style={{ fontSize: 13, fontWeight: 500 }}>{c.nome}</span>
-                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{c.quando}</span>
-                      </div>
-                    ))}
+                    {vm.cursos.map((c, i) => {
+                      const cor = formCor(c.quando, i)
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `color-mix(in srgb, ${cor} 13%, var(--surface-2))`, borderLeft: `3px solid ${cor}`, borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: cor }}>{c.quando}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : (
                   <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>

@@ -7,11 +7,12 @@ import { deptName } from '@/lib/mock/employee'
 import { useClassroomCourses } from '@/lib/ui/classroom-courses'
 import Avatar from '../Avatar'
 
-type CourseItem = {
-  courseId: string; title: string; createdAt: string
+type CourseItem = { courseId: string; title: string; createdAt: string }
+type CreatorGroup = {
   creatorId: string; creatorName: string; initials: string; color: string; hasAvatar: boolean
+  count: number; items: CourseItem[]
 }
-type DeptGroup = { id: string; nome: string; color: string; count: number; items: CourseItem[] }
+type DeptGroup = { id: string; nome: string; color: string; count: number; creators: CreatorGroup[] }
 
 const OTHER_ID = '__outros__'
 const fmtDate = (iso: string) => {
@@ -23,42 +24,58 @@ export default function CoursesByDeptCard() {
   const router = useRouter()
   const data = useTalentData()
   const { courses, loading } = useClassroomCourses()
-  const [open, setOpen] = useState<Set<string>>(new Set())
+  const [openDepts, setOpenDepts] = useState<Set<string>>(new Set())
+  const [openCreators, setOpenCreators] = useState<Set<string>>(new Set())
 
   const { groups, total } = useMemo(() => {
     const byNexus = new Map(data.employees.filter((e) => e.nexusUserId).map((e) => [e.nexusUserId as string, e]))
-    const g = new Map<string, DeptGroup>()
+    const depts = new Map<string, DeptGroup>()
+    const creators = new Map<string, CreatorGroup>() // key: deptId|creatorId
+
     for (const c of courses) {
       const e = byNexus.get(c.creatorNexusUserId)
       const deptId = e ? e.dept : OTHER_ID
-      let grp = g.get(deptId)
-      if (!grp) {
-        grp = {
+      let dg = depts.get(deptId)
+      if (!dg) {
+        dg = {
           id: deptId,
           nome: e ? deptName(data, e.dept) : 'Outros',
           color: e ? (data.departments.find((d) => d.id === e.dept)?.color ?? 'var(--accent)') : 'var(--text-mute)',
+          count: 0, creators: [],
+        }
+        depts.set(deptId, dg)
+      }
+      dg.count++
+
+      const creatorKey = `${deptId}|${c.creatorNexusUserId}`
+      let cg = creators.get(creatorKey)
+      if (!cg) {
+        cg = {
+          creatorId: e?.id ?? '', creatorName: e?.nome ?? '—',
+          initials: e?.initials ?? '?', color: e?.color ?? 'var(--text-mute)', hasAvatar: e?.hasAvatar ?? false,
           count: 0, items: [],
         }
-        g.set(deptId, grp)
+        creators.set(creatorKey, cg)
+        dg.creators.push(cg)
       }
-      grp.count++
-      grp.items.push({
-        courseId: c.courseId, title: c.title, createdAt: c.createdAt,
-        creatorId: e?.id ?? '', creatorName: e?.nome ?? '—',
-        initials: e?.initials ?? '?', color: e?.color ?? 'var(--text-mute)', hasAvatar: e?.hasAvatar ?? false,
-      })
+      cg.count++
+      cg.items.push({ courseId: c.courseId, title: c.title, createdAt: c.createdAt })
     }
-    const groups = Array.from(g.values()).sort((a, b) => b.count - a.count)
-    groups.forEach((grp) => grp.items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+
+    const groups = Array.from(depts.values()).sort((a, b) => b.count - a.count)
+    groups.forEach((dg) => {
+      dg.creators.sort((a, b) => b.count - a.count)
+      dg.creators.forEach((cg) => cg.items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+    })
     return { groups, total: groups.reduce((s, x) => s + x.count, 0) }
   }, [courses, data])
 
   const max = Math.max(1, ...groups.map((d) => d.count))
-  const toggle = (id: string) => setOpen((prev) => {
-    const n = new Set(prev)
+  const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
+    const n = new Set(set)
     n.has(id) ? n.delete(id) : n.add(id)
-    return n
-  })
+    setter(n)
+  }
 
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
@@ -66,7 +83,7 @@ export default function CoursesByDeptCard() {
         <div style={{ fontSize: 14, fontWeight: 600 }}>Cursos criados por departamento</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{total.toLocaleString('pt-BR')} no período</div>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Clique num setor para ver os cursos, criadores e datas</div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Clique no setor para ver quem gravou e quantos; clique no funcionário para ver os cursos</div>
 
       {loading && courses.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Carregando…</div>
@@ -75,10 +92,10 @@ export default function CoursesByDeptCard() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {groups.map((d) => {
-            const isOpen = open.has(d.id)
+            const isOpen = openDepts.has(d.id)
             return (
               <div key={d.id} style={{ borderRadius: 10, overflow: 'hidden', border: isOpen ? '1px solid var(--border-soft)' : '1px solid transparent' }}>
-                <div className="tc-row" onClick={() => toggle(d.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '8px 8px', borderRadius: 10 }}>
+                <div className="tc-row" onClick={() => toggle(openDepts, setOpenDepts, d.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '8px 8px', borderRadius: 10 }}>
                   <ChevronRight size={15} style={{ flex: 'none', color: 'var(--text-mute)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flex: 'none' }} />
                   <div style={{ width: 110, flex: 'none', fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</div>
@@ -87,18 +104,34 @@ export default function CoursesByDeptCard() {
                   </div>
                   <div style={{ width: 34, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.count}</div>
                 </div>
+
                 {isOpen && (
-                  <div style={{ padding: '2px 8px 10px 35px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {d.items.map((it) => (
-                      <div key={it.courseId + it.creatorId} className="tc-row" onClick={() => it.creatorId && router.push(`/funcionarios/${it.creatorId}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 6px', borderRadius: 8, cursor: it.creatorId ? 'pointer' : 'default' }}>
-                        <Avatar id={it.creatorId} hasAvatar={it.hasAvatar} initials={it.initials} color={it.color} size={24} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.creatorName}</div>
+                  <div style={{ padding: '2px 8px 8px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {d.creators.map((cg) => {
+                      const ckey = `${d.id}|${cg.creatorId}|${cg.creatorName}`
+                      const cOpen = openCreators.has(ckey)
+                      return (
+                        <div key={ckey}>
+                          <div className="tc-row" onClick={() => toggle(openCreators, setOpenCreators, ckey)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 6px', borderRadius: 8, cursor: 'pointer' }}>
+                            <ChevronRight size={13} style={{ flex: 'none', color: 'var(--text-mute)', transform: cOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+                            <Avatar id={cg.creatorId} hasAvatar={cg.hasAvatar} initials={cg.initials} color={cg.color} size={24} />
+                            <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cg.creatorName}</div>
+                            <span style={{ flex: 'none', fontSize: 12.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{cg.count} <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>{cg.count === 1 ? 'curso' : 'cursos'}</span></span>
+                          </div>
+                          {cOpen && (
+                            <div style={{ padding: '1px 6px 6px 43px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              {cg.items.map((it) => (
+                                <div key={it.courseId} className="tc-row" onClick={() => cg.creatorId && router.push(`/funcionarios/${cg.creatorId}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 6px', borderRadius: 8, cursor: cg.creatorId ? 'pointer' : 'default' }}>
+                                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--text-mute)', flex: 'none' }} />
+                                  <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title}</div>
+                                  <div style={{ flex: 'none', fontSize: 11.5, color: 'var(--text-mute)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(it.createdAt)}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ flex: 'none', fontSize: 11.5, color: 'var(--text-mute)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(it.createdAt)}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
