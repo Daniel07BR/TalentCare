@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useClassroomPeriod } from '@/lib/ui/classroom-period'
@@ -7,13 +8,17 @@ import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { classroomVM } from '@/lib/mock/classroom'
 import Avatar from '../Avatar'
 import Donut from '../Donut'
+import CoursesByDeptCard from './CoursesByDeptCard'
 
 export default function ClassroomPage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, setPeriod } = usePeriod()
   const { map } = useClassroomPeriod()
   const vm = classroomVM(data, map ?? undefined)
+
+  // Resumo do ClassRoom abre por padrão no acumulado do ano corrente.
+  useEffect(() => { setPeriod('Ano') }, [setPeriod])
 
   const kpis = [
     { label: 'Vídeos concluídos', value: vm.totals.videos, color: 'var(--chart-2)' },
@@ -70,6 +75,8 @@ export default function ClassroomPage() {
           </>
         )}
       </div>
+
+      <CoursesByDeptCard />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <PeopleCard title="Maiores criadores de cursos" sub="Cursos criados" unit="cursos" people={vm.topCreators} router={router} />
