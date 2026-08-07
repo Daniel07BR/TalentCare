@@ -217,6 +217,26 @@ async function main() {
     eventos.push({ personKey: mt.personKey, source: 'nexo', sourceId: a.id, data: a.day, tipo: 'advertencia', motivo: a.motivo, dias: null })
   }
 
+  /* ---------- TRAVA ANTI-PERDA (antes de qualquer delete) ----------
+     Este import é wipe+rebuild: ele APAGA assiduidade_daily e as advertências
+     do Nexo e regrava a partir do dump. Se o dump não estiver no lugar (o
+     caminho padrão aponta para o .75, não para o .78) ou vier parcial, o wipe
+     destrói histórico que NÃO existe em nenhuma outra fonte — o dump original
+     é apagado depois da carga por conter PII.
+     Regra: nunca encolher sozinho. Só passa se o que vai gravar for pelo menos
+     90% do que já existe, ou se vier `--forcar` explícito. */
+  const forcar = process.argv.includes('--forcar')
+  const jaTem = await prisma.assiduidadeDaily.count()
+  const vaiGravar = daily.size
+  if (!forcar && jaTem > 0 && vaiGravar < jaTem * 0.9) {
+    console.error(JSON.stringify({
+      erro: 'import_encolheria_o_historico',
+      jaTem, vaiGravar, dir: DIR,
+      dica: 'O dump em ' + DIR + ' cobre menos que o banco. Confira se o dump está completo e no lugar certo. Para sobrescrever mesmo assim: --forcar',
+    }, null, 1))
+    process.exit(1)
+  }
+
   /* ---------- grava (wipe + rebuild = idempotente) ---------- */
   await prisma.$transaction([
     prisma.assiduidadeDaily.deleteMany({}),
