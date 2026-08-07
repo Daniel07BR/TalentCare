@@ -9,7 +9,13 @@
 
 // nota = null → fator SEM FONTE real (ex.: Prazos/Colaboração hoje) → não entra no
 // cálculo do score (peso redistribuído) e aparece como "sem fonte" na ficha.
-export type Factor = { key: string; label: string; peso: number; nota: number | null }
+export type Factor = {
+  key: string; label: string; peso: number; nota: number | null
+  // Contra QUEM a nota foi comparada. 'global' = o setor é pequeno demais p/
+  // servir de referência (ver MIN_PARES); a ficha avisa, senão o número parece
+  // dizer algo sobre o setor que ele não diz.
+  base?: 'dept' | 'global'
+}
 
 export type Employee = {
   id: string
@@ -394,17 +400,37 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
   // atividade de sistema (ex.: Limpeza/Cozinha) → produtividade "não se aplica" (null).
   const byDept = new Map<string, Employee[]>()
   for (const e of employees) { const l = byDept.get(e.dept) ?? []; l.push(e); byDept.set(e.dept, l) }
+  // ⚠️ TRAVA DE SETOR PEQUENO. Percentil precisa de PARES; num setor de 1 ou 2
+  // pessoas ele não mede nada — o primeiro leva 100 e o segundo 0, qualquer que
+  // seja o volume real. Foi o que deu 100 ao Marco Aurelio sozinho em
+  // "Programação" com 1 atividade, e 0 ao Gilberto (25 atividades) só por estar
+  // ao lado do Elton. Abaixo de MIN_PARES o percentil passa a ser GLOBAL.
+  //
+  // O cohort global também é o piso absoluto: quem tem atividade quase nula fica
+  // no fundo da distribuição da empresa (Marco Aurelio 100 → 17), sem precisar de
+  // um limiar arbitrário separado.
+  const MIN_PARES = 3
+  const percentil = (v: number, vals: number[]): number => {
+    if (vals.length <= 1) return 100
+    const less = vals.filter((x) => x < v).length
+    const eq = vals.filter((x) => x === v).length
+    return Math.max(0, Math.min(100, Math.round(((less + (eq - 1) / 2) / (vals.length - 1)) * 100)))
+  }
+  const valsGlobal = employees.map((e) => act.get(e.id) ?? 0)
   const prodNota = new Map<string, number | null>()
+  const prodBase = new Map<string, 'dept' | 'global'>()
   for (const [, list] of byDept) {
     const total = list.reduce((a, e) => a + (act.get(e.id) ?? 0), 0)
+    // Setor inteiro sem atividade de sistema (Cozinha/Limpeza/Pousada/Marketing)
+    // segue "não se aplica". ⚠️ NÃO cair no global aqui: daria nota ~7 a quem não
+    // tem fonte nenhuma e os traria de volta ao ranking — o artefato que a regra
+    // de hasScore existe justamente para evitar.
     if (total <= 0) { for (const e of list) prodNota.set(e.id, null); continue }
-    const vals = list.map((e) => act.get(e.id) ?? 0)
+    const usaGlobal = list.length < MIN_PARES
+    const vals = usaGlobal ? valsGlobal : list.map((e) => act.get(e.id) ?? 0)
     for (const e of list) {
-      const v = act.get(e.id) ?? 0
-      const less = vals.filter((x) => x < v).length
-      const eq = vals.filter((x) => x === v).length
-      const pct = list.length <= 1 ? 100 : ((less + (eq - 1) / 2) / (list.length - 1)) * 100
-      prodNota.set(e.id, Math.max(0, Math.min(100, Math.round(pct))))
+      prodNota.set(e.id, percentil(act.get(e.id) ?? 0, vals))
+      prodBase.set(e.id, usaGlobal ? 'global' : 'dept')
     }
   }
   const out = new Map<string, { score: number; factors: Factor[]; hasScore: boolean }>()
@@ -426,7 +452,7 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
     const sumW = parts.reduce((a, p) => a + p.w, 0) || 1
     const score = Math.round(parts.reduce((a, p) => a + p.w * p.nota, 0) / sumW)
     const factors: Factor[] = [
-      { key: 'prod', label: 'Produtividade', peso: 30, nota: pN },
+      { key: 'prod', label: 'Produtividade', peso: 30, nota: pN, base: pN == null ? undefined : prodBase.get(e.id) },
       { key: 'prazo', label: 'Prazos', peso: 25, nota: null },
       { key: 'assid', label: 'Assiduidade', peso: 20, nota: aN },
       { key: 'form', label: 'Formação', peso: 15, nota: fN },

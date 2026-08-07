@@ -5,6 +5,7 @@ import {
   FACTORS, SYSTEMS, rnd, seedOf, scoreColor, admissao, statusMeta, fmtTempo, sysColor,
   type Employee, type TalentData,
 } from './data'
+import { personLevels, ESC_COLOR } from '../education-edit'
 
 function geomGauge(score: number) {
   const cx = 100, cy = 100, r = 82
@@ -220,6 +221,9 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
       pct: f.nota == null ? '0%' : f.nota + '%',
       color: f.nota == null ? 'var(--text-mute)' : scoreColor(f.nota),
       semFonte: f.nota == null,
+      // Setor pequeno demais p/ comparar internamente → a nota vale contra a
+      // empresa toda. Dizer isso evita ler "100" como "o melhor do setor".
+      baseGlobal: f.base === 'global',
     })),
     timeline: timelineFor(emp),
     tasksDone: emp.tasksDone, tasksLate: emp.tasksLate, tasksPend: emp.tasksPend, prodBar, bySystem,
@@ -231,7 +235,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     disc, discEmpty: disc.length === 0,
     heat: heatmapFor(emp.assidDays),
     radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima, whatsapp,
-    grau: fm.grau, cursos: fm.cursos, certs: fm.certs,
+    grau: fm.grau, grauLevels: personLevels(emp.eduCursos, emp.escolaridade).map((l) => ({ label: l, color: ESC_COLOR[l] ?? '#9aa1ac' })), cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
     treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,
     birthISO: emp.birthDate ? emp.birthDate.slice(0, 10) : '', hireISO: emp.hireISO ? emp.hireISO.slice(0, 10) : '',

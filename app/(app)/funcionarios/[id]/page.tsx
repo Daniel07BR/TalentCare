@@ -168,6 +168,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <span style={{ fontWeight: 700, color: f.color, fontSize: f.semFonte ? 10 : undefined }}>{f.notaLabel}</span>
                 </div>
                 <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: f.pct, background: f.color, borderRadius: 20 }} /></div>
+                {f.baseGlobal && (
+                  <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="O setor tem menos de 3 pessoas, o que não dá base de comparação — a nota vale contra a empresa toda.">comparado com a empresa (setor pequeno)</div>
+                )}
               </div>
             ))}
           </div>
