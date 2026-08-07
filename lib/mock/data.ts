@@ -240,6 +240,7 @@ export function statusMeta(s: string): { color: string; bg: string } {
 }
 
 export function fmtTempo(m: number): string {
+  if (!m) return '—' // sem data de admissão (ver monthsSince)
   const y = Math.floor(m / 12), mo = m % 12
   const a: string[] = []
   if (y) a.push(y + (y > 1 ? ' anos' : ' ano'))
@@ -267,12 +268,16 @@ export function geomLine(vals: number[], w: number, h: number, pad = 6): { line:
   return { line, area, pts }
 }
 
-function monthsSince(d: Date | null, seed: number): number {
+// ⚠️ Sem data de admissão devolve 0 = "não informado". Antes SORTEAVA um valor
+// entre 6 meses e 6 anos a partir do id da pessoa, e a ficha exibia isso como
+// tempo de casa e mês de admissão — número inventado numa tela que embasa
+// aumento e promoção. Quem não tem data agora mostra "—".
+function monthsSince(d: Date | null): number {
   if (d && !isNaN(d.getTime())) {
     const m = (BASE_DATE.getFullYear() - d.getFullYear()) * 12 + (BASE_DATE.getMonth() - d.getMonth())
     return Math.max(1, Math.min(420, m))
   }
-  return 6 + Math.floor(rnd(seed * 1.31) * 72) // sem admissão → 6m..6anos
+  return 0
 }
 
 /** Simula as MÉTRICAS de um funcionário a partir da identidade real. */
@@ -281,7 +286,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
   const score = 48 + Math.round(rnd(seed * 1.7) * 48) // 48..96
   // Escolaridade é dado REAL (planilha). Sem vínculo → "Não informado" (nada simulado).
   const escolaridade = id8.escolaridade ?? 'Não informado'
-  const tempoMeses = monthsSince(id8.entryDate, seed)
+  const tempoMeses = monthsSince(id8.entryDate)
   const status = id8.active ? 'Ativo' : 'Desligado'
 
   const factors: Factor[] = FACTORS.map((f, fi) => {
@@ -312,7 +317,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     radioUltima: id8.radio.lastListenedAt,
     admissao: id8.entryDate && !isNaN(id8.entryDate.getTime())
       ? id8.entryDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-      : admissao(tempoMeses),
+      : 'Não informado',
     birthDate: id8.birthDate,
     gender: id8.gender,
     hireISO: id8.entryDate ? id8.entryDate.toISOString() : null,
