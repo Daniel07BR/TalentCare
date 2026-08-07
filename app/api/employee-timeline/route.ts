@@ -41,13 +41,14 @@ export async function GET(req: NextRequest) {
   const take = 30
   const ord = { day: 'desc' as const }
 
-  const [hd, cls, cide, cons, radio, wpp] = await Promise.all([
+  const [hd, cls, cide, cons, radio, wpp, ger] = await Promise.all([
     nx ? prisma.helpdeskDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.classroomDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.cideDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.consultoriaDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.radioDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     prisma.whatsappAttendantDaily.groupBy({ by: ['day'], where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true }, orderBy: { day: 'desc' }, take }),
+    nx ? prisma.gerenciaDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
   ])
 
   const now = new Date()
@@ -73,6 +74,21 @@ export async function GET(req: NextRequest) {
     if (r.videos > 0) parts.push(plural(r.videos, 'vídeo assistido', 'vídeos assistidos'))
     if (parts.length) push('ClassRoom', 'var(--chart-2)', r.day, parts[0].charAt(0).toUpperCase() + parts[0].slice(1), parts.slice(1).join(' · ') || 'no ClassRoom')
   }
+  // GERÊNCIA — entrega na rua e demanda de escritório no mesmo dia.
+  for (const r of ger) {
+    const saiu: string[] = []
+    if (r.servicos > 0) saiu.push(plural(r.servicos, 'serviço entregue', 'serviços entregues'))
+    if (r.km > 0) saiu.push(`${r.km} km`)
+    if (r.viagens > 0) saiu.push(plural(r.viagens, 'viagem', 'viagens'))
+    if (saiu.length) push('Gerência', 'var(--chart-2)', r.day, saiu[0].charAt(0).toUpperCase() + saiu[0].slice(1), saiu.slice(1).join(' · ') || 'na mensageria')
+    const esc: string[] = []
+    if (r.protAbertos > 0) esc.push(plural(r.protAbertos, 'protocolo aberto', 'protocolos abertos'))
+    if (r.servCriados > 0) esc.push(plural(r.servCriados, 'serviço criado', 'serviços criados'))
+    if (r.protAprovados > 0) esc.push(plural(r.protAprovados, 'aprovação', 'aprovações'))
+    if (r.datasAlteradas > 0) esc.push(plural(r.datasAlteradas, 'data alterada', 'datas alteradas'))
+    if (esc.length) push('Gerência', 'var(--info)', r.day, esc[0].charAt(0).toUpperCase() + esc[0].slice(1), esc.slice(1).join(' · ') || 'na mensageria')
+  }
+
   for (const r of cide) {
     if (r.atividades > 0) push('CIDE', 'var(--chart-5)', r.day, `Registrou ${plural(r.atividades, 'atividade', 'atividades')}`, 'alterações no cadastro geral')
   }

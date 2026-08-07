@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     _sum: {
       servicos: true, km: true, viagens: true, jornadaMin: true,
       protAbertos: true, protAprovados: true, servCriados: true,
-      reagendados: true, cancelados: true,
+      reagendados: true, cancelados: true, datasAlteradas: true,
     },
   })
   const byUser = rows.map((r) => ({
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     servCriados: r._sum.servCriados ?? 0,
     reagendados: r._sum.reagendados ?? 0,
     cancelados: r._sum.cancelados ?? 0,
+    datasAlteradas: r._sum.datasAlteradas ?? 0,
   }))
   return NextResponse.json({ period, fromDay, toDay, byUser })
 }

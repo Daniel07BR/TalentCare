@@ -367,6 +367,7 @@ model GerenciaDaily {
   servCriados   Int      @default(0) @map("serv_criados")
   reagendados   Int      @default(0)
   cancelados    Int      @default(0)
+  datasAlteradas Int     @default(0) @map("datas_alteradas")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])

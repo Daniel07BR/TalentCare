@@ -55,7 +55,7 @@ export async function getTalentData(): Promise<TalentData> {
       _sum: {
         servicos: true, km: true, viagens: true, jornadaMin: true,
         protAbertos: true, protAprovados: true, servCriados: true,
-        reagendados: true, cancelados: true,
+        reagendados: true, cancelados: true, datasAlteradas: true,
       },
     }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
@@ -180,6 +180,7 @@ export async function getTalentData(): Promise<TalentData> {
         servCriados: gds?._sum.servCriados ?? 0,
         reagendados: gds?._sum.reagendados ?? 0,
         cancelados: gds?._sum.cancelados ?? 0,
+        datasAlteradas: gds?._sum.datasAlteradas ?? 0,
       },
       // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
       // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.

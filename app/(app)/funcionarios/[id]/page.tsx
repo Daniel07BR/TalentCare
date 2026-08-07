@@ -84,6 +84,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
         { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
         { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
+        { label: 'serviços criados', sys: 'Gerência', n: m.gerencia.servCriados },
       ].filter((p) => p.n > 0)
     : []
   const concluidas = m ? concluidasParts.reduce((a, p) => a + p.n, 0) : null
@@ -97,7 +98,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     'Consultoria Plus': m ? m.consultoria.total : null,
     CIDE: m ? m.cide.atividades : null,
     // Gerência = execução + demanda; o card abaixo separa as duas.
-    'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.servCriados : null,
+    'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.protAprovados + m.gerencia.servCriados + m.gerencia.datasAlteradas : null,
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
@@ -353,6 +354,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                           <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{gr.protAbertos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Protocolos abertos</div></div>
                           <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.protAprovados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Aprovações</div></div>
                           <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.servCriados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Serviços criados</div></div>
+                          {gr.datasAlteradas > 0 && (
+                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.datasAlteradas.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Datas alteradas</div></div>
+                          )}
                           {(gr.reagendados > 0 || gr.cancelados > 0) && (
                             <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.reagendados.toLocaleString('pt-BR')}<span style={{ fontSize: 13, color: 'var(--text-mute)' }}> / {gr.cancelados}</span></div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Reagend. / cancel.</div></div>
                           )}

@@ -89,7 +89,7 @@ export type CideStat = { atividades: number }
 export type GerenciaStat = {
   servicos: number; km: number; viagens: number; jornadaMin: number
   protAbertos: number; protAprovados: number; servCriados: number
-  reagendados: number; cancelados: number
+  reagendados: number; cancelados: number; datasAlteradas: number
 }
 
 /** Assiduidade REAL (ponto, dump do Nexo). Só atrasos+advertências têm fonte;
@@ -331,7 +331,7 @@ const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 
 const zeroCide = (): CideStat => ({ atividades: 0 })
 export const zeroGerencia = (): GerenciaStat => ({
   servicos: 0, km: 0, viagens: 0, jornadaMin: 0,
-  protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0,
+  protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0, datasAlteradas: 0,
 })
 
 /* ============================================================
@@ -355,11 +355,16 @@ export function formacaoNota(esc: string | null | undefined): number | null {
 // Volume de ATIVIDADE de uma pessoa (acumulado) nos sistemas que medem trabalho.
 // Rádio (escuta) NÃO entra. Usado quando não há override por período.
 export function activityOf(e: Employee): number {
-  const c = e.classroom, h = e.helpdesk, k = e.cide, p = e.consultoria, w = e.whatsapp
+  const c = e.classroom, h = e.helpdesk, k = e.cide, p = e.consultoria, w = e.whatsapp, g = e.gerencia
   return c.videosCompleted + c.coursesCompleted + c.coursesCreated
     + h.opened + h.resolved + k.atividades
     + p.studies + p.tickets + p.messages + p.comments
     + w.finalizados
+    // GERÊNCIA conta como produtividade: sem ela, quem entrega serviço na rua o
+    // dia inteiro (Elton, 266 serviços em 30d) caía em "Sem dados suficientes".
+    // km/viagens/jornada NÃO entram — são a MAGNITUDE dos mesmos serviços e, em
+    // ordem de grandeza (951 km × 266 serviços), abafariam todo o resto.
+    + g.servicos + g.protAbertos + g.protAprovados + g.servCriados + g.datasAlteradas
 }
 
 // Sinais por pessoa NO PERÍODO (do /api/score-metrics) p/ o score period-aware.
@@ -512,6 +517,7 @@ export function assembleData(identities: Identity[]): TalentData {
           jornadaMin: a.jornadaMin + g.jornadaMin, protAbertos: a.protAbertos + g.protAbertos,
           protAprovados: a.protAprovados + g.protAprovados, servCriados: a.servCriados + g.servCriados,
           reagendados: a.reagendados + g.reagendados, cancelados: a.cancelados + g.cancelados,
+          datasAlteradas: a.datasAlteradas + g.datasAlteradas,
         }
       }, zeroGerencia())
       return {

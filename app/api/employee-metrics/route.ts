@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           _sum: {
             servicos: true, km: true, viagens: true, jornadaMin: true,
             protAbertos: true, protAprovados: true, servCriados: true,
-            reagendados: true, cancelados: true,
+            reagendados: true, cancelados: true, datasAlteradas: true,
           },
         })
       : null,
@@ -98,9 +98,11 @@ export async function GET(req: NextRequest) {
       servCriados: gd?._sum.servCriados ?? 0,
       reagendados: gd?._sum.reagendados ?? 0,
       cancelados: gd?._sum.cancelados ?? 0,
+      datasAlteradas: gd?._sum.datasAlteradas ?? 0,
       hasSaida: (gd?._sum.servicos ?? 0) > 0 || (gd?._sum.viagens ?? 0) > 0 || (gd?._sum.km ?? 0) > 0,
       hasEscritorio: (gd?._sum.protAbertos ?? 0) > 0 || (gd?._sum.protAprovados ?? 0) > 0
-        || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0,
+        || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0
+        || (gd?._sum.datasAlteradas ?? 0) > 0,
     },
     assiduidade: (() => {
       const atr = assid._sum.atrasos ?? 0

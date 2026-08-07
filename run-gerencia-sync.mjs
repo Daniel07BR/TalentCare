@@ -42,6 +42,7 @@ async function main() {
       servCriados: n(r.servCriados),
       reagendados: n(r.reagendados),
       cancelados: n(r.cancelados),
+      datasAlteradas: n(r.datasAlteradas),
     }
     await prisma.gerenciaDaily.upsert({
       where: { nexusUserId_day: { nexusUserId: r.userId, day: r.day } },

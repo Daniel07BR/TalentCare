@@ -25,6 +25,7 @@ interface DailyRow {
   servCriados: number | string
   reagendados: number | string
   cancelados: number | string
+  datasAlteradas: number | string
 }
 
 export interface GerenciaSyncResult {
@@ -78,6 +79,7 @@ export async function syncGerencia(): Promise<GerenciaSyncResult> {
       servCriados: n(r.servCriados),
       reagendados: n(r.reagendados),
       cancelados: n(r.cancelados),
+      datasAlteradas: n(r.datasAlteradas),
     }
     try {
       await prisma.gerenciaDaily.upsert({

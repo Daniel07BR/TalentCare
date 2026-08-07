@@ -162,6 +162,7 @@ export default function GerenciaPage() {
         <Kpi label="Protocolos abertos" value={t.protAbertos.toLocaleString('pt-BR')} color={COR_ESCR} hint="desde mar/2026" />
         <Kpi label="Protocolos aprovados" value={t.protAprovados.toLocaleString('pt-BR')} color="var(--text)" />
         <Kpi label="Serviços criados" value={t.servCriados.toLocaleString('pt-BR')} color="var(--text)" />
+        <Kpi label="Datas alteradas" value={t.datasAlteradas.toLocaleString('pt-BR')} color="var(--text)" />
         <Kpi label="Reagendados" value={t.reagendados.toLocaleString('pt-BR')} color="var(--warning)" />
         <Kpi label="Cancelados" value={t.cancelados.toLocaleString('pt-BR')} color="var(--danger)" />
         <Kpi label="Pessoas que demandaram" value={vm.escrPessoas} color="var(--info)" />
@@ -174,12 +175,13 @@ export default function GerenciaPage() {
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma demanda registrada no período.</div>
         ) : (
           <>
-            <Cabecalho labels={['Abertos', 'Aprovou', 'Serviços', 'Reagend.', 'Cancel.']} />
+            <Cabecalho labels={['Abertos', 'Aprovou', 'Serviços', 'Datas', 'Reagend.', 'Cancel.']} />
             {vm.escritorio.map((p) => (
               <Linha key={p.id} p={p} cols={[
                 { label: 'Abertos', v: p.stat.protAbertos, destaque: true },
                 { label: 'Aprovou', v: p.stat.protAprovados },
                 { label: 'Serviços', v: p.stat.servCriados },
+                { label: 'Datas', v: p.stat.datasAlteradas },
                 { label: 'Reagend.', v: p.stat.reagendados },
                 { label: 'Cancel.', v: p.stat.cancelados },
               ]} />

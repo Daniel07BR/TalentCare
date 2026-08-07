@@ -14,7 +14,7 @@ export type EmployeeMetrics = {
   gerencia: {
     servicos: number; km: number; viagens: number; jornadaMin: number
     protAbertos: number; protAprovados: number; servCriados: number
-    reagendados: number; cancelados: number
+    reagendados: number; cancelados: number; datasAlteradas: number
     hasSaida: boolean; hasEscritorio: boolean
   }
   assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }

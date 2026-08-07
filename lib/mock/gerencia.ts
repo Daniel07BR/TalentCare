@@ -31,6 +31,7 @@ const soma = (a: GerenciaStat, b: GerenciaStat): GerenciaStat => ({
   jornadaMin: a.jornadaMin + b.jornadaMin, protAbertos: a.protAbertos + b.protAbertos,
   protAprovados: a.protAprovados + b.protAprovados, servCriados: a.servCriados + b.servCriados,
   reagendados: a.reagendados + b.reagendados, cancelados: a.cancelados + b.cancelados,
+  datasAlteradas: a.datasAlteradas + b.datasAlteradas,
 })
 
 export function gerenciaVM(data: TalentData, period?: GerenciaUsage) {
@@ -47,7 +48,7 @@ export function gerenciaVM(data: TalentData, period?: GerenciaUsage) {
       id: e.id, nome: e.nome, cargo: e.cargo, dept: deptName(data, e.dept),
       initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, stat,
       execucao: stat.servicos,
-      escritorio: stat.protAbertos + stat.protAprovados + stat.servCriados,
+      escritorio: stat.protAbertos + stat.protAprovados + stat.servCriados + stat.datasAlteradas,
     }
   })
 
@@ -87,7 +88,7 @@ export function gerenciaVM(data: TalentData, period?: GerenciaUsage) {
     execucao,
     escritorio,
     execBars: bars((s) => s.servicos),
-    escrBars: bars((s) => s.protAbertos + s.protAprovados + s.servCriados),
+    escrBars: bars((s) => s.protAbertos + s.protAprovados + s.servCriados + s.datasAlteradas),
     kmBars: bars((s) => s.km),
     horasJornada: Math.round(totais.jornadaMin / 60),
     // "Ativos" em cada face, p/ os KPIs não sugerirem que a empresa toda sai na rua.

@@ -15,13 +15,14 @@ export async function GET(req: NextRequest) {
   const { fromDay, toDay } = periodDays(period)
   const range = { day: { gte: fromDay, lte: toDay } }
 
-  const [users, cls, hd, cide, cons, wpp, ponto, adv] = await Promise.all([
+  const [users, cls, hd, cide, cons, wpp, ger, ponto, adv] = await Promise.all([
     prisma.user.findMany({ where: { origin: { in: ['nexus', 'staff'] } }, select: { id: true, nexusUserId: true, name: true } }),
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { opened: true, resolved: true } }),
     prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { atividades: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: range, _sum: { finalizados: true } }),
+    prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: range, _sum: { atrasos: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
   ])
@@ -30,6 +31,9 @@ export async function GET(req: NextRequest) {
   const hdM = new Map(hd.map((r) => [r.nexusUserId, (r._sum.opened ?? 0) + (r._sum.resolved ?? 0)]))
   const cideM = new Map(cide.map((r) => [r.nexusUserId, r._sum.atividades ?? 0]))
   const consM = new Map(cons.map((r) => [r.nexusUserId, (r._sum.studies ?? 0) + (r._sum.tickets ?? 0) + (r._sum.messages ?? 0) + (r._sum.comments ?? 0)]))
+  // Gerência: só CONTAGEM de ação (serviço entregue/criado, protocolo aberto/
+  // aprovado, data alterada). km/viagens/jornada ficam fora — são magnitude.
+  const gerM = new Map(ger.map((r) => [r.nexusUserId, (r._sum.servicos ?? 0) + (r._sum.protAbertos ?? 0) + (r._sum.protAprovados ?? 0) + (r._sum.servCriados ?? 0) + (r._sum.datasAlteradas ?? 0)]))
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const wppM = new Map(wpp.map((r) => [normName(r.name), r._sum.finalizados ?? 0]))
   const atrM = new Map(ponto.map((r) => [r.personKey, r._sum.atrasos ?? 0]))
@@ -39,7 +43,7 @@ export async function GET(req: NextRequest) {
     const nk = u.nexusUserId
     const pk = u.nexusUserId ?? u.id
     const activity =
-      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) : 0) +
+      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) : 0) +
       (wppM.get(normName(u.name)) ?? 0)
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }
   })
