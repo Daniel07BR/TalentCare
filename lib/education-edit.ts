@@ -126,3 +126,60 @@ export function loadItems(src: { level?: string | null; detail?: string | null; 
   }
   return items
 }
+
+// ── Escolaridade: cores, ranking e níveis exibidos (badges + distribuição) ──
+// Centralizado aqui (módulo puro) p/ ser usado por server e client sem ciclo.
+// Extensão de Pós é PARALELA a MBA/Pós/Mestrado/Doutorado — todas acima da Graduação;
+// quem tem várias pós-graduações exibe TODAS (não só a "mais alta").
+export const ESC_RANK = [
+  'Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Extensão de Pós', 'Superior Completo',
+  'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio',
+  'Ensino Fundamental', 'Não informado',
+]
+export const ESC_COLOR: Record<string, string> = {
+  Doutorado: '#7c5cf0', Mestrado: '#a78bfa', MBA: '#f5a623', 'Pós-graduação': '#e0941a',
+  'Extensão de Pós': '#0fb5ba',
+  'Superior Completo': '#159b87', 'Superior (cursando)': '#2196c4', 'Superior Incompleto': '#56c5e8',
+  'Médio Técnico': '#b6d957', 'Técnico': '#8aab2e', 'Ensino Médio': '#e0857a', 'Ensino Fundamental': '#f1788a',
+  'Não informado': '#9aa1ac',
+}
+export const POSGRAD_LEVELS = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Extensão de Pós']
+const escRank = (k: string) => { const i = ESC_RANK.indexOf(k); return i < 0 ? 99 : i }
+
+// Rótulo do curso (eduCursos.tipo) + status → nível canônico de escolaridade.
+function levelOfCurso(tipo: string, status: string): string | null {
+  const t = norm(tipo)
+  if (t.startsWith('doutorado')) return 'Doutorado'
+  if (t.startsWith('mestrado')) return 'Mestrado'
+  if (t === 'mba') return 'MBA'
+  if (t.startsWith('extensao')) return 'Extensão de Pós'
+  if (t.startsWith('pos')) return 'Pós-graduação'
+  if (t.startsWith('graduacao') || t.startsWith('superior')) return norm(status).startsWith('curs') ? 'Superior (cursando)' : 'Superior Completo'
+  if (t.includes('tecnico')) return 'Médio Técnico'
+  if (t.includes('medio')) return 'Ensino Médio'
+  if (t.includes('fundamental')) return 'Ensino Fundamental'
+  return null
+}
+
+/**
+ * Formações "terminais" de uma pessoa p/ badges e distribuição.
+ * Deriva de `eduCursos` (detalhe do RH). Se a pessoa tem QUALQUER pós-graduação
+ * (MBA/Pós/Extensão/Mestrado/Doutorado), retorna TODAS elas — a graduação-base
+ * fica implícita. Sem pós → apenas o nível mais alto. Fallback ao nível único
+ * cobre Ensino Médio/Fundamental (que não geram curso no detalhe).
+ */
+export function personLevels(
+  eduCursos: { tipo: string; status: string }[] | null | undefined,
+  escolaridade: string | null | undefined,
+): string[] {
+  const set = new Set<string>()
+  for (const c of eduCursos ?? []) { const l = levelOfCurso(c.tipo, c.status); if (l) set.add(l) }
+  if (!set.size) {
+    const single = escolaridade && escolaridade !== 'Não informado' ? escolaridade : null
+    return single ? [single] : ['Não informado']
+  }
+  const all = [...set]
+  const pos = POSGRAD_LEVELS.filter((p) => all.includes(p))
+  const chosen = pos.length ? pos : [all.slice().sort((a, b) => escRank(a) - escRank(b))[0]]
+  return chosen.sort((a, b) => escRank(a) - escRank(b))
+}

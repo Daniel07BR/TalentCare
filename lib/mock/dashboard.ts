@@ -1,7 +1,8 @@
 /* ============================================================
    TalentCare — view-model do Dashboard (puro em função de data + período).
    ============================================================ */
-import { geomSpark, geomLine, scoreColor, rnd, PALETTE, type TalentData, type Employee } from './data'
+import { geomSpark, geomLine, scoreColor, rnd, type TalentData, type Employee } from './data'
+import { ESC_RANK, ESC_COLOR, personLevels } from '../education-edit'
 import type { PeriodAssid } from './assiduidade'
 
 export type Period = '7d' | '30d' | 'Trimestre' | 'Ano'
@@ -143,20 +144,22 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
     }
   }).sort((a, b) => b.score - a.score)
 
-  const ESC_RANK = ['Doutorado', 'Mestrado', 'MBA', 'Pós-graduação', 'Superior Completo', 'Superior (cursando)', 'Superior Incompleto', 'Médio Técnico', 'Técnico', 'Ensino Médio', 'Ensino Fundamental', 'Não informado']
+  // Multi-contagem: cada pessoa entra em CADA formação que tem (MBA + Pós +
+  // Extensão de Pós contam separado). Cores semânticas por nível (ESC_COLOR).
   const escCounts: Record<string, number> = {}
-  perf.forEach((e) => { const k = e.escolaridade || 'Não informado'; escCounts[k] = (escCounts[k] ?? 0) + 1 })
+  perf.forEach((e) => personLevels(e.eduCursos, e.escolaridade).forEach((k) => { escCounts[k] = (escCounts[k] ?? 0) + 1 }))
   const escUsed = Object.keys(escCounts).sort((a, b) => {
     const ia = ESC_RANK.indexOf(a), ib = ESC_RANK.indexOf(b)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
-  const escTotal = perf.length || 1
+  // Denominador = soma das formações (o donut fecha 100%); count = nº de pessoas.
+  const escTotal = Object.values(escCounts).reduce((a, b) => a + b, 0) || 1
   const C = 2 * Math.PI * 46
   let acc = 0
-  const escSegments: EscSegment[] = escUsed.map((label, i) => {
+  const escSegments: EscSegment[] = escUsed.map((label) => {
     const count = escCounts[label]
     const frac = count / escTotal
-    const seg = { label, count, color: PALETTE[i % 6], dash: (frac * C).toFixed(2) + ' ' + (C - frac * C).toFixed(2), offset: (-acc * C).toFixed(2) }
+    const seg = { label, count, color: ESC_COLOR[label] ?? '#9aa1ac', dash: (frac * C).toFixed(2) + ' ' + (C - frac * C).toFixed(2), offset: (-acc * C).toFixed(2) }
     acc += frac
     return seg
   })

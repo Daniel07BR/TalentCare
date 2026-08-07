@@ -67,7 +67,9 @@ export default function FormacaoPage() {
                     <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
                     {p.username && <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>{p.username}</div>}
                   </div>
-                  <LevelBadge label={p.level} color={p.levelColor} />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' }}>
+                    {p.levels.map((l) => <LevelBadge key={l.label} label={l.label} color={l.color} />)}
+                  </div>
                 </div>
               ))}
             </div>
