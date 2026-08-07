@@ -69,6 +69,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const cons = m?.consultoria ?? null
   const hd = m?.helpdesk ?? null
   const cd = m?.cide ?? null
+  const gr = m?.gerencia ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m ? m.assiduidade : { assid: vm.assid, atrasos: vm.atrasos, atrasosAbon: vm.atrasosAbon, minutos: vm.minutosAtraso, advertencias: vm.advert, faltas: null, suspensoes: null }
   const periodo = PERIOD_LABEL[period]
@@ -82,6 +83,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         { label: 'alterações', sys: 'CIDE', n: m.cide.atividades },
         { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
         { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
+        { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
       ].filter((p) => p.n > 0)
     : []
   const concluidas = m ? concluidasParts.reduce((a, p) => a + p.n, 0) : null
@@ -94,6 +96,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     'Painel de Atendimento': m ? m.whatsapp.abertos : null,
     'Consultoria Plus': m ? m.consultoria.total : null,
     CIDE: m ? m.cide.atividades : null,
+    // Gerência = execução + demanda; o card abaixo separa as duas.
+    'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.servCriados : null,
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
@@ -122,7 +126,13 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               {vm.dataSaida && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Data de saída</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>{vm.dataSaida}</div></div>}
               {vm.idade != null && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Idade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.idade} anos</div></div>}
               {vm.nascimento && <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Nascimento</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.nascimento}</div></div>}
-              <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Escolaridade</div><div style={{ fontSize: 13, fontWeight: 600 }}>{vm.esc}</div></div>
+              <div><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Escolaridade</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {vm.grauLevels.map((l) => (
+                    <span key={l.label} style={{ fontSize: 11.5, fontWeight: 600, color: l.color, background: `color-mix(in srgb, ${l.color} 16%, transparent)`, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
+                  ))}
+                </div>
+              </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Rádio</div>
                 <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--chart-2)' }}>
@@ -314,6 +324,43 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     )}
                   </div>
                 )}
+
+                {gr && (gr.hasSaida || gr.hasEscritorio) && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M10 17h4V5H2v12h3M20 17h2v-6l-3-4h-4v10h2" /><circle cx="7.5" cy="17.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" />
+                      </svg>
+                      Gerência · mensageria <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                    </div>
+
+                    {gr.hasSaida && (
+                      <div style={{ marginBottom: gr.hasEscritorio ? 12 : 0 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Saídas externas</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 10 }}>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-2)' }}>{gr.servicos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Serviços entregues</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.km.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Km rodados</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.viagens.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Viagens</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{Math.round(gr.jornadaMin / 60).toLocaleString('pt-BR')}<span style={{ fontSize: 13, color: 'var(--text-mute)' }}>h</span></div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Jornada registrada</div></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {gr.hasEscritorio && (
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Demanda do escritório</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 10 }}>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{gr.protAbertos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Protocolos abertos</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.protAprovados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Aprovações</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.servCriados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Serviços criados</div></div>
+                          {(gr.reagendados > 0 || gr.cancelados > 0) && (
+                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.reagendados.toLocaleString('pt-BR')}<span style={{ fontSize: 13, color: 'var(--text-mute)' }}> / {gr.cancelados}</span></div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Reagend. / cancel.</div></div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
@@ -421,7 +468,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div style={{ fontSize: 15, fontWeight: 700 }}>{vm.grau}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Escolaridade</div></div>
+                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                      {vm.grauLevels.map((l) => (
+                        <span key={l.label} style={{ fontSize: 12.5, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 16%, transparent)`, padding: '3px 11px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Escolaridade</div>
+                  </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Formação acadêmica <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· cadastro RH</span></div>
                 {vm.cursos.length > 0 ? (

@@ -57,6 +57,7 @@ export type Employee = {
   consultoria: ConsultoriaStat
   helpdesk: HelpdeskStat
   cide: CideStat
+  gerencia: GerenciaStat
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -78,6 +79,18 @@ export type HelpdeskStat = { opened: number; resolved: number; formalized: numbe
 
 /** Métricas REAIS do CIDE (frente B): alterações/atividades registradas por pessoa. */
 export type CideStat = { atividades: number }
+
+/** Métricas REAIS da GERÊNCIA (mensageria). Duas faces na mesma pessoa:
+ *  EXECUÇÃO (servicos/km/viagens/jornadaMin) — quem faz saída externa, que não
+ *  são só os dois mensageiros; e ESCRITÓRIO (protAbertos/protAprovados/
+ *  servCriados/reagendados/cancelados) — qualquer funcionário que demanda.
+ *  ⚠️ Janelas de histórico MUITO diferentes: serviço vem desde 2022, km e
+ *  jornada só desde 17/07/2026, e autoria de protocolo desde março/2026. */
+export type GerenciaStat = {
+  servicos: number; km: number; viagens: number; jornadaMin: number
+  protAbertos: number; protAprovados: number; servCriados: number
+  reagendados: number; cancelados: number
+}
 
 /** Assiduidade REAL (ponto, dump do Nexo). Só atrasos+advertências têm fonte;
  *  faltas/suspensões NÃO vêm na origem → tratadas como "sem fonte" na ficha. */
@@ -102,6 +115,7 @@ export type Department = {
   consultoria: ConsultoriaStat // soma da atividade do Consultoria Plus do depto (REAL)
   helpdesk: HelpdeskStat // soma da atividade do HelpDesk do depto (REAL)
   cide: CideStat // soma da atividade do CIDE do depto (REAL)
+  gerencia: GerenciaStat // soma da atividade da Gerência do depto (REAL)
 }
 
 export type TalentData = {
@@ -131,6 +145,7 @@ export type Identity = {
   consultoria: ConsultoriaStat
   helpdesk: HelpdeskStat
   cide: CideStat
+  gerencia: GerenciaStat
   assid: AssidStat
   assidDays: AssidDay[]
   discEventos: DiscEvento[]
@@ -306,6 +321,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     consultoria: id8.consultoria,
     helpdesk: id8.helpdesk,
     cide: id8.cide,
+    gerencia: id8.gerencia,
   }
 }
 
@@ -313,6 +329,10 @@ const zeroClassroom = (): ClassroomStat => ({ videosCompleted: 0, coursesComplet
 const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messages: 0, comments: 0 })
 const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 0, resolvedSeconds: 0 })
 const zeroCide = (): CideStat => ({ atividades: 0 })
+export const zeroGerencia = (): GerenciaStat => ({
+  servicos: 0, km: 0, viagens: 0, jornadaMin: 0,
+  protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0,
+})
 
 /* ============================================================
    SCORE REAL (substitui o seed). Fatores com fonte: Produtividade (atividade nos
@@ -484,9 +504,19 @@ export function assembleData(identities: Identity[]): TalentData {
       )
       // CIDE (atividades) SOMA todos, inclusive desligados.
       const cide = all.reduce((a, e) => ({ atividades: a.atividades + e.cide.atividades }), zeroCide())
+      // GERÊNCIA (execução + escritório) SOMA todos, inclusive desligados.
+      const gerencia = all.reduce((a, e) => {
+        const g = e.gerencia
+        return {
+          servicos: a.servicos + g.servicos, km: a.km + g.km, viagens: a.viagens + g.viagens,
+          jornadaMin: a.jornadaMin + g.jornadaMin, protAbertos: a.protAbertos + g.protAbertos,
+          protAprovados: a.protAprovados + g.protAprovados, servCriados: a.servCriados + g.servCriados,
+          reagendados: a.reagendados + g.reagendados, cancelados: a.cancelados + g.cancelados,
+        }
+      }, zeroGerencia())
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
-        radioHoras, radioSessoes, consultoria, helpdesk, cide,
+        radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }

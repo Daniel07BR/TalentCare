@@ -349,3 +349,27 @@ model SyncWatermark {
 
   @@map("sync_watermark")
 }
+
+// Espelho diário da GERÊNCIA (mensageria). Duas famílias de métrica na mesma
+// linha porque a Gerência tem duas faces: quem SAI (serviços, km, viagens,
+// jornada) e quem DEMANDA do escritório (protocolos abertos/aprovados/…).
+// A mesma pessoa pode ter as duas — vários cargos fazem saída externa
+// eventual, não só os dois motoboys.
+model GerenciaDaily {
+  nexusUserId   String   @map("nexus_user_id")
+  day           String   @db.VarChar(10) // YYYY-MM-DD
+  servicos      Int      @default(0)
+  km            Int      @default(0)
+  viagens       Int      @default(0)
+  jornadaMin    Int      @default(0) @map("jornada_min")
+  protAbertos   Int      @default(0) @map("prot_abertos")
+  protAprovados Int      @default(0) @map("prot_aprovados")
+  servCriados   Int      @default(0) @map("serv_criados")
+  reagendados   Int      @default(0)
+  cancelados    Int      @default(0)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("gerencia_daily")
+}

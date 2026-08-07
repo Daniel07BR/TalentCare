@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, assid, advert] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, assid, advert] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -43,6 +43,17 @@ export async function GET(req: NextRequest) {
       : null,
     user.nexusUserId
       ? prisma.cideDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { atividades: true } })
+      : null,
+    // GERÊNCIA no período: execução (saídas) + escritório (demanda) juntas.
+    user.nexusUserId
+      ? prisma.gerenciaDaily.aggregate({
+          where: { nexusUserId: user.nexusUserId, ...range },
+          _sum: {
+            servicos: true, km: true, viagens: true, jornadaMin: true,
+            protAbertos: true, protAprovados: true, servCriados: true,
+            reagendados: true, cancelados: true,
+          },
+        })
       : null,
     // ASSIDUIDADE (ponto) no período: soma atrasos/minutos + advertências no range.
     prisma.assiduidadeDaily.aggregate({ where: { personKey, ...range }, _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true } }),
@@ -75,6 +86,22 @@ export async function GET(req: NextRequest) {
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
     helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, formalized: hForm, tempoMedio: fmtDur(hResNormal ? Math.round(hSec / hResNormal) : 0) },
     cide: { has: (cd?._sum.atividades ?? 0) > 0, atividades: cd?._sum.atividades ?? 0 },
+    // Duas faces separadas: `hasSaida` só é true p/ quem realmente saiu na rua,
+    // senão a ficha de quem só abre protocolo mostraria um card de mensageiro.
+    gerencia: {
+      servicos: gd?._sum.servicos ?? 0,
+      km: gd?._sum.km ?? 0,
+      viagens: gd?._sum.viagens ?? 0,
+      jornadaMin: gd?._sum.jornadaMin ?? 0,
+      protAbertos: gd?._sum.protAbertos ?? 0,
+      protAprovados: gd?._sum.protAprovados ?? 0,
+      servCriados: gd?._sum.servCriados ?? 0,
+      reagendados: gd?._sum.reagendados ?? 0,
+      cancelados: gd?._sum.cancelados ?? 0,
+      hasSaida: (gd?._sum.servicos ?? 0) > 0 || (gd?._sum.viagens ?? 0) > 0 || (gd?._sum.km ?? 0) > 0,
+      hasEscritorio: (gd?._sum.protAbertos ?? 0) > 0 || (gd?._sum.protAprovados ?? 0) > 0
+        || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0,
+    },
     assiduidade: (() => {
       const atr = assid._sum.atrasos ?? 0
       const abon = assid._sum.atrasosAbon ?? 0

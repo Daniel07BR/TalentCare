@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes,
+  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -32,6 +32,7 @@ const NAV_SYSTEMS = [
   { href: '/consultoria', label: 'Consultoria Plus', icon: MessagesSquare },
   { href: '/helpdesk', label: 'HelpDesk', icon: LifeBuoy },
   { href: '/cide', label: 'CIDE', icon: Landmark },
+  { href: '/gerencia', label: 'Gerência', icon: Truck },
 ]
 // Administração: visível apenas para o dono/admin que mantém o sistema.
 const NAV_ADMIN = [

@@ -9,6 +9,14 @@ export type EmployeeMetrics = {
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
   helpdesk: { has: boolean; opened: number; resolved: number; formalized: number; tempoMedio: string }
   cide: { has: boolean; atividades: number }
+  // Gerência: as duas faces (execução e escritório) com flags próprias, p/ a
+  // ficha só mostrar o bloco de saída de quem realmente saiu na rua.
+  gerencia: {
+    servicos: number; km: number; viagens: number; jornadaMin: number
+    protAbertos: number; protAprovados: number; servCriados: number
+    reagendados: number; cancelados: number
+    hasSaida: boolean; hasEscritorio: boolean
+  }
   assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }
 }
 

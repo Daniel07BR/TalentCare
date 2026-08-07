@@ -10,7 +10,7 @@ import { isHiddenDept } from '@/lib/hidden-depts'
 export async function getTalentData(): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
   const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
-  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
     prisma.user.findMany({
       // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
       // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
@@ -49,6 +49,15 @@ export async function getTalentData(): Promise<TalentData> {
       by: ['nexusUserId'],
       _sum: { atividades: true },
     }),
+    // GERÊNCIA ACUMULADA (todo o histórico) somada do espelho diário.
+    prisma.gerenciaDaily.groupBy({
+      by: ['nexusUserId'],
+      _sum: {
+        servicos: true, km: true, viagens: true, jornadaMin: true,
+        protAbertos: true, protAprovados: true, servCriados: true,
+        reagendados: true, cancelados: true,
+      },
+    }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
     // ASSIDUIDADE (ponto) ACUMULADA por pessoa — espelho do dump do Nexo.
@@ -74,6 +83,7 @@ export async function getTalentData(): Promise<TalentData> {
   const consultoriaByNexus = new Map(consultoriaStats.map((c) => [c.nexusUserId, c]))
   const helpdeskByNexus = new Map(helpdeskStats.map((h) => [h.nexusUserId, h]))
   const cideByNexus = new Map(cideStats.map((c) => [c.nexusUserId, c]))
+  const gerenciaByNexus = new Map(gerenciaStats.map((g) => [g.nexusUserId, g]))
   // WhatsApp por nome normalizado (atendente → funcionário).
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const whatsappByName = new Map(whatsappAtt.map((w) => [normName(w.name), w]))
@@ -102,6 +112,7 @@ export async function getTalentData(): Promise<TalentData> {
     const cps = u.nexusUserId ? consultoriaByNexus.get(u.nexusUserId) : undefined
     const hds = u.nexusUserId ? helpdeskByNexus.get(u.nexusUserId) : undefined
     const cds = u.nexusUserId ? cideByNexus.get(u.nexusUserId) : undefined
+    const gds = u.nexusUserId ? gerenciaByNexus.get(u.nexusUserId) : undefined
     const ws = whatsappByName.get(normName(u.name))
     // Escolaridade/cursos/certificados são preenchíveis MANUALMENTE p/ todos
     // (inclusive STAFF sem Nexus): a chave é nexus_user_id quando existe, senão o id.
@@ -156,6 +167,19 @@ export async function getTalentData(): Promise<TalentData> {
       },
       cide: {
         atividades: cds?._sum.atividades ?? 0,
+      },
+      // GERÊNCIA: execução (serviços/km/viagens/jornada) + escritório
+      // (protocolos abertos/aprovados/…). Uma pessoa pode ter as duas.
+      gerencia: {
+        servicos: gds?._sum.servicos ?? 0,
+        km: gds?._sum.km ?? 0,
+        viagens: gds?._sum.viagens ?? 0,
+        jornadaMin: gds?._sum.jornadaMin ?? 0,
+        protAbertos: gds?._sum.protAbertos ?? 0,
+        protAprovados: gds?._sum.protAprovados ?? 0,
+        servCriados: gds?._sum.servCriados ?? 0,
+        reagendados: gds?._sum.reagendados ?? 0,
+        cancelados: gds?._sum.cancelados ?? 0,
       },
       // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
       // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.
