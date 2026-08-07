@@ -54,6 +54,9 @@ interface NexusEmployee {
   // Data de saída/desligamento definida no Nexus (fonte real de turnover). null se
   // ainda ativo ou se foi inativado sem data. Espelhada em User.leftAt.
   terminationDate: string | null
+  educationItems?: { tipo: string; curso: string; cursando: boolean }[] | null
+  educationLevel?: string | null
+  educationDetail?: string | null
   updatedAt: string | null
   // Foto (data URI webp base64) quando pedida com ?includeAvatar=true; null se sem foto.
   avatar: string | null
@@ -191,6 +194,31 @@ export async function syncFromNexus(): Promise<SyncResult> {
           },
         })
         result.created++
+      }
+      // FORMAÇÃO: o Nexus virou a fonte (é o diretório de pessoas) e os 75
+      // registros curados aqui foram migrados para lá antes desta troca.
+      // ⚠️ Só sobrescreve quando o Nexus TEM formação: sem isso, uma pessoa
+      // ainda não preenchida lá apagaria o que existe aqui — e escolaridade é
+      // dado que ninguém reconstrói da origem.
+      if (Array.isArray(nu.educationItems) && nu.educationItems.length) {
+        await prisma.employeeEducation.upsert({
+          where: { nexusUserId: nu.id },
+          create: {
+            nexusUserId: nu.id,
+            level: nu.educationLevel ?? null,
+            detail: nu.educationDetail ?? null,
+            // `raw.items` é o que o editor local relê (loadItems) — grava no
+            // mesmo formato para a tela continuar abrindo os níveis certos.
+            raw: { items: nu.educationItems },
+            source: 'nexus',
+          },
+          update: {
+            level: nu.educationLevel ?? null,
+            detail: nu.educationDetail ?? null,
+            raw: { items: nu.educationItems },
+            source: 'nexus',
+          },
+        })
       }
     } catch (err) {
       result.errors.push(`${nu.name} (${nu.id}): ${(err as Error).message}`)

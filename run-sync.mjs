@@ -95,6 +95,23 @@ async function main() {
       } })
       created++
     }
+
+    // FORMAÇÃO: o Nexus é a fonte. ⚠️ Só sobrescreve quando ele TEM a lista —
+    // sem isso, pessoa ainda não preenchida lá apagaria o que existe aqui.
+    // Mantido em sincronia com lib/nexus.ts: este CLI duplica a lógica de lá.
+    if (Array.isArray(nu.educationItems) && nu.educationItems.length) {
+      await prisma.employeeEducation.upsert({
+        where: { nexusUserId: nu.id },
+        create: {
+          nexusUserId: nu.id, level: nu.educationLevel ?? null, detail: nu.educationDetail ?? null,
+          raw: { items: nu.educationItems }, source: 'nexus',
+        },
+        update: {
+          level: nu.educationLevel ?? null, detail: nu.educationDetail ?? null,
+          raw: { items: nu.educationItems }, source: 'nexus',
+        },
+      })
+    }
   }
 
   const orphans = await prisma.user.findMany({
