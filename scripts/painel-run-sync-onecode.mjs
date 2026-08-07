@@ -98,7 +98,9 @@ async function fullReconcile() {
       const antes = localUpd.get(row.id)
       if (antes === undefined) paraCriar.push(row)
       else if (antes !== +row.updatedAt) {
-        await prisma.ocTicket.update({ where: { id: row.id }, data: row })
+        // upsert e não update: o incremental roda a cada 3 min em paralelo e a
+        // linha pode ter sumido/chegado no meio da varredura.
+        await prisma.ocTicket.upsert({ where: { id: row.id }, create: row, update: row })
         atualizados++
       }
     }
@@ -106,7 +108,20 @@ async function fullReconcile() {
     page++
   } while (page <= lastPage)
 
-  for (const part of chunk(paraCriar, 500)) await prisma.ocTicket.createMany({ data: part })
+  // ⚠️ A varredura leva ~10 min e o incremental (*/3 min) grava no meio dela:
+  // um id anotado como "novo" pode já ter sido inserido por ele quando chegamos
+  // aqui. `createMany` estoura no id repetido e derruba o lote inteiro — foi o
+  // que aconteceu na 1ª execução real. Em lote pela velocidade, upsert linha a
+  // linha como rede de segurança do lote que falhar.
+  for (const part of chunk(paraCriar, 500)) {
+    try {
+      await prisma.ocTicket.createMany({ data: part })
+    } catch {
+      for (const row of part) {
+        await prisma.ocTicket.upsert({ where: { id: row.id }, create: row, update: row })
+      }
+    }
+  }
 
   // Linhas que existem aqui e não vieram da API. NÃO são apagadas: este espelho
   // alimenta relatório histórico e, para vários dias, já é o melhor registro que
@@ -191,9 +206,12 @@ async function main() {
   const totalTickets = await prisma.ocTicket.count()
   const lastSyncAt = new Date().toISOString()
   const durationMs = Date.now() - t0
-  // gap = quanto a origem tem a mais que o espelho. Diferente de zero por várias
-  // execuções seguidas = a varredura parou de achar o que existe (foi assim que
-  // passamos dias parados sem ninguém notar).
+  // gap = quanto a origem tem a mais que o espelho.
+  //   POSITIVO e teimoso por várias execuções = a varredura parou de achar o que
+  //     existe (foi assim que passamos dias parados sem ninguém notar).
+  //   NEGATIVO é o estado SAUDÁVEL aqui: guardamos tickets que o OneCode apagou
+  //     (8 em 2026-08-07) e de propósito não os removemos. Espelho é superconjunto
+  //     da origem, não cópia fiel.
   const gap = apiCount == null ? null : apiCount - totalTickets
   const value = JSON.stringify({ mode, lastTicketId, lastSyncAt, tickets: totalTickets, newTickets, refreshedActive, apiCount, gap, order, reconc, durationMs, ...cat })
   await prisma.syncState.upsert({ where: { key: 'onecode' }, create: { key: 'onecode', value }, update: { value } })
