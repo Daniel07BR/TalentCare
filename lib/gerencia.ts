@@ -18,6 +18,7 @@ interface DailyRow {
   day: string // YYYY-MM-DD
   servicos: number | string
   km: number | string
+  saidas: number | string
   viagens: number | string
   jornadaMin: number | string
   protAbertos: number | string
@@ -30,6 +31,7 @@ interface DailyRow {
 
 export interface GerenciaSyncResult {
   synced: number
+  removidos?: number
   from: string | null
   to: string
   errors: string[]
@@ -67,11 +69,14 @@ export async function syncGerencia(): Promise<GerenciaSyncResult> {
   }
   const data = (await res.json()) as { days: DailyRow[] }
 
+  const vistos = new Set<string>()
   for (const r of data.days) {
     if (!r.userId || !r.day) continue
+    vistos.add(`${r.userId}|${r.day}`)
     const row = {
       servicos: n(r.servicos),
       km: n(r.km),
+      saidas: n(r.saidas),
       viagens: n(r.viagens),
       jornadaMin: n(r.jornadaMin),
       protAbertos: n(r.protAbertos),
@@ -91,6 +96,31 @@ export async function syncGerencia(): Promise<GerenciaSyncResult> {
     } catch (e) {
       result.errors.push(`${r.userId}/${r.day}: ${(e as Error).message}`)
     }
+  }
+
+
+  // ⚠️ Linha que DEIXOU de existir na origem. O upsert só toca no que a fonte
+  // devolve, então um dia que sumiu (mudou a definição da métrica, ou o registro
+  // foi corrigido lá) fica congelado aqui para sempre — foi o que aconteceu com
+  // os serviços fantasmas da importação: o endpoint parou de devolvê-los e o
+  // espelho seguiu mostrando.
+  //
+  // Só roda em sync COMPLETO e só DEPOIS de todos os upserts terem dado certo,
+  // então uma falha de rede nunca apaga nada. É seguro aqui (e só aqui) porque
+  // gerencia_daily é 100% derivada da Gerência — diferente do espelho do
+  // WhatsApp, onde a origem já perdeu história e a nossa cópia é a melhor.
+  if (!from && result.errors.length === 0 && vistos.size > 0) {
+    const dias = [...vistos].map((k) => k.slice(k.indexOf('|') + 1))
+    const removidos = await prisma.gerenciaDaily.deleteMany({
+      where: {
+        day: { gte: dias.reduce((a, b) => (a < b ? a : b)), lte: dias.reduce((a, b) => (a > b ? a : b)) },
+        NOT: [...vistos].map((k) => ({
+          nexusUserId: k.slice(0, k.indexOf('|')),
+          day: k.slice(k.indexOf('|') + 1),
+        })),
+      },
+    })
+    result.removidos = removidos.count
   }
 
   await prisma.syncWatermark.upsert({

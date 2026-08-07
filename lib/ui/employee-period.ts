@@ -12,7 +12,7 @@ export type EmployeeMetrics = {
   // Gerência: as duas faces (execução e escritório) com flags próprias, p/ a
   // ficha só mostrar o bloco de saída de quem realmente saiu na rua.
   gerencia: {
-    servicos: number; km: number; viagens: number; jornadaMin: number
+    servicos: number; km: number; saidas: number; viagens: number; jornadaMin: number
     protAbertos: number; protAprovados: number; servCriados: number
     reagendados: number; cancelados: number; datasAlteradas: number
     hasSaida: boolean; hasEscritorio: boolean

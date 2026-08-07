@@ -30,11 +30,14 @@ async function main() {
   const data = await res.json()
 
   let synced = 0
+  const vistos = new Set()
   for (const r of data.days) {
     if (!r.userId || !r.day) continue
+    vistos.add(`${r.userId}|${r.day}`)
     const row = {
       servicos: n(r.servicos),
       km: n(r.km),
+      saidas: n(r.saidas),
       viagens: n(r.viagens),
       jornadaMin: n(r.jornadaMin),
       protAbertos: n(r.protAbertos),
@@ -51,11 +54,28 @@ async function main() {
     })
     synced++
   }
+  // Ver o comentário longo em lib/gerencia.ts: remove só em sync COMPLETO, só
+  // depois dos upserts, e só porque esta tabela é 100% derivada da Gerência.
+  let removidos = 0
+  if (!from && vistos.size > 0) {
+    const dias = [...vistos].map((k) => k.slice(k.indexOf('|') + 1))
+    const r = await prisma.gerenciaDaily.deleteMany({
+      where: {
+        day: { gte: dias.reduce((a, b) => (a < b ? a : b)), lte: dias.reduce((a, b) => (a > b ? a : b)) },
+        NOT: [...vistos].map((k) => ({
+          nexusUserId: k.slice(0, k.indexOf('|')),
+          day: k.slice(k.indexOf('|') + 1),
+        })),
+      },
+    })
+    removidos = r.count
+  }
+
   await prisma.syncWatermark.upsert({
     where: { source: SOURCE },
     create: { source: SOURCE, lastSyncedAt: now },
     update: { lastSyncedAt: now },
   })
-  console.log(JSON.stringify({ synced, from: from ? from.toISOString() : null, to: now.toISOString() }))
+  console.log(JSON.stringify({ synced, removidos, from: from ? from.toISOString() : null, to: now.toISOString() }))
 }
 main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

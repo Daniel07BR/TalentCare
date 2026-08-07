@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     by: ['nexusUserId'],
     where: { day: { gte: fromDay, lte: toDay } },
     _sum: {
-      servicos: true, km: true, viagens: true, jornadaMin: true,
+      servicos: true, km: true, saidas: true, viagens: true, jornadaMin: true,
       protAbertos: true, protAprovados: true, servCriados: true,
       reagendados: true, cancelados: true, datasAlteradas: true,
     },
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     nexusUserId: r.nexusUserId,
     servicos: r._sum.servicos ?? 0,
     km: r._sum.km ?? 0,
+    saidas: r._sum.saidas ?? 0,
     viagens: r._sum.viagens ?? 0,
     jornadaMin: r._sum.jornadaMin ?? 0,
     protAbertos: r._sum.protAbertos ?? 0,

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       ? prisma.gerenciaDaily.aggregate({
           where: { nexusUserId: user.nexusUserId, ...range },
           _sum: {
-            servicos: true, km: true, viagens: true, jornadaMin: true,
+            servicos: true, km: true, saidas: true, viagens: true, jornadaMin: true,
             protAbertos: true, protAprovados: true, servCriados: true,
             reagendados: true, cancelados: true, datasAlteradas: true,
           },
@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
     gerencia: {
       servicos: gd?._sum.servicos ?? 0,
       km: gd?._sum.km ?? 0,
+      saidas: gd?._sum.saidas ?? 0,
       viagens: gd?._sum.viagens ?? 0,
       jornadaMin: gd?._sum.jornadaMin ?? 0,
       protAbertos: gd?._sum.protAbertos ?? 0,
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
       reagendados: gd?._sum.reagendados ?? 0,
       cancelados: gd?._sum.cancelados ?? 0,
       datasAlteradas: gd?._sum.datasAlteradas ?? 0,
-      hasSaida: (gd?._sum.servicos ?? 0) > 0 || (gd?._sum.viagens ?? 0) > 0 || (gd?._sum.km ?? 0) > 0,
+      hasSaida: (gd?._sum.servicos ?? 0) > 0 || (gd?._sum.saidas ?? 0) > 0 || (gd?._sum.km ?? 0) > 0,
       hasEscritorio: (gd?._sum.protAbertos ?? 0) > 0 || (gd?._sum.protAprovados ?? 0) > 0
         || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0
         || (gd?._sum.datasAlteradas ?? 0) > 0,

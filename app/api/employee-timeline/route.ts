@@ -79,7 +79,8 @@ export async function GET(req: NextRequest) {
     const saiu: string[] = []
     if (r.servicos > 0) saiu.push(plural(r.servicos, 'serviço entregue', 'serviços entregues'))
     if (r.km > 0) saiu.push(`${r.km} km`)
-    if (r.viagens > 0) saiu.push(plural(r.viagens, 'viagem', 'viagens'))
+    if (r.saidas > 0) saiu.push(plural(r.saidas, 'saída', 'saídas'))
+    if (r.viagens > 0) saiu.push(plural(r.viagens, 'viagem (fora do estado)', 'viagens (fora do estado)'))
     if (saiu.length) push('Gerência', 'var(--chart-2)', r.day, saiu[0].charAt(0).toUpperCase() + saiu[0].slice(1), saiu.slice(1).join(' · ') || 'na mensageria')
     const esc: string[] = []
     if (r.protAbertos > 0) esc.push(plural(r.protAbertos, 'protocolo aberto', 'protocolos abertos'))

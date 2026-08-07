@@ -53,7 +53,7 @@ export async function getTalentData(): Promise<TalentData> {
     prisma.gerenciaDaily.groupBy({
       by: ['nexusUserId'],
       _sum: {
-        servicos: true, km: true, viagens: true, jornadaMin: true,
+        servicos: true, km: true, saidas: true, viagens: true, jornadaMin: true,
         protAbertos: true, protAprovados: true, servCriados: true,
         reagendados: true, cancelados: true, datasAlteradas: true,
       },
@@ -173,6 +173,7 @@ export async function getTalentData(): Promise<TalentData> {
       gerencia: {
         servicos: gds?._sum.servicos ?? 0,
         km: gds?._sum.km ?? 0,
+        saidas: gds?._sum.saidas ?? 0,
         viagens: gds?._sum.viagens ?? 0,
         jornadaMin: gds?._sum.jornadaMin ?? 0,
         protAbertos: gds?._sum.protAbertos ?? 0,

@@ -93,7 +93,7 @@ export type CideStat = { atividades: number }
  *  ⚠️ Janelas de histórico MUITO diferentes: serviço vem desde 2022, km e
  *  jornada só desde 17/07/2026, e autoria de protocolo desde março/2026. */
 export type GerenciaStat = {
-  servicos: number; km: number; viagens: number; jornadaMin: number
+  servicos: number; km: number; saidas: number; viagens: number; jornadaMin: number
   protAbertos: number; protAprovados: number; servCriados: number
   reagendados: number; cancelados: number; datasAlteradas: number
 }
@@ -336,7 +336,7 @@ const zeroConsultoria = (): ConsultoriaStat => ({ studies: 0, tickets: 0, messag
 const zeroHelpdesk = (): HelpdeskStat => ({ opened: 0, resolved: 0, formalized: 0, resolvedSeconds: 0 })
 const zeroCide = (): CideStat => ({ atividades: 0 })
 export const zeroGerencia = (): GerenciaStat => ({
-  servicos: 0, km: 0, viagens: 0, jornadaMin: 0,
+  servicos: 0, km: 0, saidas: 0, viagens: 0, jornadaMin: 0,
   protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0, datasAlteradas: 0,
 })
 
@@ -539,7 +539,8 @@ export function assembleData(identities: Identity[]): TalentData {
       const gerencia = all.reduce((a, e) => {
         const g = e.gerencia
         return {
-          servicos: a.servicos + g.servicos, km: a.km + g.km, viagens: a.viagens + g.viagens,
+          servicos: a.servicos + g.servicos, km: a.km + g.km,
+          saidas: a.saidas + g.saidas, viagens: a.viagens + g.viagens,
           jornadaMin: a.jornadaMin + g.jornadaMin, protAbertos: a.protAbertos + g.protAbertos,
           protAprovados: a.protAprovados + g.protAprovados, servCriados: a.servCriados + g.servCriados,
           reagendados: a.reagendados + g.reagendados, cancelados: a.cancelados + g.cancelados,

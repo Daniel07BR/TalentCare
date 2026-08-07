@@ -109,7 +109,8 @@ export default function GerenciaPage() {
         <span aria-hidden="true">ℹ️</span>
         <span>
           As janelas de histórico são diferentes na origem: <strong>serviços concluídos</strong> existem desde 2022;
-          <strong> km, viagens e jornada</strong> só a partir de 17/07/2026 (quando o app passou a registrar);
+          <strong> km, saídas e jornada</strong> só a partir de 17/07/2026 (quando o app passou a registrar);
+          <strong> viagens</strong> só contam a partir de quando a rota for marcada como viagem na Gerência;
           <strong> autoria de protocolo</strong> desde março/2026. Períodos anteriores aparecem zerados por falta de registro, não por inatividade.
         </span>
       </div>
@@ -119,7 +120,8 @@ export default function GerenciaPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
         <Kpi label="Serviços concluídos" value={t.servicos.toLocaleString('pt-BR')} color={COR_EXEC} />
         <Kpi label="Km rodados" value={t.km.toLocaleString('pt-BR')} unit="km" color="var(--text)" hint="desde 17/07/2026" />
-        <Kpi label="Viagens" value={t.viagens.toLocaleString('pt-BR')} color="var(--text)" hint="desde 17/07/2026" />
+        <Kpi label="Saídas" value={t.saidas.toLocaleString('pt-BR')} color="var(--text)" hint="saídas registradas no app · desde 17/07/2026" />
+        <Kpi label="Viagens" value={t.viagens.toLocaleString('pt-BR')} color="var(--accent)" hint="dias em rota de viagem (fora do estado)" />
         <Kpi label="Jornada registrada" value={vm.horasJornada.toLocaleString('pt-BR')} unit="h" color="var(--text)" hint="desde 17/07/2026" />
         <Kpi label="Pessoas que saíram" value={vm.execPessoas} color="var(--info)" />
       </div>
@@ -133,11 +135,12 @@ export default function GerenciaPage() {
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma saída registrada no período.</div>
         ) : (
           <>
-            <Cabecalho labels={['Serviços', 'Km', 'Viagens']} />
+            <Cabecalho labels={['Serviços', 'Km', 'Saídas', 'Viagens']} />
             {vm.execucao.map((p) => (
               <Linha key={p.id} p={p} cols={[
                 { label: 'Serviços', v: p.stat.servicos, destaque: true },
                 { label: 'Km', v: p.stat.km },
+                { label: 'Saídas', v: p.stat.saidas },
                 { label: 'Viagens', v: p.stat.viagens },
               ]} />
             ))}

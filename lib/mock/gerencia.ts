@@ -27,7 +27,8 @@ export type GerenciaPerson = {
 export type GerenciaDeptBar = { id: string; nome: string; color: string; valor: number; pct: string }
 
 const soma = (a: GerenciaStat, b: GerenciaStat): GerenciaStat => ({
-  servicos: a.servicos + b.servicos, km: a.km + b.km, viagens: a.viagens + b.viagens,
+  servicos: a.servicos + b.servicos, km: a.km + b.km,
+  saidas: a.saidas + b.saidas, viagens: a.viagens + b.viagens,
   jornadaMin: a.jornadaMin + b.jornadaMin, protAbertos: a.protAbertos + b.protAbertos,
   protAprovados: a.protAprovados + b.protAprovados, servCriados: a.servCriados + b.servCriados,
   reagendados: a.reagendados + b.reagendados, cancelados: a.cancelados + b.cancelados,
@@ -57,7 +58,7 @@ export function gerenciaVM(data: TalentData, period?: GerenciaUsage) {
   // Quem saiu na rua: ordenado por serviço concluído. O cargo vai junto porque
   // a maioria NÃO é mensageiro de carteira — é saída externa eventual.
   const execucao = pessoas
-    .filter((p) => p.execucao > 0 || p.stat.km > 0 || p.stat.viagens > 0)
+    .filter((p) => p.execucao > 0 || p.stat.km > 0 || p.stat.saidas > 0)
     .sort((a, b) => b.execucao - a.execucao || b.stat.km - a.stat.km)
 
   // Quem demandou do escritório.
