@@ -49,9 +49,26 @@ const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
 /** Cargos do Nexus que abrem o painel do próprio setor. */
 const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
 
-// Setor "Diretoria" ou email na allowlist → ADMIN. Depois disso, depende da
-// chave acima.
-export function mapRole(email: string | null, setor: string | null, cargo?: string | null): UserRole {
+/**
+ * Setor "Diretoria" ou email na allowlist → ADMIN. Depois disso, depende da
+ * chave acima.
+ *
+ * ⚠️⚠️ `temVinculo` NÃO é opcional na prática, e foi o defeito descoberto em
+ * 02/09/2026, na primeira vez que alguém usou a tela de verdade: a Rosemeire
+ * (Cozinha) foi nomeada avaliadora da Limpeza e da Cozinha, e o cargo dela é
+ * `Colaborador`. Sem esta linha, no dia em que o acesso abrisse ela seria
+ * barrada da própria fila que administra — a porta diria "colaborador" enquanto
+ * o vínculo dizia "avaliadora".
+ *
+ * A lição: quem MANDA é o vínculo. O cargo é só o atalho para quem não tem
+ * vínculo nenhum. Quem avalia alguém alcança a fila, seja qual for o cargo.
+ */
+export function mapRole(
+  email: string | null,
+  setor: string | null,
+  cargo?: string | null,
+  temVinculo = false,
+): UserRole {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
   if (!ACESSO_ABERTO) return 'SEM_PERMISSAO'
@@ -59,8 +76,35 @@ export function mapRole(email: string | null, setor: string | null, cargo?: stri
   // continua vindo de `setor_avaliador`, confirmado por gente — ver
   // `lib/avaliacoes/regua.ts`. Um Gestor sem vínculo entra no painel do setor e
   // não avalia ninguém, e é isso mesmo.
+  if (temVinculo) return 'GESTOR'
   if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'
   return 'COLABORADOR'
+}
+
+/**
+ * Recalcula e grava a classe de acesso de UMA pessoa.
+ *
+ * ⚠️ Existe porque o vínculo muda pela tela e o sync de diretório roda quando
+ * roda (hoje, no .78, só a mão). Sem isto, nomear alguém avaliador só teria
+ * efeito na porta depois do próximo sync — e a pessoa bateria num 403 sem
+ * ninguém entender por quê.
+ *
+ * ⚠️ Os DOIS caminhos (aqui e o sync) usam `mapRole`, a mesma função. Dois
+ * escritores da mesma coisa só é seguro quando os dois derivam do mesmo lugar.
+ */
+export async function recalcularAcesso(userId: string): Promise<UserRole | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, jobTitle: true, role: true, department: { select: { name: true } } },
+  })
+  if (!u) return null
+  const temVinculo = (await prisma.setorAvaliador.count({ where: { userId } })) > 0
+  const computed = mapRole(u.email, u.department?.name ?? null, u.jobTitle, temVinculo)
+  const finalRole = resolveRole(computed, u.role)
+  if (finalRole !== u.role) {
+    await prisma.user.update({ where: { id: userId }, data: { role: finalRole } })
+  }
+  return finalRole
 }
 
 // Preserva elevação manual: nunca rebaixa um ADMIN no sync.
@@ -141,6 +185,12 @@ export async function syncFromNexus(): Promise<SyncResult> {
 
   const employees: NexusEmployee[] = await res.json()
   const nexusIds = new Set(employees.map((e) => e.id))
+  // Quem é avaliador de algum setor. Carregado UMA vez: entra na classe de
+  // acesso de cada pessoa (ver `mapRole`), e consultar por linha custaria uma
+  // ida ao banco por funcionário.
+  const vinculados = new Set(
+    (await prisma.setorAvaliador.findMany({ select: { userId: true } })).map((v) => v.userId),
+  )
 
   for (const nu of employees) {
     try {
@@ -161,7 +211,10 @@ export async function syncFromNexus(): Promise<SyncResult> {
         })
       }
 
-      const computed = mapRole(nu.email, nu.department, nu.role)
+      // ⚠️ O vínculo entra na conta: quem avalia alguém alcança a fila, seja
+      // qual for o cargo dele no Nexus (ver `mapRole`).
+      const temVinculo = local ? vinculados.has(local.id) : false
+      const computed = mapRole(nu.email, nu.department, nu.role, temVinculo)
       const isActive = nu.status === 'active'
       const dept = await resolveDepartment(nu.department, nu.departmentId)
 

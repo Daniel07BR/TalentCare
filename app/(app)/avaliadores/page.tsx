@@ -3,15 +3,18 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Avatar from '../Avatar'
 
-type P = { id: string; nome: string; cargo: string | null; hasAvatar: boolean }
+type P = { id: string; nome: string; cargo: string | null; hasAvatar: boolean; deOutroSetor?: string | null }
 type Setor = { id: string; nome: string; pessoas: number; avaliadores: P[]; sugestoes: P[]; equipe: P[] }
-type Dados = { setores: Setor[]; semAvaliador: number; pessoasSemAvaliador: number }
+type Pessoa = P & { setor: string }
+type Dados = { setores: Setor[]; todos: Pessoa[]; semAvaliador: number; pessoasSemAvaliador: number }
 
 export default function AvaliadoresPage() {
   const router = useRouter()
   const [d, setD] = useState<Dados | null>(null)
   const [abrindo, setAbrindo] = useState<string | null>(null)
   const [salvando, setSalvando] = useState<string | null>(null)
+  // Busca do seletor aberto — é o que permite pegar alguém de OUTRO setor.
+  const [busca, setBusca] = useState('')
 
   const carregar = useCallback(() => {
     fetch('/api/avaliadores', { cache: 'no-store' })
@@ -82,16 +85,16 @@ export default function AvaliadoresPage() {
                 <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{s.pessoas} {s.pessoas === 1 ? 'pessoa' : 'pessoas'}</div>
               </div>
               {vazio && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--danger)', background: 'var(--surface-2)', border: '1px solid var(--danger)33', padding: '3px 10px', borderRadius: 20 }}>Ninguém avalia</span>}
-              <button onClick={() => setAbrindo(aberto ? null : s.id)} className="tc-btn"
+              <button onClick={() => { setAbrindo(aberto ? null : s.id); setBusca('') }} className="tc-btn"
                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                {aberto ? 'Fechar' : 'Escolher da equipe'}
+                {aberto ? 'Fechar' : 'Escolher quem avalia'}
               </button>
             </div>
 
             {s.avaliadores.length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                 {s.avaliadores.map((p) => (
-                  <Chip key={p.id} p={p} ativo onClick={() => alternar(s.id, p.id, false)} carregando={salvando === p.id} />
+                  <Chip key={p.id} p={p} setor={p.deOutroSetor ?? undefined} ativo onClick={() => alternar(s.id, p.id, false)} carregando={salvando === p.id} />
                 ))}
               </div>
             )}
@@ -112,7 +115,7 @@ export default function AvaliadoresPage() {
             {aberto && (
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-soft)' }}>
                 <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.3px' }}>
-                  Qualquer pessoa do setor
+                  Do próprio setor
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {s.equipe.map((p) => {
@@ -121,6 +124,33 @@ export default function AvaliadoresPage() {
                   })}
                 </div>
                 {s.equipe.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Setor sem gente ativa.</div>}
+
+                {/*
+                  ⚠️⚠️ De QUALQUER setor. Setor pequeno quase nunca tem o próprio
+                  avaliador dentro dele — a Limpeza é avaliada por alguém da
+                  Cozinha, e isso é a regra e não a exceção. A tela só oferecia a
+                  equipe do setor e tornava esse caso impossível, embora a rota
+                  sempre tenha aceitado.
+                */}
+                <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, margin: '16px 0 8px', textTransform: 'uppercase', letterSpacing: '.3px' }}>
+                  Ou alguém de outro setor
+                </div>
+                <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar pessoa por nome ou setor…"
+                  style={{ width: '100%', maxWidth: 340, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '7px 12px', fontSize: 12.5, fontFamily: 'inherit', marginBottom: 10 }} />
+                {busca.trim().length >= 2 ? (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(d.todos ?? [])
+                      .filter((p) => p.id !== undefined && !s.equipe.some((e) => e.id === p.id))
+                      .filter((p) => `${p.nome} ${p.setor}`.toLowerCase().includes(busca.trim().toLowerCase()))
+                      .slice(0, 24)
+                      .map((p) => {
+                        const ja = s.avaliadores.some((a) => a.id === p.id)
+                        return <Chip key={p.id} p={p} setor={p.setor} ativo={ja} onClick={() => alternar(s.id, p.id, !ja)} carregando={salvando === p.id} />
+                      })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-mute)' }}>Digite ao menos duas letras.</div>
+                )}
               </div>
             )}
           </div>
@@ -130,7 +160,7 @@ export default function AvaliadoresPage() {
   )
 }
 
-function Chip({ p, ativo, onClick, carregando }: { p: P; ativo?: boolean; onClick: () => void; carregando: boolean }) {
+function Chip({ p, ativo, onClick, carregando, setor }: { p: P; ativo?: boolean; onClick: () => void; carregando: boolean; setor?: string }) {
   return (
     <button onClick={onClick} disabled={carregando} className="tc-btn"
       style={{
@@ -142,7 +172,7 @@ function Chip({ p, ativo, onClick, carregando }: { p: P; ativo?: boolean; onClic
       }}>
       <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={24} />
       <span style={{ fontSize: 12, fontWeight: 600 }}>{p.nome}</span>
-      <span style={{ fontSize: 10.5, opacity: 0.75 }}>{p.cargo}</span>
+      <span style={{ fontSize: 10.5, opacity: 0.75 }}>{setor ? `${p.cargo} · ${setor}` : p.cargo}</span>
       <span style={{ fontSize: 13, marginLeft: 2 }}>{ativo ? '×' : '+'}</span>
     </button>
   )

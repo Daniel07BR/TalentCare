@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh, podeGerirAvaliadores } from '@/lib/avaliacoes/regua'
 import { isHiddenDept } from '@/lib/hidden-depts'
+import { recalcularAcesso } from '@/lib/nexus'
 
 /* ============================================================
    QUEM AVALIA cada setor.
@@ -44,6 +45,8 @@ export async function GET() {
     vinculadosPorSetor.set(v.departmentId, s)
   }
 
+  const nomeDe = new Map(depts.map((d) => [d.id, d.name]))
+
   const setores = depts
     // Diretoria e Sistemas não são população avaliada, então não têm fila.
     .filter((d) => !isHiddenDept(d.name))
@@ -55,9 +58,21 @@ export async function GET() {
         id: d.id,
         nome: d.name,
         pessoas: doSetor.length,
-        // Quem já está gravado como avaliador.
-        avaliadores: doSetor.filter((p) => ligados.has(p.id))
-          .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl })),
+        /*
+         * Quem já está gravado como avaliador — de QUALQUER setor.
+         *
+         * ⚠️⚠️ Filtrar por `doSetor` (a equipe daquele setor) escondia justamente
+         * o caso que existe: a Rosemeire é da Cozinha e avalia a Limpeza. O
+         * vínculo estaria gravado e a tela mostraria "Ninguém avalia" — o pior
+         * dos dois mundos, porque quem olhasse desfaria e refaria sem entender.
+         */
+        avaliadores: pessoas.filter((p) => ligados.has(p.id))
+          .map((p) => ({
+            id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl,
+            // De onde a pessoa é, quando não é deste setor. A tela mostra, senão
+            // "Rosemeire · Colaborador" na Limpeza parece cadastro errado.
+            deOutroSetor: p.departmentId !== d.id ? (nomeDe.get(p.departmentId ?? '') ?? 'Sem setor') : null,
+          })),
         // Sugestão pelo cargo, ainda não confirmada.
         sugestoes: sugeridos.filter((p) => !ligados.has(p.id))
           .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl })),
@@ -73,6 +88,18 @@ export async function GET() {
 
   return NextResponse.json({
     setores,
+    /*
+     * ⚠️⚠️ TODA a gente ativa, e não só a do setor. Descoberto em 02/09/2026, na
+     * primeira vez que a tela foi usada de verdade: a Limpeza não tem ninguém de
+     * chefia, e quem vai avaliá-la é a Rosemeire, que é da COZINHA. Oferecer só
+     * "a equipe do setor" tornava isso impossível pela tela — e a rota sempre
+     * aceitou, então o limite era só do formulário. Setor pequeno quase nunca
+     * tem o próprio avaliador dentro dele; é a regra, não a exceção.
+     */
+    todos: pessoas.map((p) => ({
+      id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl,
+      setor: nomeDe.get(p.departmentId ?? '') ?? 'Sem setor',
+    })),
     semAvaliador: setores.filter((s) => s.avaliadores.length === 0).length,
     pessoasSemAvaliador: setores.filter((s) => s.avaliadores.length === 0).reduce((a, s) => a + s.pessoas, 0),
   })
@@ -100,7 +127,11 @@ export async function POST(req: NextRequest) {
     await prisma.setorAvaliador.deleteMany({
       where: { departmentId: body.departmentId, userId: body.userId },
     })
-    return NextResponse.json({ ok: true, ligado: false })
+    // ⚠️ A VOLTA também mexe no acesso: quem deixou de avaliar o último setor
+    // dele deixa de alcançar a fila. Sem esta linha, o vínculo sumia e a porta
+    // continuava aberta — estado que só um caminho atualiza.
+    const papel = await recalcularAcesso(body.userId)
+    return NextResponse.json({ ok: true, ligado: false, papel })
   }
 
   const alvo = await prisma.user.findUnique({ where: { id: body.userId }, select: { id: true, active: true } })
@@ -114,5 +145,10 @@ export async function POST(req: NextRequest) {
     create: { departmentId: body.departmentId, userId: body.userId, createdById: quem.id },
     update: {},
   })
-  return NextResponse.json({ ok: true, ligado: true })
+  // ⚠️⚠️ O acesso é recalculado NA HORA. O sync de diretório roda quando roda
+  // (no .78, só a mão), e sem isto nomear alguém avaliador só teria efeito na
+  // porta depois do próximo sync — a pessoa bateria num 403 sem ninguém
+  // entender por quê.
+  const papel = await recalcularAcesso(body.userId)
+  return NextResponse.json({ ok: true, ligado: true, papel })
 }
