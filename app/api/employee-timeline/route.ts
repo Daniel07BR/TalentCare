@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   const take = 30
   const ord = { day: 'desc' as const }
 
-  const [hd, cls, cide, cons, radio, wpp, ger] = await Promise.all([
+  const [hd, cls, cide, cons, radio, wpp, ger, chat] = await Promise.all([
     nx ? prisma.helpdeskDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.classroomDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.cideDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
     nx ? prisma.radioDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     prisma.whatsappAttendantDaily.groupBy({ by: ['day'], where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true }, orderBy: { day: 'desc' }, take }),
     nx ? prisma.gerenciaDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
+    nx ? prisma.chatDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
   ])
 
   const now = new Date()
@@ -88,6 +89,25 @@ export async function GET(req: NextRequest) {
     if (r.protAprovados > 0) esc.push(plural(r.protAprovados, 'aprovação', 'aprovações'))
     if (r.datasAlteradas > 0) esc.push(plural(r.datasAlteradas, 'data alterada', 'datas alteradas'))
     if (esc.length) push('Gerência', 'var(--info)', r.day, esc[0].charAt(0).toUpperCase() + esc[0].slice(1), esc.slice(1).join(' · ') || 'na mensageria')
+  }
+
+  // CHAT INTERNO — chamado e conversa viram DOIS eventos no mesmo dia, de
+  // propósito. Juntá-los daria "Concluiu 2 chamados · 340 mensagens", e a
+  // segunda metade abafaria a primeira em toda linha do tempo.
+  for (const r of chat) {
+    const cham: string[] = []
+    if (r.chamadosConcluidos > 0) cham.push(plural(r.chamadosConcluidos, 'chamado concluído', 'chamados concluídos'))
+    if (r.chamadosAssumidos > 0) cham.push(plural(r.chamadosAssumidos, 'assumido', 'assumidos'))
+    if (r.chamadosAbertos > 0) cham.push(plural(r.chamadosAbertos, 'chamado aberto', 'chamados abertos'))
+    if (cham.length) push('Chat Interno', 'var(--chart-3)', r.day, cham[0].charAt(0).toUpperCase() + cham[0].slice(1), cham.slice(1).join(' · ') || 'nos chamados entre setores')
+    const msgs = r.msgCanais + r.msgDiretas + r.msgChamados
+    if (msgs > 0) {
+      const onde: string[] = []
+      if (r.msgCanais > 0) onde.push(`${r.msgCanais.toLocaleString('pt-BR')} em canais`)
+      if (r.msgDiretas > 0) onde.push(`${r.msgDiretas.toLocaleString('pt-BR')} em conversas diretas`)
+      if (r.msgChamados > 0) onde.push(`${r.msgChamados.toLocaleString('pt-BR')} em chamados`)
+      push('Chat Interno', 'var(--info)', r.day, `Escreveu ${plural(msgs, 'mensagem', 'mensagens')}`, onde.join(' · '))
+    }
   }
 
   for (const r of cide) {

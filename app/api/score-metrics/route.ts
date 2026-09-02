@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const { fromDay, toDay } = periodDays(period)
   const range = { day: { gte: fromDay, lte: toDay } }
 
-  const [users, cls, hd, cide, cons, wpp, ger, ponto, adv] = await Promise.all([
+  const [users, cls, hd, cide, cons, wpp, ger, chat, ponto, adv] = await Promise.all([
     prisma.user.findMany({ where: { origin: { in: ['nexus', 'staff'] } }, select: { id: true, nexusUserId: true, name: true } }),
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { opened: true, resolved: true } }),
@@ -23,6 +23,11 @@ export async function GET(req: NextRequest) {
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: range, _sum: { finalizados: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
+    // CHAT INTERNO: só CHAMADO. ⚠️⚠️ Mensagem NÃO entra (decisão do dono,
+    // 02/09/2026) — é a métrica mais fácil de subir e a que menos diz sobre
+    // entrega; em ordem de grandeza abafaria as outras sete fontes somadas e o
+    // score passaria a medir quem mais escreve. Ver `activityOf()`.
+    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: range, _sum: { atrasos: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
   ])
@@ -34,6 +39,7 @@ export async function GET(req: NextRequest) {
   // Gerência: só CONTAGEM de ação (serviço entregue/criado, protocolo aberto/
   // aprovado, data alterada). km/viagens/jornada ficam fora — são magnitude.
   const gerM = new Map(ger.map((r) => [r.nexusUserId, (r._sum.servicos ?? 0) + (r._sum.protAbertos ?? 0) + (r._sum.protAprovados ?? 0) + (r._sum.servCriados ?? 0) + (r._sum.datasAlteradas ?? 0)]))
+  const chatM = new Map(chat.map((r) => [r.nexusUserId, (r._sum.chamadosAbertos ?? 0) + (r._sum.chamadosConcluidos ?? 0)]))
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const wppM = new Map(wpp.map((r) => [normName(r.name), r._sum.finalizados ?? 0]))
   const atrM = new Map(ponto.map((r) => [r.personKey, r._sum.atrasos ?? 0]))
@@ -43,7 +49,7 @@ export async function GET(req: NextRequest) {
     const nk = u.nexusUserId
     const pk = u.nexusUserId ?? u.id
     const activity =
-      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) : 0) +
+      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) + (chatM.get(nk) ?? 0) : 0) +
       (wppM.get(normName(u.name)) ?? 0)
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }
   })

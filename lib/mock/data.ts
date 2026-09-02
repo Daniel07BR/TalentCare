@@ -64,6 +64,7 @@ export type Employee = {
   helpdesk: HelpdeskStat
   cide: CideStat
   gerencia: GerenciaStat
+  chat: ChatStat
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -98,6 +99,20 @@ export type GerenciaStat = {
   reagendados: number; cancelados: number; datasAlteradas: number
 }
 
+/** Métricas REAIS do CHAT INTERNO (8ª fonte). Duas famílias na mesma pessoa:
+ *  CONVERSA (msgCanais/msgDiretas/msgChamados) e CHAMADO (abertos/assumidos/
+ *  concluídos + o tempo dos concluídos).
+ *  ⚠️⚠️ `segundosResolucao` é SEGUNDO DE EXPEDIENTE (08h–18h, seg a sex),
+ *  contado no .69 — nunca recalcular a partir de datas aqui.
+ *  ⚠️⚠️ Mensagem NÃO entra em `activityOf()` nem no score: ela é vitrine. O
+ *  score decide aumento e promoção, e contar mensagem premiaria quem mais
+ *  escreve, não quem mais entrega. Só chamado (aberto + concluído) conta. */
+export type ChatStat = {
+  msgCanais: number; msgDiretas: number; msgChamados: number
+  chamadosAbertos: number; chamadosAssumidos: number; chamadosConcluidos: number
+  segundosResolucao: number
+}
+
 /** Assiduidade REAL (ponto, dump do Nexo). Só atrasos+advertências têm fonte;
  *  faltas/suspensões NÃO vêm na origem → tratadas como "sem fonte" na ficha. */
 export type AssidStat = { atrasos: number; atrasosAbon: number; minutos: number; advertencias: number }
@@ -122,6 +137,7 @@ export type Department = {
   helpdesk: HelpdeskStat // soma da atividade do HelpDesk do depto (REAL)
   cide: CideStat // soma da atividade do CIDE do depto (REAL)
   gerencia: GerenciaStat // soma da atividade da Gerência do depto (REAL)
+  chat: ChatStat // soma da atividade do Chat Interno do depto (REAL)
 }
 
 export type TalentData = {
@@ -152,6 +168,7 @@ export type Identity = {
   helpdesk: HelpdeskStat
   cide: CideStat
   gerencia: GerenciaStat
+  chat: ChatStat
   assid: AssidStat
   assidDays: AssidDay[]
   discEventos: DiscEvento[]
@@ -196,7 +213,11 @@ export const ESC_ORDER = [
 export const PALETTE = [
   'var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)',
 ]
-export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE']
+// Sistemas que aparecem na barra "Atividade por sistema" da ficha e na tela de
+// Configurações. ⚠️ Entrar aqui exige três coisas juntas: cor em `sysColor`,
+// descrição em `SYS_INFO` (lib/mock/config.ts) e um valor REAL em `realBySystem`
+// na ficha — faltando qualquer uma, o sistema aparece com barra inventada.
+export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE', 'Chat Interno']
 
 const BASE_DATE = new Date(2026, 5, 1) // jun/2026 — referência fixa (determinístico)
 
@@ -252,6 +273,7 @@ export function sysColor(s: string): string {
   return ({
     HelpDesk: 'var(--chart-4)', ClassRoom: 'var(--chart-2)', 'Consultoria Plus': 'var(--chart-3)',
     'Painel de Atendimento': 'var(--chart-1)', CIDE: 'var(--chart-5)',
+    'Chat Interno': 'var(--chart-3)',
   } as Record<string, string>)[s]
 }
 
@@ -333,6 +355,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     helpdesk: id8.helpdesk,
     cide: id8.cide,
     gerencia: id8.gerencia,
+    chat: id8.chat,
   }
 }
 
@@ -343,6 +366,10 @@ const zeroCide = (): CideStat => ({ atividades: 0 })
 export const zeroGerencia = (): GerenciaStat => ({
   servicos: 0, km: 0, saidas: 0, viagens: 0, jornadaMin: 0,
   protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0, datasAlteradas: 0,
+})
+export const zeroChat = (): ChatStat => ({
+  msgCanais: 0, msgDiretas: 0, msgChamados: 0,
+  chamadosAbertos: 0, chamadosAssumidos: 0, chamadosConcluidos: 0, segundosResolucao: 0,
 })
 
 /* ============================================================
@@ -367,6 +394,7 @@ export function formacaoNota(esc: string | null | undefined): number | null {
 // Rádio (escuta) NÃO entra. Usado quando não há override por período.
 export function activityOf(e: Employee): number {
   const c = e.classroom, h = e.helpdesk, k = e.cide, p = e.consultoria, w = e.whatsapp, g = e.gerencia
+  const t = e.chat
   return c.videosCompleted + c.coursesCompleted + c.coursesCreated
     + h.opened + h.resolved + k.atividades
     + p.studies + p.tickets + p.messages + p.comments
@@ -376,6 +404,16 @@ export function activityOf(e: Employee): number {
     // km/viagens/jornada NÃO entram — são a MAGNITUDE dos mesmos serviços e, em
     // ordem de grandeza (951 km × 266 serviços), abafariam todo o resto.
     + g.servicos + g.protAbertos + g.protAprovados + g.servCriados + g.datasAlteradas
+    // CHAT INTERNO: só CHAMADO conta — pedido feito e pedido entregue, exatamente
+    // como o HelpDesk (opened + resolved).
+    //
+    // ⚠️⚠️ MENSAGEM FICA DE FORA, de propósito (decisão do dono, 02/09/2026).
+    // Ela é a métrica mais fácil de subir do sistema inteiro e a que menos diz
+    // sobre entrega: em ordem de grandeza (milhares de mensagens × dezenas de
+    // chamados) abafaria todas as outras sete fontes somadas, e o ranking
+    // passaria a medir quem mais escreve. Mensagem aparece na ficha e na tela
+    // do Chat; no score, não. Mesmo raciocínio de km/jornada na Gerência.
+    + t.chamadosAbertos + t.chamadosConcluidos
 }
 
 // Sinais por pessoa NO PERÍODO (do /api/score-metrics) p/ o score period-aware.
@@ -552,9 +590,28 @@ export function assembleData(identities: Identity[]): TalentData {
           datasAlteradas: a.datasAlteradas + g.datasAlteradas,
         }
       }, zeroGerencia())
+      // CHAT INTERNO (conversa + chamados) SOMA todos, inclusive desligados.
+      //
+      // ⚠️ Esta é a soma das PESSOAS do setor, e não o painel por setor do chat:
+      // aqui um chamado é creditado a quem o abriu ou concluiu, esteja essa
+      // pessoa em que setor estiver hoje. O painel por setor (`chat_dept_daily`)
+      // conta pela FUNÇÃO gravada no chamado, que não muda quando alguém troca
+      // de área — os dois números respondem perguntas diferentes e podem
+      // divergir de propósito.
+      const chat = all.reduce((a, e) => {
+        const t = e.chat
+        return {
+          msgCanais: a.msgCanais + t.msgCanais, msgDiretas: a.msgDiretas + t.msgDiretas,
+          msgChamados: a.msgChamados + t.msgChamados,
+          chamadosAbertos: a.chamadosAbertos + t.chamadosAbertos,
+          chamadosAssumidos: a.chamadosAssumidos + t.chamadosAssumidos,
+          chamadosConcluidos: a.chamadosConcluidos + t.chamadosConcluidos,
+          segundosResolucao: a.segundosResolucao + t.segundosResolucao,
+        }
+      }, zeroChat())
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
-        radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia,
+        radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia, chat,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,
       }

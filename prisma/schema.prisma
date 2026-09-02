@@ -375,3 +375,72 @@ model GerenciaDaily {
   @@index([day])
   @@map("gerencia_daily")
 }
+
+// Espelho diário do CHAT INTERNO (por usuário × dia) — 8ª fonte.
+//   msgCanais   = mensagens escritas em canal (público ou privado)
+//   msgDiretas  = mensagens em conversa direta ou grupo privado
+//   msgChamados = mensagens dentro da conversa de um chamado
+//   chamadosAbertos/Assumidos/Concluidos = o pedido que ela fez, pegou, entregou
+//   segundosResolucao = tempo dos concluídos, em SEGUNDOS DE EXPEDIENTE
+//
+// ⚠️⚠️ `segundosResolucao` NÃO é relógio de parede. O chat conta só 08h–18h de
+// segunda a sexta (`lib/expediente.ts` lá), e a conta vem PRONTA da origem
+// justamente para não existir uma segunda verdade sobre quanto um chamado
+// levou. Nunca recalcular aqui a partir de datas.
+//
+// ⚠️ MENSAGEM NÃO ENTRA NO SCORE (decisão do dono, 02/09/2026). Ela aparece na
+// ficha, na linha do tempo e na tela do Chat, e fica fora de `activityOf()` e
+// de `/api/score-metrics`: o score decide aumento e promoção, e contar mensagem
+// premiaria quem mais escreve, não quem mais entrega. Chamado aberto e
+// concluído entra — é trabalho pedido e entregue, igual ao HelpDesk.
+//
+// ⚠️ Há história ANTERIOR ao Chat Interno: o import do Mattermost (24/08/2026)
+// gravou a data original da mensagem. Quem veio como autor `legacy` (sem conta
+// no Nexus) não tem a quem creditar e fica de fora — por isso a soma daqui é
+// menor que o total de mensagens do chat, e isso é o certo.
+model ChatDaily {
+  nexusUserId       String   @map("nexus_user_id")
+  day               String   @db.VarChar(10) // YYYY-MM-DD
+  msgCanais         Int      @default(0) @map("msg_canais")
+  msgDiretas        Int      @default(0) @map("msg_diretas")
+  msgChamados       Int      @default(0) @map("msg_chamados")
+  chamadosAbertos   Int      @default(0) @map("chamados_abertos")
+  chamadosAssumidos Int      @default(0) @map("chamados_assumidos")
+  chamadosConcluidos Int     @default(0) @map("chamados_concluidos")
+  segundosResolucao Int      @default(0) @map("segundos_resolucao")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("chat_daily")
+}
+
+// Espelho diário dos CHAMADOS do Chat por DEPARTAMENTO × dia.
+//
+// ⚠️⚠️ São as DUAS FACES do mesmo chamado, e elas NÃO se somam. `pedidos*` é o
+// que o setor pediu aos outros; `recebidos*` é o que chegou para ele atender —
+// as colunas SOLICITANTE e RESPONSÁVEL da tela de chamados. Somar os dois
+// contaria a casa inteira duas vezes.
+//
+// A chave é o `nexusDepartmentId` (o mesmo id que `departments.nexus_department_id`
+// já usa aqui), e não o nome: nome de setor muda e o histórico se perderia.
+//
+// ⚠️ Chamado cuja função de destino/origem não É um departamento (função
+// multi-setor, grupo montado à mão, ou quem pediu não tinha setor) não aparece
+// em setor nenhum. A origem devolve essa contagem em `foraDeSetor` e o sync a
+// registra no log — espelho que descarta linha em silêncio é o pior dos dois.
+model ChatDeptDaily {
+  nexusDepartmentId  String   @map("nexus_department_id")
+  day                String   @db.VarChar(10) // YYYY-MM-DD
+  pedidosAbertos     Int      @default(0) @map("pedidos_abertos")
+  pedidosConcluidos  Int      @default(0) @map("pedidos_concluidos")
+  recebidosAbertos   Int      @default(0) @map("recebidos_abertos")
+  recebidosConcluidos Int     @default(0) @map("recebidos_concluidos")
+  recebidosCancelados Int     @default(0) @map("recebidos_cancelados")
+  segundosResolucao  Int      @default(0) @map("segundos_resolucao")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusDepartmentId, day])
+  @@index([day])
+  @@map("chat_dept_daily")
+}

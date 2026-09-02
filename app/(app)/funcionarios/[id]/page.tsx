@@ -70,6 +70,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const hd = m?.helpdesk ?? null
   const cd = m?.cide ?? null
   const gr = m?.gerencia ?? null
+  const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m ? m.assiduidade : { assid: vm.assid, atrasos: vm.atrasos, atrasosAbon: vm.atrasosAbon, minutos: vm.minutosAtraso, advertencias: vm.advert, faltas: null, suspensoes: null }
   const periodo = PERIOD_LABEL[period]
@@ -85,6 +86,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
         { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
         { label: 'serviços criados', sys: 'Gerência', n: m.gerencia.servCriados },
+        // ⚠️ Só CHAMADO CONCLUÍDO. Mensagem não é entrega e não entra aqui —
+        // seria o maior número da lista e o mais vazio.
+        { label: 'chamados concluídos', sys: 'Chat Interno', n: m.chat.chamadosConcluidos },
       ].filter((p) => p.n > 0)
     : []
   const concluidas = m ? concluidasParts.reduce((a, p) => a + p.n, 0) : null
@@ -99,6 +103,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     CIDE: m ? m.cide.atividades : null,
     // Gerência = execução + demanda; o card abaixo separa as duas.
     'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.protAprovados + m.gerencia.servCriados + m.gerencia.datasAlteradas : null,
+    // ⚠️ A barra do Chat mede CHAMADO, não mensagem: com mensagem dentro, ela
+    // encostaria no teto em toda ficha e as outras seis viravam risquinhos.
+    'Chat Interno': m ? m.chat.chamadosAbertos + m.chat.chamadosConcluidos : null,
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
@@ -366,6 +373,57 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                           {(gr.reagendados > 0 || gr.cancelados > 0) && (
                             <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{gr.reagendados.toLocaleString('pt-BR')}<span style={{ fontSize: 13, color: 'var(--text-mute)' }}> / {gr.cancelados}</span></div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Reagend. / cancel.</div></div>
                           )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {ch && (ch.hasConversa || ch.hasChamado) && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z" /><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
+                      </svg>
+                      Chat Interno <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                    </div>
+
+                    {/* ⚠️ CHAMADO primeiro, e CONVERSA depois com o aviso: o
+                        número de mensagem é uma ordem de grandeza maior e, em
+                        cima, seria lido como o resultado da pessoa. */}
+                    {ch.hasChamado && (
+                      <div style={{ marginBottom: ch.hasConversa ? 12 : 0 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Chamados entre setores</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 10 }}>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{ch.chamadosConcluidos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Concluídos</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{ch.chamadosAbertos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos por ela</div></div>
+                          {ch.chamadosAssumidos > 0 && (
+                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.chamadosAssumidos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Assumidos</div></div>
+                          )}
+                          {ch.chamadosConcluidos > 0 && (
+                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio <span style={{ color: 'var(--text-mute)' }}>(só expediente)</span></div></div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {ch.hasConversa && (
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Conversa <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· não entra no score</span></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 10 }}>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-3)' }}>{ch.mensagens.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Mensagens</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.msgCanais.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Em canais</div></div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.msgDiretas.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Conversas diretas</div></div>
+                          {ch.msgChamados > 0 && (
+                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.msgChamados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Dentro de chamados</div></div>
+                          )}
+                        </div>
+                        {/* ⚠️ O aviso fica JUNTO do número, e não no rodapé da
+                            página: quem olha a ficha de uma pessoa para decidir
+                            promoção precisa ler aqui que isto não é avaliação. */}
+                        <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 8, lineHeight: 1.5 }}>
+                          Volume de conversa é contexto, não desempenho — não entra no score.
+                          O conteúdo das mensagens nunca sai do chat: aqui só chega a contagem.
                         </div>
                       </div>
                     )}

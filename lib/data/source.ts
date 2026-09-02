@@ -10,7 +10,7 @@ import { isHiddenDept } from '@/lib/hidden-depts'
 export async function getTalentData(): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
   const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
-  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
     prisma.user.findMany({
       // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
       // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
@@ -58,6 +58,18 @@ export async function getTalentData(): Promise<TalentData> {
         reagendados: true, cancelados: true, datasAlteradas: true,
       },
     }),
+    // CHAT INTERNO ACUMULADO (todo o histórico) somado do espelho diário.
+    // ⚠️ Inclui as mensagens importadas do Mattermost, que trazem a data
+    // original — por isso o acumulado do chat é bem mais antigo que o dos
+    // chamados (que só existem desde 21/08/2026).
+    prisma.chatDaily.groupBy({
+      by: ['nexusUserId'],
+      _sum: {
+        msgCanais: true, msgDiretas: true, msgChamados: true,
+        chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true,
+        segundosResolucao: true,
+      },
+    }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
     // ASSIDUIDADE (ponto) ACUMULADA por pessoa — espelho do dump do Nexo.
@@ -84,6 +96,7 @@ export async function getTalentData(): Promise<TalentData> {
   const helpdeskByNexus = new Map(helpdeskStats.map((h) => [h.nexusUserId, h]))
   const cideByNexus = new Map(cideStats.map((c) => [c.nexusUserId, c]))
   const gerenciaByNexus = new Map(gerenciaStats.map((g) => [g.nexusUserId, g]))
+  const chatByNexus = new Map(chatStats.map((c) => [c.nexusUserId, c]))
   // WhatsApp por nome normalizado (atendente → funcionário).
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const whatsappByName = new Map(whatsappAtt.map((w) => [normName(w.name), w]))
@@ -113,6 +126,7 @@ export async function getTalentData(): Promise<TalentData> {
     const hds = u.nexusUserId ? helpdeskByNexus.get(u.nexusUserId) : undefined
     const cds = u.nexusUserId ? cideByNexus.get(u.nexusUserId) : undefined
     const gds = u.nexusUserId ? gerenciaByNexus.get(u.nexusUserId) : undefined
+    const chs = u.nexusUserId ? chatByNexus.get(u.nexusUserId) : undefined
     const ws = whatsappByName.get(normName(u.name))
     // Escolaridade/cursos/certificados são preenchíveis MANUALMENTE p/ todos
     // (inclusive STAFF sem Nexus): a chave é nexus_user_id quando existe, senão o id.
@@ -182,6 +196,17 @@ export async function getTalentData(): Promise<TalentData> {
         reagendados: gds?._sum.reagendados ?? 0,
         cancelados: gds?._sum.cancelados ?? 0,
         datasAlteradas: gds?._sum.datasAlteradas ?? 0,
+      },
+      // CHAT INTERNO: conversa (canais/diretas/chamados) + os chamados que a
+      // pessoa abriu, assumiu e concluiu. Só chamado entra no score.
+      chat: {
+        msgCanais: chs?._sum.msgCanais ?? 0,
+        msgDiretas: chs?._sum.msgDiretas ?? 0,
+        msgChamados: chs?._sum.msgChamados ?? 0,
+        chamadosAbertos: chs?._sum.chamadosAbertos ?? 0,
+        chamadosAssumidos: chs?._sum.chamadosAssumidos ?? 0,
+        chamadosConcluidos: chs?._sum.chamadosConcluidos ?? 0,
+        segundosResolucao: chs?._sum.segundosResolucao ?? 0,
       },
       // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
       // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.

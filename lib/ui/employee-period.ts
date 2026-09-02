@@ -17,6 +17,14 @@ export type EmployeeMetrics = {
     reagendados: number; cancelados: number; datasAlteradas: number
     hasSaida: boolean; hasEscritorio: boolean
   }
+  // Chat Interno: CONVERSA e CHAMADO com flags próprias, p/ a ficha de quem só
+  // conversa não mostrar um bloco de chamados zerado (que se lê como "não
+  // atendeu nada") e vice-versa.
+  chat: {
+    msgCanais: number; msgDiretas: number; msgChamados: number; mensagens: number
+    chamadosAbertos: number; chamadosAssumidos: number; chamadosConcluidos: number
+    tempoMedio: string; hasConversa: boolean; hasChamado: boolean
+  }
   assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }
 }
 

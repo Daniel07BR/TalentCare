@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, assid, advert] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -55,6 +55,17 @@ export async function GET(req: NextRequest) {
           },
         })
       : null,
+    // CHAT INTERNO no período: conversa (canais/diretas/chamados) + chamados.
+    user.nexusUserId
+      ? prisma.chatDaily.aggregate({
+          where: { nexusUserId: user.nexusUserId, ...range },
+          _sum: {
+            msgCanais: true, msgDiretas: true, msgChamados: true,
+            chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true,
+            segundosResolucao: true,
+          },
+        })
+      : null,
     // ASSIDUIDADE (ponto) no período: soma atrasos/minutos + advertências no range.
     prisma.assiduidadeDaily.aggregate({ where: { personKey, ...range }, _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
@@ -77,6 +88,14 @@ export async function GET(req: NextRequest) {
   const hForm = hd?._sum.formalized ?? 0
   const hRes = hResNormal + hForm // formalizado conta como resolvido
   const hSec = hd?._sum.resolvedSeconds ?? 0
+
+  const tCan = ct?._sum.msgCanais ?? 0
+  const tDir = ct?._sum.msgDiretas ?? 0
+  const tCha = ct?._sum.msgChamados ?? 0
+  const tAb = ct?._sum.chamadosAbertos ?? 0
+  const tAs = ct?._sum.chamadosAssumidos ?? 0
+  const tCo = ct?._sum.chamadosConcluidos ?? 0
+  const tSec = ct?._sum.segundosResolucao ?? 0
 
   return NextResponse.json({
     period, fromDay, toDay,
@@ -104,6 +123,22 @@ export async function GET(req: NextRequest) {
       hasEscritorio: (gd?._sum.protAbertos ?? 0) > 0 || (gd?._sum.protAprovados ?? 0) > 0
         || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0
         || (gd?._sum.datasAlteradas ?? 0) > 0,
+    },
+    // CHAT INTERNO — duas faces separadas na ficha, como na Gerência: CONVERSA
+    // (quanto se falou) e CHAMADO (o que foi pedido e entregue). `hasConversa` e
+    // `hasChamado` existem para a ficha de quem só conversa não mostrar um
+    // bloco de chamados zerado, que se lê como "não atendeu nada".
+    //
+    // ⚠️ `tempoMedio` sai de SEGUNDOS DE EXPEDIENTE (08h–18h, seg a sex) já
+    // contados no chat — é o mesmo número do painel de chamados de lá, e não
+    // uma segunda conta feita aqui.
+    chat: {
+      msgCanais: tCan, msgDiretas: tDir, msgChamados: tCha,
+      mensagens: tCan + tDir + tCha,
+      chamadosAbertos: tAb, chamadosAssumidos: tAs, chamadosConcluidos: tCo,
+      tempoMedio: fmtDur(tCo ? Math.round(tSec / tCo) : 0),
+      hasConversa: tCan + tDir + tCha > 0,
+      hasChamado: tAb > 0 || tAs > 0 || tCo > 0,
     },
     assiduidade: (() => {
       const atr = assid._sum.atrasos ?? 0

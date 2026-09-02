@@ -14,10 +14,11 @@ const SYS_INFO: Record<string, string> = {
   'Consultoria Plus': 'Estudos e chamados contábeis',
   'Painel de Atendimento': 'Atendimentos de WhatsApp e clientes',
   CIDE: 'Aberturas e alterações societárias',
+  'Chat Interno': 'Mensagens e chamados entre setores',
 }
 const SYS_SYNC: Record<string, string> = {
   HelpDesk: 'há 8 min', ClassRoom: 'há 1 h', 'Consultoria Plus': 'há 22 min',
-  'Painel de Atendimento': 'há 3 min', CIDE: 'há 35 min',
+  'Painel de Atendimento': 'há 3 min', CIDE: 'há 35 min', 'Chat Interno': 'há 12 min',
 }
 
 export const CFG_ROLES = [
