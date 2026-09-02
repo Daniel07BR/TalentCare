@@ -29,7 +29,7 @@ export async function GET() {
   }
 
   const [depts, pessoas, vinculos] = await Promise.all([
-    prisma.department.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.department.findMany({ select: { id: true, name: true, avaliadoPelaDiretoria: true }, orderBy: { name: 'asc' } }),
     prisma.user.findMany({
       where: { origin: { in: ['nexus', 'staff'] }, active: true },
       select: { id: true, name: true, jobTitle: true, departmentId: true, avatarUrl: true },
@@ -58,6 +58,8 @@ export async function GET() {
         id: d.id,
         nome: d.name,
         pessoas: doSetor.length,
+        // Setor cuja avaliação cabe à Diretoria: tem dono, e o dono é ela.
+        pelaDiretoria: d.avaliadoPelaDiretoria,
         /*
          * Quem já está gravado como avaliador — de QUALQUER setor.
          *
@@ -84,7 +86,9 @@ export async function GET() {
       }
     })
     // Os que precisam de decisão vêm primeiro.
-    .sort((a, b) => (a.avaliadores.length === 0 ? 0 : 1) - (b.avaliadores.length === 0 ? 0 : 1) || b.pessoas - a.pessoas)
+    // Os que precisam de decisão vêm primeiro — e setor marcado "pela Diretoria"
+    // JÁ TEM decisão, então não é um deles.
+    .sort((a, b) => (a.avaliadores.length === 0 && !a.pelaDiretoria ? 0 : 1) - (b.avaliadores.length === 0 && !b.pelaDiretoria ? 0 : 1) || b.pessoas - a.pessoas)
 
   return NextResponse.json({
     setores,
@@ -100,8 +104,8 @@ export async function GET() {
       id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl,
       setor: nomeDe.get(p.departmentId ?? '') ?? 'Sem setor',
     })),
-    semAvaliador: setores.filter((s) => s.avaliadores.length === 0).length,
-    pessoasSemAvaliador: setores.filter((s) => s.avaliadores.length === 0).reduce((a, s) => a + s.pessoas, 0),
+    semAvaliador: setores.filter((s) => s.avaliadores.length === 0 && !s.pelaDiretoria).length,
+    pessoasSemAvaliador: setores.filter((s) => s.avaliadores.length === 0 && !s.pelaDiretoria).reduce((a, s) => a + s.pessoas, 0),
   })
 }
 
@@ -151,4 +155,28 @@ export async function POST(req: NextRequest) {
   // entender por quê.
   const papel = await recalcularAcesso(body.userId)
   return NextResponse.json({ ok: true, ligado: true, papel })
+}
+
+/**
+ * Marca (ou desmarca) um setor como AVALIADO PELA DIRETORIA.
+ *
+ * ⚠️ Tem a ida E a volta na mesma rota. Marca que só se põe é marca que ninguém
+ * confere depois — e um setor que ganhou gestor continuaria eternamente "da
+ * Diretoria", com dois donos e nenhum responsável.
+ */
+export async function PATCH(req: NextRequest) {
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const quem = await quemEh((session.user as { id: string }).id)
+  if (!quem || !podeGerirAvaliadores(quem)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+  const body = (await req.json()) as { departmentId?: string; pelaDiretoria?: boolean }
+  if (!body.departmentId) return NextResponse.json({ error: 'departmentId é obrigatório' }, { status: 400 })
+
+  await prisma.department.update({
+    where: { id: body.departmentId },
+    data: { avaliadoPelaDiretoria: body.pelaDiretoria !== false },
+  })
+  return NextResponse.json({ ok: true, pelaDiretoria: body.pelaDiretoria !== false })
 }

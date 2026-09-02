@@ -27,6 +27,19 @@ model Department {
   name              String   @unique
   nexusDepartmentId String?  @unique @map("nexus_department_id")
   active            Boolean  @default(true)
+  /// Setor cuja avaliação CABE À DIRETORIA (decisão do dono, 02/09/2026:
+  /// Consultoria e Pousada).
+  ///
+  /// ⚠️⚠️ Existe como MARCA e não como regra no código porque, sem ela, o setor
+  /// aparecia como "ninguém avalia" — que é verdade e é mentira ao mesmo tempo:
+  /// não há gestor ali, mas há quem responda. Um setor legitimamente sem chefia
+  /// ficaria para sempre no alerta vermelho, e um alerta que não se resolve é um
+  /// alerta que se aprende a ignorar.
+  ///
+  /// ⚠️ Ela também conserta um buraco: até 02/09 o painel ROTULAVA "Avaliado pela
+  /// Diretoria" quem era avaliador do próprio setor, e nenhum diretor conseguia
+  /// de fato avaliar essa pessoa — o rótulo prometia o que a régua não fazia.
+  avaliadoPelaDiretoria Boolean @default(false) @map("avaliado_pela_diretoria")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   users             User[]

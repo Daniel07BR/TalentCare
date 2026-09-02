@@ -8,7 +8,7 @@ import Avatar from '../Avatar'
 type Linha = {
   id: string; nome: string; cargo: string; hasAvatar: boolean
   departmentId: string | null; setor: string
-  ehAvaliador: boolean; setorSemAvaliador: boolean
+  ehAvaliador: boolean; cabeADiretoria: boolean; setorSemAvaliador: boolean
   avaliacaoId: string | null; status: string; media: number | null; versao: number | null
   publishedAt: string | null; ciente: boolean; comentarioDoAvaliado: string | null
   posso: boolean
@@ -48,7 +48,10 @@ export default function AvaliacoesPage() {
   if (!d) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Não foi possível carregar as avaliações.</div>
 
   const visiveis = d.linhas
-    .filter((l) => (filtro === 'todos' ? true : filtro === 'falta' ? l.status !== 'publicada' && !l.ehAvaliador : l.status === 'publicada'))
+    // ⚠️ "Faltam" mostra o que EU posso fazer. Listar a pendência da casa
+    // inteira num filtro chamado "faltam" faria o gestor procurar gente que ele
+    // não avalia — e desconfiar da lista toda.
+    .filter((l) => (filtro === 'todos' ? true : filtro === 'falta' ? l.status !== 'publicada' && l.posso : l.status === 'publicada'))
     .filter((l) => !busca || l.nome.toLowerCase().includes(busca.toLowerCase()) || l.setor.toLowerCase().includes(busca.toLowerCase()))
 
   const pct = d.total ? Math.round((d.publicadas / d.total) * 100) : 0
@@ -158,7 +161,7 @@ function Selo({ l }: { l: Linha }) {
   // ⚠️ Cada situação tem rótulo PRÓPRIO. Um "pendente" cobrindo os quatro casos
   // faria o gestor cobrar quem ele nem avalia — e desconfiar da lista inteira.
   if (l.setorSemAvaliador) return <Tag t="Setor sem avaliador" c="var(--danger)" />
-  if (l.ehAvaliador) return <Tag t="Avaliado pela Diretoria" c="var(--text-mute)" />
+  if (l.cabeADiretoria && l.status !== 'publicada') return <Tag t={l.posso ? 'Falta · cabe à Diretoria' : 'Cabe à Diretoria'} c={l.posso ? 'var(--warning)' : 'var(--text-mute)'} />
   if (l.status === 'publicada') return <Tag t={l.versao && l.versao > 1 ? `Avaliado · v${l.versao}` : 'Avaliado'} c="var(--success)" />
   if (l.status === 'rascunho') return <Tag t="Rascunho" c="var(--warning)" />
   return <Tag t={l.posso ? 'Falta avaliar' : 'Pendente'} c={l.posso ? 'var(--warning)' : 'var(--text-mute)'} />

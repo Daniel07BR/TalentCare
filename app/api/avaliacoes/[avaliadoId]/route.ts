@@ -15,6 +15,24 @@ async function avaliadoresDoSetor(departmentId: string | null): Promise<Set<stri
   return new Set(rows.map((r) => r.userId))
 }
 
+/**
+ * A avaliação desta pessoa cabe à DIRETORIA? Setor marcado, ou ela é avaliadora
+ * do próprio setor (não tem ninguém acima ali).
+ *
+ * ⚠️ Calculado do MESMO jeito aqui e na fila (`filaDaCompetencia`). Se as duas
+ * contas divergirem, a tela oferece o botão de avaliar e a rota responde 403 —
+ * o pior tipo de bug de permissão, porque parece defeito da tela.
+ */
+async function cabeADiretoria(alvoId: string, departmentId: string | null, doSetor: Set<string>): Promise<boolean> {
+  if (doSetor.has(alvoId)) return true
+  if (!departmentId) return false
+  const d = await prisma.department.findUnique({
+    where: { id: departmentId },
+    select: { avaliadoPelaDiretoria: true },
+  })
+  return !!d?.avaliadoPelaDiretoria
+}
+
 // ── LER ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest, ctx: Ctx) {
   const session = await auth()
@@ -36,7 +54,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!podeVer(quem, alvo)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const doSetor = await avaliadoresDoSetor(alvo.departmentId)
-  const posso = podeAvaliar(quem, alvo, doSetor)
+  const posso = podeAvaliar(quem, alvo, doSetor, await cabeADiretoria(alvo.id, alvo.departmentId, doSetor))
 
   const av = await prisma.avaliacao.findUnique({
     where: { competencia_avaliadoId: { competencia, avaliadoId } },
@@ -105,7 +123,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   // ⚠️⚠️ A régua vale AQUI, no servidor, e não só no formulário. Rota que confia
   // na tela não tem regra nenhuma: basta um POST para se dar 10.
   const doSetor = await avaliadoresDoSetor(alvo.departmentId)
-  if (!podeAvaliar(quem, alvo, doSetor)) {
+  if (!podeAvaliar(quem, alvo, doSetor, await cabeADiretoria(alvo.id, alvo.departmentId, doSetor))) {
     return NextResponse.json({ error: 'Você não avalia esta pessoa' }, { status: 403 })
   }
 

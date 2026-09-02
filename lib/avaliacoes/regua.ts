@@ -97,9 +97,24 @@ export function podeAvaliar(
   quem: Quem,
   alvo: { id: string; departmentId: string | null },
   avaliadoresDoSetor: Set<string>,
+  /**
+   * A avaliação desta pessoa cabe à DIRETORIA. Duas situações:
+   *  - o setor dela está marcado `avaliadoPelaDiretoria` (Consultoria, Pousada);
+   *  - ela É avaliadora do próprio setor, ou seja, não tem ninguém acima ali.
+   *
+   * ⚠️⚠️ Até 02/09/2026 este caminho não existia: o painel escrevia "Avaliado
+   * pela Diretoria" e NENHUM diretor conseguia avaliar essa pessoa, porque a
+   * régua exigia vínculo com o setor. O rótulo prometia o que a régua não fazia,
+   * e a pessoa nunca seria avaliada — sem nada acusar.
+   */
+  cabeADiretoria = false,
 ): boolean {
   if (alvo.id === quem.id) return false
   if (!alvo.departmentId) return false
+  // ⚠️ Aditivo, e não um desvio: um setor pode ter avaliador PRÓPRIO e ainda
+  // assim ter gente que cabe à Diretoria (o avaliador dele mesmo). Cortar aqui
+  // com `return` cedo tiraria o caminho normal de quem tem os dois.
+  if (cabeADiretoria && quem.role === 'ADMIN') return true
   if (!quem.escopo.avaliaDepartmentIds.includes(alvo.departmentId)) return false
   if (avaliadoresDoSetor.has(alvo.id)) return false
   return true
@@ -137,7 +152,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ? { departmentId: { in: quem.escopo.avaliaDepartmentIds } }
         : { id: quem.id }
 
-  const [pessoas, avaliacoes, avaliadores] = await Promise.all([
+  const [pessoas, avaliacoes, avaliadores, deptsDiretoria] = await Promise.all([
     prisma.user.findMany({
       where: {
         origin: { in: ['nexus', 'staff'] },
@@ -162,9 +177,11 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
       },
     }),
     prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true } }),
+    prisma.department.findMany({ where: { avaliadoPelaDiretoria: true }, select: { id: true } }),
   ])
 
   const porAvaliado = new Map(avaliacoes.map((a) => [a.avaliadoId, a]))
+  const setoresDaDiretoria = new Set(deptsDiretoria.map((d) => d.id))
   const avaliadoresPorSetor = new Map<string, Set<string>>()
   for (const v of avaliadores) {
     const s = avaliadoresPorSetor.get(v.departmentId) ?? new Set<string>()
@@ -181,6 +198,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
       const doSetor = avaliadoresPorSetor.get(p.departmentId ?? '') ?? new Set<string>()
       // ⚠️ Avaliador do setor é avaliado pela Diretoria, e não pelo par dele.
       const ehAvaliador = doSetor.has(p.id)
+      const cabeADiretoria = ehAvaliador || setoresDaDiretoria.has(p.departmentId ?? '')
       return {
         id: p.id,
         nome: p.name,
@@ -189,9 +207,18 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         departmentId: p.departmentId,
         setor: p.department?.name ?? 'Sem setor',
         ehAvaliador,
-        // O setor tem QUEM avaliar? Zero avaliadores = ninguém responde por esta
-        // fila, e a tela precisa dizer isso em vez de mostrar "falta avaliar".
-        setorSemAvaliador: doSetor.size === 0,
+        cabeADiretoria,
+        /*
+         * O setor tem QUEM avaliar? Zero avaliadores E não cabe à Diretoria =
+         * ninguém responde por esta fila, e a tela diz isso em vez de mostrar
+         * "falta avaliar" para um gestor que não existe.
+         *
+         * ⚠️ Setor marcado `avaliadoPelaDiretoria` NÃO é órfão: ele tem dono, o
+         * dono é a Diretoria. Contá-lo como órfão deixaria um alerta vermelho
+         * permanente sobre uma situação legítima — e alerta que não se resolve
+         * é alerta que se aprende a ignorar.
+         */
+        setorSemAvaliador: doSetor.size === 0 && !cabeADiretoria,
         avaliacaoId: av?.id ?? null,
         status: av?.status ?? 'pendente',
         media: av?.media ?? null,
@@ -201,14 +228,20 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ciente: !!av?.ciencia?.cienteEm,
         comentarioDoAvaliado: av?.ciencia?.comentario ?? null,
         // Pode EU avaliar esta pessoa agora?
-        posso: podeAvaliar(quem, p, doSetor),
+        posso: podeAvaliar(quem, p, doSetor, cabeADiretoria),
       }
     })
 
   const publicadas = linhas.filter((l) => l.status === 'publicada').length
-  // ⚠️ "Falta" só conta quem TEM avaliador. Setor órfão aparece à parte, senão o
-  // contador acusa um gestor que não existe.
-  const faltam = linhas.filter((l) => l.status !== 'publicada' && !l.setorSemAvaliador && !l.ehAvaliador).length
+  /*
+   * ⚠️ "Falta" é o que EU posso fazer e ainda não fiz — e não a pendência do
+   * mundo. Um gestor do Fiscal não pode ser cobrado do Contábil, e o selo do
+   * menu perderia o sentido no primeiro mês se contasse a casa inteira.
+   *
+   * ⚠️ Órfão fica de fora: contar quem ninguém pode avaliar transforma o número
+   * numa dívida que não se paga.
+   */
+  const faltam = linhas.filter((l) => l.status !== 'publicada' && l.posso).length
   const orfaos = linhas.filter((l) => l.setorSemAvaliador).length
 
   return { competencia, linhas, total: linhas.length, publicadas, faltam, orfaos }

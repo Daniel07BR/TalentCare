@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Avatar from '../Avatar'
 
 type P = { id: string; nome: string; cargo: string | null; hasAvatar: boolean; deOutroSetor?: string | null }
-type Setor = { id: string; nome: string; pessoas: number; avaliadores: P[]; sugestoes: P[]; equipe: P[] }
+type Setor = { id: string; nome: string; pessoas: number; pelaDiretoria: boolean; avaliadores: P[]; sugestoes: P[]; equipe: P[] }
 type Pessoa = P & { setor: string }
 type Dados = { setores: Setor[]; todos: Pessoa[]; semAvaliador: number; pessoasSemAvaliador: number }
 
@@ -22,6 +22,17 @@ export default function AvaliadoresPage() {
       .then(setD)
   }, [])
   useEffect(() => { carregar() }, [carregar])
+
+  async function marcarDiretoria(departmentId: string, pelaDiretoria: boolean) {
+    setSalvando(departmentId)
+    await fetch('/api/avaliadores', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ departmentId, pelaDiretoria }),
+    })
+    setSalvando(null)
+    carregar()
+  }
 
   async function alternar(departmentId: string, userId: string, ligar: boolean) {
     setSalvando(userId)
@@ -75,7 +86,7 @@ export default function AvaliadoresPage() {
       )}
 
       {d.setores.map((s) => {
-        const vazio = s.avaliadores.length === 0
+        const vazio = s.avaliadores.length === 0 && !s.pelaDiretoria
         const aberto = abrindo === s.id
         return (
           <div key={s.id} className="tc-card" style={{ background: 'var(--surface)', border: `1px solid ${vazio ? 'var(--danger)44' : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: 18, marginBottom: 12 }}>
@@ -85,6 +96,22 @@ export default function AvaliadoresPage() {
                 <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{s.pessoas} {s.pessoas === 1 ? 'pessoa' : 'pessoas'}</div>
               </div>
               {vazio && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--danger)', background: 'var(--surface-2)', border: '1px solid var(--danger)33', padding: '3px 10px', borderRadius: 20 }}>Ninguém avalia</span>}
+              {/*
+                ⚠️ Setor sem chefia que responde à Diretoria não é órfão: tem
+                dono. Sem esta marca ele ficaria para sempre no alerta vermelho,
+                e alerta que não se resolve é alerta que se aprende a ignorar.
+              */}
+              <button onClick={() => marcarDiretoria(s.id, !s.pelaDiretoria)} disabled={salvando === s.id} className="tc-btn"
+                title="A avaliação deste setor cabe à Diretoria — qualquer diretor pode fazê-la"
+                style={{
+                  background: s.pelaDiretoria ? 'var(--accent)' : 'transparent',
+                  border: `1px solid ${s.pelaDiretoria ? 'var(--accent)' : 'var(--border)'}`,
+                  color: s.pelaDiretoria ? '#fff' : 'var(--text-mute)',
+                  borderRadius: 20, padding: '5px 13px', fontSize: 11.5, fontWeight: 600,
+                  fontFamily: 'inherit', cursor: 'pointer',
+                }}>
+                {s.pelaDiretoria ? '✓ Cabe à Diretoria' : 'Cabe à Diretoria'}
+              </button>
               <button onClick={() => { setAbrindo(aberto ? null : s.id); setBusca('') }} className="tc-btn"
                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
                 {aberto ? 'Fechar' : 'Escolher quem avalia'}
