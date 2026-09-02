@@ -10,10 +10,29 @@ const ADMIN_EMAILS = (process.env.TALENTCARE_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 const norm = (s) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-const mapRole = (email, setor) => {
+
+/**
+ * ⚠️⚠️ ESTA FUNÇÃO É CÓPIA DE `lib/nexus.ts`. Mexeu lá, mexa aqui.
+ *
+ * A cópia existe porque o CLI roda com `node --env-file` puro, sem o bundler do
+ * Next, e não consegue importar do `lib/` (TypeScript, alias `@/`). Duas cópias
+ * da mesma régua é exatamente o defeito que a auditoria do Nexus custou caro —
+ * então elas ficam idênticas, e este aviso existe para isso.
+ *
+ * Em 02/09/2026 as duas JÁ tinham divergido: `lib/nexus.ts` ganhou GESTOR e
+ * COLABORADOR e esta aqui continuava só com ADMIN/SEM_PERMISSAO. Com o acesso
+ * aberto, quem rodasse por último venceria — e o cron roda por último sempre.
+ */
+const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
+const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
+const mapRole = (email, setor, cargo, temVinculo = false) => {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
-  return 'SEM_PERMISSAO'
+  if (!ACESSO_ABERTO) return 'SEM_PERMISSAO'
+  // O VÍNCULO ganha do cargo: quem avalia alguém alcança a fila.
+  if (temVinculo) return 'GESTOR'
+  if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'
+  return 'COLABORADOR'
 }
 const resolveRole = (computed, current) => (current === 'ADMIN' ? 'ADMIN' : computed)
 
@@ -41,6 +60,10 @@ async function main() {
   if (!res.ok) throw new Error(`Nexus ${res.status}: ${await res.text()}`)
   const employees = await res.json()
   const nexusIds = new Set(employees.map((e) => e.id))
+  // Quem é avaliador de algum setor — entra na classe de acesso (ver mapRole).
+  const vinculados = new Set(
+    (await prisma.setorAvaliador.findMany({ select: { userId: true } })).map((v) => v.userId),
+  )
   let created = 0, updated = 0, deactivated = 0, admins = 0
 
   for (const nu of employees) {
@@ -56,7 +79,7 @@ async function main() {
     if (!local && nu.email) {
       local = await prisma.user.findFirst({ where: { email: { equals: nu.email, mode: 'insensitive' } } })
     }
-    const computed = mapRole(nu.email, nu.department)
+    const computed = mapRole(nu.email, nu.department, nu.role, local ? vinculados.has(local.id) : false)
     if (computed === 'ADMIN') admins++
     const isActive = nu.status === 'active'
     const dept = await resolveDepartment(nu.department, nu.departmentId)
@@ -112,6 +135,36 @@ async function main() {
         },
       })
     }
+  }
+
+  /**
+   * ⚠️⚠️ FREIO NA INATIVAÇÃO EM MASSA.
+   *
+   * Este bloco desliga quem sumiu do diretório. Se o Nexus devolver 200 com uma
+   * lista curta — um deploy pela metade, um filtro novo, um erro de paginação —
+   * ele desligaria a empresa inteira, e o log diria "sucesso". Foi assim que a
+   * lógica de órfão do ClassRoom desativou 8 pessoas ativas de verdade.
+   *
+   * O freio: se a resposta cobre menos de 80% de quem já está ativo aqui, NÃO
+   * inativa ninguém e grita no log. Perder um desligamento por uma hora é
+   * barato; desligar 120 pessoas do painel de RH não é.
+   *
+   * ⚠️ O corte é sobre o TAMANHO da resposta, não sobre quantos seriam
+   * desligados: uma demissão em massa real (que existe) tem de passar, e uma
+   * resposta truncada tem de parar — e só o tamanho da origem distingue as duas.
+   */
+  const ativosAqui = await prisma.user.count({
+    where: { nexusUserId: { not: null }, origin: 'nexus', active: true },
+  })
+  const cobertura = ativosAqui > 0 ? employees.length / ativosAqui : 1
+  if (cobertura < 0.8) {
+    console.error(JSON.stringify({
+      alerta: 'resposta_curta_demais_nao_inativei',
+      recebidos: employees.length, ativosAqui, cobertura: Number(cobertura.toFixed(2)),
+    }))
+    // O `.finally` do rodapé desconecta; sair daqui é só não inativar ninguém.
+    console.log(JSON.stringify({ total: employees.length, created, updated, deactivated: 0, admins, freio: true }))
+    return
   }
 
   const orphans = await prisma.user.findMany({
