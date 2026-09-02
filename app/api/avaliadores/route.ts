@@ -35,13 +35,13 @@ export async function GET() {
       select: { id: true, name: true, jobTitle: true, departmentId: true, avatarUrl: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true } }),
+    prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true, nivel: true } }),
   ])
 
-  const vinculadosPorSetor = new Map<string, Set<string>>()
+  const vinculadosPorSetor = new Map<string, Map<string, string>>()
   for (const v of vinculos) {
-    const s = vinculadosPorSetor.get(v.departmentId) ?? new Set<string>()
-    s.add(v.userId)
+    const s = vinculadosPorSetor.get(v.departmentId) ?? new Map<string, string>()
+    s.set(v.userId, v.nivel)
     vinculadosPorSetor.set(v.departmentId, s)
   }
 
@@ -52,7 +52,7 @@ export async function GET() {
     .filter((d) => !isHiddenDept(d.name))
     .map((d) => {
       const doSetor = pessoas.filter((p) => p.departmentId === d.id)
-      const ligados = vinculadosPorSetor.get(d.id) ?? new Set<string>()
+      const ligados = vinculadosPorSetor.get(d.id) ?? new Map<string, string>()
       const sugeridos = doSetor.filter((p) => CARGOS_SUGERIDOS.includes(norm(p.jobTitle)))
       return {
         id: d.id,
@@ -71,6 +71,8 @@ export async function GET() {
         avaliadores: pessoas.filter((p) => ligados.has(p.id))
           .map((p) => ({
             id: p.id, nome: p.name, cargo: p.jobTitle, hasAvatar: !!p.avatarUrl,
+            // 'gestor' | 'sub' — a hierarquia dentro do setor.
+            nivel: ligados.get(p.id) ?? 'gestor',
             // De onde a pessoa é, quando não é deste setor. A tela mostra, senão
             // "Rosemeire · Colaborador" na Limpeza parece cadastro errado.
             deOutroSetor: p.departmentId !== d.id ? (nomeDe.get(p.departmentId ?? '') ?? 'Sem setor') : null,
@@ -122,7 +124,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const body = (await req.json()) as { departmentId?: string; userId?: string; ligar?: boolean }
+  const body = (await req.json()) as { departmentId?: string; userId?: string; ligar?: boolean; nivel?: string }
   if (!body.departmentId || !body.userId) {
     return NextResponse.json({ error: 'departmentId e userId são obrigatórios' }, { status: 400 })
   }
@@ -138,16 +140,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ligado: false, papel })
   }
 
-  const alvo = await prisma.user.findUnique({ where: { id: body.userId }, select: { id: true, active: true } })
+  const alvo = await prisma.user.findUnique({ where: { id: body.userId }, select: { id: true, active: true, jobTitle: true } })
   if (!alvo) return NextResponse.json({ error: 'pessoa não encontrada' }, { status: 404 })
   // ⚠️ Desligado não avalia: o vínculo é poder sobre a carreira de alguém e não
   // pode sobreviver à saída da pessoa.
   if (!alvo.active) return NextResponse.json({ error: 'Pessoa desligada não pode ser avaliadora.' }, { status: 422 })
 
+  /*
+   * O NÍVEL: 'sub' quando pedido, ou sugerido pelo cargo do Nexus.
+   *
+   * ⚠️ `gestor` é o padrão porque quem é escolhido para um setor sem chefia é,
+   * por definição, o topo dele — a Rosemeire tem cargo `Colaborador` e é o topo
+   * da Limpeza e da Cozinha. `sub` é a exceção que se marca.
+   */
+  const nivel = body.nivel === 'sub' || (!body.nivel && norm(alvo.jobTitle) === 'sub-encarregado')
+    ? 'sub'
+    : 'gestor'
   await prisma.setorAvaliador.upsert({
     where: { departmentId_userId: { departmentId: body.departmentId, userId: body.userId } },
-    create: { departmentId: body.departmentId, userId: body.userId, createdById: quem.id },
-    update: {},
+    create: { departmentId: body.departmentId, userId: body.userId, nivel, createdById: quem.id },
+    // Reclicar com outro nível TROCA o nível — é como a tela corrige um engano
+    // sem obrigar a desligar e religar.
+    update: body.nivel ? { nivel } : {},
   })
   // ⚠️⚠️ O acesso é recalculado NA HORA. O sync de diretório roda quando roda
   // (no .78, só a mão), e sem isto nomear alguém avaliador só teria efeito na

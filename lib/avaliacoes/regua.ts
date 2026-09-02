@@ -82,42 +82,67 @@ export function podeVer(quem: Quem, alvo: { id: string; departmentId: string | n
   return !!alvo.departmentId && quem.escopo.avaliaDepartmentIds.includes(alvo.departmentId)
 }
 
+/** O que se sabe sobre UM setor: o nível de cada avaliador, e se ele responde
+ *  à Diretoria. É o contexto de que `podeAvaliar` precisa. */
+export type Setor = {
+  /** userId → 'gestor' | 'sub'. Só quem tem vínculo naquele setor aparece. */
+  niveis: Map<string, string>
+  pelaDiretoria: boolean
+}
+
 /**
  * Pode AVALIAR esta pessoa?
  *
- * ⚠️⚠️ `alvo.id !== quem.id` é a regra que não pode faltar: ninguém se avalia.
- * Sem ela, o Gestor do setor apareceria na própria fila e poderia se dar 10 —
- * e o número entraria no gráfico de performance como qualquer outro.
+ * A HIERARQUIA, fixada pelo dono em 02/09/2026:
+ *   - **gestor do setor** → avaliado pela **Diretoria**, sempre;
+ *   - **sub-encarregado** → avaliado pelo **gestor** daquele setor;
+ *   - **todos os outros** → pelo gestor **ou** pelo sub-encarregado.
  *
- * ⚠️⚠️ E avaliador NÃO avalia avaliador do mesmo setor: quem tem vínculo ali
- * é avaliado pela Diretoria. Senão o Fiscal teria a Sub-encarregada avaliando a
- * Gestora, que é quem avalia ela — e a nota de uma pesaria sobre a outra.
+ * ⚠️⚠️ `alvo.id !== quem.id` é a regra que não pode faltar: ninguém se avalia.
+ * Sem ela, o gestor apareceria na própria fila e poderia se dar 10 — e o número
+ * entraria no gráfico de performance como qualquer outro.
+ *
+ * ⚠️⚠️ O caminho da Diretoria é EXCLUSIVO, e não somado: quem é gestor do setor
+ * sai do alcance do sub-encarregado. Senão o Fiscal teria a Bianca avaliando a
+ * Adriana, que é justamente quem avalia a Bianca — e a nota de uma pesaria
+ * sobre a outra.
+ *
+ * ⚠️ Os níveis vêm do VÍNCULO gravado, nunca do cargo lido na hora. A Rosemeire
+ * tem cargo `Colaborador` e é o topo de dois setores; a régua tem de saber
+ * disso, e o cargo não sabe.
  */
 export function podeAvaliar(
   quem: Quem,
   alvo: { id: string; departmentId: string | null },
-  avaliadoresDoSetor: Set<string>,
-  /**
-   * A avaliação desta pessoa cabe à DIRETORIA. Duas situações:
-   *  - o setor dela está marcado `avaliadoPelaDiretoria` (Consultoria, Pousada);
-   *  - ela É avaliadora do próprio setor, ou seja, não tem ninguém acima ali.
-   *
-   * ⚠️⚠️ Até 02/09/2026 este caminho não existia: o painel escrevia "Avaliado
-   * pela Diretoria" e NENHUM diretor conseguia avaliar essa pessoa, porque a
-   * régua exigia vínculo com o setor. O rótulo prometia o que a régua não fazia,
-   * e a pessoa nunca seria avaliada — sem nada acusar.
-   */
-  cabeADiretoria = false,
+  setor: Setor,
 ): boolean {
   if (alvo.id === quem.id) return false
   if (!alvo.departmentId) return false
-  // ⚠️ Aditivo, e não um desvio: um setor pode ter avaliador PRÓPRIO e ainda
-  // assim ter gente que cabe à Diretoria (o avaliador dele mesmo). Cortar aqui
-  // com `return` cedo tiraria o caminho normal de quem tem os dois.
-  if (cabeADiretoria && quem.role === 'ADMIN') return true
-  if (!quem.escopo.avaliaDepartmentIds.includes(alvo.departmentId)) return false
-  if (avaliadoresDoSetor.has(alvo.id)) return false
+
+  const nivelDoAlvo = setor.niveis.get(alvo.id)
+  // Gestor do setor, ou setor inteiro marcado: cabe à Diretoria e a mais ninguém.
+  if (nivelDoAlvo === 'gestor' || setor.pelaDiretoria) return quem.role === 'ADMIN'
+
+  const meuNivel = setor.niveis.get(quem.id)
+  if (!meuNivel) return false
+  // Sub-encarregado é avaliado pelo GESTOR do setor, não por outro sub.
+  if (nivelDoAlvo === 'sub') return meuNivel === 'gestor'
+  // Colaborador: gestor ou sub-encarregado.
   return true
+}
+
+/** Quem, por NOME, avalia esta pessoa — a coluna que a tela mostra. */
+export function quemAvaliaEssa(
+  alvo: { id: string; departmentId: string | null },
+  setor: Setor,
+  nomeDe: Map<string, string>,
+): string[] {
+  const nivelDoAlvo = setor.niveis.get(alvo.id)
+  if (nivelDoAlvo === 'gestor' || setor.pelaDiretoria) return ['Diretoria']
+  const podem = [...setor.niveis.entries()]
+    .filter(([id, nivel]) => id !== alvo.id && (nivelDoAlvo === 'sub' ? nivel === 'gestor' : true))
+    .map(([id]) => nomeDe.get(id) ?? '—')
+  return podem
 }
 
 /** Só quem administra o painel mexe em QUEM AVALIA. */
@@ -152,13 +177,25 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ? { departmentId: { in: quem.escopo.avaliaDepartmentIds } }
         : { id: quem.id }
 
-  const [pessoas, avaliacoes, avaliadores, deptsDiretoria] = await Promise.all([
+  const [pessoas, avaliacoes, avaliadores, deptsDiretoria, todosNomes] = await Promise.all([
     prisma.user.findMany({
       where: {
         origin: { in: ['nexus', 'staff'] },
         ...alcance,
         // Ativo no fim da competência: ou nunca saiu, ou saiu depois dela.
         OR: [{ leftAt: null }, { leftAt: { gt: fim } }],
+        /*
+         * ⚠️⚠️ Quem SUMIU do diretório fica de fora, e isso não é o mesmo que
+         * "foi desligado". A conta `Axis Certificados` (certificado digital, do
+         * setor `Sistemas`, que o Nexus já exclui do diretório) aparecia aqui
+         * como se fosse gente: o sync a desligou, mas carimbou uma data de saída
+         * INVENTADA — o instante em que percebeu a ausência —, e a linha acima
+         * leu isso como "estava ativa durante a competência".
+         *
+         * Quem foi desligado de verdade continua entrando, e deve: trabalhou o
+         * mês e merece a avaliação dele.
+         */
+        foraDoDiretorio: false,
         entryDate: { lt: corteAdmissao },
       },
       select: {
@@ -176,18 +213,28 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ciencia: { select: { cienteEm: true, comentario: true, versaoCiente: true } },
       },
     }),
-    prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true } }),
+    prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true, nivel: true } }),
     prisma.department.findMany({ where: { avaliadoPelaDiretoria: true }, select: { id: true } }),
+    // Nome de quem avalia — a coluna que faltava na tela. Sem ela, a lista
+    // respondia "o quê" e nunca "quem", e o leitor não tinha como agir.
+    prisma.user.findMany({ select: { id: true, name: true } }),
   ])
 
   const porAvaliado = new Map(avaliacoes.map((a) => [a.avaliadoId, a]))
-  const setoresDaDiretoria = new Set(deptsDiretoria.map((d) => d.id))
-  const avaliadoresPorSetor = new Map<string, Set<string>>()
+  const nomeDe = new Map(todosNomes.map((u) => [u.id, u.name]))
+  // Contexto por setor: quem avalia ali e em que nível.
+  const porSetor = new Map<string, Setor>()
   for (const v of avaliadores) {
-    const s = avaliadoresPorSetor.get(v.departmentId) ?? new Set<string>()
-    s.add(v.userId)
-    avaliadoresPorSetor.set(v.departmentId, s)
+    const s = porSetor.get(v.departmentId) ?? { niveis: new Map<string, string>(), pelaDiretoria: false }
+    s.niveis.set(v.userId, v.nivel)
+    porSetor.set(v.departmentId, s)
   }
+  for (const d of deptsDiretoria) {
+    const s = porSetor.get(d.id) ?? { niveis: new Map<string, string>(), pelaDiretoria: false }
+    s.pelaDiretoria = true
+    porSetor.set(d.id, s)
+  }
+  const setorVazio: Setor = { niveis: new Map(), pelaDiretoria: false }
 
   const linhas = pessoas
     // Diretoria e Sistemas continuam fora da população avaliada, como no resto
@@ -195,10 +242,20 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
     .filter((p) => !isHiddenDept(p.department?.name))
     .map((p) => {
       const av = porAvaliado.get(p.id)
-      const doSetor = avaliadoresPorSetor.get(p.departmentId ?? '') ?? new Set<string>()
-      // ⚠️ Avaliador do setor é avaliado pela Diretoria, e não pelo par dele.
-      const ehAvaliador = doSetor.has(p.id)
-      const cabeADiretoria = ehAvaliador || setoresDaDiretoria.has(p.departmentId ?? '')
+      const setor = porSetor.get(p.departmentId ?? '') ?? setorVazio
+      const meuNivel = setor.niveis.get(p.id)
+      // ⚠️ Gestor do setor é avaliado pela Diretoria, e não pelo par de chefia.
+      const ehAvaliador = !!meuNivel
+      const cabeADiretoria = meuNivel === 'gestor' || setor.pelaDiretoria
+      /*
+       * QUEM avalia esta pessoa, por nome.
+       *
+       * ⚠️ A tela mostrava só a SITUAÇÃO ("pendente", "setor sem avaliador") e
+       * nunca o responsável — e "pendente" sem dono não diz a ninguém o que
+       * fazer. Pior: "Setor sem avaliador" foi lido como "esta pessoa não tem
+       * setor", que é outra coisa e assustava. O nome resolve as duas.
+       */
+      const quemAvalia = quemAvaliaEssa(p, setor, nomeDe)
       return {
         id: p.id,
         nome: p.name,
@@ -208,6 +265,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         setor: p.department?.name ?? 'Sem setor',
         ehAvaliador,
         cabeADiretoria,
+        quemAvalia,
         /*
          * O setor tem QUEM avaliar? Zero avaliadores E não cabe à Diretoria =
          * ninguém responde por esta fila, e a tela diz isso em vez de mostrar
@@ -218,7 +276,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
          * permanente sobre uma situação legítima — e alerta que não se resolve
          * é alerta que se aprende a ignorar.
          */
-        setorSemAvaliador: doSetor.size === 0 && !cabeADiretoria,
+        setorSemAvaliador: quemAvalia.length === 0,
         avaliacaoId: av?.id ?? null,
         status: av?.status ?? 'pendente',
         media: av?.media ?? null,
@@ -228,7 +286,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ciente: !!av?.ciencia?.cienteEm,
         comentarioDoAvaliado: av?.ciencia?.comentario ?? null,
         // Pode EU avaliar esta pessoa agora?
-        posso: podeAvaliar(quem, p, doSetor, cabeADiretoria),
+        posso: podeAvaliar(quem, p, setor),
       }
     })
 

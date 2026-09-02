@@ -244,6 +244,10 @@ export async function syncFromNexus(): Promise<SyncResult> {
             phone: nu.phone ?? undefined,
             active: isActive,
             leftAt,
+            // Reapareceu no diretório → deixa de estar fora dele. É a VOLTA que
+            // faz a marca ser confiável; sem ela, quem voltasse ficaria fora da
+            // avaliação para sempre.
+            foraDoDiretorio: false,
             role: finalRole,
             jobTitle: nu.role ?? undefined,
             avatarUrl: nu.avatar ?? undefined,
@@ -317,7 +321,14 @@ export async function syncFromNexus(): Promise<SyncResult> {
     where: { nexusUserId: { not: null }, origin: 'nexus', active: true, NOT: { nexusUserId: { in: [...nexusIds] } } },
   })
   for (const o of orphans) {
-    await prisma.user.update({ where: { id: o.id }, data: { active: false, leftAt: o.leftAt ?? new Date() } })
+    await prisma.user.update({
+      where: { id: o.id },
+      // ⚠️ `foraDoDiretorio` é o que separa "sumiu do diretório" de "foi
+      // desligado". O `leftAt` carimbado aqui é o instante em que percebemos a
+      // ausência, e não uma data de saída de verdade — sem a marca, a fila de
+      // avaliação lê essa data inventada como "estava ativa no mês".
+      data: { active: false, leftAt: o.leftAt ?? new Date(), foraDoDiretorio: true },
+    })
     result.deactivated++
   }
 

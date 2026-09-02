@@ -15,18 +15,18 @@ datasource db {
 // consultar `setor_avaliador`. A classe é a porta; a régua é o conteúdo. Confiar
 // só na porta deixaria um gestor puxar a ficha de qualquer um por URL.
 enum UserRole {
-  ADMIN         // Diretoria e administração: a empresa toda.
-  GESTOR        // Gestor / Sub-encarregado: o painel e a fila do próprio setor.
-  COLABORADOR   // Só a própria página de desempenho.
-  USUARIO       // Legado. Ninguém tem; mantido para não quebrar linha antiga.
+  ADMIN // Diretoria e administração: a empresa toda.
+  GESTOR // Gestor / Sub-encarregado: o painel e a fila do próprio setor.
+  COLABORADOR // Só a própria página de desempenho.
+  USUARIO // Legado. Ninguém tem; mantido para não quebrar linha antiga.
   SEM_PERMISSAO // Existe na lista, não entra.
 }
 
 model Department {
-  id                String   @id @default(cuid())
-  name              String   @unique
-  nexusDepartmentId String?  @unique @map("nexus_department_id")
-  active            Boolean  @default(true)
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  nexusDepartmentId     String?  @unique @map("nexus_department_id")
+  active                Boolean  @default(true)
   /// Setor cuja avaliação CABE À DIRETORIA (decisão do dono, 02/09/2026:
   /// Consultoria e Pousada).
   ///
@@ -39,39 +39,56 @@ model Department {
   /// ⚠️ Ela também conserta um buraco: até 02/09 o painel ROTULAVA "Avaliado pela
   /// Diretoria" quem era avaliador do próprio setor, e nenhum diretor conseguia
   /// de fato avaliar essa pessoa — o rótulo prometia o que a régua não fazia.
-  avaliadoPelaDiretoria Boolean @default(false) @map("avaliado_pela_diretoria")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  users             User[]
+  avaliadoPelaDiretoria Boolean  @default(false) @map("avaliado_pela_diretoria")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  users                 User[]
 
   @@map("departments")
 }
 
 model User {
-  id            String      @id @default(cuid())
-  name          String
-  email         String      @unique
-  passwordHash  String      @map("password_hash")
-  role          UserRole    @default(SEM_PERMISSAO)
-  jobTitle      String?     @map("job_title")
-  birthDate     DateTime?   @map("birth_date")
-  gender        String?
+  id              String      @id @default(cuid())
+  name            String
+  email           String      @unique
+  passwordHash    String      @map("password_hash")
+  role            UserRole    @default(SEM_PERMISSAO)
+  jobTitle        String?     @map("job_title")
+  birthDate       DateTime?   @map("birth_date")
+  gender          String?
   // CPF (só dígitos). Usado p/ colaboradores STAFF sem Nexus e como chave de
   // casamento na futura importação de ponto/disciplina. Nullable.
-  cpf           String?
-  active        Boolean     @default(true)
-  leftAt        DateTime?   @map("left_at")
-  avatarUrl     String?     @map("avatar_url")
-  phone         String?
-  domainAccount String?     @map("domain_account")
-  windowsUser   String?     @map("windows_user")
-  nexusUserId   String?     @unique @map("nexus_user_id")
-  origin        String      @default("local")
-  departmentId  String?     @map("department_id")
-  department    Department? @relation(fields: [departmentId], references: [id])
-  entryDate     DateTime?   @map("entry_date")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  cpf             String?
+  active          Boolean     @default(true)
+  leftAt          DateTime?   @map("left_at")
+  avatarUrl       String?     @map("avatar_url")
+  phone           String?
+  domainAccount   String?     @map("domain_account")
+  windowsUser     String?     @map("windows_user")
+  nexusUserId     String?     @unique @map("nexus_user_id")
+  origin          String      @default("local")
+  /// Sumiu do diretório do Nexus — NÃO é o mesmo que "foi desligado".
+  ///
+  /// ⚠️⚠️ A distinção conserta um defeito real (02/09/2026): a conta
+  /// `Axis Certificados` (certificado digital, setor `Sistemas`, que o Nexus já
+  /// exclui do diretório) aparecia na fila de avaliação do TI como se fosse
+  /// gente. O sync a havia desligado, mas carimbou uma DATA DE SAÍDA inventada —
+  /// o instante em que percebeu a ausência —, e a fila leu isso como "estava
+  /// ativa durante a competência" e a incluiu.
+  ///
+  /// Desligamento de verdade vem do Nexus com `status` e `terminationDate`, e
+  /// essa pessoa DEVE ser avaliada pelo mês que trabalhou. Sumir do diretório é
+  /// outra coisa: é o Nexus dizendo que aquilo não é (ou não é mais) gente da
+  /// casa. Sem separar as duas, ou some quem trabalhou o mês, ou entra o que
+  /// nunca foi gente.
+  ///
+  /// ⚠️ Tem a VOLTA: volta a `false` assim que a pessoa reaparece no diretório.
+  foraDoDiretorio Boolean     @default(false) @map("fora_do_diretorio")
+  departmentId    String?     @map("department_id")
+  department      Department? @relation(fields: [departmentId], references: [id])
+  entryDate       DateTime?   @map("entry_date")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -500,6 +517,20 @@ model SetorAvaliador {
   id           String   @id @default(cuid())
   departmentId String   @map("department_id")
   userId       String   @map("user_id")
+  /// `gestor` | `sub` — o NÍVEL dentro do setor, e com ele a hierarquia que o
+  /// dono fixou em 02/09/2026:
+  ///   - quem é `gestor` do setor é avaliado pela DIRETORIA;
+  ///   - quem é `sub` é avaliado pelo `gestor` do setor;
+  ///   - todo o resto é avaliado pelo `gestor` OU pelo `sub`.
+  ///
+  /// ⚠️⚠️ O nível mora AQUI e não no cargo do Nexus, pelo mesmo motivo do
+  /// vínculo: o cargo sugere, gente confirma. E há casos em que os dois não
+  /// coincidem — a Rosemeire tem cargo `Colaborador` e é o topo da Limpeza e da
+  /// Cozinha, então o nível dela é `gestor` nos dois.
+  ///
+  /// ⚠️ `gestor` é o padrão porque quem é escolhido para um setor sem chefia é,
+  /// por definição, o topo dele. `sub` é a exceção que se marca.
+  nivel        String   @default("gestor") @db.VarChar(10)
   // Quem criou o vínculo (User.id). Null nos criados por "aplicar sugestões".
   createdById  String?  @map("created_by_id")
   createdAt    DateTime @default(now()) @map("created_at")

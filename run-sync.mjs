@@ -171,7 +171,13 @@ async function main() {
     where: { nexusUserId: { not: null }, origin: 'nexus', active: true, NOT: { nexusUserId: { in: [...nexusIds] } } },
   })
   for (const o of orphans) {
-    await prisma.user.update({ where: { id: o.id }, data: { active: false, leftAt: o.leftAt ?? new Date() } })
+    // ⚠️ Ver o comentário gêmeo em `lib/nexus.ts`: `foraDoDiretorio` separa
+    // "sumiu do diretório" de "foi desligado", e é o que tira as contas de
+    // sistema da fila de avaliação sem tirar quem trabalhou o mês.
+    await prisma.user.update({
+      where: { id: o.id },
+      data: { active: false, leftAt: o.leftAt ?? new Date(), foraDoDiretorio: true },
+    })
     deactivated++
   }
 

@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Avatar from '../Avatar'
 
-type P = { id: string; nome: string; cargo: string | null; hasAvatar: boolean; deOutroSetor?: string | null }
+type P = { id: string; nome: string; cargo: string | null; hasAvatar: boolean; deOutroSetor?: string | null; nivel?: string }
 type Setor = { id: string; nome: string; pessoas: number; pelaDiretoria: boolean; avaliadores: P[]; sugestoes: P[]; equipe: P[] }
 type Pessoa = P & { setor: string }
 type Dados = { setores: Setor[]; todos: Pessoa[]; semAvaliador: number; pessoasSemAvaliador: number }
@@ -34,12 +34,12 @@ export default function AvaliadoresPage() {
     carregar()
   }
 
-  async function alternar(departmentId: string, userId: string, ligar: boolean) {
+  async function alternar(departmentId: string, userId: string, ligar: boolean, nivel?: string) {
     setSalvando(userId)
     await fetch('/api/avaliadores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ departmentId, userId, ligar }),
+      body: JSON.stringify({ departmentId, userId, ligar, nivel }),
     })
     setSalvando(null)
     carregar()
@@ -65,12 +65,14 @@ export default function AvaliadoresPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
         <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
         <span>
-          Quem está aqui avalia <b>qualquer pessoa do setor</b> — e a primeira avaliação publicada
-          dá baixa no mês, seja de quem for. Ninguém se avalia, e quem aparece nesta lista é
-          avaliado pela Diretoria, não pelo colega de chefia.
+          <b>A hierarquia:</b> quem é <b>gestor</b> do setor é avaliado pela <b>Diretoria</b>;
+          quem é <b>sub-encarregado</b> é avaliado pelo gestor do setor; e todo o resto é avaliado
+          pelo gestor <i>ou</i> pelo sub-encarregado — a primeira avaliação publicada dá baixa no
+          mês, seja de quem for. Ninguém se avalia.
           <br />
-          O cargo do Nexus (<i>Gestor</i>, <i>Sub-encarregado</i>) só sugere; o vínculo só existe
-          depois que você confirma, e ele <b>não muda sozinho</b> quando alguém for promovido.
+          Clique no nível ao lado do nome para trocar entre <b>gestor</b> e <b>sub</b>. O cargo do
+          Nexus só sugere; o vínculo só existe depois que você confirma, e ele <b>não muda
+          sozinho</b> quando alguém for promovido.
         </span>
       </div>
 
@@ -121,7 +123,21 @@ export default function AvaliadoresPage() {
             {s.avaliadores.length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                 {s.avaliadores.map((p) => (
-                  <Chip key={p.id} p={p} setor={p.deOutroSetor ?? undefined} ativo onClick={() => alternar(s.id, p.id, false)} carregando={salvando === p.id} />
+                  <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Chip p={p} setor={p.deOutroSetor ?? undefined} ativo onClick={() => alternar(s.id, p.id, false)} carregando={salvando === p.id} />
+                    {/* O NÍVEL, clicável. É o que decide quem avalia quem dentro
+                        do setor — e por isso fica visível, não escondido. */}
+                    <button onClick={() => alternar(s.id, p.id, true, p.nivel === 'sub' ? 'gestor' : 'sub')}
+                      disabled={salvando === p.id}
+                      title="Trocar entre gestor e sub-encarregado"
+                      style={{
+                        fontSize: 10.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+                        background: 'var(--surface-2)', color: p.nivel === 'sub' ? 'var(--text-mute)' : 'var(--accent)',
+                        border: '1px solid var(--border)', borderRadius: 20, padding: '3px 9px',
+                      }}>
+                      {p.nivel === 'sub' ? 'sub' : 'gestor'}
+                    </button>
+                  </span>
                 ))}
               </div>
             )}
