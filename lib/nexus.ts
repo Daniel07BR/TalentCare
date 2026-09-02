@@ -26,15 +26,49 @@ export function isOwnerEmail(email: string | null | undefined): boolean {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase())
 }
 
-// Setor "Diretoria" ou email na allowlist → ADMIN. Caso contrário, SEM_PERMISSAO
-// (a pessoa existe no sistema p/ aparecer na lista, mas não acessa).
-export function mapRole(email: string | null, setor: string | null): UserRole {
+/**
+ * ⚠️⚠️ A CHAVE QUE ABRE O SISTEMA PARA A EMPRESA INTEIRA.
+ *
+ * Desligada = só a Diretoria e a allowlist entram, e os outros 86 continuam
+ * `SEM_PERMISSAO` (existem na lista, não acessam) — que é o comportamento de
+ * sempre. Ligada = Gestor e Sub-encarregado viram `GESTOR` e todo o resto vira
+ * `COLABORADOR`, com acesso à própria página de desempenho.
+ *
+ * Fica atrás de uma chave porque abrir é irreversível na prática: no instante em
+ * que 88 pessoas entrarem e virem os próprios números, tirar o acesso de volta
+ * não desfaz o que foi visto. E porque falta uma coisa antes (ver o README da
+ * área): as rotas de dado agregado — `/api/chat-metrics`, `/api/helpdesk-metrics`
+ * e as outras seis — hoje devolvem a EMPRESA INTEIRA para qualquer sessão
+ * autenticada. Enquanto isso não for recortado por setor, um Gestor consegue
+ * puxar o painel dos outros setores pela URL.
+ *
+ * Ligar com `TALENTCARE_ACESSO_ABERTO=on` no `.env` e um novo sync de diretório.
+ */
+const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
+
+/** Cargos do Nexus que abrem o painel do próprio setor. */
+const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
+
+// Setor "Diretoria" ou email na allowlist → ADMIN. Depois disso, depende da
+// chave acima.
+export function mapRole(email: string | null, setor: string | null, cargo?: string | null): UserRole {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
-  return 'SEM_PERMISSAO'
+  if (!ACESSO_ABERTO) return 'SEM_PERMISSAO'
+  // ⚠️ O cargo decide só a PORTA (que telas), nunca o conteúdo. Quem avalia quem
+  // continua vindo de `setor_avaliador`, confirmado por gente — ver
+  // `lib/avaliacoes/regua.ts`. Um Gestor sem vínculo entra no painel do setor e
+  // não avalia ninguém, e é isso mesmo.
+  if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'
+  return 'COLABORADOR'
 }
 
-// Preserva elevação manual: nunca rebaixa um ADMIN para SEM_PERMISSAO no sync.
+// Preserva elevação manual: nunca rebaixa um ADMIN no sync.
+//
+// ⚠️ Só o ADMIN é preservado. GESTOR e COLABORADOR são recalculados a cada sync
+// de propósito: eles vêm do cargo, e cargo muda no Nexus. Preservar os três
+// deixaria alguém que saiu da chefia com a porta do setor aberta para sempre —
+// e ninguém iria conferir.
 export function resolveRole(computed: UserRole, current: UserRole): UserRole {
   if (current === 'ADMIN') return 'ADMIN'
   return computed
@@ -127,7 +161,7 @@ export async function syncFromNexus(): Promise<SyncResult> {
         })
       }
 
-      const computed = mapRole(nu.email, nu.department)
+      const computed = mapRole(nu.email, nu.department, nu.role)
       const isActive = nu.status === 'active'
       const dept = await resolveDepartment(nu.department, nu.departmentId)
 

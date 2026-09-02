@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { periodDays } from '@/lib/period-range'
+import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Métricas REAIS de UMA pessoa no PERÍODO (rádio, ClassRoom, WhatsApp), lidas dos
@@ -22,8 +23,23 @@ export async function GET(req: NextRequest) {
   const { fromDay, toDay } = periodDays(period)
   const range = { day: { gte: fromDay, lte: toDay } }
 
-  const user = await prisma.user.findUnique({ where: { id }, select: { nexusUserId: true, name: true } })
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, nexusUserId: true, name: true, departmentId: true },
+  })
   if (!user) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
+
+  /*
+   * ⚠️⚠️ A RÉGUA FINA. Esta rota expõe os números de UMA pessoa por `?id=`, e o
+   * gate do middleware não alcança isso: ele só conhece o caminho, e o caminho é
+   * o mesmo para todo mundo. Sem esta linha, no dia em que o sistema abrir, um
+   * gestor do Fiscal puxaria a ficha de qualquer pessoa do Contábil trocando o
+   * id na URL — e nada apareceria em log nenhum.
+   */
+  const quem = await quemEh((session.user as { id: string }).id)
+  if (!quem || !podeVer(quem, user)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 

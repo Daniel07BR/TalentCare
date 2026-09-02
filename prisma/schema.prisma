@@ -7,10 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// A CLASSE DE ACESSO. Grosseira de propósito: ela decide QUE TELAS a pessoa
+// alcança (o gate do middleware, que roda sem banco). Quem decide QUE DADOS ela
+// vê é a régua fina em `lib/avaliacoes/regua.ts`, que consulta o vínculo.
+//
+// ⚠️⚠️ Duas réguas, e é assim mesmo: o middleware não tem banco e a régua tem de
+// consultar `setor_avaliador`. A classe é a porta; a régua é o conteúdo. Confiar
+// só na porta deixaria um gestor puxar a ficha de qualquer um por URL.
 enum UserRole {
-  ADMIN
-  USUARIO
-  SEM_PERMISSAO
+  ADMIN         // Diretoria e administração: a empresa toda.
+  GESTOR        // Gestor / Sub-encarregado: o painel e a fila do próprio setor.
+  COLABORADOR   // Só a própria página de desempenho.
+  USUARIO       // Legado. Ninguém tem; mantido para não quebrar linha antiga.
+  SEM_PERMISSAO // Existe na lista, não entra.
 }
 
 model Department {
@@ -26,30 +35,30 @@ model Department {
 }
 
 model User {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String
-  email         String     @unique
-  passwordHash  String     @map("password_hash")
-  role          UserRole   @default(SEM_PERMISSAO)
-  jobTitle      String?    @map("job_title")
-  birthDate     DateTime?  @map("birth_date")
+  email         String      @unique
+  passwordHash  String      @map("password_hash")
+  role          UserRole    @default(SEM_PERMISSAO)
+  jobTitle      String?     @map("job_title")
+  birthDate     DateTime?   @map("birth_date")
   gender        String?
   // CPF (só dígitos). Usado p/ colaboradores STAFF sem Nexus e como chave de
   // casamento na futura importação de ponto/disciplina. Nullable.
   cpf           String?
-  active        Boolean    @default(true)
-  leftAt        DateTime?  @map("left_at")
-  avatarUrl     String?    @map("avatar_url")
+  active        Boolean     @default(true)
+  leftAt        DateTime?   @map("left_at")
+  avatarUrl     String?     @map("avatar_url")
   phone         String?
-  domainAccount String?    @map("domain_account")
-  windowsUser   String?    @map("windows_user")
-  nexusUserId   String?    @unique @map("nexus_user_id")
-  origin        String     @default("local")
-  departmentId  String?    @map("department_id")
+  domainAccount String?     @map("domain_account")
+  windowsUser   String?     @map("windows_user")
+  nexusUserId   String?     @unique @map("nexus_user_id")
+  origin        String      @default("local")
+  departmentId  String?     @map("department_id")
   department    Department? @relation(fields: [departmentId], references: [id])
-  entryDate     DateTime?  @map("entry_date")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
+  entryDate     DateTime?   @map("entry_date")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -296,7 +305,7 @@ model DisciplinaEvento {
   source    String   @default("nexo")
   sourceId  String   @map("source_id")
   data      String   @db.VarChar(10) // YYYY-MM-DD
-  tipo      String   // 'advertencia' | 'suspensao'
+  tipo      String // 'advertencia' | 'suspensao'
   motivo    String?
   dias      Int? // duração (suspensão); null p/ advertência
   createdAt DateTime @default(now()) @map("created_at")
@@ -356,20 +365,20 @@ model SyncWatermark {
 // A mesma pessoa pode ter as duas — vários cargos fazem saída externa
 // eventual, não só os dois motoboys.
 model GerenciaDaily {
-  nexusUserId   String   @map("nexus_user_id")
-  day           String   @db.VarChar(10) // YYYY-MM-DD
-  servicos      Int      @default(0)
-  km            Int      @default(0)
-  saidas        Int      @default(0) // cada saída registrada no app
-  viagens       Int      @default(0) // dia com serviço em rota marcada como viagem (fora do estado)
-  jornadaMin    Int      @default(0) @map("jornada_min")
-  protAbertos   Int      @default(0) @map("prot_abertos")
-  protAprovados Int      @default(0) @map("prot_aprovados")
-  servCriados   Int      @default(0) @map("serv_criados")
-  reagendados   Int      @default(0)
-  cancelados    Int      @default(0)
-  datasAlteradas Int     @default(0) @map("datas_alteradas")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  nexusUserId    String   @map("nexus_user_id")
+  day            String   @db.VarChar(10) // YYYY-MM-DD
+  servicos       Int      @default(0)
+  km             Int      @default(0)
+  saidas         Int      @default(0) // cada saída registrada no app
+  viagens        Int      @default(0) // dia com serviço em rota marcada como viagem (fora do estado)
+  jornadaMin     Int      @default(0) @map("jornada_min")
+  protAbertos    Int      @default(0) @map("prot_abertos")
+  protAprovados  Int      @default(0) @map("prot_aprovados")
+  servCriados    Int      @default(0) @map("serv_criados")
+  reagendados    Int      @default(0)
+  cancelados     Int      @default(0)
+  datasAlteradas Int      @default(0) @map("datas_alteradas")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])
   @@index([day])
@@ -399,16 +408,16 @@ model GerenciaDaily {
 // no Nexus) não tem a quem creditar e fica de fora — por isso a soma daqui é
 // menor que o total de mensagens do chat, e isso é o certo.
 model ChatDaily {
-  nexusUserId       String   @map("nexus_user_id")
-  day               String   @db.VarChar(10) // YYYY-MM-DD
-  msgCanais         Int      @default(0) @map("msg_canais")
-  msgDiretas        Int      @default(0) @map("msg_diretas")
-  msgChamados       Int      @default(0) @map("msg_chamados")
-  chamadosAbertos   Int      @default(0) @map("chamados_abertos")
-  chamadosAssumidos Int      @default(0) @map("chamados_assumidos")
-  chamadosConcluidos Int     @default(0) @map("chamados_concluidos")
-  segundosResolucao Int      @default(0) @map("segundos_resolucao")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  nexusUserId        String   @map("nexus_user_id")
+  day                String   @db.VarChar(10) // YYYY-MM-DD
+  msgCanais          Int      @default(0) @map("msg_canais")
+  msgDiretas         Int      @default(0) @map("msg_diretas")
+  msgChamados        Int      @default(0) @map("msg_chamados")
+  chamadosAbertos    Int      @default(0) @map("chamados_abertos")
+  chamadosAssumidos  Int      @default(0) @map("chamados_assumidos")
+  chamadosConcluidos Int      @default(0) @map("chamados_concluidos")
+  segundosResolucao  Int      @default(0) @map("segundos_resolucao")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])
   @@index([day])
@@ -430,17 +439,173 @@ model ChatDaily {
 // em setor nenhum. A origem devolve essa contagem em `foraDeSetor` e o sync a
 // registra no log — espelho que descarta linha em silêncio é o pior dos dois.
 model ChatDeptDaily {
-  nexusDepartmentId  String   @map("nexus_department_id")
-  day                String   @db.VarChar(10) // YYYY-MM-DD
-  pedidosAbertos     Int      @default(0) @map("pedidos_abertos")
-  pedidosConcluidos  Int      @default(0) @map("pedidos_concluidos")
-  recebidosAbertos   Int      @default(0) @map("recebidos_abertos")
-  recebidosConcluidos Int     @default(0) @map("recebidos_concluidos")
-  recebidosCancelados Int     @default(0) @map("recebidos_cancelados")
-  segundosResolucao  Int      @default(0) @map("segundos_resolucao")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  nexusDepartmentId   String   @map("nexus_department_id")
+  day                 String   @db.VarChar(10) // YYYY-MM-DD
+  pedidosAbertos      Int      @default(0) @map("pedidos_abertos")
+  pedidosConcluidos   Int      @default(0) @map("pedidos_concluidos")
+  recebidosAbertos    Int      @default(0) @map("recebidos_abertos")
+  recebidosConcluidos Int      @default(0) @map("recebidos_concluidos")
+  recebidosCancelados Int      @default(0) @map("recebidos_cancelados")
+  segundosResolucao   Int      @default(0) @map("segundos_resolucao")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@id([nexusDepartmentId, day])
   @@index([day])
   @@map("chat_dept_daily")
+}
+
+/**
+ * ============================================================
+ * AVALIAÇÃO MENSAL — a nota que uma PESSOA dá a outra.
+ * ⚠️⚠️ Não confundir com o `score` (0–100) calculado das 8 fontes integradas.
+ * São dois números diferentes, de origens diferentes, e nunca devem virar um só:
+ * o score mede atividade registrada, a avaliação mede julgamento humano. O valor
+ * está justamente em compará-los — quem produz muito e é mal avaliado (ou o
+ * contrário) é o sinal que interessa; a média dos dois não é nada.
+ * ============================================================
+ */
+
+// Quem pode avaliar em cada setor (decisão do dono, 02/09/2026).
+//
+// ⚠️⚠️ A régua é do SETOR, não de cada pessoa: Gestor e Sub-encarregado avaliam
+// qualquer um do setor e a PRIMEIRA avaliação publicada dá baixa no mês, seja de
+// quem for. Por isso não existe "gestor de fulano" — existe "avaliadores do
+// setor X", e a fila é uma só.
+//
+// ⚠️⚠️ A linha é GRAVADA e nunca derivada do cargo na hora. O cargo (`Gestor`,
+// `Sub-encarregado`) só serve para SUGERIR o vínculo numa tela onde uma pessoa
+// confirma. Poder de avaliar é poder sobre a carreira de alguém: no dia em que
+// um setor tiver dois gestores, ou alguém for promovido, a régua derivada
+// mudaria sozinha e ninguém saberia. Mesmo princípio dos administradores de
+// função do Chat Interno — função com poder não se delega automaticamente.
+//
+// ⚠️ Setor SEM nenhuma linha aqui = ninguém avalia aquele setor, e a tela diz
+// isso em voz alta. Hoje são seis (Limpeza, TI, Cozinha, Consultoria, Entregas,
+// Pousada — 13 pessoas), porque nenhum deles tem Gestor cadastrado no Nexus.
+// Silêncio aqui viraria 13 pessoas na fila de ninguém, para sempre.
+model SetorAvaliador {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  userId       String   @map("user_id")
+  // Quem criou o vínculo (User.id). Null nos criados por "aplicar sugestões".
+  createdById  String?  @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([departmentId, userId])
+  @@index([userId])
+  @@map("setor_avaliador")
+}
+
+// A avaliação de UMA pessoa numa competência (mês). Linha ÚNICA por
+// (competência, avaliado): a baixa do mês é uma só, não importa qual avaliador
+// do setor a fez.
+//
+// ⚠️ `departmentId` fica CONGELADO no momento da publicação. A avaliação é do
+// setor em que a pessoa estava naquele mês; quem muda de área em novembro não
+// pode reescrever o histórico de agosto.
+//
+// ⚠️⚠️ Publicada NÃO se edita. Correção incrementa `versao`, exige motivo e
+// guarda a versão anterior em `AvaliacaoVersao` — as duas ficam visíveis para o
+// avaliado. Uma nota que pode ser reescrita depois de a pessoa ler e comentar
+// não é registro, é negociação.
+model Avaliacao {
+  id           String    @id @default(cuid())
+  // AAAA-MM. É o mês AVALIADO, não o mês em que se avaliou.
+  competencia  String    @db.VarChar(7)
+  avaliadoId   String    @map("avaliado_id")
+  // Quem salvou/publicou por último. Muda se o outro avaliador do setor corrigir.
+  avaliadorId  String    @map("avaliador_id")
+  departmentId String?   @map("department_id")
+  // rascunho | publicada. Rascunho é invisível para o avaliado.
+  status       String    @default("rascunho")
+  publishedAt  DateTime? @map("published_at")
+  versao       Int       @default(1)
+  // Texto livre do avaliador (o "recado do mês"). Opcional.
+  comentario   String?
+  // Média das notas APLICÁVEIS (critério "não se aplica" fica fora e o peso se
+  // redistribui sozinho — é a divisão pelo número de notas que existem).
+  // Calculada na publicação e gravada: mudar a lista de critérios amanhã não
+  // pode reescrever a média de um mês já fechado.
+  media        Float?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  notas   AvaliacaoNota[]
+  versoes AvaliacaoVersao[]
+  ciencia AvaliacaoCiencia?
+
+  @@unique([competencia, avaliadoId])
+  @@index([competencia])
+  @@index([avaliadorId])
+  @@map("avaliacao")
+}
+
+// Uma nota por critério. Tabela separada (e não um Json) porque o gráfico de
+// evolução POR CRITÉRIO é o produto final disto — em Json ele viraria uma
+// consulta ilegível ou uma varredura em memória.
+//
+// ⚠️⚠️ `nota` NULA quer dizer "NÃO SE APLICA", e não zero. Liderança de quem não
+// lidera ninguém, ou inovação num mês em que ninguém inovou nada: um 7 inventado
+// para preencher campo é pior que campo vazio, porque entra na média como se
+// fosse observação. Critério nulo sai da conta e o peso se redistribui — mesmo
+// mecanismo do `Factor.nota = null` do score.
+model AvaliacaoNota {
+  avaliacaoId   String  @map("avaliacao_id")
+  // entrega | prazo | iniciativa | equipe | comunicacao | conduta | melhoria | lideranca
+  criterio      String  @db.VarChar(20)
+  nota          Int?
+  // ⚠️ Obrigatória para nota < 5 ou > 8 (decisão do dono, 02/09/2026). É o freio
+  // mais barato contra a inflação de notas — sem ele a escala vira 8 para todo
+  // mundo em três meses e o gráfico vira uma reta. E é o que dá conteúdo à
+  // conversa de aumento seis meses depois: um 10 sem motivo não prova nada.
+  justificativa String?
+
+  avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  @@id([avaliacaoId, criterio])
+  @@map("avaliacao_nota")
+}
+
+// O que a avaliação dizia ANTES de cada correção. Escrita só na correção.
+model AvaliacaoVersao {
+  id          String    @id @default(cuid())
+  avaliacaoId String    @map("avaliacao_id")
+  versao      Int
+  avaliadorId String    @map("avaliador_id")
+  publishedAt DateTime? @map("published_at")
+  // Por que foi corrigida. Obrigatório — correção sem motivo é reescrita.
+  motivo      String?
+  comentario  String?
+  media       Float?
+  // Snapshot das notas daquela versão: [{criterio, nota, justificativa}].
+  notas       Json
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  @@unique([avaliacaoId, versao])
+  @@map("avaliacao_versao")
+}
+
+// A ciência do avaliado + o comentário dele.
+//
+// ⚠️⚠️ O comentário NÃO muda a nota, e é de propósito: ele fica AO LADO dela,
+// permanente, e o avaliador é avisado. Deixar a reação alterar a nota
+// transformaria a avaliação numa negociação, e a versão final seria a de quem
+// insistiu mais.
+//
+// ⚠️ `versaoCiente` guarda de QUAL versão a pessoa deu ciência. Se vier uma
+// correção depois, a página dela avisa que há versão nova — senão a ciência de
+// ontem cobriria um texto que ela nunca leu.
+model AvaliacaoCiencia {
+  avaliacaoId  String    @id @map("avaliacao_id")
+  versaoCiente Int       @map("versao_ciente")
+  cienteEm     DateTime  @default(now()) @map("ciente_em")
+  comentario   String?
+  // Quando o avaliador leu o comentário do avaliado (null = ainda não).
+  lidoEm       DateTime? @map("lido_em")
+
+  avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  @@map("avaliacao_ciencia")
 }

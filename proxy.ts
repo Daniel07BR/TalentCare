@@ -11,6 +11,33 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }
 
+/**
+ * Tudo o que um COLABORADOR alcança. Lista FECHADA (o que não está aqui é
+ * negado), e não uma lista de proibições: lista de proibições esquece a rota
+ * nova, e a rota nova nasce aberta.
+ */
+const COLABORADOR_OK = [
+  '/minha-avaliacao',
+  '/api/minha-avaliacao',
+  '/acesso-negado',
+  '/api/avatar',
+]
+
+function alcanceDoColaborador(pathname: string): boolean {
+  if (COLABORADOR_OK.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true
+  // A ciência da PRÓPRIA avaliação — a rota confere no servidor que o id é o
+  // dele. Sem isto o botão "Li e estou ciente" responderia 403.
+  if (/^\/api\/avaliacoes\/[^/]+\/ciencia$/.test(pathname)) return true
+  return false
+}
+
+/** Áreas de administração do sistema. */
+const SO_ADMIN = [
+  '/avaliadores', '/api/avaliadores',
+  '/usuarios', '/equipe', '/escolaridade', '/ponto', '/configuracoes',
+  '/api/admin',
+]
+
 export default auth((req) => {
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth
@@ -35,8 +62,38 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/acesso-negado', req.url))
   }
 
+  /*
+   * ⚠️⚠️ A PORTA GROSSA. Aqui se decide QUE CAMINHOS a pessoa alcança, e só isso.
+   * O middleware roda sem banco (é edge), então ele só conhece o papel que veio
+   * no token — não sabe quem avalia quem. Quem decide QUE DADOS aparecem é a
+   * régua fina de `lib/avaliacoes/regua.ts`, consultada nas rotas.
+   *
+   * ⚠️ São duas réguas de propósito, e as duas precisam existir: confiar só na
+   * porta deixaria um gestor puxar a ficha de qualquer um por URL; confiar só na
+   * régua deixaria um colaborador abrir o painel da empresa e ver os agregados.
+   *
+   * O `matcher` cobre `/api/*` também, então esta lista protege página E rota.
+   */
+  if (role === 'COLABORADOR' && !alcanceDoColaborador(pathname)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL('/minha-avaliacao', req.url))
+  }
+
+  // Administração é só de quem administra. GESTOR entra no painel e na fila do
+  // setor dele, mas não define quem avalia nem mexe em usuário.
+  if (role !== 'ADMIN' && SO_ADMIN.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL('/avaliacoes', req.url))
+  }
+
   if (pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    // ⚠️ Quem só tem a própria página não pode cair no /dashboard: ele existe,
+    // carrega e mostra a empresa inteira. A porta de entrada é outra.
+    return NextResponse.redirect(new URL(role === 'COLABORADOR' ? '/minha-avaliacao' : '/dashboard', req.url))
   }
 
   return NextResponse.next()
