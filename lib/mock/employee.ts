@@ -92,27 +92,22 @@ export function heatmapFor(days: { day: string; atrasos: number; minutos: number
   return cells
 }
 
-function trajetoriaFor(emp: Employee) {
-  const items: { tipo: string; titulo: string; detalhe: string; quando: string; dot: string }[] = []
-  const seed = seedOf(emp.id)
-  items.push({ tipo: 'Admissão', titulo: 'Entrada na empresa', detalhe: 'Cargo inicial · ' + emp.cargo.replace(/Coordenador.*|Tech Lead|Gestor.*|Sênior/, 'Júnior'), quando: emp.admissao, dot: 'var(--text-mute)' })
-  if (emp.tempoMeses > 24) items.push({ tipo: 'Promoção', titulo: 'Efetivação / mudança de cargo', detalhe: 'Reconhecimento por desempenho', quando: admissao(Math.round(emp.tempoMeses * 0.55)), dot: 'var(--chart-3)' })
-  if (emp.tempoMeses > 14) items.push({ tipo: 'Ajuste salarial', titulo: 'Reajuste por mérito ' + (8 + Math.round(rnd(seed) * 9)) + '%', detalhe: 'Acima do dissídio da categoria', quando: admissao(Math.round(emp.tempoMeses * 0.3)), dot: 'var(--chart-2)' })
-  if (emp.score >= 85) items.push({ tipo: 'Promoção', titulo: 'Promoção a ' + emp.cargo, detalhe: 'Score consistente acima de 85', quando: admissao(Math.round(emp.tempoMeses * 0.12)), dot: 'var(--accent)' })
-  return items
-}
+/* ⚠️⚠️ A TRAJETÓRIA era INVENTADA (removida em 03/09/2026).
+   Ela emitia, na ficha de uma pessoa real, eventos de carreira que não
+   aconteceram, com datas plausíveis calculadas do tempo de casa:
+     · "Efetivação / mudança de cargo" quando `tempoMeses > 24`
+     · "Reajuste por mérito 13%" — o percentual era `8 + rnd(seed) * 9`
+     · "Promoção a <cargo>" quando o score passava de 85
+   Isso é pior que a recomendação automática: recomendação é opinião, e aquilo
+   era um REGISTRO — alguém leria "promovida em março de 2025" e acreditaria.
 
-function reconhecimentoFor(emp: Employee) {
-  const seed = seedOf(emp.id)
-  const all = [
-    { titulo: 'Destaque do trimestre', quando: 'Q1 2026', kind: 'var(--accent)' },
-    { titulo: 'Certificação ClassRoom', quando: 'Mar 2026', kind: 'var(--chart-2)' },
-    { titulo: '100% de assiduidade', quando: '2025', kind: 'var(--chart-4)' },
-    { titulo: 'Menção da Diretoria', quando: 'Dez 2025', kind: 'var(--chart-3)' },
-    { titulo: 'Mentor de novatos', quando: '2025', kind: 'var(--chart-5)' },
-  ]
-  return all.filter((_, i) => rnd(seed + i * 2) > (0.62 - emp.score / 260))
-}
+   Só a ADMISSÃO era real, e ela já aparece no cabeçalho da ficha. Quando a casa
+   tiver histórico de cargo e de salário de verdade, a aba volta com dado. */
+
+/* ⚠️ O RECONHECIMENTO era sorteado ("Destaque do trimestre · Q1 2026" saía de
+   `rnd(seed)`). Removido pelo mesmo motivo da trajetória: prêmio que a pessoa
+   não recebeu, na ficha dela. */
+
 
 function formacaoFor(emp: Employee) {
   // Formação acadêmica REAL (cadastro RH): graduação/pós/médio técnico etc.
@@ -137,17 +132,20 @@ function decisionFor(data: TalentData, emp: Employee) {
   const trend = emp.hist[11] - emp.hist[5]
   const deptEmps = data.employees.filter((e) => e.dept === emp.dept && e.hasScore)
   const deptAvg = deptEmps.length ? Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length) : emp.score
-  let rec: string
-  if (!emp.hasScore) rec = (emp.atrasos > 0 || emp.advertencias > 0)
-    ? 'Avaliação parcial — há apenas registro de assiduidade (sem produtividade nos sistemas e sem formação cadastrada). Assiduidade isolada não compõe um score comparável; avaliar esta função por critérios próprios.'
-    : 'Sem dados suficientes para um score — sem atividade nos sistemas, formação cadastrada ou registro de ponto.'
-  else if (emp.status === 'Desligado') rec = 'Colaborador desligado — histórico mantido para consulta. Score final ' + emp.score + '.'
-  else if (emp.score >= 85 && trend >= 0) rec = 'Score consistente acima de 85 e assiduidade exemplar — forte candidato a promoção ou bônus.'
-  else if (emp.score >= 75) rec = 'Desempenho sólido e estável. Recomenda-se reajuste por mérito e plano de desenvolvimento.'
-  else if (trend >= 5) rec = 'Em evolução clara nos últimos 6 meses — manter acompanhamento e mentoria.'
-  else if (emp.score < 60) rec = 'Pontos de atenção relevantes — recomenda-se plano de ação e revisão de metas.'
-  else rec = 'Desempenho dentro da média do setor — acompanhar próximos ciclos antes de decisão.'
-  return { strengths, attention, trend, deptAvg, scoreVsDept: emp.score - deptAvg, recommendation: rec }
+  /* ⚠️⚠️ A RECOMENDAÇÃO AUTOMÁTICA foi removida (pedido do dono, 03/09/2026).
+     Ela escrevia frases como "forte candidato a promoção ou bônus" e "Em
+     evolução clara nos últimos 6 meses" numa caixa rotulada "Resumo executivo ·
+     aumento / promoção".
+
+     Duas coisas erradas, e a segunda é pior:
+     1. decidir por alguém a partir de um número é o oposto do que a avaliação
+        mensal existe para fazer — a nota vem de gente que observou a pessoa;
+     2. a frase saía do `trend = hist[11] - hist[5]`, e `hist` é um PASSEIO
+        ALEATÓRIO semeado pelo id (`data.ts`). "Em evolução clara nos últimos 6
+        meses" era gerado por sorteio, e ia impresso ao lado da palavra
+        "promoção". */
+
+return { strengths, attention, trend, deptAvg, scoreVsDept: emp.score - deptAvg }
 }
 
 export type EmployeeVM = NonNullable<ReturnType<typeof buildEmployeeVM>>
@@ -245,9 +243,6 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
       videos: emp.classroom.videosCompleted,
       total: emp.classroom.coursesCreated + emp.classroom.coursesCompleted,
     },
-    traj: trajetoriaFor(emp),
-    recon: reconhecimentoFor(emp), reconEmpty: reconhecimentoFor(emp).length === 0,
-    decRec: dec.recommendation,
     decTrend: (dec.trend >= 0 ? '+' : '') + dec.trend, decTrendColor: dec.trend >= 0 ? 'var(--success)' : 'var(--danger)',
     decVsDept: (dec.scoreVsDept >= 0 ? '+' : '') + dec.scoreVsDept, decVsDeptColor: dec.scoreVsDept >= 0 ? 'var(--success)' : 'var(--danger)',
     decStrengths: dec.strengths, decHasStr: dec.strengths.length > 0,

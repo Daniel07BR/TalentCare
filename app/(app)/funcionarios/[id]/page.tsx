@@ -5,7 +5,7 @@ import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
-import { useEmployeePeriod } from '@/lib/ui/employee-period'
+import { type EmployeeMetrics, useEmployeePeriod } from '@/lib/ui/employee-period'
 import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
 import { buildEmployeeVM } from '@/lib/mock/employee'
@@ -17,7 +17,11 @@ import TreinamentosEditor from './TreinamentosEditor'
 
 const TABS: [string, string][] = [
   ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
-  ['formacao', 'Formação'], ['trajetoria', 'Trajetória'], ['reconhecimento', 'Reconhecimento'],
+  /* ⚠️ "Trajetória" e "Reconhecimento" saíram: as duas eram INVENTADAS —
+     promoções, reajustes e prêmios que a pessoa não teve, com datas plausíveis,
+     na ficha dela. Voltam no dia em que houver histórico de cargo e de salário
+     de verdade. Ver `lib/mock/employee.ts`. */
+  ['formacao', 'Formação'],
 ]
 
 // Cor de destaque por nível de formação (chave = rótulo exibido no card, sem acento).
@@ -56,22 +60,30 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 
   // Métricas REAIS no período (rádio/ClassRoom/WhatsApp). Enquanto carrega, usa o
   // acumulado do vm; quando chega, reflete o filtro de dias.
-  const radioHoras = m ? m.radio.horas : vm.radioHoras
-  const radioSessoes = m ? m.radio.sessoes : vm.radioSessoes
+  /* ⚠️⚠️ ENQUANTO CARREGA, NADA em vez do ACUMULADO. Estes fallbacks caíam em
+     `vm.*`, que é a soma de TODA A HISTÓRIA — a mesma armadilha que o relatório
+     de setor tinha (o TI com 59 cursos debaixo de "Últimos 30 dias"), aqui numa
+     versão mais discreta: o número de sempre aparecia por um segundo e era
+     trocado pelo do período. Quem olhasse rápido leria o valor errado, e quem
+     olhasse duas vezes concluiria que a tela pisca sozinha.
+
+     `null` faz cada bloco mostrar "—" até o dado do período chegar. */
+  const radioHoras = m ? m.radio.horas : null
+  const radioSessoes = m ? m.radio.sessoes : null
   const radioUltima = m
     ? (m.radio.ultimaDay ? new Date(`${m.radio.ultimaDay}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' }) : null)
-    : vm.radioUltima
+    : null
   const cr = m
     ? { assistidos: m.classroom.courses, criados: m.classroom.created, videos: m.classroom.videos, total: m.classroom.total }
-    : vm.classroom
-  const wpp = m ? m.whatsapp : vm.whatsapp
+    : { assistidos: null, criados: null, videos: null, total: null }
+  const wpp = m?.whatsapp ?? null
   const cons = m?.consultoria ?? null
   const hd = m?.helpdesk ?? null
   const cd = m?.cide ?? null
   const gr = m?.gerencia ?? null
   const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
-  const ass = m ? m.assiduidade : { assid: vm.assid, atrasos: vm.atrasos, atrasosAbon: vm.atrasosAbon, minutos: vm.minutosAtraso, advertencias: vm.advert, faltas: null, suspensoes: null }
+  const ass = m?.assiduidade ?? null
   const periodo = label
 
   // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
@@ -146,7 +158,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M16.5 4 7 8" /><rect x="3" y="8" width="18" height="12" rx="2" /><circle cx="8" cy="14" r="3" /><path d="M16 12h.01M18 16h.01" />
                   </svg>
-                  {radioHoras.toLocaleString('pt-BR')}h
+                  {radioHoras != null ? `${radioHoras.toLocaleString('pt-BR')}h` : '—'}
                 </div>
               </div>
             </div>
@@ -183,7 +195,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         </div>
       </div>
 
-      {/* Abas + painel de decisão */}
+      {/* Abas + o painel de quem vai avaliar */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', gap: 22, padding: '0 22px', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
@@ -262,7 +274,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   ))}
                 </div>
 
-                {wpp.has && (
+                {wpp?.has && (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2Zm5.6 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.8-.6-3-1.3-5-4.4-5.2-4.6-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.5.1.3.6 1.1 1.4 1.7 1 .9 1.8 1.2 2 1.3.3.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.5.3.1.2.1.6-.1 1.2Z" /></svg>
@@ -431,7 +443,12 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               </>
             )}
 
-            {tab === 'assiduidade' && (
+            {/* ⚠️ A aba só desenha com o dado do PERÍODO — ver o comentário no
+                topo do arquivo sobre não cair no acumulado enquanto carrega. */}
+            {tab === 'assiduidade' && !ass && (
+              <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-mute)', fontSize: 13 }}>Carregando o período…</div>
+            )}
+            {tab === 'assiduidade' && ass && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>Ponto eletrônico · {periodo}</span>
@@ -488,7 +505,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
-                          {radioSessoes.toLocaleString('pt-BR')} {radioSessoes === 1 ? 'sessão' : 'sessões'}
+                          {radioSessoes != null ? `${radioSessoes.toLocaleString('pt-BR')} ${radioSessoes === 1 ? 'sessão' : 'sessões'}` : '—'}
                           {radioUltima ? <> · última escuta {radioUltima}</> : null}
                         </div>
                       </>
@@ -523,12 +540,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                 </div>
                 <div style={{ marginBottom: 22 }}>
-                  {cr.total + cr.videos > 0 ? (
+                  {cr.total == null ? (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>Carregando o período…</div>
+                  ) : (cr.total ?? 0) + (cr.videos ?? 0) > 0 ? (
                     <ClassroomStats stats={[
-                      { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos, color: 'var(--chart-2)' },
-                      { icon: PenLine, label: 'Cursos criados', value: cr.criados, color: 'var(--accent)' },
-                      { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos, color: 'var(--info)' },
-                      { icon: BookOpen, label: 'Total', value: cr.total, color: 'var(--text)' },
+                      { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos ?? 0, color: 'var(--chart-2)' },
+                      { icon: PenLine, label: 'Cursos criados', value: cr.criados ?? 0, color: 'var(--accent)' },
+                      { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos ?? 0, color: 'var(--info)' },
+                      { icon: BookOpen, label: 'Total', value: cr.total ?? 0, color: 'var(--text)' },
                     ]} />
                   ) : (
                     <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no ClassRoom neste período.</div>
@@ -564,70 +583,115 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
               </>
             )}
-
-            {tab === 'trajetoria' && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {vm.traj.map((t, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 14 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <div style={{ width: 11, height: 11, borderRadius: '50%', background: t.dot, marginTop: 4, flex: 'none' }} />
-                      <div style={{ width: 2, flex: 1, background: 'var(--border)', margin: '3px 0' }} />
-                    </div>
-                    <div style={{ paddingBottom: 20, flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 2 }}>{t.tipo} · {t.quando}</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t.titulo}</div>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 1 }}>{t.detalhe}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tab === 'reconhecimento' && (
-              vm.reconEmpty ? (
-                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)', fontSize: 13 }}>Nenhum reconhecimento registrado ainda.</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {vm.recon.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: r.kind, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1205', fontSize: 16, flex: 'none' }}>★</div>
-                      <div><div style={{ fontSize: 13, fontWeight: 600 }}>{r.titulo}</div><div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{r.quando}</div></div>
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
           </div>
         </div>
 
-        {/* Fatores para decisão */}
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--radius)', padding: 20, position: 'sticky', top: 80 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} /><div style={{ fontSize: 14, fontWeight: 700 }}>Fatores para decisão</div></div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Resumo executivo · aumento / promoção</div>
-          <div style={{ background: 'var(--accent-soft)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 18 }}>
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text)' }}>{vm.decRec}</div>
+        {/*
+          ⚠️⚠️ AQUI HAVIA "Fatores para decisão" · Resumo executivo · aumento /
+          promoção", com uma frase automática do tipo "forte candidato a promoção
+          ou bônus". Removido a pedido do dono em 03/09/2026 — e ele tinha mais
+          razão do que sabia: a frase saía de `trend = hist[11] - hist[5]`, e
+          `hist` é um passeio ALEATÓRIO semeado pelo id da pessoa. "Em evolução
+          clara nos últimos 6 meses" era sorteio, impresso ao lado da palavra
+          "promoção".
+
+          Quem decide sobre a carreira de alguém é gente, e o lugar disso é a
+          avaliação mensal. O painel aqui passou a servir a quem vai AVALIAR: o
+          que aconteceu no mês, e o que perguntar na conversa.
+        */}
+        <PainelDoAvaliador vm={vm} m={m} periodo={periodo} />
+      </div>
+    </div>
+  )
+}
+
+/* ============================================================
+   O PAINEL DE QUEM VAI AVALIAR.
+
+   ⚠️⚠️ Substitui "Fatores para decisão · aumento / promoção", que escrevia uma
+   recomendação automática a partir de um número — e o número era sorteado.
+
+   O que fica aqui não decide nada: junta o que aconteceu no mês e o que vale
+   PERGUNTAR na conversa. A nota continua sendo de quem observou a pessoa.
+   ============================================================ */
+function PainelDoAvaliador({ vm, m, periodo }: {
+  vm: ReturnType<typeof buildEmployeeVM> extends null ? never : NonNullable<ReturnType<typeof buildEmployeeVM>>
+  m: EmployeeMetrics | null
+  periodo: string
+}) {
+  const router = useRouter()
+
+  /* O QUE PERGUNTAR — derivado do que os sistemas registraram, e escrito como
+     PERGUNTA, nunca como conclusão. A diferença não é de estilo: "resolveu 40
+     chamados, o dobro do mês passado" é um fato; "excelente produtividade" é um
+     julgamento que cabe a quem avalia, não à tela. */
+  const pontos: { texto: string; cor: string }[] = []
+  if (m) {
+    const c = m.chat
+    if (c.hasChamado && c.chamadosConcluidos > 0) {
+      pontos.push({ texto: `Concluiu ${c.chamadosConcluidos} ${c.chamadosConcluidos === 1 ? 'chamado' : 'chamados'} de outros setores, em média ${c.tempoMedio}. Isso corresponde ao que você via no dia a dia?`, cor: 'var(--chart-3)' })
+    }
+    if (m.helpdesk.has && m.helpdesk.resolved > 0) {
+      pontos.push({ texto: `Resolveu ${m.helpdesk.resolved} ${m.helpdesk.resolved === 1 ? 'chamado' : 'chamados'} no HelpDesk. Vale reconhecer, ou foi tarefa de rotina?`, cor: 'var(--chart-4)' })
+    }
+    if (m.classroom.created > 0) {
+      pontos.push({ texto: `Criou ${m.classroom.created} ${m.classroom.created === 1 ? 'curso' : 'cursos'} no ClassRoom — ensinar alguém conta como colaboração.`, cor: 'var(--chart-2)' })
+    }
+    if (m.whatsapp.has && m.whatsapp.finalizados > 0) {
+      pontos.push({ texto: `Finalizou ${m.whatsapp.finalizados} atendimentos no WhatsApp, em média ${m.whatsapp.tempoMedio}.`, cor: 'var(--chart-1)' })
+    }
+    if (m.gerencia.hasSaida && m.gerencia.servicos > 0) {
+      pontos.push({ texto: `Entregou ${m.gerencia.servicos} serviços na rua, ${m.gerencia.km} km rodados.`, cor: 'var(--chart-2)' })
+    }
+    const a = m.assiduidade
+    if (a.advertencias > 0) {
+      pontos.push({ texto: `${a.advertencias} ${a.advertencias === 1 ? 'advertência' : 'advertências'} no período. Já foi conversado?`, cor: 'var(--danger)' })
+    }
+    if (a.atrasos > 0) {
+      pontos.push({ texto: `${a.atrasos} ${a.atrasos === 1 ? 'atraso' : 'atrasos'} (${a.minutos} min). ${a.atrasosAbon > 0 ? `Outros ${a.atrasosAbon} foram abonados.` : 'Há um motivo conhecido?'}`, cor: 'var(--warning)' })
+    }
+    /* ⚠️ SILÊNCIO NOS SISTEMAS NÃO É INATIVIDADE. Quem não passa pelas oito
+       fontes (Limpeza, Cozinha, quem não tem conta no Nexus) apareceria aqui sem
+       nenhum ponto — e a ausência de linhas se lê como "não fez nada". */
+    if (pontos.length === 0) {
+      pontos.push({
+        texto: 'Os sistemas não registraram atividade desta pessoa no período. Isso não quer dizer que ela não trabalhou — o trabalho dela pode não passar por nenhuma das oito fontes medidas.',
+        cor: 'var(--text-mute)',
+      })
+    }
+  }
+
+  return (
+    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, position: 'sticky', top: 80 }}>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>Antes de avaliar</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2, marginBottom: 16 }}>
+        O que os sistemas registraram · {periodo}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {pontos.map((p, i) => (
+          <div key={i} className="cpop" style={{ animationDelay: `${i * 55}ms`, fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-dim)', background: 'var(--surface-2)', borderLeft: `3px solid ${p.cor}`, borderRadius: 'var(--radius-sm)', padding: '10px 13px' }}>
+            {p.texto}
           </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
-            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 3 }}>Tendência 6m</div><div style={{ fontSize: 18, fontWeight: 700, color: vm.decTrendColor }}>{vm.decTrend}</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 3 }}>vs. setor</div><div style={{ fontSize: 18, fontWeight: 700, color: vm.decVsDeptColor }}>{vm.decVsDept}</div></div>
-          </div>
-          {vm.decHasStr && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Pontos fortes</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
-                {vm.decStrengths.map((s, i) => <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5 }}><span style={{ color: 'var(--text)' }}>↑ {s.label}</span><span style={{ fontWeight: 600, color: 'var(--success)' }}>{s.diff}</span></div>)}
-              </div>
-            </>
-          )}
-          {vm.decHasAtt && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Pontos de atenção</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {vm.decAttention.map((s, i) => <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5 }}><span style={{ color: 'var(--text)' }}>↓ {s.label}</span><span style={{ fontWeight: 600, color: 'var(--danger)' }}>{s.diff}</span></div>)}
-              </div>
-            </>
-          )}
-        </div>
+        ))}
+      </div>
+
+      {/* ⚠️ O botão leva à avaliação DESTA pessoa. Sem ele, o gestor lê a ficha,
+          abre outra aba, procura o nome na fila e recomeça — e a ficha existe
+          justamente para ser lida antes de avaliar. */}
+      <button
+        onClick={() => router.push(`/avaliacoes/${vm.id}`)}
+        className="tc-btn"
+        style={{ width: '100%', marginTop: 18, background: 'var(--accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', padding: '11px 16px', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+      >
+        Avaliar {vm.name.split(' ')[0]}
+      </button>
+
+      {/* ⚠️ O que a tela NÃO faz, dito na tela. Uma ficha cheia de números ao
+          lado de um botão de avaliar sugere que a nota sai deles. */}
+      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 11, lineHeight: 1.5 }}>
+        Estes números são o que os sistemas viram — não são a nota. A nota é sua, e o que ela mede
+        (entrega, prazo, conduta, equipe) nenhum sistema registra.
       </div>
     </div>
   )
