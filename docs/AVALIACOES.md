@@ -192,12 +192,40 @@ SEM_PERMISSAO→ existe na lista, não entra
 `TALENTCARE_ACESSO_ABERTO` fica `off`. Ligar põe ~87 pessoas dentro e **não se
 desfaz**: o que foi visto foi visto.
 
-**E falta uma coisa antes.** As rotas de dado **agregado** —
-`/api/chat-metrics`, `/api/helpdesk-metrics`, `/api/gerencia-metrics`,
-`/api/cide-metrics`, `/api/classroom-metrics`, `/api/consultoria-metrics`,
-`/api/radio-metrics`, `/api/whatsapp-*`, `/api/score-metrics` — devolvem a **empresa
-inteira** para qualquer sessão autenticada. Sem recorte por setor, um `GESTOR` puxa o
-painel dos outros setores pela URL.
+#### As duas dívidas que bloqueavam — ✅ resolvidas em 03/09/2026
+
+**1. O dataset do cliente levava o histórico disciplinar da empresa.**
+`getTalentData()` não filtrava por quem lê, e o `layout` passava tudo ao
+`TalentDataProvider` — no payload de **qualquer** página. Dentro: **732 advertências
+de 73 pessoas, com o motivo escrito**, e 130 dias de atrasos por pessoa. As rotas da
+ficha checavam `podeVer` e por isso ninguém via: a régua protegia a parte *menos*
+sensível. Agora `getTalentData(alcance)` recorta, e o **`motivo` nunca sai do
+servidor** — a lista vem de `/api/employee-metrics`, que confere `podeVer`.
+
+**2. As rotas AGREGADAS devolviam a empresa inteira** para qualquer sessão. Onze
+delas. A régua agora é **uma**, em [`lib/alcance.ts`](../lib/alcance.ts):
+
+```
+alcanceDeQuemLe()  →  { tipo: 'tudo' }  ou  { tipo: 'recorte', … }
+porNexus · porPersonKey · porNome · porDeptNexus   ← os filtros prontos
+```
+
+⚠️ **O alcance sai dos VÍNCULOS, não do setor da pessoa.** O primeiro desenho somava
+"o meu departamento", e o ensaio contra o banco mostrou o efeito: a Ana Carolina,
+`Colaborador` do Fiscal, alcançaria as **31 pessoas do setor** — atividade, atrasos e
+advertências de todo mundo — só por sentar lá. O dado do setor não é de quem trabalha
+nele; é de quem responde por ele.
+
+Medido depois do conserto: Gestor e Sub-encarregado do Fiscal alcançam **31 de 129**;
+a Rosemeire (Limpeza + Cozinha) **6**; um colaborador sem vínculo, **1** — ele mesmo;
+a Diretoria, tudo.
+
+⚠️ O **snapshot do WhatsApp** ("pendentes agora") não se recorta — não tem setor nem
+atendente, é um número só da casa. Fica apenas para quem alcança tudo: meio-número
+seria pior que nenhum.
+
+⚠️ `/api/classroom-courses` **não** foi recortada de propósito: ela devolve o catálogo
+de cursos criados no período, que é artefato público da casa, e não dado por pessoa.
 
 ---
 

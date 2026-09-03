@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
+import { alcanceDeQuemLe, porNexus, porDeptNexus } from '@/lib/alcance'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Atividade do Chat Interno NO PERÍODO, lida do espelho local. Devolve as duas
@@ -9,17 +10,18 @@ import type { Period } from '@/lib/mock/dashboard'
 //   byUser — mensagens e chamados por pessoa
 //   byDept — chamados por setor, nas duas faces (pediu × recebeu)
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
+  /* ⚠️⚠️ ESTA ROTA DEVOLVIA A EMPRESA INTEIRA para qualquer sessão autenticada.
+     O middleware não alcança isto: ele conhece o caminho, e o caminho é igual
+     para todo setor. Ver `lib/alcance.ts`. */
+  const alcance = await alcanceDeQuemLe()
+  if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const range = { day: { gte: fromDay, lte: toDay } }
 
   const [rows, deptRows, primeiro] = await Promise.all([
     prisma.chatDaily.groupBy({
       by: ['nexusUserId'],
-      where: range,
+      where: { ...range, ...porNexus(alcance) },
       _sum: {
         msgCanais: true, msgDiretas: true, msgChamados: true,
         chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true,
@@ -28,7 +30,10 @@ export async function GET(req: NextRequest) {
     }),
     prisma.chatDeptDaily.groupBy({
       by: ['nexusDepartmentId'],
-      where: range,
+      // ⚠️ Esta tabela é por SETOR: a chave é `nexusDepartmentId`, não
+      // `nexusUserId`. Com o filtro errado o `where` viraria uma coluna que não
+      // existe — ou pior, num Prisma mais permissivo, filtro nenhum.
+      where: { ...range, ...porDeptNexus(alcance) },
       _sum: {
         pedidosAbertos: true, pedidosConcluidos: true,
         recebidosAbertos: true, recebidosConcluidos: true, recebidosCancelados: true,
@@ -38,7 +43,9 @@ export async function GET(req: NextRequest) {
     // ⚠️ Desde quando HÁ dado. A tela avisa, senão o filtro de Ano parece bug:
     // o histórico de mensagem vem do import do Mattermost e é muito mais antigo
     // que o dos chamados, que só existem desde 21/08/2026.
-    prisma.chatDaily.aggregate({ _min: { day: true } }),
+    // ⚠️ Recortado também: o dia mais antigo da EMPRESA diria a quem lê desde
+    // quando existe dado de gente que ele não alcança.
+    prisma.chatDaily.aggregate({ where: porNexus(alcance), _min: { day: true } }),
   ])
 
   const byUser = rows.map((r) => ({

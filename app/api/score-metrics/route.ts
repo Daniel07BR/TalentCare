@@ -2,33 +2,42 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
+import { alcanceDeQuemLe, porNexus, porPersonKey, porNome } from '@/lib/alcance'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Sinais do SCORE por pessoa NO PERÍODO (atividade nos sistemas + assiduidade),
 // lidos dos espelhos diários locais. O cálculo do score (percentil por depto,
 // formação, pesos) é feito no cliente por computeScores/withRealScores.
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  /* ⚠️⚠️ A MAIS SENSÍVEL das agregadas: ela devolve a atividade de CADA PESSOA
+     da empresa, e é o que alimenta o score de todo mundo no cliente. Ver
+     `lib/alcance.ts`. */
+  const alcance = await alcanceDeQuemLe()
+  if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const range = { day: { gte: fromDay, lte: toDay } }
 
   const [users, cls, hd, cide, cons, wpp, ger, chat, ponto, adv] = await Promise.all([
-    prisma.user.findMany({ where: { origin: { in: ['nexus', 'staff'] } }, select: { id: true, nexusUserId: true, name: true } }),
-    prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { videos: true, courses: true, created: true } }),
-    prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { opened: true, resolved: true } }),
-    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { atividades: true } }),
-    prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
-    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: range, _sum: { finalizados: true } }),
-    prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
+    prisma.user.findMany({
+      where: alcance.tipo === 'tudo'
+        ? { origin: { in: ['nexus', 'staff'] } }
+        : { origin: { in: ['nexus', 'staff'] }, id: { in: alcance.userIds } },
+      select: { id: true, nexusUserId: true, name: true },
+    }),
+    prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { videos: true, courses: true, created: true } }),
+    prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { opened: true, resolved: true } }),
+    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { atividades: true } }),
+    prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
+    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { ...range, ...porNome(alcance) }, _sum: { finalizados: true } }),
+    prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
     // CHAT INTERNO: só CHAMADO. ⚠️⚠️ Mensagem NÃO entra (decisão do dono,
     // 02/09/2026) — é a métrica mais fácil de subir e a que menos diz sobre
     // entrega; em ordem de grandeza abafaria as outras sete fontes somadas e o
     // score passaria a medir quem mais escreve. Ver `activityOf()`.
-    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: range, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
-    prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: range, _sum: { atrasos: true } }),
-    prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
+    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
+    prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { ...range, ...porPersonKey(alcance) }, _sum: { atrasos: true } }),
+    prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) }, _count: { _all: true } }),
   ])
 
   const clsM = new Map(cls.map((r) => [r.nexusUserId, (r._sum.videos ?? 0) + (r._sum.courses ?? 0) + (r._sum.created ?? 0)]))

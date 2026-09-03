@@ -2,27 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
+import { alcanceDeQuemLe, porPersonKey } from '@/lib/alcance'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Assiduidade (ponto) por pessoa NO PERÍODO, lida dos espelhos locais
 // (assiduidade_daily + disciplina_evento). A página mescla com a identidade
 // (useTalentData) p/ montar leaderboards/por depto respeitando o filtro de dias.
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
+  /* ⚠️⚠️ Devolvia a empresa inteira para qualquer sessão. Ver `lib/alcance.ts`. */
+  const alcance = await alcanceDeQuemLe()
+  if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
 
   const [pontoRows, advRows] = await Promise.all([
     prisma.assiduidadeDaily.groupBy({
       by: ['personKey'],
-      where: { day: { gte: fromDay, lte: toDay } },
+      // ⚠️ `personKey` = `nexusUserId ?? id` — cobre o STAFF sem conta no Nexus.
+      where: { day: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) },
       _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true },
     }),
     prisma.disciplinaEvento.groupBy({
       by: ['personKey'],
-      where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay } },
+      where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) },
       _count: { _all: true },
     }),
   ])

@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
+import { alcanceDeQuemLe, porNexus } from '@/lib/alcance'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Atividade da Gerência por usuário NO PERÍODO, lida do espelho local
 // gerencia_daily. Devolve as duas famílias (execução e escritório) juntas —
 // quem separa é a tela, não a API.
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
+  /* ⚠️⚠️ ESTA ROTA DEVOLVIA A EMPRESA INTEIRA para qualquer sessão autenticada.
+     O middleware não alcança isto: ele conhece o caminho, e o caminho é igual
+     para todo setor. Ver `lib/alcance.ts`. */
+  const alcance = await alcanceDeQuemLe()
+  if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const rows = await prisma.gerenciaDaily.groupBy({
     by: ['nexusUserId'],
-    where: { day: { gte: fromDay, lte: toDay } },
+    where: { day: { gte: fromDay, lte: toDay }, ...porNexus(alcance) },
     _sum: {
       servicos: true, km: true, saidas: true, viagens: true, jornadaMin: true,
       protAbertos: true, protAprovados: true, servCriados: true,
