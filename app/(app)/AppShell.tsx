@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck, MessageSquareText,
-  ClipboardCheck, UserCircle, CalendarDays,
+  ClipboardCheck, UserCircle, CalendarDays, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -101,8 +101,11 @@ const inputData: React.CSSProperties = {
   colorScheme: 'light dark', // o calendário nativo acompanha o tema da conta
 }
 
-function Topbar({ soMeuSetor = false, meusSetores = [], nome = '', me, initials = '' }: {
+function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores = [], nome = '', me, initials = '' }: {
   soMeuSetor?: boolean
+  /** Quem recolheu o menu pode trazê-lo de volta. Quem NUNCA o teve, não. */
+  podeVoltar?: boolean
+  onVoltar?: () => void
   meusSetores?: { id: string; name: string }[]
   nome?: string
   me?: { id: string; cargo: string | null; hasAvatar: boolean }
@@ -142,7 +145,18 @@ function Topbar({ soMeuSetor = false, meusSetores = [], nome = '', me, initials 
       */}
       {soMeuSetor && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
-          <Logo size={30} radius={8} />
+          {/* ⚠️ O botão de VOLTAR só existe para quem recolheu o menu por
+              vontade. Para o gestor, trazer o menu da Diretoria de volta seria
+              devolver o que a régua acabou de tirar. */}
+          {podeVoltar ? (
+            <button onClick={onVoltar} className="tc-btn" aria-label="Mostrar o menu"
+              title="Voltar ao menu da Diretoria — você está vendo como o gestor vê"
+              style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-dim)', cursor: 'pointer', flex: 'none' }}>
+              <PanelLeftOpen size={16} />
+            </button>
+          ) : (
+            <Logo size={30} radius={8} />
+          )}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 0, overflowX: 'auto' }}>
             {meusSetores.map((d) => (
               <Link key={d.id} href={`/departamentos/${d.id}`}
@@ -152,6 +166,14 @@ function Topbar({ soMeuSetor = false, meusSetores = [], nome = '', me, initials 
             <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
             <Link href="/minha-avaliacao" className={'tc-nav' + (pathname === '/minha-avaliacao' ? ' on' : '')} style={navChip}>Meu desempenho</Link>
           </nav>
+          {/* ⚠️ O selo é o que impede o preview de virar confusão: sem ele, quem
+              recolheu o menu ontem abre o sistema hoje e conclui que perdeu
+              acesso — e o preview vira um chamado de suporte. */}
+          {podeVoltar && (
+            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', color: 'var(--accent)', border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)', borderRadius: 20, padding: '3px 9px', whiteSpace: 'nowrap', flex: 'none' }}>
+              VENDO COMO GESTOR
+            </span>
+          )}
         </div>
       )}
 
@@ -255,6 +277,29 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
   me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode
 }) {
   const faltam = useFaltamAvaliar()
+
+  /*
+   * RECOLHER O MENU — e, com ele, ver a tela como o gestor vê.
+   *
+   * ⚠️ Não é só esconder a barra: recolhido, a navegação vira a MESMA barra
+   * enxuta que o gestor recebe (os setores dele, Avaliações, Meu desempenho).
+   * Um preview que mostrasse outra navegação não serviria para conferir nada —
+   * e conferir isso é justamente por que o botão existe.
+   *
+   * ⚠️ Para quem JÁ não tem o menu (gestor, sub-encarregado), não há botão de
+   * voltar: trazer o menu da Diretoria de volta seria dar a ele o que a régua
+   * acabou de tirar.
+   */
+  const [recolhido, setRecolhido] = useState(false)
+  useEffect(() => {
+    try { setRecolhido(localStorage.getItem('tc-menu') === 'off') } catch { /* noop */ }
+  }, [])
+  const alternarMenu = () => {
+    const v = !recolhido
+    setRecolhido(v)
+    try { localStorage.setItem('tc-menu', v ? 'off' : 'on') } catch { /* noop */ }
+  }
+  const semLateral = soMeuSetor || recolhido
   const pathname = usePathname()
   const [settled, setSettled] = useState(false)
   const systemsActive = NAV_SYSTEMS.some((it) => isActive(pathname, it.href))
@@ -277,14 +322,23 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
     <PeriodProvider>
      <TalentDataProvider value={data}>
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
-{!soMeuSetor && (
+{!semLateral && (
         <aside style={{ width: 240, flex: 'none', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
           <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 11 }}>
             <Logo size={34} radius={9} />
-            <div style={{ lineHeight: 1.15 }}>
+            <div style={{ lineHeight: 1.15, flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-.2px' }}>TalentCare</div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Indicadores</div>
             </div>
+            <button
+              onClick={alternarMenu}
+              className="tc-btn"
+              aria-label="Recolher o menu"
+              title="Recolher o menu — é assim que o gestor vê o sistema"
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-mute)', cursor: 'pointer', flex: 'none' }}
+            >
+              <PanelLeftClose size={16} />
+            </button>
           </div>
 
           <nav style={{ flex: 1, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
@@ -355,7 +409,7 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
         )}
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <Topbar soMeuSetor={soMeuSetor} meusSetores={meusSetores} nome={name} me={me} initials={initials} />
+          <Topbar soMeuSetor={semLateral} podeVoltar={!soMeuSetor} onVoltar={alternarMenu} meusSetores={meusSetores} nome={name} me={me} initials={initials} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px 56px' }}>{children}</main>
         </div>
       </div>

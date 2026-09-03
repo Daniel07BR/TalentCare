@@ -33,7 +33,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
    * ver `AppShell`. Tirar tudo os deixaria presos numa página só.
    */
   const soMeuSetor = role !== 'ADMIN'
-  const meusSetores = soMeuSetor && uid
+  /* ⚠️ Calculado SEMPRE, inclusive para a Diretoria: é o que permite recolher o
+     menu e ver a tela como o gestor a vê. Um preview que mostra uma navegação
+     diferente da real não serve para conferir nada. */
+  const meusSetores = uid
     ? await (async () => {
         const v = await prisma.setorAvaliador.findMany({ where: { userId: uid }, select: { departmentId: true } })
         const ids = [...new Set([...v.map((x) => x.departmentId), ...(meDept ? [meDept] : [])])]
