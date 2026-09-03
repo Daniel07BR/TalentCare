@@ -52,6 +52,7 @@ dívida já quitada faz desconfiar do resto.
 | [`docs/AVALIACOES.md`](AVALIACOES.md) | mexer em avaliação, permissão ou acesso |
 | [`docs/FONTES.md`](FONTES.md) | mexer em qualquer número vindo dos 8 sistemas |
 | [`docs/PERIODO-E-DEPLOY.md`](PERIODO-E-DEPLOY.md) | **antes do primeiro deploy** |
+| [`docs/AGENTE-CRITICO.md`](AGENTE-CRITICO.md) | **antes de entregar qualquer tela** |
 | [`CHANGELOG.md`](../CHANGELOG.md) | entender por que algo está do jeito que está |
 
 ## 4. ⚠️ O deploy tem duas armadilhas que já custaram horas
@@ -112,11 +113,11 @@ O Daniel estava seguindo por **telas e relatórios**. Pendências conhecidas:
   opções e uma recomendação. Ele responde rápido e direto.
 - Ele **aceita más notícias**: quando você achar que um número está mentindo, diga com
   a medição na mão. Foi assim que cinco blocos de ficção saíram do sistema.
-- Ele valoriza **um agente crítico** revisando a entrega. Foi usado nesta sessão com
-  duas regras que funcionaram: dar-lhe o **briefing** (o que é medição e o que é
-  ficção, senão ele pede gráficos mais ricos para dados falsos) e uma **regra de
-  parada** — só reportar o que mudaria a decisão de quem usa a tela, e dizer quando um
-  bloco acabou.
+- Ele valoriza **um agente crítico** revisando a entrega, e pediu isso
+  explicitamente. **O briefing pronto e o laço estão em
+  [`docs/AGENTE-CRITICO.md`](AGENTE-CRITICO.md)** — use-o, não improvise: crítico sem
+  briefing pede gráfico mais rico para dado falso, e sem regra de parada o laço nunca
+  fecha.
 
 ## 8. ⚠️ O aviso mais importante
 
