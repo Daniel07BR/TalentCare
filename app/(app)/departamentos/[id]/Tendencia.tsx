@@ -1,6 +1,7 @@
 'use client'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import { geomLine } from '@/lib/mock/data'
+import Avatar from '../../Avatar'
 
 /* ============================================================
    A TENDÊNCIA — atividade mês a mês, REAL.
@@ -27,10 +28,13 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
     return (
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade mês a mês</div>
+        {/* ⚠️ "Ainda não há meses suficientes" é uma promessa — e para Limpeza,
+            Cozinha e Pousada ela nunca se cumpre: o trabalho delas não passa por
+            nenhuma das oito fontes. Prometer o que não vem é pior que dizer não. */}
         <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-          Ainda não há meses suficientes para desenhar uma tendência
-          {s.length > 0 && ` (há ${s.length} ${s.length === 1 ? 'mês' : 'meses'} com registro)`}.
-          Dois pontos ligados por uma reta parecem uma tendência e não são.
+          {s.length === 0
+            ? 'O trabalho deste setor não passa por nenhuma das oito fontes medidas — não haverá série de atividade, e isso não é uma falha de registro.'
+            : `Há ${s.length} ${s.length === 1 ? 'mês' : 'meses'} com registro: ainda não dá para desenhar tendência. Dois pontos ligados por uma reta parecem uma tendência e não são.`}
         </div>
       </div>
     )
@@ -62,7 +66,10 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
         )}
       </div>
 
-      <svg viewBox="0 0 300 90" preserveAspectRatio="none" style={{ width: '100%', height: 110, marginTop: 12, display: 'block' }}>
+      {/* ⚠️ `preserveAspectRatio="none"` num viewBox 300×90 esticado para ~700px
+          deixava o traço com espessura desigual e transformava os pontos em
+          ELIPSES. `non-scaling-stroke` mantém a espessura sob o esticamento. */}
+      <svg viewBox="0 0 300 90" preserveAspectRatio="none" style={{ width: '100%', height: 110, marginTop: 12, display: 'block', overflow: 'visible' }}>
         <defs>
           <linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-2)" stopOpacity="0.28" />
@@ -70,9 +77,14 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
           </linearGradient>
         </defs>
         <path d={g.area} fill="url(#tgrad)" />
-        <path className="cdraw" style={{ ['--len' as string]: 600 }} d={g.line} fill="none" stroke="var(--chart-2)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* ⚠️ `--len` era 600 num caminho de ~350: a linha terminava de ser
+            desenhada em 60% da duração e o resto era tempo parado. */}
+        <path className="cdraw" style={{ ['--len' as string]: 380 }} vectorEffect="non-scaling-stroke"
+          d={g.line} fill="none" stroke="var(--chart-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {g.pts.map(([x, y], i) => (
-          <circle key={i} className="cpop" style={{ animationDelay: `${i * 45}ms` }} cx={x} cy={y} r={i === g.pts.length - 1 ? 3.4 : 2}
+          <circle key={i} className="cpop" style={{ animationDelay: `${i * 45}ms` }} cx={x} cy={y}
+            r={i === g.pts.length - 1 ? 3.4 : 2} vectorEffect="non-scaling-stroke"
+            transform={`translate(${x} ${y}) scale(0.34 1) translate(${-x} ${-y})`}
             fill={i === g.pts.length - 1 ? 'var(--chart-2)' : 'var(--surface)'} stroke="var(--chart-2)" strokeWidth="1.6">
             <title>{`${mesCurto(s[i].mes)}: ${s[i].atividade.toLocaleString('pt-BR')} ações`}</title>
           </circle>
@@ -120,16 +132,64 @@ export function Turnover({ m }: { m: DeptMetrics }) {
       <div style={{ height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
         <div className="cbar" style={{ height: '100%', width: `${Math.min(100, t.taxa12m)}%`, background: alto ? 'var(--danger)' : 'var(--warning)', borderRadius: 20 }} />
       </div>
-      {t.saidasNoPeriodo > 0 && (
-        <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 14, lineHeight: 1.6 }}>
-          <b style={{ color: 'var(--text)' }}>
-            {t.saidasNoPeriodo} {t.saidasNoPeriodo === 1 ? 'saída' : 'saídas'} dentro do período
-          </b>
-          {': '}{t.nomesQueSairam.join(', ')}
-        </div>
+      {/*
+        QUEM saiu, com foto e nome (pedido do dono, 03/09/2026).
+
+        ⚠️ Duas listas porque respondem coisas diferentes. `noPeriodo` obedece ao
+        filtro — é o que foi pedido. Mas a TAXA acima é de 12 meses: com o filtro
+        em 7 dias a primeira lista vem vazia e os 40% ficariam sem ninguém por
+        trás, que é exatamente o número virar abstração.
+      */}
+      {t.noPeriodo.length > 0 && (
+        <ListaSaiu titulo={`${t.noPeriodo.length} ${t.noPeriodo.length === 1 ? 'saída dentro do período' : 'saídas dentro do período'}`} gente={t.noPeriodo} />
+      )}
+      {t.noPeriodo.length === 0 && t.em12m.length > 0 && (
+        <ListaSaiu titulo={`Ninguém saiu no período · ${t.em12m.length} nos últimos 12 meses`} gente={t.em12m} esmaecido />
       )}
       {t.saidas12m === 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 14 }}>Ninguém saiu deste setor em 12 meses.</div>
+      )}
+    </div>
+  )
+}
+
+/** Quem saiu — foto, nome, cargo e a data. */
+function ListaSaiu({ titulo, gente, esmaecido }: {
+  titulo: string
+  gente: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }[]
+  esmaecido?: boolean
+}) {
+  // ⚠️ Sem link para a ficha: a pessoa saiu, e a ficha dela é de quem está aqui.
+  // Um clique que leva a um perfil de desligado é uma promessa que a tela não
+  // cumpre bem.
+  const visiveis = gente.slice(0, 6)
+  const resto = gente.length - visiveis.length
+  return (
+    <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
+        {titulo}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, opacity: esmaecido ? 0.78 : 1 }}>
+        {visiveis.map((p, i) => (
+          <div key={p.id} className="cpop" style={{ animationDelay: `${i * 45}ms`, display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Em escala de cinza: é um retrato de quem não está mais aqui. */}
+            <span style={{ filter: 'grayscale(1)', opacity: 0.85, display: 'flex' }}>
+              <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--text-mute)" size={28} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{p.cargo}</div>
+            </div>
+            {p.quando && (
+              <span style={{ fontSize: 11, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>
+                {new Date(`${p.quando}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      {resto > 0 && (
+        <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 8 }}>e mais {resto} {resto === 1 ? 'pessoa' : 'pessoas'}</div>
       )}
     </div>
   )

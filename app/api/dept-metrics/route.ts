@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
-import { quemEh } from '@/lib/avaliacoes/regua'
+import { quemEh, filtroDeAvaliaveis } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 
 /* ============================================================
@@ -59,6 +59,14 @@ export async function GET(req: NextRequest) {
 
   const porNexus = { nexusUserId: { in: nx }, ...range }
   const hojeRef = new Date()
+
+  /* ⚠️⚠️ A população avaliável vem do MESMO filtro da fila (`filtroDeAvaliaveis`).
+     Antes esta rota usava `ativos.length` ("ativo hoje") e as duas divergiam:
+     medido em 03/09/2026, Fiscal 22 aqui × 21 na fila, Financeiro 5 × 4. O selo
+     do menu diria 4 e a faixa vermelha do setor diria 5, sobre a mesma coisa. */
+  const avaliaveis = await prisma.user.count({
+    where: { departmentId: dept.id, ...filtroDeAvaliaveis(competenciaAnterior()) },
+  })
 
   const [cls, hd, cide, cons, radio, ger, chat, wpp, assid, adv, avals] = await Promise.all([
     prisma.classroomDaily.aggregate({ where: porNexus, _sum: { videos: true, courses: true, created: true } }),
@@ -133,14 +141,27 @@ export async function GET(req: NextRequest) {
   const saidasNoPeriodo = pessoas.filter(
     (p) => p.leftAt && p.leftAt >= new Date(`${fromDay}T00:00:00`) && p.leftAt <= new Date(`${toDay}T23:59:59`),
   )
-  const saidas12m = pessoas.filter((p) => p.leftAt && p.leftAt >= doze).length
+  const lista12m = pessoas.filter((p) => p.leftAt && p.leftAt >= doze)
   // Denominador = quadro ativo + quem saiu no período (o headcount que existiu).
-  const baseTurnover = ativos.length + saidas12m
+  const baseTurnover = ativos.length + lista12m.length
+  /* Quem saiu, COM NOME E FOTO (pedido do dono, 03/09/2026).
+   * ⚠️ Duas listas, porque respondem coisas diferentes: `noPeriodo` obedece ao
+   * filtro (é o que ele pediu) e `em12m` é a gente por trás da TAXA, que é de 12
+   * meses. Com o filtro em 7 dias a primeira vem vazia e a taxa continua em 40% —
+   * mostrar só a primeira deixaria os 40% sem ninguém por trás. */
+  const quemSaiu = (l: typeof pessoas) => l
+    .sort((a, b) => (b.leftAt?.getTime() ?? 0) - (a.leftAt?.getTime() ?? 0))
+    .map((p) => ({
+      id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador',
+      hasAvatar: !!p.avatarUrl,
+      quando: p.leftAt ? p.leftAt.toISOString().slice(0, 10) : null,
+    }))
   const turnover = {
     saidasNoPeriodo: saidasNoPeriodo.length,
-    nomesQueSairam: saidasNoPeriodo.map((p) => p.name),
-    saidas12m,
-    taxa12m: baseTurnover > 0 ? Math.round((saidas12m / baseTurnover) * 1000) / 10 : 0,
+    noPeriodo: quemSaiu(saidasNoPeriodo),
+    em12m: quemSaiu(lista12m),
+    saidas12m: lista12m.length,
+    taxa12m: baseTurnover > 0 ? Math.round((lista12m.length / baseTurnover) * 1000) / 10 : 0,
   }
 
   /* ── SÉRIE MENSAL REAL de atividade ───────────────────────────────────────
@@ -407,7 +428,7 @@ export async function GET(req: NextRequest) {
     avaliacao: {
       competencia: competenciaAnterior(),
       publicadas: avals.length,
-      avaliaveis: ativos.length,
+      avaliaveis,
       media: medias.length ? Math.round((medias.reduce((a, b) => a + b, 0) / medias.length) * 10) / 10 : null,
       porCriterio: [...porCriterio.entries()].map(([criterio, c]) => ({
         criterio, media: Math.round((c.soma / c.n) * 10) / 10, n: c.n,

@@ -76,6 +76,24 @@ a{color:inherit;text-decoration:none;}
 @media (prefers-reduced-motion){.cbar,.crise,.cdraw,.cpop,.cnum{animation:none;}}
 
 /* ============================================================
+   RELATÓRIO DE SETOR — foco visível e adaptação a telas estreitas.
+   ⚠️ A Diretoria abre este relatório no celular, e a tela era toda de grid fixo
+   (1.35fr/1fr, repeat(3,1fr), colunas em px): a coluna do nome colapsava e a
+   faixa de alerta virava três cartõezinhos ilegíveis.
+   ============================================================ */
+.linha-pessoa:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+@media (max-width:900px){
+  /* Uma coluna: as duas do topo eram lidas em par e em telas estreitas viravam
+     um degrau. Empilhadas, a faixa de ação continua sendo a primeira coisa. */
+  .dept-topo,.dept-duplo{grid-template-columns:1fr!important;}
+  .cab-pessoas{display:none!important;}
+  /* Sem o cabeçalho, a linha vira duas faixas: pessoa em cima, números embaixo. */
+  .linha-pessoa{grid-template-columns:minmax(0,1fr) 62px 82px!important;}
+  .linha-pessoa>*:nth-child(3),.linha-pessoa>*:nth-child(5){display:none!important;}
+  .card-fonte{grid-template-columns:1fr!important;}
+}
+
+/* ============================================================
    LEGADO — telas existentes (login, /usuarios, acesso-negado)
    Mantidas até serem portadas para o novo design system.
    ============================================================ */

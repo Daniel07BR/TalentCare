@@ -20,6 +20,12 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   if (!dep) return null
   // Ranking de pessoas do setor: só ativos (desligados não entram).
   const emps = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado' && e.hasScore).sort((a, b) => b.score - a.score)
+  /* ⚠️⚠️ Quantas pessoas SUSTENTAM o score do setor. Sem isso, um setor onde
+     ninguém tem base (produtividade não se aplica, sem formação informada, sem
+     registro de ponto) cai em `score = 0` e a tela imprime "0 /100" em 42px —
+     um zero fabricado no lugar mais nobre da página. Medido em 03/09/2026: a
+     Pousada é exatamente esse caso. `null ≠ zero` vale aqui também. */
+  const totalDoSetor = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado').length
   const ativos = data.employees.filter((e) => e.status !== 'Desligado' && e.hasScore)
   const compAvg = ativos.length ? Math.round(ativos.reduce((a, e) => a + e.score, 0) / ativos.length) : dep.score
   const hl = geomLine(dep.spark, 300, 84, 8)
@@ -43,6 +49,8 @@ export function deptDetailVM(data: TalentData, deptId: string) {
     { label: 'vs. média empresa', value: (dep.score - compAvg >= 0 ? '+' : '') + (dep.score - compAvg), unit: 'pts', color: dep.score - compAvg >= 0 ? 'var(--success)' : 'var(--danger)' },
   ]
   return {
+    comScore: emps.length,
+    totalDoSetor,
     name: dep.nome, kpis, ranking, histLine: hl.line, histArea: hl.area, compAvg, score: dep.score,
     barSelf: dep.score + '%', barComp: compAvg + '%', heat: heatmapFor([...deptDays.values()]),
     classroom: {

@@ -54,7 +54,11 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   // Clicar num alerta leva ao bloco que o explica — alerta que não leva a lugar
   // nenhum obriga o gestor a caçar na página o que o número quis dizer.
   const irPara = (chave: string) => {
-    const destino = chave === 'avaliar' || chave === 'abaixo' ? 'sec-pessoas'
+    /* ⚠️ "Faltam avaliar" levava à tabela, onde a resposta é uma fileira de
+       chips "sem nota". O destino útil é o bloco da avaliação — e o alerta de
+       nota baixa é que pertence à tabela, onde estão os nomes. */
+    const destino = chave === 'avaliar' ? 'sec-avaliacao'
+      : chave === 'abaixo' ? 'sec-pessoas'
       : chave === 'turnover' ? 'sec-tendencia' : 'sec-assiduidade'
     document.getElementById(destino)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -110,7 +114,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         headcount não pedem nada de ninguém; "quatro pessoas sem avaliação e duas
         com advertência" pede — e por isso vem primeiro.
       */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 16, alignItems: 'start', marginBottom: 16 }}>
+      <div className="dept-topo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 16, alignItems: 'start', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>
             Relatório do setor · <b>{label}</b>
@@ -124,12 +128,31 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
+          {/* ⚠️ 28px e não 42: o score é CONTEXTO para ler o resto, e estava
+              roubando o olho do que pede ação (a faixa ao lado, em 25px). */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span className="cnum" style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-2px', color: vm.kpis[0].color as string, lineHeight: 1 }}>{vm.score}</span>
-            <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/100 score do setor</span>
+            {vm.comScore > 0 ? (
+              <>
+                <span className="cnum" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1.2px', color: vm.kpis[0].color as string, lineHeight: 1 }}>{vm.score}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>/100 score do setor</span>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--text-mute)', lineHeight: 1 }}>—</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>sem base para score</span>
+              </>
+            )}
           </div>
+          {/* ⚠️ De quantas pessoas o score fala. Em setor não medido ele é
+              composto só de assiduidade + formação — régua diferente da dos
+              setores medidos, comparada lado a lado com a média da empresa. */}
+          {vm.comScore > 0 && vm.comScore < vm.totalDoSetor && (
+            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 5 }}>
+              cobre {vm.comScore} de {vm.totalDoSetor} pessoas · o resto não tem base para nota
+            </div>
+          )}
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 11 }}>
-            <Barra nome={vm.name} valor={vm.score} largura={vm.barSelf} cor="var(--accent)" />
+            {vm.comScore > 0 && <Barra nome={vm.name} valor={vm.score} largura={vm.barSelf} cor="var(--accent)" />}
             <Barra nome="Média da empresa" valor={vm.compAvg} largura={vm.barComp} cor="var(--text-mute)" esmaecido />
           </div>
           <div style={{ display: 'flex', gap: 22, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
@@ -137,12 +160,14 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
               <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Pessoas</div>
               <div className="cnum" style={{ fontSize: 18, fontWeight: 700 }}>{m ? m.equipe.ativos : vm.kpis[1].value}</div>
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>vs. empresa</div>
-              <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: vm.score - vm.compAvg >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                {vm.score - vm.compAvg >= 0 ? '+' : ''}{vm.score - vm.compAvg} pts
+            {vm.comScore > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>vs. empresa</div>
+                <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: vm.score - vm.compAvg >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                  {vm.score - vm.compAvg >= 0 ? '+' : ''}{vm.score - vm.compAvg} pts
+                </div>
               </div>
-            </div>
+            )}
             {m && (
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Rotatividade</div>
@@ -156,21 +181,26 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
       </div>
 
       {/* 3 · AS PESSOAS — o coração do relatório */}
+      <Tarja>As pessoas</Tarja>
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
         {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} />}
       </div>
 
       {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais */}
       {m && (
-        <div id="sec-tendencia" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+        <div id="sec-tendencia" className="dept-duplo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, marginBottom: 16, alignItems: 'start' }}>
           <Tendencia m={m} />
           <Turnover m={m} />
         </div>
       )}
 
-      <div id="sec-avaliacao" />
-      {m && <Avaliacao m={m} />}
+      {/* ⚠️ Nove cartões de peso idêntico depois da dobra era onde o "monte de
+          dados jogados" sobrevivia. As tarjas dão ritmo e dizem em que assunto o
+          leitor está — sem mudar nada do conteúdo. */}
+      <Tarja>O que aconteceu</Tarja>
+      <div id="sec-avaliacao">{m && <Avaliacao m={m} />}</div>
       {m && <Atividade m={m} />}
+      <Tarja>Assiduidade e contexto da equipe</Tarja>
       <div id="sec-assiduidade">{m && <Assiduidade m={m} />}</div>
       {m && <Equipe m={m} />}
 
@@ -509,4 +539,13 @@ function Barra({ nome, valor, largura, cor, esmaecido }: {
 const voltar: React.CSSProperties = {
   background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer',
   fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18,
+}
+
+/** Tarja de seção. Dá ritmo à página sem competir com os títulos dos cartões. */
+function Tarja({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.7px', textTransform: 'uppercase', color: 'var(--text-mute)', margin: '4px 0 10px 2px' }}>
+      {children}
+    </div>
+  )
 }

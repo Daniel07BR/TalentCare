@@ -149,6 +149,30 @@ export function quemAvaliaEssa(
 export const podeGerirAvaliadores = (quem: Quem) => quem.role === 'ADMIN'
 
 /**
+ * QUEM devia ser avaliado numa competência — a população, e só ela.
+ *
+ * ⚠️⚠️ Exportada porque o relatório de setor tinha a SUA PRÓPRIA conta
+ * (`ativos.length`, "quem está ativo hoje") e as duas divergiam: medido em
+ * 03/09/2026, o Fiscal contava 22 aqui e 21 na fila, o Financeiro 5 e 4. O selo
+ * do menu diria 4 e a faixa vermelha do setor diria 5, sobre a mesma coisa.
+ *
+ * As três regras que a fila aplica e a outra conta não aplicava: ativo no FIM da
+ * competência (quem trabalhou agosto e saiu em setembro ainda merece a nota),
+ * admitido antes do dia 16 (cobrar do gestor quem chegou dia 28 é cobrar o
+ * impossível) e fora do `foraDoDiretorio` (conta de sistema não é gente).
+ */
+export function filtroDeAvaliaveis(competencia: string) {
+  const { fim } = limitesDaCompetencia(competencia)
+  const corteAdmissao = new Date(fim.getFullYear(), fim.getMonth(), 16)
+  return {
+    origin: { in: ['nexus', 'staff'] },
+    foraDoDiretorio: false,
+    OR: [{ leftAt: null }, { leftAt: { gt: fim } }],
+    entryDate: { lt: corteAdmissao },
+  }
+}
+
+/**
  * A FILA de uma competência: quem devia ter sido avaliado e quem já foi.
  *
  * ⚠️⚠️ "Quem falta" é DERIVADO — a lista de avaliáveis MENOS quem tem avaliação
@@ -166,10 +190,6 @@ export const podeGerirAvaliadores = (quem: Quem) => quem.role === 'ADMIN'
  *    impossível).
  */
 export async function filaDaCompetencia(quem: Quem, competencia: string) {
-  const { fim } = limitesDaCompetencia(competencia)
-  // Corte da admissão: dia 15 da competência.
-  const corteAdmissao = new Date(fim.getFullYear(), fim.getMonth(), 16)
-
   const alcance =
     quem.escopo.tipo === 'tudo'
       ? {}
@@ -180,23 +200,8 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
   const [pessoas, avaliacoes, avaliadores, deptsDiretoria, todosNomes] = await Promise.all([
     prisma.user.findMany({
       where: {
-        origin: { in: ['nexus', 'staff'] },
+        ...filtroDeAvaliaveis(competencia),
         ...alcance,
-        // Ativo no fim da competência: ou nunca saiu, ou saiu depois dela.
-        OR: [{ leftAt: null }, { leftAt: { gt: fim } }],
-        /*
-         * ⚠️⚠️ Quem SUMIU do diretório fica de fora, e isso não é o mesmo que
-         * "foi desligado". A conta `Axis Certificados` (certificado digital, do
-         * setor `Sistemas`, que o Nexus já exclui do diretório) aparecia aqui
-         * como se fosse gente: o sync a desligou, mas carimbou uma data de saída
-         * INVENTADA — o instante em que percebeu a ausência —, e a linha acima
-         * leu isso como "estava ativa durante a competência".
-         *
-         * Quem foi desligado de verdade continua entrando, e deve: trabalhou o
-         * mês e merece a avaliação dele.
-         */
-        foraDoDiretorio: false,
-        entryDate: { lt: corteAdmissao },
       },
       select: {
         id: true, name: true, jobTitle: true, avatarUrl: true,

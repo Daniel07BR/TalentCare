@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PessoaDoSetor } from '@/lib/ui/dept-period'
 import { ancoraDe } from '@/lib/avaliacoes/criterios'
+import { ChevronRight } from 'lucide-react'
 import Avatar from '../../Avatar'
 
 /* ============================================================
@@ -74,7 +75,9 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
             {' · '}atividade e atrasos no período ({periodo}) · nota de {competencia}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 3, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
+        {/* ⚠️ Com uma pessoa não há o que ordenar, e o segmentado só ocupa
+            espaço prometendo uma comparação que não existe. */}
+        <div style={{ display: pessoas.length < 2 ? 'none' : 'flex', gap: 3, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
           {COLUNAS.map((c) => {
             const inerte = c.key === 'nota' && semNotas
             return (
@@ -89,7 +92,19 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
         </div>
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      {/* ⚠️ CABEÇALHO. As três colunas eram identificadas só pelo segmentado de
+          ordenação, que fica no canto DIREITO — alinhado sobre as ocorrências,
+          não sobre as colunas que nomeia. O leitor descobria o que era o "8.4"
+          pela cor. */}
+      <div className="cab-pessoas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 70px minmax(0,1fr) 104px 14px', gap: 14, padding: '0 10px 8px', borderBottom: '1px solid var(--border-soft)', marginTop: 16 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>Pessoa</span>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'center' }}>Nota</span>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>Atividade no período</span>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'right' }}>Ocorrências</span>
+        <span />
+      </div>
+
+      <div>
         {ordenadas.map((p, i) => {
           /* ⚠️ O selo dourado "TOPO" premiava quem tinha MAIS ATRASOS quando a
              ordenação era por atraso — a condição foi escrita para acender
@@ -102,19 +117,26 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
             : ordem === 'atividade' ? (p.atividade > 0 ? { texto: 'MAIS ATIVO', cor: 'var(--accent)' } : null)
             : (p.atrasos > 0 ? { texto: 'MAIS ATRASOS', cor: 'var(--warning)' } : null)
           return (
-            <div
+            /* ⚠️ Era `<div onClick>` com a classe `crise` — que é `scaleY` a
+               partir do centro: cada uma das 22 linhas se ESTICAVA
+               verticalmente, com o texto esmagado. Agora é `<button>` (teclado
+               e foco) com `cnum`, que é uma entrada discreta. Uma lista de
+               nomes de pessoas numa tela de aumento não deve saltar. */
+            <button
               key={p.id}
-              className="tc-row crise"
+              type="button"
+              className="tc-row cnum linha-pessoa"
               onClick={() => router.push(`/funcionarios/${p.id}`)}
               style={{
-                animationDelay: `${Math.min(i, 12) * 35}ms`, transformOrigin: 'left center',
-                display: 'grid', gridTemplateColumns: '1fr 78px 1fr 96px',
-                gap: 14, alignItems: 'center', padding: '10px 10px',
+                animationDelay: `${Math.min(i, 12) * 30}ms`,
+                display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 70px minmax(0,1fr) 104px 14px',
+                gap: 14, alignItems: 'center', padding: '10px', width: '100%',
+                background: 'transparent', border: 'none', textAlign: 'left', fontFamily: 'inherit',
                 borderBottom: '1px solid var(--border-soft)', cursor: 'pointer', borderRadius: 6,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                <Avatar id={p.id} hasAvatar initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={32} />
+                <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={32} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {p.nome}
@@ -177,7 +199,9 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>—</span>
                 )}
               </div>
-            </div>
+              {/* Diz que a linha leva a algum lugar sem depender do hover. */}
+              <ChevronRight size={14} color="var(--text-mute)" />
+            </button>
           )
         })}
       </div>
@@ -186,7 +210,7 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
         {mediaNota != null && (
           <span>Média do setor: <b style={{ color: ancoraDe(mediaNota).color }}>{mediaNota.toFixed(1)}</b> · {comNota.length} de {pessoas.length} avaliadas</span>
         )}
-        <span>A barra de atividade compara <b>dentro deste setor</b> — o cheio é quem mais registrou aqui.</span>
+        {pessoas.length > 1 && <span>A barra de atividade compara <b>dentro deste setor</b> — o cheio é quem mais registrou aqui.</span>}
       </div>
     </div>
   )

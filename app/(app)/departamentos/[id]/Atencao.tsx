@@ -144,7 +144,9 @@ export function Atencao({ m, abaixoDoEsperado, atendeEmParte, ehAdmin, onIr }: {
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 9 }}>
         Precisa de atenção
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(itens.length, 3)}, 1fr)`, gap: 10 }}>
+      {/* ⚠️ Um alerta só ocupava a largura toda (740px para um "2 atrasos" de
+          25px). `auto-fit` com teto deixa o cartão do tamanho do que ele diz. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(178px, 250px))', gap: 10 }}>
         {itens.map((it, i) => (
           <button
             key={it.chave}

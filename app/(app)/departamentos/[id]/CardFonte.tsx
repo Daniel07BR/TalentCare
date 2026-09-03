@@ -47,7 +47,7 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, numeros, 
       </div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: ranking.length ? 'minmax(0,1.15fr) minmax(0,1fr)' : '1fr', gap: 22, alignItems: 'start' }}>
+      <div className="card-fonte" style={{ display: 'grid', gridTemplateColumns: ranking.length ? 'minmax(0,1.15fr) minmax(0,1fr)' : '1fr', gap: 22, alignItems: 'start' }}>
         {/* ── ESQUERDA: quem fez ────────────────────────────────────────── */}
         {ranking.length > 0 && (
           <div>

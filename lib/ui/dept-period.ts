@@ -23,7 +23,13 @@ export type DeptMetrics = {
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
   ehAdmin: boolean
   /** Turnover REAL. `taxa12m` não acompanha o filtro — taxa só diz algo em 12 meses. */
-  turnover: { saidasNoPeriodo: number; nomesQueSairam: string[]; saidas12m: number; taxa12m: number }
+  turnover: {
+    saidasNoPeriodo: number; saidas12m: number; taxa12m: number
+    /** Quem saiu DENTRO do filtro. */
+    noPeriodo: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }[]
+    /** Quem saiu em 12 meses — a gente por trás da TAXA. */
+    em12m: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }[]
+  }
   /** Atividade real mês a mês, do primeiro mês COM registro. */
   serie: { mes: string; atividade: number }[]
   period: string; fromDay: string; toDay: string; dias: number; label: string
