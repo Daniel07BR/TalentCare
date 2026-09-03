@@ -13,7 +13,10 @@ export type AssidPeriodo = {
   janelaComPonto: boolean
   /** "ponto importado até 25/06/2026" — o que a tela mostra no lugar do número. */
   motivoSemPonto: string | null
-  /** Último dia de ponto importado (AAAA-MM-DD), p/ o rótulo de frescor. */
+  /** Primeiro e último dia de ponto importado (AAAA-MM-DD). ⚠️ As DUAS pontas:
+   *  a sparkline precisa saber quais buckets a cobertura alcança, não só se a
+   *  janela toca a cobertura em algum ponto. */
+  pontoDesde: string | null
   pontoAte: string | null
   loading: boolean
   /**
@@ -34,7 +37,7 @@ export type AssidPeriodo = {
 // do ponto nunca alcançou volta como um Map vazio, e Map vazio se lê como "zero
 // atraso para todo mundo" — a resposta mais tranquilizadora e a única errada.
 const VAZIO: Omit<AssidPeriodo, 'loading'> = {
-  map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoAte: null, erro: false,
+  map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoDesde: null, pontoAte: null, erro: false,
 }
 
 export function useAssiduidadePeriod(): AssidPeriodo {
@@ -49,7 +52,8 @@ export function useAssiduidadePeriod(): AssidPeriodo {
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
       .then((d: {
         byPerson: Row[]; porDia?: { day: string; atrasos: number }[]
-        janelaComPonto?: boolean; motivoSemPonto?: string | null; pontoAte?: string | null
+        janelaComPonto?: boolean; motivoSemPonto?: string | null
+        pontoDesde?: string | null; pontoAte?: string | null
       }) => {
         if (!alive) return
         const m: PeriodAssid = new Map()
@@ -61,6 +65,7 @@ export function useAssiduidadePeriod(): AssidPeriodo {
           porDia: d.porDia ?? [],
           janelaComPonto: d.janelaComPonto ?? false,
           motivoSemPonto: d.motivoSemPonto ?? null,
+          pontoDesde: d.pontoDesde ?? null,
           pontoAte: d.pontoAte ?? null,
           erro: false,
         })

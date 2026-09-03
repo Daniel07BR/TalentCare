@@ -31,7 +31,14 @@ export type EmployeeMetrics = {
   /** Histórico de advertências COM motivo — vem daqui, e não do dataset do
    *  cliente, porque esta rota confere `podeVer`. */
   disciplina: { data: string; motivo: string | null; tipo: string; dias: number | null }[]
-  assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }
+  assiduidade: {
+    assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number
+    faltas: number | null; suspensoes: number | null
+    /* A cobertura do ponto vem NESTA rota, que a ficha já chama — ela evita
+       fetch extra de propósito. `pessoaMedida` = está no roster do ponto;
+       `janelaComPonto` = o import alcançou esta janela. Ver `lib/ponto-cobertura.ts`. */
+    pessoaMedida?: boolean; janelaComPonto?: boolean; motivoSemPonto?: string | null
+  }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

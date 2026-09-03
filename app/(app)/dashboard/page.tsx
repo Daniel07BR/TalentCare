@@ -29,6 +29,8 @@ export default function DashboardPage() {
     janelaComPonto: assid.janelaComPonto,
     motivoSemPonto: assid.motivoSemPonto ?? (assid.erro ? 'não foi possível ler o ponto' : null),
     atrasosPorDia: assid.porDia,
+    pontoDesde: assid.pontoDesde,
+    pontoAte: assid.pontoAte,
   })
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall

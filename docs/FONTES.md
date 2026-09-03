@@ -236,6 +236,35 @@ casos, com o peso redistribuído.
 > levanta suspeita em ninguém. Ao integrar métrica nova, pergunte também: *o que
 > este número mostra para quem a fonte não cobre?*
 
+> **⚠️⚠️ E o conserto errou para o outro lado antes de acertar.** A primeira versão
+> caía no acumulado da vida inteira quando a pessoa não vinha no map do período —
+> mas `/api/assiduidade-metrics` monta `byPerson` a partir de `pontoRows ∪
+> advRows`, ou seja, **só quem teve ocorrência na janela**. Quem é do roster e foi
+> impecável simplesmente não vem. Medido em 01–25/06/2026: **19 das 65 pessoas do
+> roster** sairiam com o histórico completo no lugar do mês, e a **Joice Rocha**,
+> zero atrasos e zero advertências em junho, apareceria com **nota 0** e a legenda
+> "19 atrasos · 15 advertências" — ocorrências que não existiram naquela janela —
+> no fundo de uma lista de pessoas.
+>
+> **Numa janela medida, ausência de linha é ZERO OCORRÊNCIA.** O acumulado só vale
+> onde não há contexto de período nenhum. Inverter a regra do `null` é fácil: a
+> ausência deixou de elogiar quem não é medido e passou a acusar quem foi
+> impecável, que é a mesma falta com a vítima trocada.
+
+**A régua chegou a QUATRO telas**, e é uma só (`lib/ponto-cobertura.ts`): o
+`/ranking`, o score do painel, a tela `/assiduidade` — que em "Últimos 30 dias"
+anunciava a casa em **100%**, porque a média caía num `: 100` literal quando
+ninguém tinha ocorrência — e a ficha, que usava a heurística "tem ocorrência" e
+por isso lia um mês **impecável** como "sem registro de ponto", apagando
+justamente a boa notícia.
+
+⚠️ A **sparkline** precisa das duas pontas da cobertura, não do sim/não: em "Ano
+corrente" são 9 buckets mensais contra um import que termina em 25/06, e jul/ago/set
+saíam **zerados** — a série real é `112 · 150 · 156 · 139 · 151 · 141 · 0 · 0 · 0`,
+e uma curva que despenca no último trimestre lê-se "o problema de atraso acabou em
+julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido até
+25/06".
+
 ### Ainda em pé
 
 - **`/relatorios`** nunca saiu do "Em breve".

@@ -70,6 +70,14 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => a.day.localeCompare(b.day)),
     janelaComPonto,
     motivoSemPonto: janelaComPonto ? null : motivoSemPonto(cob, true, false),
+    /* ⚠️ AS DUAS PONTAS, não só a de cima. `janelaTemDado` é um sim/não por
+       sobreposição — certo para decidir se a métrica existe. Mas a sparkline
+       desenha bucket a bucket: em "Ano corrente" são 9 meses contra um ponto que
+       termina em 25/06, e os buckets de jul/ago/set saíam **zerados**, com o
+       cartão dizendo "no período". A curva despencava a zero e lia-se "o
+       problema de atraso acabou em julho". Bucket fora da cobertura não é zero,
+       é ausência — e não entra na série. */
+    pontoDesde: cob.primeiroDia,
     pontoAte: cob.ultimoDia,
   })
 }

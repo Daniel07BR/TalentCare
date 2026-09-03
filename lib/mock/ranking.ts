@@ -35,6 +35,9 @@ export function metricLabel(m: RankMetric): string {
 export function metricVal(e: Employee, m: RankMetric, ocorr?: Ocorrencias): number | null {
   if (m === 'assiduidade') {
     if (!e.temPonto) return null
+    /* ⚠️ Sem `ocorr` = leitura ACUMULADA, e só ela. Quem chama com período tem
+       de passar `{atrasos: 0, advertencias: 0}` para a janela limpa — ver o
+       comentário no `leaderboard`. */
     const o = ocorr ?? { atrasos: e.atrasos, advertencias: e.advertencias }
     return assidNotaFrom(o.atrasos, o.advertencias)
   }
@@ -92,8 +95,25 @@ export function leaderboard(data: TalentData, m: RankMetric, deptId?: string, as
   const medidos: { e: Employee; val: number; oc: Ocorrencias }[] = []
   let foraDaMedicao = 0
   for (const e of elegiveis) {
-    const oc = (m === 'assiduidade' && assid ? assid.ocorrenciasDe(e) : null)
-      ?? { atrasos: e.atrasos, advertencias: e.advertencias }
+    /* ⚠️⚠️ AUSÊNCIA DE LINHA NA JANELA MEDIDA É **ZERO OCORRÊNCIA**, e nunca o
+       acumulado. `/api/assiduidade-metrics` monta `byPerson` a partir de
+       `pontoRows ∪ advRows`: **só entra quem teve ocorrência no período**. Quem é
+       do roster e foi impecável simplesmente não vem no map.
+
+       A primeira versão deste conserto caía no acumulado da vida inteira, e
+       inverteu o defeito que ele existia para matar: em vez de a ausência
+       ELOGIAR quem não é medido, ela passava a ACUSAR quem foi impecável.
+       Medido na janela 01–25/06/2026: **19 das 65 pessoas do roster** sairiam
+       com o histórico completo no lugar do mês. A Joice Rocha, zero atrasos e
+       zero advertências em junho, apareceria com **nota 0** e a legenda "19
+       atrasos · 15 advertências" — ocorrências que não aconteceram naquela
+       janela — no fundo de uma lista de pessoas.
+
+       O acumulado só vale quando não há contexto de período nenhum (`assid`
+       ausente), que é a leitura acumulada de propósito. */
+    const oc: Ocorrencias = m === 'assiduidade' && assid
+      ? (assid.ocorrenciasDe(e) ?? { atrasos: 0, advertencias: 0 })
+      : { atrasos: e.atrasos, advertencias: e.advertencias }
     const v = janelaMorta ? null : metricVal(e, m, oc)
     if (v == null) { foraDaMedicao++; continue }
     medidos.push({ e, val: v, oc })

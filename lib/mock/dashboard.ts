@@ -140,10 +140,13 @@ export type OpcoesDashboard = {
   motivoSemPonto?: string | null
   /** Atrasos por dia na janela (de `/api/assiduidade-metrics`) p/ a sparkline. */
   atrasosPorDia?: { day: string; atrasos: number }[]
+  /** As duas pontas do que o import do ponto cobriu — a série só desenha dentro. */
+  pontoDesde?: string | null
+  pontoAte?: string | null
 }
 
 export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDashboard = {}) {
-  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [] } = opts
+  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null } = opts
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
 
@@ -174,15 +177,29 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
 
   /* Atrasos por bucket, nos MESMOS cortes do turnover — o gráfico do cartão de
      atrasos e o do cartão de turnover falam do mesmo intervalo, no mesmo passo. */
+  /* ⚠️⚠️ SÓ OS BUCKETS QUE A COBERTURA ALCANÇA. `janelaComPonto` é um sim/não por
+     sobreposição — certo para decidir se a métrica existe, insuficiente para
+     desenhar. Em "Ano corrente" são 9 buckets mensais contra um import que
+     termina em 25/06, e jul/ago/set saíam **zerados**: a série real do banco é
+     `112 · 150 · 156 · 139 · 151 · 141 · 0 · 0 · 0`, e uma curva que despenca a
+     zero no último trimestre lê-se "o problema de atraso acabou em julho".
+     Bucket fora da cobertura não é zero — é ausência, e ausência não se
+     desenha. */
   const atrasosSerie = janelaComPonto
-    ? tser.bucketFins.map((fimB, i) => {
+    ? tser.bucketFins.flatMap((fimB, i) => {
         const iniB = i === 0 ? fromDay : tser.bucketFins[i - 1].toISOString().slice(0, 10)
         const fimS = fimB.toISOString().slice(0, 10)
-        return atrasosPorDia
+        const foraDaCobertura = (!!pontoAte && iniB > pontoAte) || (!!pontoDesde && fimS < pontoDesde)
+        if (foraDaCobertura) return []
+        return [atrasosPorDia
           .filter((d) => (i === 0 ? d.day >= iniB : d.day > iniB) && d.day <= fimS)
-          .reduce((a, d) => a + d.atrasos, 0)
+          .reduce((a, d) => a + d.atrasos, 0)]
       })
     : []
+  /* A janela pedida vai ALÉM do que o import cobriu? O cartão tem de dizer até
+     onde ele mediu, senão o número parece falar do período inteiro. */
+  const pontoTruncado = janelaComPonto && !!pontoAte && toDay > pontoAte
+  const br = (d: string) => d.split('-').reverse().join('/')
 
   /* ⚠️⚠️ `sp(seed, base)` REMOVIDA (03/09/2026). Era um passeio aleatório de 12
      pontos semeado por um número fixo, e desenhava as sparklines de Headcount,
@@ -241,7 +258,9 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     },
     {
       label: 'Atrasos', value: atrasosVal ?? '—', unit: '', color: 'var(--chart-5)', delta: '', up: null,
-      nota: atrasosVal == null ? (motivoSemPonto ?? 'sem dado de ponto nesta janela') : 'no período',
+      nota: atrasosVal == null
+        ? (motivoSemPonto ?? 'sem dado de ponto nesta janela')
+        : pontoTruncado ? `no período, medido até ${br(pontoAte!)}` : 'no período',
       vals: atrasosSerie.length > 1 ? atrasosSerie : [],
     },
     {
@@ -313,7 +332,8 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
   const escTop = escUsed.map((l) => ({ l, c: escCounts[l] })).sort((a, b) => b.c - a.c)[0] ?? { l: '—', c: 0 }
 
   return {
-    periodLabel: PERIOD_LABEL[period],
+    // ⚠️ `periodLabel` saiu: a tela lê `label` do `usePeriod()`, que passa por
+    // `rotuloDoIntervalo` e sabe formatar o intervalo do calendário.
     kpis,
     turnoverLine: tg.line, turnoverArea: tg.area,
     turnoverWinRate: tser.rate, turnoverLabels: tser.labels,

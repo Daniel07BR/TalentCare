@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { deptName } from '@/lib/mock/employee'
 import Avatar from '../Avatar'
 

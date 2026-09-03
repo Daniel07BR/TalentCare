@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
+import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Métricas REAIS de UMA pessoa no PERÍODO (rádio, ClassRoom, WhatsApp), lidas dos
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id') ?? ''
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const range = { day: { gte: fromDay, lte: toDay } }
+  const cobPonto = await coberturaDoPonto()
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -185,6 +187,16 @@ export async function GET(req: NextRequest) {
         atrasos: atr, atrasosAbon: abon, minutos: min, advertencias: advert,
         // faltas/suspensões: sem fonte na origem (null → ficha mostra "—").
         faltas: null as number | null, suspensoes: null as number | null,
+        /* ⚠️⚠️ A COBERTURA vem junto, na rota que a ficha JÁ chama — de propósito.
+           A ficha evita fetch extra (ver o comentário no topo dela), e sem isso
+           ela ficaria com a heurística velha: "há qualquer ocorrência no
+           período". Essa heurística lê um mês IMPECÁVEL como "sem registro de
+           ponto", apagando da ficha justamente a boa notícia — e faz esta tela
+           discordar do `/ranking`, que a mostraria com 100 e "sem ocorrência no
+           período". Uma régua (`lib/ponto-cobertura.ts`), quatro telas. */
+        pessoaMedida: cobPonto.roster.has(personKey),
+        janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
+        motivoSemPonto: motivoSemPonto(cobPonto, cobPonto.roster.has(personKey), janelaTemDado(cobPonto, fromDay, toDay)),
       }
     })(),
     // Histórico completo de advertências (não é do período — é a ficha da pessoa).

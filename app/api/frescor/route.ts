@@ -26,7 +26,7 @@ export async function GET() {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  const [cls, radio, wpp, cide, hd, cons, ger, chat, ponto] = await Promise.all([
+  const [cls, radio, wpp, cide, hd, cons, ger, chat, ponto, disc] = await Promise.all([
     prisma.classroomDaily.aggregate({ _max: { day: true } }),
     prisma.radioDaily.aggregate({ _max: { day: true } }),
     prisma.whatsappDaily.aggregate({ _max: { day: true } }),
@@ -36,6 +36,7 @@ export async function GET() {
     prisma.gerenciaDaily.aggregate({ _max: { day: true } }),
     prisma.chatDaily.aggregate({ _max: { day: true } }),
     prisma.assiduidadeDaily.aggregate({ _max: { day: true } }),
+    prisma.disciplinaEvento.aggregate({ _max: { data: true } }),
   ])
 
   const fontes = [
@@ -47,8 +48,12 @@ export async function GET() {
     { nome: 'Consultoria Plus', ate: cons._max.day },
     { nome: 'Gerência', ate: ger._max.day },
     { nome: 'Chat Interno', ate: chat._max.day },
-    // ⚠️ A única sem cron: entra por import à mão, e é sempre ela que atrasa.
+    // ⚠️ As duas sem cron: entram por import à mão, e é sempre uma delas que
+    // atrasa. ⚠️⚠️ E são DUAS linhas, não uma: a disciplina termina em 11/06 e o
+    // ponto em 25/06 — anunciar só o ponto daria o painel por 14 dias mais fresco
+    // do que ele é, que é exatamente o erro do "Atualizado há 12 min".
     { nome: 'Ponto', ate: ponto._max.day },
+    { nome: 'Disciplina', ate: disc._max.data },
   ]
 
   const comDado = fontes.filter((f): f is { nome: string; ate: string } => !!f.ate)

@@ -77,9 +77,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m?.assiduidade ?? null
-  /* ⚠️ "Tem ponto" = há QUALQUER registro no período. Sem isso, zero atrasos por
-     ausência de dado viraria índice 100. */
-  const temPonto = !!ass && (ass.atrasos > 0 || ass.atrasosAbon > 0 || ass.advertencias > 0 || ass.minutos > 0)
+  /* ⚠️⚠️ São DUAS perguntas, e a heurística antiga confundia as duas.
+     Ela era `há QUALQUER ocorrência no período` — o que faz um mês IMPECÁVEL de
+     quem o ponto mede ser lido como "sem registro de ponto", e apaga da ficha
+     justamente a boa notícia. A régua certa está em `lib/ponto-cobertura.ts` e
+     agora vem no `Employee.temPonto` (a pessoa é medida) somada ao
+     `janelaComPonto` da rota (a janela foi medida) — as mesmas duas que o
+     `/ranking`, o score e a tela `/assiduidade` usam. Uma régua, quatro telas. */
+  const pessoaMedida = ass?.pessoaMedida ?? false
+  const temPonto = !!ass && pessoaMedida && ass.janelaComPonto
   const periodo = label
 
   // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
@@ -459,7 +465,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: temPonto ? 'var(--text)' : 'var(--text-mute)' }}>{temPonto ? `${ass.assid}%` : '—'}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Índice de assiduidade</div>
                     <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="100 − atrasos×2 − advertências×5. Não é taxa de presença.">
-                      {temPonto ? '100 − atrasos×2 − advert.×5' : 'sem registro de ponto'}
+                      {temPonto ? '100 − atrasos×2 − advert.×5' : (ass?.motivoSemPonto ?? 'sem registro de ponto')}
                     </div></div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
                     <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.atrasos}</div>

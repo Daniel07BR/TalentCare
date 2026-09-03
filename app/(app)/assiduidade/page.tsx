@@ -12,12 +12,16 @@ export default function AssiduidadePage() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useAssiduidadePeriod()
-  const vm = assiduidadeVM(data, map ?? undefined)
+  const assid = useAssiduidadePeriod()
+  const vm = assiduidadeVM(data, assid.map ?? undefined, assid.janelaComPonto)
   const aMax = Math.max(1, ...vm.deptBars.map((d) => d.atrasos))
 
   const kpis: { label: string; value: string; color: string }[] = [
-    { label: 'Assiduidade média', value: `${vm.assidMedio}%`, color: scoreColor(vm.assidMedio) },
+    /* ⚠️⚠️ "—" quando não há ninguém medido. O cálculo caía em `: 100` sempre que
+       ninguém tinha ocorrência — e numa janela que o import do ponto não alcança
+       isso vale para a casa inteira. A tela que se CHAMA Assiduidade anunciava
+       100% justamente quando não sabia nada. */
+    { label: 'Assiduidade média', value: vm.assidMedio == null ? '—' : `${vm.assidMedio}%`, color: vm.assidMedio == null ? 'var(--text-mute)' : scoreColor(vm.assidMedio) },
     { label: 'Atrasos', value: vm.totalAtrasos.toLocaleString('pt-BR'), color: 'var(--warning)' },
     { label: 'Tempo atrasado', value: fmtMin(vm.totalMinutos), color: 'var(--warning)' },
     { label: 'Advertências (total)', value: vm.totalAdvert.toLocaleString('pt-BR'), color: 'var(--danger)' },
@@ -35,6 +39,17 @@ export default function AssiduidadePage() {
           </h1>
         </div>
       </div>
+
+      {!vm.janelaComPonto && (
+        <div style={{ fontSize: 12.5, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          <b>Sem dado de ponto nesta janela.</b> {assid.motivoSemPonto ?? 'o ponto entra por importação manual'} — os números abaixo ficam em branco de propósito. Zero atraso aqui significaria "ninguém se atrasou", e o que houve foi ninguém medir.
+        </div>
+      )}
+      {vm.janelaComPonto && vm.foraDaMedicao > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          Medindo <b style={{ color: 'var(--text)' }}>{vm.medidos}</b> {vm.medidos === 1 ? 'pessoa' : 'pessoas'}: <b>{vm.foraDaMedicao}</b> {vm.foraDaMedicao === 1 ? 'não tem' : 'não têm'} registro no ponto e {vm.foraDaMedicao === 1 ? 'fica' : 'ficam'} fora da conta — não entram como 100%.
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, marginBottom: 16 }}>
         {kpis.map((k) => (

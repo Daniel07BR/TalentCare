@@ -20,7 +20,7 @@ export type AssidDeptGroup = { id: string; nome: string; color: string; atrasos:
 export const personKeyOf = (e: TalentData['employees'][number]) => e.nexusUserId ?? e.id
 export const assidPct = (atrasos: number, advert: number) => Math.max(0, 100 - atrasos * 2 - advert * 5)
 
-export function assiduidadeVM(data: TalentData, period?: PeriodAssid) {
+export function assiduidadeVM(data: TalentData, period?: PeriodAssid, janelaComPonto = true) {
   const colorOf = new Map(data.departments.map((d) => [d.id, d.color]))
 
   const stat = (e: TalentData['employees'][number]) => {
@@ -47,7 +47,14 @@ export function assiduidadeVM(data: TalentData, period?: PeriodAssid) {
     }
   }
 
-  const all = ativos.map(person)
+  /* ⚠️⚠️ QUEM O PONTO MEDE — a mesma régua do `/ranking` e do score, que não
+     tinha chegado aqui. `assidPct(0, 0)` é **100**, e sem esta linha a tela que
+     se CHAMA Assiduidade mostrava a casa em 100% em "Últimos 30 dias", que é
+     justamente a janela em que o import do ponto não alcança (ele parou em
+     25/06/2026). Ver `lib/ponto-cobertura.ts`. */
+  const medidos = janelaComPonto ? ativos.filter((e) => e.temPonto) : []
+  const foraDaMedicao = ativos.length - medidos.length
+  const all = medidos.map(person)
   const comOcorrencia = all.filter((p) => p.atrasos > 0 || p.advertencias > 0 || p.abonados > 0)
 
   const totalAtrasos = all.reduce((a, p) => a + p.atrasos, 0)
@@ -55,11 +62,15 @@ export function assiduidadeVM(data: TalentData, period?: PeriodAssid) {
   const totalMinutos = all.reduce((a, p) => a + p.minutos, 0)
   const totalAdvert = all.reduce((a, p) => a + p.advertencias, 0)
   const pessoas = comOcorrencia.length
-  // Assiduidade média sobre quem TEM registro de ponto (evita inflar com 100% de
-  // quem não é controlado por ponto). Sem ninguém com ocorrência → 100%.
-  const assidMedio = comOcorrencia.length
-    ? Math.round(comOcorrencia.reduce((a, p) => a + p.assid, 0) / comOcorrencia.length)
-    : 100
+  /* ⚠️⚠️ A média é sobre QUEM O PONTO MEDE — inclusive quem foi impecável, que
+     merece os 100 dela. A versão anterior tinha dois defeitos somados: media só
+     `comOcorrencia` (então uma casa inteira sem atraso não puxava a média para
+     cima) e caía em **`: 100`** quando ninguém tinha ocorrência — o que numa
+     janela sem import é exatamente o caso, e a tela anunciava 100%.
+     `null` quando não há ninguém medido; a tela mostra "—". */
+  const assidMedio = all.length
+    ? Math.round(all.reduce((a, p) => a + p.assid, 0) / all.length)
+    : null
 
   const topAtrasos = [...comOcorrencia].filter((p) => p.atrasos > 0).sort((a, b) => b.atrasos - a.atrasos || b.minutos - a.minutos).slice(0, 5)
   const topAdvert = [...comOcorrencia].filter((p) => p.advertencias > 0).sort((a, b) => b.advertencias - a.advertencias).slice(0, 5)
@@ -92,6 +103,8 @@ export function assiduidadeVM(data: TalentData, period?: PeriodAssid) {
 
   return {
     totalAtrasos, totalAbonados, totalMinutos, totalAdvert, pessoas, assidMedio,
+    /** Quantos ficaram fora da medição, e por quê — a tela tem de dizer. */
+    foraDaMedicao, medidos: medidos.length, janelaComPonto,
     deptBars, deptCount: deptBars.length, byUser, byDept, topAtrasos, topAdvert,
   }
 }
