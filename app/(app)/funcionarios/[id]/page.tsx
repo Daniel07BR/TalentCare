@@ -120,8 +120,21 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <button onClick={() => router.push('/funcionarios')} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar ao diretório</button>
 
-      {/* Header: identidade + gauge + fatores */}
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, display: 'grid', gridTemplateColumns: '1fr auto', gap: 28, marginBottom: 16 }}>
+      {/* Cabeçalho: identidade. O gauge e os fatores saíram — ver abaixo. */}
+      {/*
+        ⚠️⚠️ O GAUGE DE SCORE SAIU DAQUI (03/09/2026), pela mesma régua que o
+        tirou do relatório de setor: ele não foi validado e não está valendo.
+
+        E aqui ele era pior que lá. Um número de 38px no alto da ficha, logo
+        acima do botão "Avaliar a Karen", sugere fortemente que a nota deve sair
+        dele — o oposto exato do que a avaliação mensal existe para fazer. A nota
+        é de quem observou a pessoa; o score é o que oito sistemas registraram.
+        Deixá-los encostados um no outro convidava a transcrever um no outro.
+
+        Os FATORES (produtividade/assiduidade/formação, com os pesos) foram junto:
+        eles são a decomposição do score, e sozinhos não querem dizer nada.
+      */}
+      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
           <Avatar id={vm.id} hasAvatar={vm.hasAvatar} initials={vm.initials} color={vm.color} size={84} radius={22} />
           <div style={{ paddingTop: 2 }}>
@@ -155,63 +168,6 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
               </div>
             </div>
             <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 26, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 28 }}>
-          <div style={{ position: 'relative', width: 172, textAlign: 'center' }}>
-            <svg viewBox="0 0 200 116" style={{ width: 172, display: 'block' }}>
-              <path d={vm.gaugeTrack} fill="none" stroke="var(--surface-2)" strokeWidth="14" strokeLinecap="round" />
-              <path d={vm.gaugeValue} fill="none" stroke={vm.gaugeColor} strokeWidth="14" strokeLinecap="round" />
-            </svg>
-            <div style={{ position: 'absolute', top: 36, left: 0, right: 0 }}>
-              <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.hasScore ? vm.scoreColor : 'var(--text-mute)' }}>{vm.scoreLabel}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>
-                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : vm.scoreNote}
-              </div>
-            </div>
-          </div>
-          <div style={{ width: 206, display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {vm.factors.map((f) => (
-              <div key={f.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 3 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>{f.label} <span style={{ color: 'var(--text-mute)' }}>· {f.peso}%</span></span>
-                  <span style={{ fontWeight: 700, color: f.color, fontSize: f.semFonte ? 10 : undefined }}>{f.notaLabel}</span>
-                </div>
-                <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: f.pct, background: f.color, borderRadius: 20 }} /></div>
-                {f.baseGlobal && (
-                  <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="O setor tem menos de 3 pessoas, o que não dá base de comparação — a nota vale contra a empresa toda.">comparado com a empresa (setor pequeno)</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 26, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 28 }}>
-          <div style={{ position: 'relative', width: 172, textAlign: 'center' }}>
-            <svg viewBox="0 0 200 116" style={{ width: 172, display: 'block' }}>
-              <path d={vm.gaugeTrack} fill="none" stroke="var(--surface-2)" strokeWidth="14" strokeLinecap="round" />
-              <path d={vm.gaugeValue} fill="none" stroke={vm.gaugeColor} strokeWidth="14" strokeLinecap="round" />
-            </svg>
-            <div style={{ position: 'absolute', top: 36, left: 0, right: 0 }}>
-              <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.hasScore ? vm.scoreColor : 'var(--text-mute)' }}>{vm.scoreLabel}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>
-                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : vm.scoreNote}
-              </div>
-            </div>
-          </div>
-          <div style={{ width: 206, display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {vm.factors.map((f) => (
-              <div key={f.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 3 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>{f.label} <span style={{ color: 'var(--text-mute)' }}>· {f.peso}%</span></span>
-                  <span style={{ fontWeight: 700, color: f.color, fontSize: f.semFonte ? 10 : undefined }}>{f.notaLabel}</span>
-                </div>
-                <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: f.pct, background: f.color, borderRadius: 20 }} /></div>
-                {f.baseGlobal && (
-                  <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="O setor tem menos de 3 pessoas, o que não dá base de comparação — a nota vale contra a empresa toda.">comparado com a empresa (setor pequeno)</div>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       </div>
