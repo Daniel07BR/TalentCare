@@ -194,3 +194,63 @@ export async function PATCH(req: NextRequest) {
   })
   return NextResponse.json({ ok: true, pelaDiretoria: body.pelaDiretoria !== false })
 }
+
+/**
+ * APLICAR AS SUGESTÕES de todos os setores que ainda não têm vínculo nenhum.
+ *
+ * ⚠️⚠️ Existe porque a exigência de confirmar setor por setor virou ATRITO real
+ * (02/09/2026): o dono perguntou "por que várias pessoas estão sem avaliador, se
+ * o sistema já sabe o gestor e os sub-encarregados dele?" — e ele tinha razão. O
+ * cargo do Nexus já dizia; o que faltava era um caminho para dizer "sim, use o
+ * cargo" de uma vez. Sem este botão, a única saída era um script — e uma régua
+ * que só se preenche por script é uma régua que fica vazia.
+ *
+ * ⚠️ Só toca em setor SEM NENHUM vínculo e que não está marcado "cabe à
+ * Diretoria". Nunca reescreve uma decisão já tomada por gente: a promoção de
+ * alguém continua NÃO mudando a régua sozinha, que é o ponto de tudo isto.
+ *
+ * Nível: `Sub-encarregado` → `sub`; qualquer outro cargo de chefia → `gestor`.
+ */
+export async function PUT() {
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const quem = await quemEh((session.user as { id: string }).id)
+  if (!quem || !podeGerirAvaliadores(quem)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+
+  const [depts, vinculos, pessoas] = await Promise.all([
+    prisma.department.findMany({ select: { id: true, name: true, avaliadoPelaDiretoria: true } }),
+    prisma.setorAvaliador.findMany({ select: { departmentId: true } }),
+    prisma.user.findMany({
+      where: { origin: { in: ['nexus', 'staff'] }, active: true, foraDoDiretorio: false },
+      select: { id: true, jobTitle: true, departmentId: true },
+    }),
+  ])
+  const comVinculo = new Set(vinculos.map((v) => v.departmentId))
+
+  let criados = 0
+  const semChefia: string[] = []
+  for (const d of depts) {
+    if (isHiddenDept(d.name)) continue
+    if (comVinculo.has(d.id) || d.avaliadoPelaDiretoria) continue
+    const equipe = pessoas.filter((p) => p.departmentId === d.id)
+    if (equipe.length === 0) continue
+    const chefes = equipe.filter((p) => CARGOS_SUGERIDOS.includes(norm(p.jobTitle)))
+    // ⚠️ Setor sem ninguém de chefia volta NOMEADO na resposta, e não em
+    // silêncio: é ele que continua precisando de uma escolha à mão, e a tela
+    // tem de poder dizer quais são.
+    if (chefes.length === 0) { semChefia.push(d.name); continue }
+    for (const c of chefes) {
+      const nivel = norm(c.jobTitle) === 'sub-encarregado' ? 'sub' : 'gestor'
+      await prisma.setorAvaliador.upsert({
+        where: { departmentId_userId: { departmentId: d.id, userId: c.id } },
+        create: { departmentId: d.id, userId: c.id, nivel, createdById: quem.id },
+        update: { nivel },
+      })
+      await recalcularAcesso(c.id)
+      criados++
+    }
+  }
+  return NextResponse.json({ ok: true, criados, semChefia })
+}

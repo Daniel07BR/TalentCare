@@ -23,6 +23,25 @@ export default function AvaliadoresPage() {
   }, [])
   useEffect(() => { carregar() }, [carregar])
 
+  const [aplicando, setAplicando] = useState(false)
+  const [resultado, setResultado] = useState<string | null>(null)
+
+  // ⚠️ O botão que faltava. Sem ele, a única forma de preencher a régua era um
+  // script — e régua que só se preenche por script fica vazia.
+  async function aplicarSugestoes() {
+    setAplicando(true); setResultado(null)
+    const r = await fetch('/api/avaliadores', { method: 'PUT' })
+    const j = await r.json()
+    setAplicando(false)
+    setResultado(
+      j.criados
+        ? `${j.criados} ${j.criados === 1 ? 'vínculo criado' : 'vínculos criados'}.` +
+          (j.semChefia?.length ? ` Sem cargo de chefia, ainda precisam de escolha à mão: ${j.semChefia.join(', ')}.` : '')
+        : 'Nenhum setor pendente — todos já têm quem avalia.',
+    )
+    carregar()
+  }
+
   async function marcarDiretoria(departmentId: string, pelaDiretoria: boolean) {
     setSalvando(departmentId)
     await fetch('/api/avaliadores', {
@@ -75,6 +94,26 @@ export default function AvaliadoresPage() {
           sozinho</b> quando alguém for promovido.
         </span>
       </div>
+
+      {d.semAvaliador > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <button onClick={aplicarSugestoes} disabled={aplicando} className="tc-btn"
+            style={{ background: 'var(--accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', padding: '10px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            {aplicando ? 'Aplicando…' : `Usar o cargo do Nexus nos ${d.semAvaliador} setores pendentes`}
+          </button>
+          <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 7, lineHeight: 1.55 }}>
+            Gestor vira <b>gestor</b> e Sub-encarregado vira <b>sub</b>. Só mexe em setor que
+            ainda não tem ninguém — decisão já tomada não é reescrita, e promoção continua
+            não mudando a régua sozinha.
+          </div>
+        </div>
+      )}
+
+      {resultado && (
+        <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderLeft: '3px solid var(--success)', borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginBottom: 14, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
+          {resultado}
+        </div>
+      )}
 
       {d.semAvaliador > 0 && (
         <div style={{ display: 'flex', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderLeft: '3px solid var(--danger)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 16, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
