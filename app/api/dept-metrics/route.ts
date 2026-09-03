@@ -64,9 +64,13 @@ export async function GET(req: NextRequest) {
      Antes esta rota usava `ativos.length` ("ativo hoje") e as duas divergiam:
      medido em 03/09/2026, Fiscal 22 aqui × 21 na fila, Financeiro 5 × 4. O selo
      do menu diria 4 e a faixa vermelha do setor diria 5, sobre a mesma coisa. */
-  const avaliaveis = await prisma.user.count({
-    where: { departmentId: dept.id, ...filtroDeAvaliaveis(competenciaAnterior()) },
+  const compAtual = competenciaAnterior()
+  const avaliaveisRows = await prisma.user.findMany({
+    where: { departmentId: dept.id, ...filtroDeAvaliaveis(compAtual) },
+    select: { id: true },
   })
+  const avaliaveisIds = avaliaveisRows.map((r) => r.id)
+  const avaliaveis = avaliaveisIds.length
 
   const [cls, hd, cide, cons, radio, ger, chat, wpp, assid, adv, avals] = await Promise.all([
     prisma.classroomDaily.aggregate({ where: porNexus, _sum: { videos: true, courses: true, created: true } }),
@@ -103,7 +107,13 @@ export async function GET(req: NextRequest) {
     // AVALIAÇÃO: a competência do mês fechado, não o intervalo — a avaliação é
     // mensal por natureza e não se recorta em "últimos 7 dias".
     prisma.avaliacao.findMany({
-      where: { avaliadoId: { in: ids }, competencia: competenciaAnterior(), status: 'publicada' },
+      /* ⚠️⚠️ O MESMO conjunto do denominador. Antes o denominador vinha do
+         filtro da competência e o numerador de `ids` (ativo HOJE): quem
+         trabalhou agosto, FOI AVALIADA e saiu em 01/09 entrava em `avaliaveis`
+         e a avaliação dela não entrava em `publicadas` — "Falta avaliar 1" para
+         sempre, sobre alguém que já foi avaliada e já foi embora. É o alerta
+         eterno que a régua única veio evitar, reintroduzido pelo meio-conserto. */
+      where: { avaliadoId: { in: avaliaveisIds }, competencia: compAtual, status: 'publicada' },
       select: { media: true, avaliadoId: true, notas: { select: { criterio: true, nota: true } } },
     }),
   ])
@@ -213,7 +223,23 @@ export async function GET(req: NextRequest) {
             FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
         ) t GROUP BY mes ORDER BY mes`
     : []
-  const serie = mensal.map((r) => ({ mes: r.mes, atividade: Number(r.atividade) }))
+  /* ⚠️⚠️ O `GROUP BY` só emite mês COM linha. Com [mar, abr, ago] o gráfico
+     desenhava três pontos igualmente espaçados, o eixo deixava de ser tempo, e a
+     variação "vs. mês anterior" comparava agosto com abril. Meses vazios entre o
+     primeiro e o último viram ZERO — aqui zero é o valor certo: houve o mês e
+     não houve atividade. (A ponta de trás continua começando no 1º com
+     registro, que é o que separa "não houve" de "não medíamos ainda".) */
+  const bruto = new Map(mensal.map((r) => [r.mes, Number(r.atividade)]))
+  const serie: { mes: string; atividade: number }[] = []
+  if (bruto.size > 0) {
+    const chaves = [...bruto.keys()].sort()
+    const [a0, m0] = chaves[0].split('-').map(Number)
+    const [a1, m1] = chaves[chaves.length - 1].split('-').map(Number)
+    for (let d = new Date(a0, m0 - 1, 1); d <= new Date(a1, m1 - 1, 1); d.setMonth(d.getMonth() + 1)) {
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      serie.push({ mes: k, atividade: bruto.get(k) ?? 0 })
+    }
+  }
 
   // ── Demografia (não é do período: é o retrato de hoje) ─────────────────────
   const hoje = hojeRef
@@ -245,17 +271,23 @@ export async function GET(req: NextRequest) {
    * Serve às duas coisas que a tela precisa: comparar as pessoas do setor e
    * dizer ONDE ESTÁ O PROBLEMA.
    *
-   * ⚠️ `atividade` é a MESMA conta do score (`activityOf` / `/api/score-metrics`):
-   * contagem de ação, sem mensagem de chat, sem escuta de rádio, sem km. Uma
-   * segunda definição de "atividade" aqui faria a tela do setor discordar do
-   * ranking, e ninguém saberia qual das duas acreditar.
+   * ⚠️ `atividade` segue a MESMA regra do score (`activityOf` /
+   * `/api/score-metrics`): contagem de ação, sem mensagem de chat, sem escuta de
+   * rádio, sem km. Uma segunda definição de "atividade" faria a tela do setor
+   * discordar do ranking, e ninguém saberia qual acreditar.
+   *
+   * ⚠️⚠️ NÃO é idêntica: falta `datasAlteradas` da Gerência, que o score soma.
+   * A diferença é pequena e o comentário diz isso de propósito — a versão
+   * anterior GARANTIA a igualdade e ela não existia (o WhatsApp inteiro estava
+   * de fora). Comentário que promete o que o código não faz é pior que
+   * comentário nenhum.
    */
   const grupos = nx.length ? await Promise.all([
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { opened: true, resolved: true } }),
     prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { atividades: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
-    prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true } }),
+    prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, km: true } }),
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true, msgCanais: true, msgDiretas: true, msgChamados: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, ...range }, _sum: { atrasos: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
@@ -276,9 +308,14 @@ export async function GET(req: NextRequest) {
       by: ['name'], where: { name: { in: nomes }, ...range },
       _sum: { abertos: true, finalizados: true, handleSum: true },
     }),
-  ]) : [[], [], [], [], [], [], [], [], [], []] as never
+    /* ⚠️ SEM `range`: "ter fonte" é propriedade da PESSOA, não da janela. Com o
+       filtro no intervalo, a atendente sem conta no Nexus era "medida" em 30
+       dias e virava "não medido nos sistemas" em 7 dias de férias — mudava de
+       população conforme o filtro. */
+    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { name: { in: nomes } }, _count: { _all: true } }),
+  ]) : [[], [], [], [], [], [], [], [], [], [], []] as never
 
-  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gRadio, gWpp] = grupos
+  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gRadio, gWpp, gWppSempre] = grupos
   const mapa = <T,>(rows: T[], chave: (r: T) => string | null, valor: (r: T) => number) =>
     new Map(rows.map((r) => [chave(r), valor(r)] as const))
 
@@ -297,6 +334,7 @@ export async function GET(req: NextRequest) {
   const mWppFin = new Map(gWpp.map((r) => [normNome(r.name), n(r._sum.finalizados)]))
   const mWppAb = new Map(gWpp.map((r) => [normNome(r.name), n(r._sum.abertos)]))
   const mRadio = new Map(gRadio.map((r) => [r.nexusUserId, n(r._sum.seconds)]))
+  const temWppAlgumDia = new Set(gWppSempre.map((r) => normNome(r.name)))
 
   const notaDe = new Map(avals.map((a) => [a.avaliadoId, a.media]))
   const equipePessoas = ativos.map((p) => {
@@ -312,7 +350,7 @@ export async function GET(req: NextRequest) {
       hasAvatar: !!p.avatarUrl,
       // ⚠️ `semFonte` = sem conta no Nexus E sem registro de WhatsApp (que casa
       // por nome). Quem atende no Painel sem conta do Nexus É medido.
-      semFonte: !k && !mWppFin.has(normNome(p.name)),
+      semFonte: !k && !temWppAlgumDia.has(normNome(p.name)),
       atividade: (k ? (mCls.get(k) ?? 0) + (mHd.get(k) ?? 0) + (mCide.get(k) ?? 0) + (mCons.get(k) ?? 0) + (mGer.get(k) ?? 0) + (mChatCham.get(k) ?? 0) : 0)
         + (mWppFin.get(normNome(p.name)) ?? 0),
       mensagens: k ? (mChatMsg.get(k) ?? 0) : 0,
@@ -358,15 +396,39 @@ export async function GET(req: NextRequest) {
   const mChatConcl = new Map(gChat.map((r) => [r.nexusUserId, n(r._sum.chamadosConcluidos)]))
   const mCideAt = new Map(gCide.map((r) => [r.nexusUserId, n(r._sum.atividades)]))
 
-  const rankings = {
-    whatsapp: rank(mWppFin, true),
-    helpdesk: rank(mHdResolvidos),
-    classroom: rank(mClsConcl),
-    consultoria: rank(mConsTudo),
-    cide: rank(mCideAt),
-    gerencia: rank(mGerServ),
-    chat: rank(mChatConcl),
-    radio: rank(new Map([...mRadio].map(([k, v]) => [k, Math.round(v / 3600)]))),
+  /* ⚠️⚠️ Ranking VAZIO é o caso COMUM, não a borda. Quem RESOLVE chamado de
+     HelpDesk é o T.I; quem CONCLUI chamado no Chat é o setor que atende. Todo o
+     resto da empresa só ABRE — então, para a maioria das combinações
+     setor × fonte, ranquear pela grandeza "nobre" devolvia lista vazia e o
+     cartão perdia metade da própria estrutura, sem dizer por quê.
+     Cada fonte agora tem uma ALTERNATIVA, e o cartão diz por qual está
+     ranqueando. */
+  const mHdAbertos = new Map(gHd.map((r) => [r.nexusUserId, n(r._sum.opened)]))
+  const mChatAbertos = new Map(gChat.map((r) => [r.nexusUserId, n(r._sum.chamadosAbertos)]))
+  const mClsVideos = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.videos)]))
+  const mGerKm = new Map(gGer.map((r) => [r.nexusUserId, n(r._sum.km)]))
+
+  type Rk = { rotulo: string; gente: ReturnType<typeof rank> }
+  const comAlternativa = (
+    a: [string, Map<string | null, number>], b: [string, Map<string | null, number>], porNome = false,
+  ): Rk => {
+    const primeiro = rank(a[1], porNome)
+    if (primeiro.length > 0) return { rotulo: a[0], gente: primeiro }
+    return { rotulo: b[0], gente: rank(b[1], porNome) }
+  }
+
+  const rankings: Record<string, Rk> = {
+    whatsapp: comAlternativa(['mais finalizou atendimento', mWppFin], ['mais abriu atendimento', mWppAb], true),
+    helpdesk: comAlternativa(['mais resolveu', mHdResolvidos], ['mais abriu chamado', mHdAbertos]),
+    classroom: comAlternativa(['mais concluiu e criou curso', mClsConcl], ['mais assistiu vídeo', mClsVideos]),
+    consultoria: { rotulo: 'mais registrou atividade', gente: rank(mConsTudo) },
+    cide: { rotulo: 'mais alterou cadastro', gente: rank(mCideAt) },
+    gerencia: comAlternativa(['mais entregou e pediu', mGerServ], ['mais rodou (km)', mGerKm]),
+    chat: comAlternativa(['mais concluiu chamado', mChatConcl], ['mais abriu chamado', mChatAbertos]),
+    // ⚠️ A rádio NÃO tem ranking. Ver o comentário na tela: pódio de escuta,
+    // com foto e posição, na mesma gramática dos cartões de entrega, numa tela
+    // lida para decidir aumento.
+    radio: { rotulo: '', gente: [] },
   }
 
   return NextResponse.json({
@@ -426,7 +488,7 @@ export async function GET(req: NextRequest) {
       generos,
     },
     avaliacao: {
-      competencia: competenciaAnterior(),
+      competencia: compAtual,
       publicadas: avals.length,
       avaliaveis,
       media: medias.length ? Math.round((medias.reduce((a, b) => a + b, 0) / medias.length) * 10) / 10 : null,

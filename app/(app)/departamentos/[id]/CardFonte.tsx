@@ -21,21 +21,24 @@ export type Numero = { label: string; valor: number | string | null; cor?: strin
 const fmt = (v: number | string | null) =>
   v === null ? '—' : typeof v === 'number' ? v.toLocaleString('pt-BR') : v
 
-export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, numeros, rodape }: {
+export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNinguem, numeros, rodape }: {
   titulo: string
   sub?: string
   cor: string
   Icone: React.ComponentType<{ size?: number; color?: string }>
   ranking: Pessoa[]
-  /** O que o número do ranking significa: "atendimentos", "chamados"… */
+  /** Por qual grandeza está ranqueado ("mais resolveu", "mais abriu chamado"). */
   unidade: string
+  /** O que dizer quando NÃO há ninguém — a frase é do cartão, não genérica. */
+  semNinguem?: string
   numeros: Numero[]
   rodape?: React.ReactNode
 }) {
   const router = useRouter()
   const max = Math.max(1, ...ranking.map((p) => p.valor))
-  // Mais de 6 vira lista de rolagem: o cartão não pode crescer com o setor, ou
-  // o Fiscal (22 pessoas) empurra todo o resto da página para fora da tela.
+  // Corta em 6: o cartão não pode crescer com o setor, ou o Fiscal (22 pessoas)
+  // empurra todo o resto da página para fora da tela. O resto tem caminho — a
+  // linha abaixo aponta para "As pessoas", onde a lista é completa.
   const visiveis = ranking.slice(0, 6)
   const resto = ranking.length - visiveis.length
 
@@ -47,9 +50,25 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, numeros, 
       </div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>}
 
-      <div className="card-fonte" style={{ display: 'grid', gridTemplateColumns: ranking.length ? 'minmax(0,1.15fr) minmax(0,1fr)' : '1fr', gap: 22, alignItems: 'start' }}>
+      {/*
+        ⚠️⚠️ Ranking vazio é o caso COMUM, não a borda: quem RESOLVE chamado de
+        HelpDesk é o T.I, e todo o resto da empresa só ABRE. Antes o grid virava
+        uma coluna, a tarja "Quem mais resolveu" sumia junto, e sobrava um cartão
+        de totais sem metade da própria estrutura — sem uma linha dizendo por
+        quê. Um cartão sem "quem" tem de dizer que não tem.
+      */}
+      <div className="card-fonte" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr)', gap: 22, alignItems: 'start' }}>
         {/* ── ESQUERDA: quem fez ────────────────────────────────────────── */}
-        {ranking.length > 0 && (
+        {ranking.length === 0 ? (
+          <div>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
+              Quem {unidade}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+              {semNinguem ?? 'Ninguém deste setor, no período — os números ao lado vêm de outra ponta da mesma fonte.'}
+            </div>
+          </div>
+        ) : (
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
               Quem {unidade}
@@ -85,8 +104,10 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, numeros, 
               ))}
             </div>
             {resto > 0 && (
+              // ⚠️ Diz onde ver o resto: a comparação completa existe no cartão
+              // "As pessoas", então não é perda de dado — era perda de caminho.
               <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 8, paddingLeft: 7 }}>
-                e mais {resto} {resto === 1 ? 'pessoa' : 'pessoas'} com registro
+                e mais {resto} {resto === 1 ? 'pessoa' : 'pessoas'} com registro · a lista completa está em <b>As pessoas</b>
               </div>
             )}
           </div>

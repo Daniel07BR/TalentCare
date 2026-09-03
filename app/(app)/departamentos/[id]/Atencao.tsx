@@ -73,7 +73,10 @@ export function Atencao({ m, abaixoDoEsperado, atendeEmParte, ehAdmin, onIr }: {
   }
   if (atendeEmParte.length > 0) {
     itens.push({
-      chave: 'abaixo', Icone: TrendingDown, peso: 60,
+      /* ⚠️ Era 'abaixo' nos DOIS cartões, e o `key` do React repetia: com nota
+         ≤4 e 5–6 ao mesmo tempo, React podia reaproveitar o nó errado entre
+         renders e o cartão trocava de cor e de ícone ao mudar o filtro. */
+      chave: 'parcial', Icone: TrendingDown, peso: 60,
       valor: String(atendeEmParte.length),
       titulo: atendeEmParte.length === 1 ? 'atende em parte' : 'atendem em parte',
       detalhe: primeiros(atendeEmParte),

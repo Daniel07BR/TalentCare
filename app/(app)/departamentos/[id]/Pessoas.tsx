@@ -29,7 +29,14 @@ const COLUNAS: { key: Coluna; label: string; dica: string }[] = [
   { key: 'atrasos', label: 'Atrasos', dica: 'Atrasos não abonados, no período' },
 ]
 
-export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSetor[]; periodo: string; competencia: string }) {
+export function Pessoas({ pessoas, periodo, competencia, avaliaveis }: {
+  pessoas: PessoaDoSetor[]; periodo: string; competencia: string
+  /* ⚠️ O MESMO denominador do cartão de Avaliação. A tela chegou a mostrar
+     "N de 22" aqui e "de 21 pessoas" ali, lado a lado, sobre a mesma pergunta —
+     a divergência que acabara de ser morta entre a tela e o selo do menu,
+     sobrevivendo dentro da própria página. */
+  avaliaveis: number
+}) {
   const router = useRouter()
   const [ordemPedida, setOrdem] = useState<Coluna>('nota')
 
@@ -83,7 +90,7 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
             return (
               <button key={c.key} disabled={inerte} onClick={() => setOrdem(c.key)}
                 title={inerte ? 'Nenhuma avaliação publicada nesta competência' : c.dica}
-                className={'seg' + (ordem === c.key ? ' on' : '')}
+                className={'seg' + (ordem === c.key ? ' on' : '') + (c.key === 'atividade' ? ' ord-atividade' : '')}
                 style={{ fontSize: 11.5, padding: '5px 10px', opacity: inerte ? 0.45 : 1, cursor: inerte ? 'not-allowed' : 'pointer' }}>
                 {c.label}
               </button>
@@ -208,7 +215,18 @@ export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSe
 
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginTop: 14, fontSize: 11, color: 'var(--text-mute)', lineHeight: 1.6 }}>
         {mediaNota != null && (
-          <span>Média do setor: <b style={{ color: ancoraDe(mediaNota).color }}>{mediaNota.toFixed(1)}</b> · {comNota.length} de {pessoas.length} avaliadas</span>
+          <span>
+            Média do setor: <b style={{ color: ancoraDe(mediaNota).color }}>{mediaNota.toFixed(1)}</b>
+            {' · '}{comNota.length} de {avaliaveis} avaliadas
+            {/* ⚠️ Quando a competência alcança menos gente que o setor tem hoje,
+                dizer POR QUÊ — senão o leitor vê 21 num setor de 22 e não sabe
+                se é regra ou defeito. */}
+            {avaliaveis < pessoas.length && (
+              <span style={{ color: 'var(--text-mute)' }}>
+                {' '}({pessoas.length - avaliaveis} {pessoas.length - avaliaveis === 1 ? 'admitida' : 'admitidas'} depois do dia 15 não {pessoas.length - avaliaveis === 1 ? 'entra' : 'entram'} na competência)
+              </span>
+            )}
+          </span>
         )}
         {pessoas.length > 1 && <span>A barra de atividade compara <b>dentro deste setor</b> — o cheio é quem mais registrou aqui.</span>}
       </div>

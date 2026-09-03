@@ -58,7 +58,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
        chips "sem nota". O destino útil é o bloco da avaliação — e o alerta de
        nota baixa é que pertence à tabela, onde estão os nomes. */
     const destino = chave === 'avaliar' ? 'sec-avaliacao'
-      : chave === 'abaixo' ? 'sec-pessoas'
+      : chave === 'abaixo' || chave === 'parcial' ? 'sec-pessoas'
       : chave === 'turnover' ? 'sec-tendencia' : 'sec-assiduidade'
     document.getElementById(destino)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -74,6 +74,23 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Você não tem acesso a este setor</div>
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>O relatório de um setor é visível para quem avalia nele e para a Diretoria.</div>
+        </div>
+      </div>
+    )
+  }
+  /* ⚠️⚠️ CARREGANDO também não desenha. O título, o veredito, a escolaridade e o
+     heatmap vêm do dataset do CLIENTE e não passam pela régua da rota: quem
+     trocasse o id na URL via nome, score, distribuição de formação e o mapa de
+     atrasos do setor alheio ATÉ o 403 chegar. Os dois estados de falha estavam
+     cobertos; a janela entre o clique e a resposta, não. */
+  if (estado === 'carregando') {
+    return (
+      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {[92, 260, 180].map((h, i) => (
+            <div key={i} style={{ height: h, background: 'var(--surface-2)', borderRadius: 'var(--radius)', opacity: 0.55 }} />
+          ))}
         </div>
       </div>
     )
@@ -183,10 +200,13 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
       {/* 3 · AS PESSOAS — o coração do relatório */}
       <Tarja>As pessoas</Tarja>
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
-        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} />}
+        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} avaliaveis={m.avaliacao.avaliaveis} />}
       </div>
 
-      {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais */}
+      {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais.
+             ⚠️ Tarja própria: elas são sobre o SETOR, não sobre as pessoas dele,
+             e sem rótulo ficavam visualmente dentro de "As pessoas". */}
+      <Tarja>Tendência do setor</Tarja>
       {m && (
         <div id="sec-tendencia" className="dept-duplo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, marginBottom: 16, alignItems: 'start' }}>
           <Tendencia m={m} />
@@ -207,7 +227,11 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
       {edu && (
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Escolaridade do setor</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Escolaridade do setor</div>
+              {/* ⚠️ Retrato de hoje — o único bloco que não avisava. */}
+              <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>Retrato de hoje · não acompanha o filtro</div>
+            </div>
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{edu.informed} de {edu.total} informados</span>
           </div>
           <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)' }}>
@@ -216,7 +240,11 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px 16px', marginTop: 14 }}>
             {edu.segs.map((s) => (
               <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-dim)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color }} /> {s.label} <b style={{ color: 'var(--text)' }}>{s.count}</b> <span style={{ color: 'var(--text-mute)' }}>({s.pct}%)</span>
+                {/* ⚠️⚠️ O `pct` é fatia ENTRE FORMAÇÕES (com multi-contagem: quem
+                    tem graduação e pós conta duas vezes), e NÃO percentual da
+                    equipe. A barra empilhada afirma visualmente que é da equipe.
+                    O rótulo agora diz o que o número é. */}
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color }} /> {s.label} <b style={{ color: 'var(--text)' }}>{s.count}</b> <span style={{ color: 'var(--text-mute)' }}>({s.pct}% das formações)</span>
               </span>
             ))}
           </div>
@@ -358,7 +386,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('Painel de Atendimento', tem(m.whatsapp.abertos, m.whatsapp.finalizados),
     <CardFonte
       titulo="Painel de Atendimento · WhatsApp" cor="var(--chart-1)" Icone={MessageCircle}
-      ranking={r.whatsapp} unidade="mais finalizou atendimento"
+      ranking={r.whatsapp.gente} unidade={r.whatsapp.rotulo || "mais finalizou atendimento"}
       numeros={[
         { label: 'Atendimentos abertos', valor: m.whatsapp.abertos, cor: 'var(--info)' },
         { label: 'Finalizados', valor: m.whatsapp.finalizados, cor: 'var(--success)' },
@@ -369,7 +397,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('Chat Interno', tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos),
     <CardFonte
       titulo="Chat Interno" cor="var(--chart-3)" Icone={MessageSquareText}
-      ranking={r.chat} unidade="mais concluiu chamado"
+      ranking={r.chat.gente} unidade={r.chat.rotulo || "mais concluiu chamado"}
       numeros={[
         { label: 'Chamados abertos por estas pessoas', valor: m.chat.chamadosAbertos, cor: 'var(--info)' },
         { label: 'Concluídos', valor: m.chat.chamadosConcluidos, cor: 'var(--success)' },
@@ -382,7 +410,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('HelpDesk', tem(m.helpdesk.abertos, m.helpdesk.resolvidos),
     <CardFonte
       titulo="HelpDesk" cor="var(--chart-4)" Icone={LifeBuoy}
-      ranking={r.helpdesk} unidade="mais resolveu"
+      ranking={r.helpdesk.gente} unidade={r.helpdesk.rotulo || "mais resolveu"}
       numeros={[
         { label: 'Chamados abertos', valor: m.helpdesk.abertos, cor: 'var(--info)' },
         { label: 'Resolvidos', valor: m.helpdesk.resolvidos, cor: 'var(--success)' },
@@ -393,7 +421,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('ClassRoom', tem(m.classroom.criados, m.classroom.assistidos, m.classroom.videos),
     <CardFonte
       titulo="ClassRoom" cor="var(--chart-2)" Icone={GraduationCap}
-      ranking={r.classroom} unidade="mais concluiu e criou curso"
+      ranking={r.classroom.gente} unidade={r.classroom.rotulo || "mais concluiu e criou curso"}
       numeros={[
         { label: 'Cursos criados', valor: m.classroom.criados, cor: 'var(--accent)' },
         { label: 'Cursos concluídos', valor: m.classroom.assistidos, cor: 'var(--chart-2)' },
@@ -404,7 +432,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('Gerência', tem(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km),
     <CardFonte
       titulo="Gerência · mensageria" cor="var(--chart-2)" Icone={Truck}
-      ranking={r.gerencia} unidade="mais entregou e pediu"
+      ranking={r.gerencia.gente} unidade={r.gerencia.rotulo || "mais entregou e pediu"}
       numeros={[
         { label: 'Serviços entregues', valor: m.gerencia.servicos, cor: 'var(--chart-2)' },
         { label: 'Km rodados', valor: m.gerencia.km },
@@ -418,7 +446,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('Consultoria Plus', tem(m.consultoria.estudos, m.consultoria.chamados, m.consultoria.mensagens, m.consultoria.comentarios),
     <CardFonte
       titulo="Consultoria Plus" cor="var(--chart-3)" Icone={MessagesSquare}
-      ranking={r.consultoria} unidade="mais registrou atividade"
+      ranking={r.consultoria.gente} unidade={r.consultoria.rotulo || "mais registrou atividade"}
       numeros={[
         { label: 'Estudos publicados', valor: m.consultoria.estudos, cor: 'var(--chart-3)' },
         { label: 'Chamados abertos', valor: m.consultoria.chamados },
@@ -430,20 +458,55 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('CIDE', tem(m.cide.atividades),
     <CardFonte
       titulo="CIDE" cor="var(--chart-5)" Icone={Landmark}
-      ranking={r.cide} unidade="mais alterou cadastro"
+      ranking={r.cide.gente} unidade={r.cide.rotulo || "mais alterou cadastro"}
       numeros={[{ label: 'Alterações no cadastro', valor: m.cide.atividades, cor: 'var(--chart-5)' }]}
     />)
 
+  /* ⚠️⚠️ A RÁDIO NÃO TEM RANKING, e é uma decisão.
+     Ela chegou a ter: um pódio de quem mais ouve, com foto, posição, barra e o
+     #1 colorido — a MESMA gramática visual dos cartões de entrega. Numa tela
+     lida para decidir aumento, uma pessoa aparecia em primeiro lugar de uma
+     lista por escutar rádio no trabalho. O rodapé dizia "escuta não é trabalho",
+     mas o rodapé é 10,5px e o pódio é a forma. Aqui só os totais. */
   add('Rádio', tem(m.radio.horas, m.radio.sessoes),
-    <CardFonte
-      titulo="Rádio Itamarathy" cor="var(--info)" Icone={Radio}
-      ranking={r.radio} unidade="mais ouviu"
-      numeros={[
-        { label: 'Horas ouvidas', valor: m.radio.horas, cor: 'var(--info)', nota: 'não entra no score' },
-        { label: 'Sessões', valor: m.radio.sessoes },
-      ]}
-      rodape="Escuta não é trabalho — a rádio é vitrine e fica fora do score."
-    />)
+    <Card titulo="Rádio Itamarathy" cor="var(--info)" sub="Escuta não é trabalho — a rádio é vitrine e fica fora do score.">
+      <div style={grade}>
+        <N label="Horas ouvidas" valor={m.radio.horas} cor="var(--info)" />
+        <N label="Sessões" valor={m.radio.sessoes} />
+      </div>
+    </Card>)
+
+  /* ⚠️⚠️ REGRESSÃO CONSERTADA: este cartão SUMIU da tela quando a Atividade foi
+     reescrita em `CardFonte`. A rota continuava calculando e devolvendo
+     `chamadosDoSetor`, o tipo continuava declarando, e nenhum componente
+     renderizava — as duas faces que não se somam eram o único lugar da tela a
+     responder "quanto este setor atende os outros", que é o argumento de
+     headcount do T.I, da Programação e do Pessoal.
+
+     Sem ranking DE PROPÓSITO: a fonte é a função gravada no chamado, não a
+     pessoa — e aqui o cartão sem "quem" é legítimo, desde que diga isso. */
+  const cs = m.chamadosDoSetor
+  if (cs && (cs.pediu > 0 || cs.recebeu > 0)) {
+    cards.unshift(
+      <Card
+        key="entre-setores"
+        titulo="Chamados entre setores"
+        cor="var(--chart-3)"
+        sub="Duas faces do mesmo pedido: o que este setor pediu aos outros e o que recebeu para atender. Não se somam — contado pela função gravada no chamado, e não por pessoa."
+      >
+        <div style={grade}>
+          <N label="Pediu aos outros" valor={cs.pediu} cor="var(--info)" />
+          <N label="Desses, atendidos" valor={cs.pediuConcluidos} />
+          <N label="Recebeu para atender" valor={cs.recebeu} cor="var(--chart-3)" />
+          <N label="Concluiu" valor={cs.recebeuConcluidos} cor="var(--success)" />
+          <N label="Cancelados" valor={cs.cancelados} nota="fora da média" />
+          <N label="Tempo médio de atendimento"
+            valor={cs.recebeuConcluidos ? dur(Math.round(cs.segundos / cs.recebeuConcluidos), 10) : null}
+            nota="só expediente · 1 d = 10 h" />
+        </div>
+      </Card>,
+    )
+  }
 
   if (cards.length === 0) {
     return (

@@ -41,7 +41,7 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
   }
 
   const vals = s.map((x) => x.atividade)
-  const g = geomLine(vals, 300, 90, 8)
+  const g = geomLine(vals, 700, 110, 10)
   const ultimo = vals[vals.length - 1]
   const anterior = vals[vals.length - 2]
   const varia = anterior > 0 ? Math.round(((ultimo - anterior) / anterior) * 100) : null
@@ -66,10 +66,13 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
         )}
       </div>
 
-      {/* ⚠️ `preserveAspectRatio="none"` num viewBox 300×90 esticado para ~700px
+      {/* ⚠️⚠️ SEM esticar. `preserveAspectRatio="none"` num viewBox 300×90
           deixava o traço com espessura desigual e transformava os pontos em
-          ELIPSES. `non-scaling-stroke` mantém a espessura sob o esticamento. */}
-      <svg viewBox="0 0 300 90" preserveAspectRatio="none" style={{ width: '100%', height: 110, marginTop: 12, display: 'block', overflow: 'visible' }}>
+          ELIPSES — e a pré-compensação por `scale()` era um número chutado, que
+          só acertava numa largura (o fator real é larguraRenderizada/300, e ela
+          muda com o breakpoint). Desenhando num viewBox com a proporção da caixa,
+          o problema não existe e os dois remendos saem juntos. */}
+      <svg viewBox="0 0 700 110" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: 110, marginTop: 12, display: 'block' }}>
         <defs>
           <linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-2)" stopOpacity="0.28" />
@@ -79,12 +82,11 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
         <path d={g.area} fill="url(#tgrad)" />
         {/* ⚠️ `--len` era 600 num caminho de ~350: a linha terminava de ser
             desenhada em 60% da duração e o resto era tempo parado. */}
-        <path className="cdraw" style={{ ['--len' as string]: 380 }} vectorEffect="non-scaling-stroke"
-          d={g.line} fill="none" stroke="var(--chart-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path className="cdraw" style={{ ['--len' as string]: 900 }}
+          d={g.line} fill="none" stroke="var(--chart-2)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         {g.pts.map(([x, y], i) => (
           <circle key={i} className="cpop" style={{ animationDelay: `${i * 45}ms` }} cx={x} cy={y}
-            r={i === g.pts.length - 1 ? 3.4 : 2} vectorEffect="non-scaling-stroke"
-            transform={`translate(${x} ${y}) scale(0.34 1) translate(${-x} ${-y})`}
+            r={i === g.pts.length - 1 ? 4 : 2.6}
             fill={i === g.pts.length - 1 ? 'var(--chart-2)' : 'var(--surface)'} stroke="var(--chart-2)" strokeWidth="1.6">
             <title>{`${mesCurto(s[i].mes)}: ${s[i].atividade.toLocaleString('pt-BR')} ações`}</title>
           </circle>
@@ -101,8 +103,15 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
           só existe desde 21/08/2026, km da Gerência desde 17/07). Uma subida no
           gráfico pode ser fonte nova entrando, e não produção crescendo. */}
       <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 10, lineHeight: 1.5 }}>
-        A série começa no primeiro mês com registro. Subida pode ser <b>fonte nova entrando</b> na
-        medição, e não produção crescendo — as oito fontes têm históricos de tamanhos diferentes.
+        {/* ⚠️ A série soma quem está no setor HOJE: quem saiu some de todos os
+            meses, retroativamente. O gestor via agosto valendo 191 em agosto e
+            140 em setembro, sem nada ter mudado no trabalho de agosto. E a
+            Rotatividade, no cartão ao lado, mostra a foto dessa mesma pessoa —
+            a tela apresentava as duas coisas como fatos independentes. */}
+        A série soma a <b>equipe de hoje</b> — quem saiu não aparece em nenhum mês, então um
+        desligamento rebaixa o passado inteiro (veja quem saiu no cartão ao lado). Ela começa no
+        primeiro mês com registro, e uma subida pode ser <b>fonte nova entrando</b> na medição, e não
+        produção crescendo.
       </div>
     </div>
   )
@@ -140,11 +149,23 @@ export function Turnover({ m }: { m: DeptMetrics }) {
         em 7 dias a primeira lista vem vazia e os 40% ficariam sem ninguém por
         trás, que é exatamente o número virar abstração.
       */}
-      {t.noPeriodo.length > 0 && (
-        <ListaSaiu titulo={`${t.noPeriodo.length} ${t.noPeriodo.length === 1 ? 'saída dentro do período' : 'saídas dentro do período'}`} gente={t.noPeriodo} />
+      {/* ⚠️ A lista de 12 meses aparece SEMPRE que houver gente nela. A condição
+          antiga ("só se a do período estiver vazia") desligava a lista justamente
+          no caso em que ela mais importa: filtro em 30 dias, uma saída recente e
+          quatro antigas → o cartão dizia "5 saídas em 12 meses" e mostrava UMA
+          pessoa. Quem caiu dentro do filtro fica marcado. */}
+      {t.em12m.length > 0 && (
+        <ListaSaiu
+          titulo={t.noPeriodo.length > 0
+            ? `${t.em12m.length} ${t.em12m.length === 1 ? 'saída' : 'saídas'} em 12 meses · ${t.noPeriodo.length} no período`
+            : `Ninguém saiu no período · ${t.em12m.length} ${t.em12m.length === 1 ? 'saída' : 'saídas'} nos últimos 12 meses`}
+          gente={t.em12m}
+          noPeriodo={new Set(t.noPeriodo.map((p) => p.id))}
+        />
       )}
-      {t.noPeriodo.length === 0 && t.em12m.length > 0 && (
-        <ListaSaiu titulo={`Ninguém saiu no período · ${t.em12m.length} nos últimos 12 meses`} gente={t.em12m} esmaecido />
+      {/* Intervalo longo pelo calendário pode conter saída anterior aos 12 meses. */}
+      {t.em12m.length === 0 && t.noPeriodo.length > 0 && (
+        <ListaSaiu titulo={`${t.noPeriodo.length} ${t.noPeriodo.length === 1 ? 'saída' : 'saídas'} no período, antes dos 12 meses`} gente={t.noPeriodo} noPeriodo={new Set(t.noPeriodo.map((p) => p.id))} />
       )}
       {t.saidas12m === 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 14 }}>Ninguém saiu deste setor em 12 meses.</div>
@@ -154,10 +175,12 @@ export function Turnover({ m }: { m: DeptMetrics }) {
 }
 
 /** Quem saiu — foto, nome, cargo e a data. */
-function ListaSaiu({ titulo, gente, esmaecido }: {
+function ListaSaiu({ titulo, gente, noPeriodo }: {
   titulo: string
   gente: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }[]
-  esmaecido?: boolean
+  /** Quem caiu dentro do filtro — marcado, para a lista de 12 meses não achatar
+   *  a diferença entre "saiu agora" e "saiu em outubro". */
+  noPeriodo: Set<string>
 }) {
   // ⚠️ Sem link para a ficha: a pessoa saiu, e a ficha dela é de quem está aqui.
   // Um clique que leva a um perfil de desligado é uma promessa que a tela não
@@ -169,9 +192,9 @@ function ListaSaiu({ titulo, gente, esmaecido }: {
       <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
         {titulo}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, opacity: esmaecido ? 0.78 : 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {visiveis.map((p, i) => (
-          <div key={p.id} className="cpop" style={{ animationDelay: `${i * 45}ms`, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div key={p.id} className="cpop" style={{ animationDelay: `${i * 45}ms`, display: 'flex', alignItems: 'center', gap: 10, opacity: noPeriodo.has(p.id) ? 1 : 0.72 }}>
             {/* Em escala de cinza: é um retrato de quem não está mais aqui. */}
             <span style={{ filter: 'grayscale(1)', opacity: 0.85, display: 'flex' }}>
               <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--text-mute)" size={28} />
@@ -181,7 +204,7 @@ function ListaSaiu({ titulo, gente, esmaecido }: {
               <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{p.cargo}</div>
             </div>
             {p.quando && (
-              <span style={{ fontSize: 11, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 11, color: noPeriodo.has(p.id) ? 'var(--text-dim)' : 'var(--text-mute)', fontWeight: noPeriodo.has(p.id) ? 600 : 400, whiteSpace: 'nowrap' }}>
                 {new Date(`${p.quando}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })}
               </span>
             )}

@@ -18,7 +18,10 @@ export type PessoaRank = { id: string; nome: string; cargo: string; hasAvatar: b
 export type DeptMetrics = {
   pessoas: PessoaDoSetor[]
   /** Quem fez o quê em cada fonte, do maior para o menor. Só quem tem valor > 0. */
-  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio', PessoaRank[]>
+  /** Por fonte: por QUAL grandeza está ranqueado, e quem. `gente` vazia é o
+   *  caso comum (o setor abre chamado e não resolve) — o cartão diz isso. */
+  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio',
+    { rotulo: string; gente: PessoaRank[] }>
   setor: { id: string; nome: string; pelaDiretoria: boolean }
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
   ehAdmin: boolean

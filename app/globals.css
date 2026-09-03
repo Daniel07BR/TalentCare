@@ -87,9 +87,12 @@ a{color:inherit;text-decoration:none;}
      um degrau. Empilhadas, a faixa de ação continua sendo a primeira coisa. */
   .dept-topo,.dept-duplo{grid-template-columns:1fr!important;}
   .cab-pessoas{display:none!important;}
-  /* Sem o cabeçalho, a linha vira duas faixas: pessoa em cima, números embaixo. */
+  /* Sem o cabeçalho, a linha guarda pessoa · nota · ocorrências. A ATIVIDADE
+     sai (não cabe), e por isso o botão de ordenar por atividade também sai —
+     ordenar por uma coluna invisível embaralha a lista sem explicação. */
   .linha-pessoa{grid-template-columns:minmax(0,1fr) 62px 82px!important;}
   .linha-pessoa>*:nth-child(3),.linha-pessoa>*:nth-child(5){display:none!important;}
+  .ord-atividade{display:none!important;}
   .card-fonte{grid-template-columns:1fr!important;}
 }
 
