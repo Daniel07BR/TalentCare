@@ -1,0 +1,184 @@
+# As fontes de atividade
+
+O TalentCare não mede nada por conta própria: ele **espelha** o que os sistemas da
+casa registram. Oito fontes hoje, todas pela mesma receita.
+
+| # | Fonte | Onde | Espelho | Cron |
+|---|---|---|---|---|
+| 1 | Rádio Itamarathy | `.68` | `radio_daily` | `:00` |
+| 2 | WhatsApp / Painel de Atendimento | `.70` | `whatsapp_daily` + `whatsapp_attendant_daily` | `:05` |
+| 3 | ClassRoom | `.71` | `classroom_daily` | `:10` |
+| 4 | Consultoria Plus | `.68` | `consultoria_daily` | `:15` |
+| 5 | HelpDesk | `.77` | `helpdesk_daily` | `:20` |
+| 6 | CIDE | `.74` | `cide_daily` | `:25` |
+| 7 | Gerência (mensageria) | `.72` | `gerencia_daily` | `:30` |
+| 8 | **Chat Interno** | `.69` | `chat_daily` + `chat_dept_daily` | `:35` |
+| — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |
+| — | Ponto / disciplina | dump do Nexo | `assiduidade_daily`, `disciplina_evento` | import à mão |
+
+---
+
+## A receita
+
+```
+1. A ORIGEM expõe  GET /api/integrations/<algo>-daily?from&to
+   auth por X-API-Key própria daquele consumidor
+
+2. AQUI  model <Fonte>Daily  com  @@id([nexusUserId, day])
+
+3. lib/<fonte>.ts + run-<fonte>-sync.mjs
+   puxa do watermark −1 dia · upsert SET · avança o watermark
+
+4. /api/<fonte>-metrics + lib/ui/<fonte>-period.ts
+   soma o espelho no intervalo pedido
+```
+
+A chave de junção é sempre o **`nexus_user_id`**, nunca o nome — exceto o WhatsApp,
+cuja origem não tem id do Nexus e casa por nome normalizado.
+
+### ⚠️⚠️ Integrar a fonte NÃO basta — percorra TODOS os consumidores
+
+Foi a lição cara da Gerência: a ficha do mensageiro que entrega o dia inteiro nasceu
+dizendo *"Sem atividade registrada"*, com o espelho cheio. São **seis** lugares:
+
+```
+lib/data/source.ts              o acumulado (getTalentData)
+lib/mock/data.ts  activityOf()  a produtividade do score
+/api/score-metrics              a MESMA conta, period-aware — esquecer um deixa
+                                o score inconsistente entre a base e o filtro
+/api/employee-metrics           o card da ficha
+/api/employee-timeline          a aba Atividade
+/api/dept-metrics               o relatório do setor
+/api/sync/run                   o sync disparado na entrada
++ SYSTEMS / sysColor / SYS_INFO se a fonte entra na barra "atividade por sistema"
+```
+
+---
+
+## Armadilhas que já custaram caro
+
+### ⚠️⚠️ O dia devolvido tem de vir INTEIRO
+
+As linhas são por **dia local**; o upsert é `SET` (troca a linha do dia). O runner
+pede `from = startOfDay(watermark) − 1 dia` no relógio **dele, que roda UTC** — 21h de
+São Paulo do dia anterior. Sem tratar isso, a origem devolve aquele dia contado só das
+21h em diante e a linha cheia é substituída pela fatia.
+
+Medido no Chat Interno: a **segunda** rodada do sync derrubou 210.740 mensagens para
+**210.636**, sem erro nenhum no log, e cairia de novo a cada hora.
+
+> **O conserto é do lado do ENDPOINT** — a origem recua o `from` até a meia-noite do
+> fuso em que ela baldeia. No runner resolveria hoje e deixaria a armadilha armada
+> para o próximo consumidor: quem chama não tem como saber qual é o balde.
+>
+> **O teste que encontra isto é rodar o sync DUAS vezes e comparar o total.** Uma
+> rodada só nunca acusa.
+
+### ⚠️⚠️ Watermark recente NÃO prova frescor
+
+O `sync_watermark` avança mesmo quando o pull traz zero linhas. Em 07/08/2026, dois
+dos seis espelhos estavam mortos há semanas com os seis crons "rodando com sucesso".
+**Meça sempre `max(day)` da tabela do espelho.**
+
+### ⚠️⚠️ Sync de diretório precisa de FREIO na inativação
+
+O bloco de órfãos desliga quem sumiu do diretório. Se o Nexus devolver `200` com uma
+lista curta — deploy pela metade, filtro novo, erro de paginação —, ele desliga a casa
+inteira e o log diz `sucesso`. Foi assim que a lógica de órfão do ClassRoom desativou
+8 pessoas ativas de verdade.
+
+Freio: **cobertura < 80%** de quem já está ativo aqui → não inativa ninguém e grita no
+log. O corte é sobre o **tamanho da resposta**, não sobre quantos seriam desligados:
+demissão em massa real tem de passar e resposta truncada tem de parar, e só o tamanho
+da origem distingue as duas.
+
+Ensaiado com uma resposta truncada (20 de 128): cobertura 0,21, `deactivated: 0`. Sem
+o freio, **77 pessoas teriam caído**.
+
+### ⚠️⚠️ O runner CLI tem uma CÓPIA da régua
+
+`run-sync.mjs` roda em node puro e não importa do `lib/` (TypeScript, alias `@/`), por
+isso tem sua própria `mapRole`/`resolveRole`. As duas divergem em silêncio e **vence
+quem roda por último — que é sempre o cron**. Mexeu em `lib/nexus.ts`, mexa lá.
+
+### ⚠️ O upsert não remove o que sumiu da origem
+
+`update: SET` só toca no que a fonte devolve. Quando um endpoint **parou** de devolver
+registros fantasmas, a linha antiga continuou congelada no espelho. O sync completo da
+Gerência apaga, no range coberto, as chaves que não vieram — **só depois de todos os
+upserts darem certo**, e **só porque `gerencia_daily` é 100% derivada**. Isso **não**
+vale para o WhatsApp, onde a origem perdeu história e a nossa cópia é a melhor.
+
+### ⚠️ `db.execute(sql...)` recusa `Date` como parâmetro
+
+No driver `postgres.js`: `ERR_INVALID_ARG_TYPE`, um 500 que só aparece na primeira
+chamada de verdade. Mande texto ISO com `::timestamptz` — o cast é obrigatório junto.
+
+### ⚠️ Janelas de histórico MUITO desiguais — a tela tem de avisar
+
+Serviço da Gerência vem desde 2022; km e jornada só desde 17/07/2026; mensagem do Chat
+desde jan/2026 (o import do Mattermost guardou a data original); chamado entre setores
+só desde 21/08/2026. Sem o aviso, o filtro de **Ano** mostra um setor "sem chamado
+nenhum" e parece defeito.
+
+---
+
+## O que sai (e o que não sai) de cada porta
+
+> **⚠️⚠️ O que atravessa é CONTAGEM, nunca conteúdo.** Nenhum texto de mensagem,
+> assunto de chamado ou nome de canal. O TalentCare mede quanto se trabalhou, e o
+> número basta — mandar o texto seria entregar a conversa da casa a um painel de RH
+> que não pediu por ela e não tem régua para lê-la.
+>
+> **Anotação particular do Chat nunca vai aparecer**: não é mensagem (mora fora da
+> auditoria), e até contar quantas alguém escreveu já diria algo sobre uma área que é
+> só dela.
+
+### Filtros que não são detalhe
+
+| Fonte | Filtro | Por quê |
+|---|---|---|
+| Chat | `hidden_at is null` | os 4 chamados de ensaio da estreia derrubavam a média da casa |
+| Chat | `deleted_at is null`, `type='user'` | apagada não é entrega; "fulano entrou no canal" não é trabalho |
+| Chat | `nexus_user_id is not null` | autor `legacy` (só existe como autor de mensagem importada) não tem a quem creditar — 5.610 de 216.350 |
+| Gerência | `u.name <> 'Sistema'` | a importação do Access carimbou **27.501** protocolos como entregues por um usuário chamado "Sistema" |
+| Gerência | `completed_at` > 180 d de `scheduled_for` | mutirão de backlog vira "serviço feito naquele dia" por quem nem estava trabalhando |
+| CIDE | exclui eventos automáticos | mesmo padrão do "Sistema" |
+
+### O tempo, quando é de chamado
+
+O Chat conta **segundos de EXPEDIENTE** (8h–18h, seg a sex) e manda a conta **pronta**.
+Um chamado aberto na sexta às 17:30 e encerrado na segunda às 08:30 levou 63 horas de
+relógio e **1 hora** de escritório.
+
+> **Nunca recalcular aqui a partir de datas** — seriam duas verdades sobre quanto o
+> chamado levou. Na tela, **1 d = 10 h** de trabalho.
+
+---
+
+## O que ainda é MOCK exibido como se fosse real
+
+> **⚠️⚠️ Dívida aberta**, e não é cosmética — o painel é usado para decidir aumento.
+
+- **"Tarefas concluídas"** (`5.331` no dashboard e no `/ranking`) = `24 + rnd(seed) × 120`
+  por pessoa × fator de período — `lib/mock/data.ts`.
+- **Os deltas dos KPIs** (`+3`, `+12%`, `+2`) e **todas as sparklines** são literais ou
+  `sp(seed)`.
+- Ficha, aba Produtividade: **Concluídas / Atrasadas / Pendentes**.
+- **`/relatorios`** nunca saiu do "Em breve".
+
+---
+
+## Como entra uma 9ª fonte
+
+1. Combine com o agente do sistema de origem o endpoint `<algo>-daily` e emita uma
+   **chave própria** para o TalentCare (separada da chave do Nexus: revogar a leitura
+   do RH não pode derrubar o push de diretório).
+2. `model <Fonte>Daily` + `npx prisma db push`.
+3. `lib/<fonte>.ts` + `run-<fonte>-sync.mjs` + o cron num minuto livre.
+4. **Percorra os seis consumidores** da lista acima.
+5. **Backfill, e depois rode o sync duas vezes** comparando o total. Reconcilie contra
+   a fonte: no Chat foram 210.742 dos dois lados.
+6. Decida explicitamente se a fonte entra no **score** — e, se entrar, o que dela
+   entra. Mensagem do Chat e escuta de rádio **não** entram (são vitrine); km e jornada
+   da Gerência também não (são a magnitude dos mesmos serviços e abafariam o resto).

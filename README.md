@@ -30,6 +30,21 @@ trajetória, formação e a atividade real gerada nos sistemas internos da empre
 - **Prisma 6** + **PostgreSQL**
 - TypeScript, CSS próprio (tema claro/escuro, sem framework de UI)
 
+## Documentação
+
+| Documento | O que traz |
+|---|---|
+| [`docs/AVALIACOES.md`](docs/AVALIACOES.md) | a avaliação mensal: quem avalia quem, os critérios, o ciclo da nota e as **duas réguas de acesso** |
+| [`docs/FONTES.md`](docs/FONTES.md) | as 8 fontes de atividade, a receita do espelho diário e as armadilhas que já custaram caro |
+| [`docs/PERIODO-E-DEPLOY.md`](docs/PERIODO-E-DEPLOY.md) | o contrato do filtro de período/calendário e como se publica em produção |
+| [`CHANGELOG.md`](CHANGELOG.md) | o histórico por sessão de trabalho |
+
+> **⚠️ Duas coisas para ler antes de mexer em número na tela:**
+> **(1)** todo valor ao lado do filtro de período tem de sair de uma consulta **com o
+> intervalo** — o teste é trocar a janela e ver o número mexer;
+> **(2)** ainda há **mock exibido como se fosse real** ("Tarefas concluídas", os deltas
+> dos KPIs, as sparklines). A lista está no fim de `docs/FONTES.md`.
+
 ## Estrutura
 
 ```
@@ -42,7 +57,9 @@ lib/
   data/             # leitura do banco e montagem do dataset do painel
   mock/             # view-models das telas
   ui/               # hooks e contextos de UI (período, dados, métricas)
+  avaliacoes/       # critérios e A RÉGUA da avaliação (uma, e só ali)
 prisma/             # schema do banco
+docs/               # ver acima
 ```
 
 ## Desenvolvimento
@@ -72,8 +89,12 @@ integração com os sistemas internos. Solicite o `.env` ao responsável pelo pr
 ## Sincronização de dados
 
 A atividade real dos colaboradores é trazida por sincronizações incrementais
-(agendadas) que populam o espelho local. A sincronização também é disparada na
-entrada do usuário, de forma transparente.
+(agendadas) que populam o espelho local — uma por fonte, mais o diretório. A
+sincronização também é disparada na entrada do usuário, de forma transparente.
+
+⚠️ **`watermark` recente não prova frescor** (ele avança mesmo quando o pull traz zero
+linhas): para saber se uma fonte está viva, meça `max(day)` da tabela do espelho.
+Receita, crons e armadilhas em [`docs/FONTES.md`](docs/FONTES.md).
 
 ---
 
