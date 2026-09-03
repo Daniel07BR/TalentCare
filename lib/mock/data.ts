@@ -217,7 +217,11 @@ export const PALETTE = [
 // Configurações. ⚠️ Entrar aqui exige três coisas juntas: cor em `sysColor`,
 // descrição em `SYS_INFO` (lib/mock/config.ts) e um valor REAL em `realBySystem`
 // na ficha — faltando qualquer uma, o sistema aparece com barra inventada.
-export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE', 'Chat Interno']
+// ⚠️ A GERÊNCIA faltava: `realBySystem` na ficha a calculava e jogava fora,
+// porque o map é sobre `SYSTEMS`. O mensageiro que entregou 266 serviços no
+// período aparecia com seis barras rasas no gráfico que responde "onde essa
+// pessoa trabalha". É o 6º consumidor da checklist do `docs/FONTES.md`.
+export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE', 'Chat Interno', 'Gerência']
 
 const BASE_DATE = new Date(2026, 5, 1) // jun/2026 — referência fixa (determinístico)
 
@@ -273,7 +277,7 @@ export function sysColor(s: string): string {
   return ({
     HelpDesk: 'var(--chart-4)', ClassRoom: 'var(--chart-2)', 'Consultoria Plus': 'var(--chart-3)',
     'Painel de Atendimento': 'var(--chart-1)', CIDE: 'var(--chart-5)',
-    'Chat Interno': 'var(--chart-3)',
+    'Chat Interno': 'var(--chart-3)', 'Gerência': 'var(--chart-2)',
   } as Record<string, string>)[s]
 }
 

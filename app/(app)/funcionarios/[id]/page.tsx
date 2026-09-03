@@ -3,12 +3,10 @@ import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
-import { useScoreSignals } from '@/lib/ui/score-period'
-import { withRealScores } from '@/lib/mock/score'
 import { type EmployeeMetrics, useEmployeePeriod } from '@/lib/ui/employee-period'
-import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
+import { useEmployeeTimeline, type EstadoTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
-import { buildEmployeeVM } from '@/lib/mock/employee'
+import { buildEmployeeVM, type EmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
@@ -34,11 +32,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const { id } = use(params)
   const router = useRouter()
   const [editando, setEditando] = useState(false)
-  const { signals } = useScoreSignals()
-  const data = withRealScores(useTalentData(), signals)
+  /* ⚠️ Sem `withRealScores`/`useScoreSignals`: eles disparavam mais um fetch a
+     `/api/score-metrics` — que devolve a atividade da EMPRESA INTEIRA — em toda
+     ficha aberta, para produzir campos que a página não lê desde que o score
+     saiu daqui. */
+  const data = useTalentData()
   const { period, label } = usePeriod()
   const { m } = useEmployeePeriod(id)
-  const { events: timeline } = useEmployeeTimeline(id)
+  const { events: timeline, estado: estadoTimeline } = useEmployeeTimeline(id)
   const vm = buildEmployeeVM(data, id)
 
   if (!vm) {
@@ -76,6 +77,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m?.assiduidade ?? null
+  /* ⚠️ "Tem ponto" = há QUALQUER registro no período. Sem isso, zero atrasos por
+     ausência de dado viraria índice 100. */
+  const temPonto = !!ass && (ass.atrasos > 0 || ass.atrasosAbon > 0 || ass.advertencias > 0 || ass.minutos > 0)
   const periodo = label
 
   // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
@@ -112,9 +116,13 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
-    return { sys: b.sys, color: b.color, real, value: real ? (realBySystem[b.sys] ?? 0) : b.value }
+    /* ⚠️⚠️ `?? 0` fazia o gráfico-resumo — o primeiro que o gestor lê — afirmar
+       SEIS ZEROS carimbados "REAL" em verde até a rota responder, e para sempre
+       se ela negasse. O acumulado era o número certo da pergunta errada; o zero
+       é a resposta errada da pergunta certa. */
+    return { sys: b.sys, color: b.color, real, value: real ? realBySystem[b.sys] : b.value }
   })
-  const maxSys = Math.max(1, ...bySystem.map((b) => b.value))
+  const maxSys = Math.max(1, ...bySystem.map((b) => b.value ?? 0))
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -193,7 +201,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     Atrasadas/Pendentes não têm fonte → ocultas. */}
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22, alignItems: 'stretch' }}>
                   <div style={{ flex: 'none', minWidth: 150, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="cnum" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: 'var(--success)' }}>{(concluidas ?? 0).toLocaleString('pt-BR')}</div>
+                    <div className="cnum" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: 'var(--success)' }}>{concluidas == null ? '—' : concluidas.toLocaleString('pt-BR')}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Atividades concluídas <span style={{ color: 'var(--text-mute)' }}>· {periodo}</span></div>
                   </div>
                   <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -223,8 +231,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                         {s.sys}
                         <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.3px', textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, color: s.real ? 'var(--success)' : 'var(--text-mute)', background: s.real ? 'rgba(63,178,85,.13)' : 'var(--surface-2)' }}>{s.real ? 'real' : 'simulado'}</span>
                       </span>
-                      <div style={{ flex: 1, height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: `${(s.value / maxSys) * 100}%`, background: s.color, borderRadius: 20, opacity: s.real ? 1 : 0.5 }} /></div>
-                      <span style={{ width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, color: s.real ? 'var(--text)' : 'var(--text-mute)' }}>{s.value}</span>
+                      {/* ⚠️ `null` = ainda não sabemos. Barra vazia e "—", nunca zero. */}
+                      <div style={{ flex: 1, height: 8, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: s.value == null ? '0%' : `${(s.value / maxSys) * 100}%`, background: s.color, borderRadius: 20, opacity: s.real ? 1 : 0.5 }} /></div>
+                      <span style={{ width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, color: s.value == null ? 'var(--text-mute)' : s.real ? 'var(--text)' : 'var(--text-mute)' }}>{s.value == null ? '—' : s.value}</span>
                     </div>
                   ))}
                 </div>
@@ -399,7 +408,16 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 
           <Secao titulo="Linha do tempo" sub={`O que aconteceu, dia a dia · ${periodo}`}>
 <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18 }}>Linha do tempo cross-sistema · dados reais · {periodo}</div>
-                {timeline !== null && timeline.length === 0 ? (
+                {/* ⚠️⚠️ "Sem atividade" só no estado `ok`. Antes um 403 ou uma
+                    falha de rede virava essa frase — a tela afirmando um fato
+                    sobre a pessoa que está prestes a ser avaliada. */}
+                {estadoTimeline === 'carregando' ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', padding: '10px 0' }}>Carregando o período…</div>
+                ) : estadoTimeline === 'negado' ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-dim)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Você não tem acesso à atividade desta pessoa.</div>
+                ) : estadoTimeline === 'erro' ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-dim)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Não deu para carregar a linha do tempo. Recarregue a página.</div>
+                ) : timeline !== null && timeline.length === 0 ? (
                   <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Sem atividade registrada nos sistemas integrados neste período.</div>
                 ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -432,7 +450,17 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>Ponto eletrônico · {periodo}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ass.assid}%</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Assiduidade</div></div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>{/* ⚠️⚠️ Este cartão mostrava `100 − atrasos×2 − advertências×5` como se fosse
+       uma TAXA de presença — e é a `assidNotaFrom()` do score, o mesmo fator que
+       vale 20% dele. Quem não tem ponto na fonte recebia "100%": zero atraso por
+       AUSÊNCIA DE DADO virava nota máxima, na mesma fileira em que "Faltas" e
+       "Suspensões" mostram "—" com "sem fonte". A fileira era honesta em duas
+       células e inventava na primeira. */}
+                    <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: temPonto ? 'var(--text)' : 'var(--text-mute)' }}>{temPonto ? `${ass.assid}%` : '—'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Índice de assiduidade</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="100 − atrasos×2 − advertências×5. Não é taxa de presença.">
+                      {temPonto ? '100 − atrasos×2 − advert.×5' : 'sem registro de ponto'}
+                    </div></div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
                     <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.atrasos}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Atrasos</div>
@@ -445,7 +473,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     ) : null}
                   </div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Faltas</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{vm.advert}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>histórico total</div></div>
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>histórico total</div></div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mapa de ocorrências · últimas 18 semanas</div>
@@ -483,7 +511,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
-                          {radioSessoes != null ? `${radioSessoes.toLocaleString('pt-BR')} ${radioSessoes === 1 ? 'sessão' : 'sessões'}` : '—'}
+                          {radioSessoes != null ? `${radioSessoes.toLocaleString('pt-BR')} ${radioSessoes === 1 ? 'sessão' : 'sessões'}` : 'carregando…'}
                           {radioUltima ? <> · última escuta {radioUltima}</> : null}
                         </div>
                       </>
@@ -491,18 +519,23 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
-                    {vm.discEmpty ? (
+                    {(m?.disciplina.length ?? 0) === 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 96, textAlign: 'center', gap: 6 }}>
                         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(63,178,85,.13)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✓</div>
                         <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Nenhuma ocorrência registrada</span>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                        {vm.disc.map((d, i) => (
-                          <div key={i} className="cpop" style={{ display: 'flex', alignItems: 'center', gap: 11, background: d.bg, borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.cor, flex: 'none' }} />
-                            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 600, color: d.cor }}>{d.tipo}</div><div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{d.motivo}</div></div>
-                            <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{d.quando}</span>
+                        {(m?.disciplina ?? []).map((d, i) => (
+                          <div key={i} className="cpop" style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'color-mix(in srgb, var(--danger) 9%, var(--surface-2))', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger)', flex: 'none' }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--danger)', textTransform: 'capitalize' }}>{d.tipo}</div>
+                              <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{d.motivo ?? 'sem motivo registrado'}</div>
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
+                              {new Date(`${d.data}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -595,7 +628,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
           avaliação mensal. O painel aqui passou a servir a quem vai AVALIAR: o
           que aconteceu no mês, e o que perguntar na conversa.
         */}
-        <PainelDoAvaliador vm={vm} m={m} periodo={periodo} />
+        <PainelDoAvaliador vm={vm} m={m} periodo={periodo} estado={estadoTimeline} />
       </div>
     </div>
   )
@@ -610,12 +643,25 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
    O que fica aqui não decide nada: junta o que aconteceu no mês e o que vale
    PERGUNTAR na conversa. A nota continua sendo de quem observou a pessoa.
    ============================================================ */
-function PainelDoAvaliador({ vm, m, periodo }: {
-  vm: ReturnType<typeof buildEmployeeVM> extends null ? never : NonNullable<ReturnType<typeof buildEmployeeVM>>
+function PainelDoAvaliador({ vm, m, periodo, estado }: {
+  vm: EmployeeVM
   m: EmployeeMetrics | null
   periodo: string
+  estado: EstadoTimeline
 }) {
   const router = useRouter()
+
+  /* ⚠️⚠️ A JANELA vs. A VIDA DA PESSOA. Todos os números são "no período", e
+     nada relacionava um com o outro: quem foi admitido há 12 dias tinha os
+     mesmos zeros de quem não é medido, debaixo de "Últimos 30 dias"; quem saiu
+     há 8 meses idem. Sem esta linha, a ausência de dado se lê como ausência de
+     trabalho — e é o leitor que vai pontuar entrega quem lê. */
+  const admissao = vm.hireISO ? new Date(vm.hireISO) : null
+  const saida = vm.leftISO ? new Date(vm.leftISO) : null
+  const desde = m ? new Date(`${m.fromDay}T00:00:00`) : null
+  const recemAdmitida = admissao && desde && admissao > desde
+  const saiuNoPeriodo = saida && desde && saida > desde
+  const fmtD = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
 
   /* O QUE PERGUNTAR — derivado do que os sistemas registraram, e escrito como
      PERGUNTA, nunca como conclusão. A diferença não é de estilo: "resolveu 40
@@ -664,6 +710,23 @@ function PainelDoAvaliador({ vm, m, periodo }: {
         O que os sistemas registraram · {periodo}
       </div>
 
+      {(recemAdmitida || saiuNoPeriodo) && (
+        <div style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--text-dim)', background: 'var(--surface-2)', borderLeft: '3px solid var(--warning)', borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginBottom: 12 }}>
+          {recemAdmitida && admissao && <>Admitida em <b>{fmtD(admissao)}</b> — o período cobre só parte do tempo de casa dela.</>}
+          {saiuNoPeriodo && saida && <>{recemAdmitida ? ' ' : ''}Desligada em <b>{fmtD(saida)}</b> — os números param aí.</>}
+        </div>
+      )}
+
+      {/* ⚠️ Painel VAZIO enquanto carrega lia-se como "não há nada a observar",
+          que é uma conclusão, e a errada. */}
+      {!m && (
+        <div style={{ fontSize: 12.5, color: 'var(--text-mute)', padding: '8px 0' }}>
+          {estado === 'negado' ? 'Você não tem acesso à atividade desta pessoa.'
+            : estado === 'erro' ? 'Não deu para carregar o que os sistemas registraram.'
+            : 'Carregando o que os sistemas registraram…'}
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         {pontos.map((p, i) => (
           <div key={i} className="cpop" style={{ animationDelay: `${i * 55}ms`, fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-dim)', background: 'var(--surface-2)', borderLeft: `3px solid ${p.cor}`, borderRadius: 'var(--radius-sm)', padding: '10px 13px' }}>
@@ -675,12 +738,16 @@ function PainelDoAvaliador({ vm, m, periodo }: {
       {/* ⚠️ O botão leva à avaliação DESTA pessoa. Sem ele, o gestor lê a ficha,
           abre outra aba, procura o nome na fila e recomeça — e a ficha existe
           justamente para ser lida antes de avaliar. */}
+      {/* ⚠️ Desligado não entra na fila da competência corrente: oferecer o
+          botão levaria a uma tela que recusa. */}
       <button
         onClick={() => router.push(`/avaliacoes/${vm.id}`)}
+        disabled={!!saida}
+        title={saida ? 'Pessoa desligada — fora da fila de avaliação' : undefined}
         className="tc-btn"
-        style={{ width: '100%', marginTop: 18, background: 'var(--accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', padding: '11px 16px', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+        style={{ width: '100%', marginTop: 18, background: saida ? 'var(--surface-2)' : 'var(--accent)', border: saida ? '1px solid var(--border)' : 'none', borderRadius: 'var(--radius-sm)', color: saida ? 'var(--text-mute)' : '#fff', padding: '11px 16px', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: saida ? 'not-allowed' : 'pointer' }}
       >
-        Avaliar {vm.name.split(' ')[0]}
+        {saida ? 'Desligada — fora da avaliação' : `Avaliar ${vm.name.split(' ')[0]}`}
       </button>
 
       {/* ⚠️ O que a tela NÃO faz, dito na tela. Uma ficha cheia de números ao

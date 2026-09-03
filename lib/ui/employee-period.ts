@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
 export type EmployeeMetrics = {
+  /** O intervalo que estes números cobrem — a ficha compara com a vida da pessoa. */
+  fromDay: string
+  toDay: string
   radio: { horas: number; sessoes: number; ultimaDay: string | null }
   classroom: { videos: number; courses: number; created: number; total: number }
   whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
@@ -25,6 +28,9 @@ export type EmployeeMetrics = {
     chamadosAbertos: number; chamadosAssumidos: number; chamadosConcluidos: number
     tempoMedio: string; hasConversa: boolean; hasChamado: boolean
   }
+  /** Histórico de advertências COM motivo — vem daqui, e não do dataset do
+   *  cliente, porque esta rota confere `podeVer`. */
+  disciplina: { data: string; motivo: string | null; tipo: string; dias: number | null }[]
   assiduidade: { assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number; faltas: number | null; suspensoes: number | null }
 }
 

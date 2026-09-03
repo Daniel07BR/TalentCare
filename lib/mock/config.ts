@@ -15,10 +15,11 @@ const SYS_INFO: Record<string, string> = {
   'Painel de Atendimento': 'Atendimentos de WhatsApp e clientes',
   CIDE: 'Aberturas e alterações societárias',
   'Chat Interno': 'Mensagens e chamados entre setores',
+  'Gerência': 'Mensageria: serviços, protocolos e saídas',
 }
 const SYS_SYNC: Record<string, string> = {
   HelpDesk: 'há 8 min', ClassRoom: 'há 1 h', 'Consultoria Plus': 'há 22 min',
-  'Painel de Atendimento': 'há 3 min', CIDE: 'há 35 min', 'Chat Interno': 'há 12 min',
+  'Painel de Atendimento': 'há 3 min', CIDE: 'há 35 min', 'Chat Interno': 'há 12 min', 'Gerência': 'há 30 min',
 }
 
 export const CFG_ROLES = [

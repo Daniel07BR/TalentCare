@@ -7,7 +7,25 @@ import { isHiddenDept } from '@/lib/hidden-depts'
  * Dataset do TalentCare: IDENTIDADE real (Nexus) + MÉTRICAS simuladas (até a frente B).
  * Lê os funcionários sincronizados (origin=nexus) e monta employees/departments.
  */
-export async function getTalentData(): Promise<TalentData> {
+/**
+ * ⚠️⚠️ O ALCANCE de quem está lendo. Sem ele, este dataset — que vai INTEIRO
+ * para o navegador (`TalentDataProvider`) — carregava, em toda página, o
+ * histórico disciplinar da empresa: em 03/09/2026 eram **732 advertências de 73
+ * pessoas, todas com o motivo escrito**, mais 130 dias de atrasos por pessoa.
+ *
+ * As rotas da ficha checavam `podeVer` corretamente, e era por isso que ninguém
+ * via o problema: a régua protegia a parte MENOS sensível (contagens do período)
+ * e o histórico disciplinar viajava livre no `self.__next_f` de qualquer tela.
+ *
+ * É o que impedia ligar `TALENTCARE_ACESSO_ABERTO`: abrir o sistema entregaria
+ * a ficha disciplinar de 73 pessoas a cada um dos 87 — e o que foi visto foi
+ * visto.
+ */
+export type Alcance =
+  | { tipo: 'tudo' }
+  | { tipo: 'recorte'; departmentIds: string[]; meuId: string }
+
+export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
   const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
   const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
@@ -84,7 +102,11 @@ export async function getTalentData(): Promise<TalentData> {
     }),
     // Eventos de disciplina (advertências) — lista real da ficha + contagem.
     prisma.disciplinaEvento.findMany({
-      select: { personKey: true, data: true, tipo: true, motivo: true, dias: true },
+      /* ⚠️ O `motivo` NÃO entra no dataset do cliente, nem para quem alcança a
+         pessoa. Ele é o conteúdo da advertência, e quem precisa dele é a FICHA —
+         que o pede a `/api/employee-metrics`, uma rota que confere `podeVer`.
+         Contagem viaja; texto não. */
+      select: { personKey: true, data: true, tipo: true, dias: true },
       orderBy: { data: 'desc' },
     }),
   ])
@@ -115,8 +137,15 @@ export async function getTalentData(): Promise<TalentData> {
   const discByKey = new Map<string, { data: string; tipo: string; motivo: string | null; dias: number | null }[]>()
   for (const e of discAll) {
     const arr = discByKey.get(e.personKey) ?? []
-    arr.push({ data: e.data, tipo: e.tipo, motivo: e.motivo, dias: e.dias })
+    arr.push({ data: e.data, tipo: e.tipo, motivo: null, dias: e.dias })
     discByKey.set(e.personKey, arr)
+  }
+
+  /* Quem o leitor alcança. Fora disso, a pessoa continua aparecendo (nome,
+     cargo, setor são diretório) — mas sem ocorrência de ponto e sem disciplina. */
+  const alcanca = (deptId: string | null, id: string): boolean => {
+    if (alcance.tipo === 'tudo') return true
+    return id === alcance.meuId || (!!deptId && alcance.departmentIds.includes(deptId))
   }
 
   const identities: Identity[] = users.map((u) => {
@@ -210,14 +239,16 @@ export async function getTalentData(): Promise<TalentData> {
       },
       // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
       // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.
-      assid: {
+      // ⚠️ Zero para quem o leitor não alcança — e não o número real escondido
+      // na tela: o dado não sai do servidor.
+      assid: !alcanca(u.departmentId, u.id) ? { atrasos: 0, atrasosAbon: 0, minutos: 0, advertencias: 0 } : {
         atrasos: at?.atrasos ?? 0,
         atrasosAbon: at?.atrasosAbon ?? 0,
         minutos: at?.minutosAtraso ?? 0,
         advertencias: disc.filter((d) => d.tipo === 'advertencia').length,
       },
-      assidDays: assidDaysByKey.get(personKey) ?? [],
-      discEventos: disc,
+      assidDays: alcanca(u.departmentId, u.id) ? (assidDaysByKey.get(personKey) ?? []) : [],
+      discEventos: alcanca(u.departmentId, u.id) ? disc : [],
     }
   })
 

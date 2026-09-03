@@ -37,26 +37,16 @@ export function findEmployee(data: TalentData, id: string): Employee | undefined
   return data.employees.find((e) => e.id === id)
 }
 
-function timelineFor(emp: Employee) {
-  const seed = seedOf(emp.id)
-  const tpl = [
-    { sys: 'HelpDesk', act: 'Resolveu chamado #' + (4200 + (seed % 900)), det: 'SLA cumprido · 2h12 de atendimento' },
-    { sys: 'ClassRoom', act: 'Concluiu "Compliance Tributário 2026"', det: 'Nota 9.4 · certificado emitido' },
-    { sys: 'CIDE', act: 'Processou abertura de empresa', det: 'Alteração de quadro societário · 3 sócios' },
-    { sys: 'Painel de Atendimento', act: 'Atendeu ' + (18 + seed % 14) + ' conversas no WhatsApp', det: 'Tempo médio de resposta 3m48' },
-    { sys: 'Consultoria Plus', act: 'Publicou estudo "Reforma e Simples Nacional"', det: '12 visualizações da diretoria' },
-    { sys: 'HelpDesk', act: 'Chamado #' + (4180 + (seed % 700)) + ' fora do SLA', det: 'Resolvido com 4h de atraso' },
-    { sys: 'ClassRoom', act: 'Publicou Step by Step "Fechamento mensal"', det: 'Aprovado pela coordenação' },
-    { sys: 'CIDE', act: 'Alteração contratual concluída', det: 'Empresa Itamarathy Holdings' },
-    { sys: 'Painel de Atendimento', act: 'Pico de atendimento no período', det: (40 + seed % 30) + ' conversas em um dia' },
-  ]
-  const whens = ['há 2 horas', 'há 5 horas', 'ontem', 'há 2 dias', 'há 3 dias', 'há 4 dias', 'há 6 dias', 'há 1 semana', 'há 9 dias']
-  const evs: { system: string; color: string; action: string; detail: string; when: string }[] = []
-  tpl.forEach((t, i) => {
-    if (rnd(seed + i * 3) > 0.18) evs.push({ system: t.sys, color: sysColor(t.sys), action: t.act, detail: t.det, when: whens[i] })
-  })
-  return evs.slice(0, 8)
-}
+/* ⚠️⚠️ `timelineFor` REMOVIDA (03/09/2026). Ela ainda rodava a cada render e
+   devolvia, num campo chamado **`timeline`**, nove eventos inventados por
+   `rnd`: "Resolveu chamado #4237 · SLA cumprido · 2h12", "Concluiu 'Compliance
+   Tributário 2026' · Nota 9.4 · certificado emitido".
+
+   A página tem uma variável local `timeline` vinda do hook REAL. Um `vm.timeline`
+   digitado por engano devolveria a ficha ao estado anterior sem quebrar nada e
+   sem aviso — é a armadilha exata que a Trajetória era. Código morto que GERA
+   número falso não é código morto: é um número falso esperando. */
+
 
 // Mapa de OCORRÊNCIAS (atrasos) das últimas 18 semanas. Sem dado de presença na
 // fonte, o heatmap não é mais "presença": cada célula é um dia, colorida pela
@@ -119,34 +109,11 @@ function formacaoFor(emp: Employee) {
   return { grau: emp.escolaridade, cursos, certs: [] as { nome: string; quando: string }[] }
 }
 
-function decisionFor(data: TalentData, emp: Employee) {
-  const cfa = compFactorAvg(data)
-  const strengths: { label: string; diff: string }[] = []
-  const attention: { label: string; diff: string }[] = []
-  emp.factors.forEach((f) => {
-    if (f.nota == null) return // fator sem fonte não entra em forças/atenção
-    const diff = f.nota - (cfa[f.key] ?? 0)
-    if (diff >= 4) strengths.push({ label: f.label, diff: '+' + diff })
-    else if (diff <= -5) attention.push({ label: f.label, diff: '' + diff })
-  })
-  const trend = emp.hist[11] - emp.hist[5]
-  const deptEmps = data.employees.filter((e) => e.dept === emp.dept && e.hasScore)
-  const deptAvg = deptEmps.length ? Math.round(deptEmps.reduce((a, e) => a + e.score, 0) / deptEmps.length) : emp.score
-  /* ⚠️⚠️ A RECOMENDAÇÃO AUTOMÁTICA foi removida (pedido do dono, 03/09/2026).
-     Ela escrevia frases como "forte candidato a promoção ou bônus" e "Em
-     evolução clara nos últimos 6 meses" numa caixa rotulada "Resumo executivo ·
-     aumento / promoção".
+/* ⚠️⚠️ `decisionFor` REMOVIDA. Nada a consumia desde que o painel de decisão
+   saiu, mas ela seguia rodando: varria a empresa inteira em `compFactorAvg` e
+   calculava `trend = emp.hist[11] - emp.hist[5]` — o passeio ALEATÓRIO —,
+   exportando `decTrend`/`decStrengths`/`decAttention` prontos para alguém usar. */
 
-     Duas coisas erradas, e a segunda é pior:
-     1. decidir por alguém a partir de um número é o oposto do que a avaliação
-        mensal existe para fazer — a nota vem de gente que observou a pessoa;
-     2. a frase saía do `trend = hist[11] - hist[5]`, e `hist` é um PASSEIO
-        ALEATÓRIO semeado pelo id (`data.ts`). "Em evolução clara nos últimos 6
-        meses" era gerado por sorteio, e ia impresso ao lado da palavra
-        "promoção". */
-
-return { strengths, attention, trend, deptAvg, scoreVsDept: emp.score - deptAvg }
-}
 
 export type EmployeeVM = NonNullable<ReturnType<typeof buildEmployeeVM>>
 
@@ -170,16 +137,10 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
   // não vem na fonte (e o dono optou por não derivar) → não há eventos de suspensão.
   const fmtDiaEvt = (iso: string) =>
     new Date(`${iso}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
-  const disc = emp.discEventos.map((e) => {
-    const susp = e.tipo === 'suspensao'
-    return {
-      tipo: susp ? 'Suspensão' : 'Advertência',
-      cor: susp ? 'var(--danger)' : 'var(--warning)',
-      bg: susp ? 'rgba(229,72,77,.13)' : 'rgba(245,166,35,.13)',
-      motivo: e.motivo || (susp ? 'Suspensão' : 'Advertência'),
-      quando: fmtDiaEvt(e.data),
-    }
-  })
+  /* ⚠️ `disc` saiu do VM: ele carregava o MOTIVO da advertência, e este VM vai
+     inteiro para o navegador em toda página. A lista agora vem de
+     `/api/employee-metrics`, que confere `podeVer`. */
+
 
   // Rádio Itamarathy (dados REAIS via .68): horas acumuladas, sessões e última escuta.
   const radioUltima = emp.radioUltima
@@ -195,7 +156,6 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     tempoMedio: wppAvgSec ? (wppAvgSec >= 3600 ? `${Math.floor(wppAvgSec / 3600)}h ${String(Math.round((wppAvgSec % 3600) / 60)).padStart(2, '0')}min` : `${Math.round(wppAvgSec / 60)}min`) : '—',
   }
 
-  const dec = decisionFor(data, emp)
 
   return {
     id: emp.id, hasAvatar: emp.hasAvatar,
@@ -205,33 +165,24 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     dataSaida: emp.leftISO ? new Date(emp.leftISO).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : null,
     nascimento: emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : null,
     idade: emp.birthDate ? (() => { const b = new Date(emp.birthDate); const t = new Date(); return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0) })() : null,
-    score: emp.score, scoreColor: scoreColor(emp.score),
-    hasScore: emp.hasScore, scoreLabel: emp.hasScore ? String(emp.score) : '—',
-    scoreNote: emp.hasScore ? null : ((emp.atrasos > 0 || emp.advertencias > 0) ? 'Avaliação parcial' : 'Sem dados suficientes'),
-    delta: (emp.delta >= 0 ? '▲ +' : '▼ ') + Math.abs(emp.delta), deltaColor: emp.delta >= 0 ? 'var(--success)' : 'var(--danger)',
-    gaugeTrack: g.track, gaugeValue: g.value, gaugeColor: g.color,
-    factors: emp.factors.map((f) => ({
-      label: f.label, peso: f.peso, nota: f.nota,
-      notaLabel: f.nota == null ? 'sem fonte' : String(f.nota),
-      pct: f.nota == null ? '0%' : f.nota + '%',
-      color: f.nota == null ? 'var(--text-mute)' : scoreColor(f.nota),
-      semFonte: f.nota == null,
-      // Setor pequeno demais p/ comparar internamente → a nota vale contra a
-      // empresa toda. Dizer isso evita ler "100" como "o melhor do setor".
-      baseGlobal: f.base === 'global',
-    })),
-    timeline: timelineFor(emp),
+    hasScore: emp.hasScore,
+    /* ⚠️ `factors` e os campos do gauge saíram junto com o score da ficha
+       (03/09/2026): eles são a decomposição de um número que não foi validado e
+       que a tela não mostra mais. Voltam com ele, se voltar. */
     bySystem,
     // Assiduidade REAL: 100 − atrasos·2 − advertências·5 (atraso abonado já fora).
     // faltas/suspensões = null = "sem fonte" (a ficha mostra "—", não 0).
     assid: Math.max(0, 100 - emp.atrasos * 2 - emp.advertencias * 5),
     atrasos: emp.atrasos, atrasosAbon: emp.atrasosAbon, minutosAtraso: emp.minutosAtraso,
     faltas: null as number | null, advert: emp.advertencias, susp: null as number | null,
-    disc, discEmpty: disc.length === 0,
     heat: heatmapFor(emp.assidDays),
     radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima, whatsapp,
     grau: fm.grau, grauLevels: personLevels(emp.eduCursos, emp.escolaridade).map((l) => ({ label: l, color: ESC_COLOR[l] ?? '#9aa1ac' })), cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,
+    // Datas da vida da pessoa — usadas para dizer se a JANELA a cobre.
+    // Data de saída — usada para dizer se a JANELA cobre a pessoa (a admissão
+    // já vem como `hireISO` logo abaixo).
+    leftISO: emp.leftISO,
     treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,
     birthISO: emp.birthDate ? emp.birthDate.slice(0, 10) : '', hireISO: emp.hireISO ? emp.hireISO.slice(0, 10) : '',
     classroom: {
@@ -240,9 +191,5 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
       videos: emp.classroom.videosCompleted,
       total: emp.classroom.coursesCreated + emp.classroom.coursesCompleted,
     },
-    decTrend: (dec.trend >= 0 ? '+' : '') + dec.trend, decTrendColor: dec.trend >= 0 ? 'var(--success)' : 'var(--danger)',
-    decVsDept: (dec.scoreVsDept >= 0 ? '+' : '') + dec.scoreVsDept, decVsDeptColor: dec.scoreVsDept >= 0 ? 'var(--success)' : 'var(--danger)',
-    decStrengths: dec.strengths, decHasStr: dec.strengths.length > 0,
-    decAttention: dec.attention, decHasAtt: dec.attention.length > 0,
   }
 }

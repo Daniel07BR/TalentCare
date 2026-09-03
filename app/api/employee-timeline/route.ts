@@ -22,7 +22,10 @@ function whenLabel(day: string, now: Date): string {
   if (diff < 7) return `há ${diff} dias`
   if (diff < 14) return 'há 1 semana'
   if (diff < 30) return `há ${Math.floor(diff / 7)} semanas`
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+  /* ⚠️ COM ANO. Sem ele, com o filtro em "Ano" — o filtro natural de quem
+     prepara conversa de aumento — dois eventos de setembros diferentes ficavam
+     idênticos, e a ordem era a única pista. */
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })
 }
 
 const plural = (n: number, s: string, p: string) => `${n.toLocaleString('pt-BR')} ${n === 1 ? s : p}`
@@ -139,14 +142,26 @@ export async function GET(req: NextRequest) {
   for (const r of wpp) {
     const ab = r._sum.abertos ?? 0
     const fi = r._sum.finalizados ?? 0
-    if (ab > 0 || fi > 0) push('Painel de Atendimento', 'var(--chart-1)', r.day, `${plural(ab, 'atendimento', 'atendimentos')} no WhatsApp`, fi > 0 ? plural(fi, 'finalizado', 'finalizados') : 'abertos no dia')
+    // ⚠️ "0 atendimentos · 5 finalizados" acontecia quando a pessoa só fechava
+    // conversas abertas na véspera. A ação passa a dizer o que houve.
+    if (ab > 0) push('Painel de Atendimento', 'var(--chart-1)', r.day, `${plural(ab, 'atendimento', 'atendimentos')} no WhatsApp`, fi > 0 ? plural(fi, 'finalizado', 'finalizados') : 'abertos no dia')
+    else if (fi > 0) push('Painel de Atendimento', 'var(--chart-1)', r.day, `Finalizou ${plural(fi, 'atendimento', 'atendimentos')}`, 'abertos antes deste dia')
   }
   for (const r of radio) {
     const h = Math.round(r.seconds / 3600)
     if (h > 0) push('Rádio', 'var(--info)', r.day, `Ouviu ${plural(h, 'hora', 'horas')} de rádio`, plural(r.sessions, 'sessão', 'sessões'))
   }
 
-  // Mais recentes primeiro; limita a 15 eventos.
+  /*
+   * ⚠️⚠️ TRABALHO PRIMEIRO no corte dos 15. Rádio e mensagem são as duas fontes
+   * de maior frequência diária e as duas que a casa classifica como VITRINE
+   * (`docs/FONTES.md`: escuta e mensagem não entram no score). Quem ouve rádio
+   * todo dia tinha a linha do tempo inteira tomada por isso, e as entregas dele
+   * caíam fora do corte — na tela lida para avaliá-lo.
+   */
+  const vitrine = (e: Ev) => e.system === 'Rádio' || e.action.startsWith('Escreveu')
   evs.sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0))
-  return NextResponse.json({ period, timeline: evs.slice(0, 15) })
+  const trabalho = evs.filter((e) => !vitrine(e))
+  const contexto = evs.filter(vitrine).map((e) => ({ ...e, contexto: true }))
+  return NextResponse.json({ period, timeline: [...trabalho, ...contexto].slice(0, 15) })
 }

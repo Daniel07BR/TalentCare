@@ -160,12 +160,30 @@ relógio e **1 hora** de escritório.
 
 > **⚠️⚠️ Dívida aberta**, e não é cosmética — o painel é usado para decidir aumento.
 
-- **"Tarefas concluídas"** (`5.331` no dashboard e no `/ranking`) = `24 + rnd(seed) × 120`
-  por pessoa × fator de período — `lib/mock/data.ts`.
-- **Os deltas dos KPIs** (`+3`, `+12%`, `+2`) e **todas as sparklines** são literais ou
-  `sp(seed)`.
-- Ficha, aba Produtividade: **Concluídas / Atrasadas / Pendentes**.
+### ✅ Quitado em 03/09/2026
+
+- ~~"Tarefas concluídas" (`24 + rnd(seed) × 120`)~~ — fora do dashboard, do
+  `/ranking` e da ficha.
+- ~~Recomendação automática de promoção~~ — saía de `hist[11] − hist[5]`, e `hist` é
+  passeio aleatório.
+- ~~Aba Trajetória~~ — promoções, "reajuste por mérito 13%" e efetivações que não
+  aconteceram, com datas plausíveis, na ficha de gente real.
+- ~~Aba Reconhecimento~~ — "Destaque do trimestre" sorteado.
+- ~~Gauge de score e fatores na ficha~~ — não validado, e ficava logo acima do botão
+  "Avaliar".
+- ~~Turnover por setor e "evolução do score · 12 meses"~~ — os dois eram `rnd(seed)`;
+  hoje são o turnover real (de `leftAt`) e a atividade mensal dos espelhos.
+
+### Ainda em pé
+
+- **Os deltas dos KPIs** do dashboard (`+3`, `+12%`) e **as sparklines** são literais
+  ou `sp(seed)`.
+- **A sparkline dos cartões da lista de departamentos** (`Department.spark`) é um
+  passeio aleatório semeado pelo id do setor.
 - **`/relatorios`** nunca saiu do "Em breve".
+
+> ⚠️ Mantenha esta lista em dia. Um mapa de dívida que aponta dívida já quitada faz
+> desconfiar do resto dele — e o resto é o que ainda mente.
 
 ---
 

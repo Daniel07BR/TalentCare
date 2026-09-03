@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { getTalentData } from '@/lib/data/source'
+import { getTalentData, type Alcance } from '@/lib/data/source'
 import { isOwnerEmail } from '@/lib/nexus'
 import AppShell from './AppShell'
 import PrepareGate from './PrepareGate'
@@ -18,7 +18,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? await prisma.user.findUnique({ where: { id: uid }, select: { id: true, jobTitle: true, avatarUrl: true, departmentId: true } })
     : null
   const meDept = me?.departmentId ?? null
-  const data = await getTalentData()
+  const vinculosDele = uid
+    ? await prisma.setorAvaliador.findMany({ where: { userId: uid }, select: { departmentId: true } })
+    : []
+  const meusSetoresIds = [...new Set([...vinculosDele.map((v) => v.departmentId), ...(meDept ? [meDept] : [])])]
+
+  /* ⚠️⚠️ O dataset vai INTEIRO para o navegador. Recortado pelo alcance de quem
+     lê, para o histórico disciplinar da empresa não viajar no payload de toda
+     página — ver `lib/data/source.ts`. */
+  const alcance: Alcance = role === 'ADMIN'
+    ? { tipo: 'tudo' }
+    : { tipo: 'recorte', departmentIds: meusSetoresIds, meuId: uid ?? '' }
+  const data = await getTalentData(alcance)
   const isOwner = isOwnerEmail(session.user.email)
 
   /*
@@ -36,14 +47,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   /* ⚠️ Calculado SEMPRE, inclusive para a Diretoria: é o que permite recolher o
      menu e ver a tela como o gestor a vê. Um preview que mostra uma navegação
      diferente da real não serve para conferir nada. */
-  const meusSetores = uid
-    ? await (async () => {
-        const v = await prisma.setorAvaliador.findMany({ where: { userId: uid }, select: { departmentId: true } })
-        const ids = [...new Set([...v.map((x) => x.departmentId), ...(meDept ? [meDept] : [])])]
-        if (ids.length === 0) return []
-        const ds = await prisma.department.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
-        return ds.sort((a, b) => a.name.localeCompare(b.name))
-      })()
+  const meusSetores = meusSetoresIds.length
+    ? (await prisma.department.findMany({ where: { id: { in: meusSetoresIds } }, select: { id: true, name: true } }))
+        .sort((a, b) => a.name.localeCompare(b.name))
     : []
 
   return (

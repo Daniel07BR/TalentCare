@@ -42,14 +42,23 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
     user.nexusUserId
       ? prisma.classroomDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { videos: true, courses: true, created: true } })
       : null,
-    prisma.whatsappAttendantDaily.aggregate({ where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true, handleSum: true } }),
+    /* ⚠️⚠️ Casava por nome EXATO. O resto do sistema (`score-metrics`,
+       `dept-metrics`) casa NORMALIZADO, e o `FONTES.md` diz que é normalizado:
+       um acento diferente entre o cadastro do Nexus e o espelho do Painel fazia
+       a ficha da atendente dizer "Sem atividade no WhatsApp" enquanto o
+       relatório do setor a mostrava em 1º lugar com 274 finalizados.
+       A normalização é em JS, como nas outras rotas — o Postgres da casa não tem
+       `unaccent`, e criar a extensão só para isto seria mais superfície. */
+    prisma.whatsappAttendantDaily.groupBy({
+      by: ['name'], where: range, _sum: { abertos: true, finalizados: true, handleSum: true },
+    }),
     user.nexusUserId
       ? prisma.consultoriaDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } })
       : null,
@@ -84,15 +93,26 @@ export async function GET(req: NextRequest) {
     // ASSIDUIDADE (ponto) no período: soma atrasos/minutos + advertências no range.
     prisma.assiduidadeDaily.aggregate({ where: { personKey, ...range }, _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
+    /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
+       confere `podeVer`; aquele dataset viaja inteiro no payload de toda página.
+       Contagem pode viajar; o texto da advertência, não. */
+    prisma.disciplinaEvento.findMany({
+      where: { personKey, tipo: 'advertencia' },
+      select: { data: true, motivo: true, dias: true, tipo: true },
+      orderBy: { data: 'desc' },
+    }),
   ])
 
   const rSec = radio?._sum.seconds ?? 0
   const cVid = classroom?._sum.videos ?? 0
   const cCur = classroom?._sum.courses ?? 0
   const cCri = classroom?._sum.created ?? 0
-  const wAb = wpp._sum.abertos ?? 0
-  const wFi = wpp._sum.finalizados ?? 0
-  const wHs = wpp._sum.handleSum ?? 0
+  const normNome = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const meuNome = normNome(user.name)
+  const minhas = wpp.filter((r) => normNome(r.name) === meuNome)
+  const wAb = minhas.reduce((a, r) => a + (r._sum.abertos ?? 0), 0)
+  const wFi = minhas.reduce((a, r) => a + (r._sum.finalizados ?? 0), 0)
+  const wHs = minhas.reduce((a, r) => a + (r._sum.handleSum ?? 0), 0)
   const cStu = cons?._sum.studies ?? 0
   const cTic = cons?._sum.tickets ?? 0
   const cMsg = cons?._sum.messages ?? 0
@@ -167,5 +187,7 @@ export async function GET(req: NextRequest) {
         faltas: null as number | null, suspensoes: null as number | null,
       }
     })(),
+    // Histórico completo de advertências (não é do período — é a ficha da pessoa).
+    disciplina: discLista.map((d) => ({ data: d.data, motivo: d.motivo, tipo: d.tipo, dias: d.dias })),
   })
 }
