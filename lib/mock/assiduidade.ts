@@ -76,9 +76,15 @@ export function assiduidadeVM(data: TalentData, period?: PeriodAssid, janelaComP
   const topAdvert = [...comOcorrencia].filter((p) => p.advertencias > 0).sort((a, b) => b.advertencias - a.advertencias).slice(0, 5)
   const byUser = [...comOcorrencia].sort((a, b) => b.atrasos - a.atrasos || b.advertencias - a.advertencias || b.minutos - a.minutos)
 
-  // Por departamento (a partir dos ativos, p/ ter o deptId).
+  /* Por departamento (a partir dos MEDIDOS, p/ ter o deptId).
+     ⚠️⚠️ Este laço percorria `ativos` e escapava do gate — a tela mostrava a
+     faixa "Sem dado de ponto nesta janela… os números abaixo ficam em branco de
+     propósito" e, logo abaixo dela, um gráfico por departamento com **550
+     advertências de 58 pessoas em 14 setores**, alimentado pelo acumulado. A
+     faixa e a seção se contradiziam na mesma tela, e entre um aviso e um gráfico
+     ganha o gráfico. */
   const byDeptMap = new Map<string, AssidDeptGroup>()
-  for (const e of ativos) {
+  for (const e of medidos) {
     const p = person(e)
     if (p.atrasos <= 0 && p.advertencias <= 0 && p.abonados <= 0) continue
     let g = byDeptMap.get(e.dept)

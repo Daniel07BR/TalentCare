@@ -170,9 +170,25 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
        (03/09/2026): eles são a decomposição de um número que não foi validado e
        que a tela não mostra mais. Voltam com ele, se voltar. */
     bySystem,
-    // Assiduidade REAL: 100 − atrasos·2 − advertências·5 (atraso abonado já fora).
-    // faltas/suspensões = null = "sem fonte" (a ficha mostra "—", não 0).
-    assid: Math.max(0, 100 - emp.atrasos * 2 - emp.advertencias * 5),
+    /* ⚠️⚠️ O CAMPO `assid` SAIU DAQUI (03/09/2026). Era a QUARTA cópia da fórmula
+       `100 − atrasos·2 − advertências·5`, escrita à mão, sobre os campos
+       ACUMULADOS, sem `temPonto` e sem `janelaComPonto` — as duas travas que
+       impedem a ausência de dado de virar nota 100.
+
+       Ninguém a renderizava: a ficha lê `ass.assid`, que vem da
+       `/api/employee-metrics` e leva a cobertura junto. E é exatamente por estar
+       dormente que ela era a mais perigosa das quatro — um campo chamado
+       `assid`, pronto e plausível, no view-model da ficha, esperando a próxima
+       pessoa que precisasse mostrar assiduidade em algum lugar. Este defeito já
+       reapareceu DUAS vezes nesta sessão por um consumidor esquecido; a terceira
+       se fecha apagando a porta, não anotando um aviso ao lado dela.
+
+       As três cópias que restam estão travadas: `assidNotaFrom` (a canônica, em
+       `data.ts`), `assidPct` (`assiduidade.ts`) e a inline de
+       `/api/employee-metrics`. Ao acrescentar uma quarta, passe por
+       `lib/ponto-cobertura.ts` — ou não a acrescente.
+
+       faltas/suspensões = null = "sem fonte" (a ficha mostra "—", não 0). */
     atrasos: emp.atrasos, atrasosAbon: emp.atrasosAbon, minutosAtraso: emp.minutosAtraso,
     faltas: null as number | null, advert: emp.advertencias, susp: null as number | null,
     heat: heatmapFor(emp.assidDays),
