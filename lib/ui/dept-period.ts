@@ -25,6 +25,8 @@ export type DeptMetrics = {
   setor: { id: string; nome: string; pelaDiretoria: boolean }
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
   ehAdmin: boolean
+  /** Gestor e sub-encarregados do setor, do vínculo gravado. */
+  chefia: { id: string; nome: string; cargo: string; hasAvatar: boolean; nivel: string; deOutroSetor: boolean }[]
   /** Turnover REAL. `taxa12m` não acompanha o filtro — taxa só diz algo em 12 meses. */
   turnover: {
     saidasNoPeriodo: number; saidas12m: number; taxa12m: number

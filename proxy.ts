@@ -17,6 +17,7 @@ function isPublic(pathname: string): boolean {
  * nova, e a rota nova nasce aberta.
  */
 const COLABORADOR_OK = [
+  '/meu-setor', // resolve e redireciona; para o colaborador vai à página dele
   '/minha-avaliacao',
   '/api/minha-avaliacao',
   '/acesso-negado',
@@ -90,10 +91,17 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/avaliacoes', req.url))
   }
 
+  /*
+   * ⚠️⚠️ O DASHBOARD É DA DIRETORIA. Ele mostra a empresa inteira — score médio,
+   * ranking, turnover, atividade de todos os setores. Gestor e sub-encarregado
+   * caem no setor DELES (decisão do dono, 03/09/2026); `/meu-setor` resolve qual
+   * é, porque aqui não há banco para perguntar.
+   */
+  if (role !== 'ADMIN' && (pathname === '/' || pathname === '/dashboard' || pathname === '/login')) {
+    return NextResponse.redirect(new URL(role === 'COLABORADOR' ? '/minha-avaliacao' : '/meu-setor', req.url))
+  }
   if (pathname === '/login') {
-    // ⚠️ Quem só tem a própria página não pode cair no /dashboard: ele existe,
-    // carrega e mostra a empresa inteira. A porta de entrada é outra.
-    return NextResponse.redirect(new URL(role === 'COLABORADOR' ? '/minha-avaliacao' : '/dashboard', req.url))
+    return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
   return NextResponse.next()

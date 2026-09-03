@@ -1,13 +1,11 @@
 'use client'
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
-  MessageSquareText, MessageCircle, ClipboardCheck, AlarmClock, Users2,
+  MessageSquareText, MessageCircle, Search,
 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
-import { useScoreSignals } from '@/lib/ui/score-period'
-import { withRealScores } from '@/lib/mock/score'
 import { deptDetailVM } from '@/lib/mock/departments'
 import { educationByDept } from '@/lib/mock/education'
 import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
@@ -15,6 +13,7 @@ import { Atencao } from './Atencao'
 import { Pessoas } from './Pessoas'
 import { Tendencia, Turnover } from './Tendencia'
 import { CardFonte } from './CardFonte'
+import { Hero, Escolaridade } from './Hero'
 import { usePeriod } from '@/lib/ui/period'
 import { criterioDe, ancoraDe, competenciaLabel, ANCORAS } from '@/lib/avaliacoes/criterios'
 import Avatar from '../../Avatar'
@@ -22,9 +21,12 @@ import Avatar from '../../Avatar'
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const { signals } = useScoreSignals()
   const { label } = usePeriod()
-  const data = withRealScores(useTalentData(), signals)
+  /* ⚠️ Sem `withRealScores`/`useScoreSignals`: eles recalculavam o score da
+     EMPRESA INTEIRA no cliente (mais um fetch a `/api/score-metrics`) para
+     alimentar o cartão de veredito — que saiu da tela. O que sobra do `vm` é o
+     nome do setor e o heatmap de atrasos, nenhum dos dois dependente de score. */
+  const data = useTalentData()
   const vm = deptDetailVM(data, id)
   const edu = educationByDept(data).byDept.find((d) => d.id === id)
   // ⚠️⚠️ TODA a atividade da tela vem daqui, do PERÍODO. Antes ela saía de
@@ -33,6 +35,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   // eram 4. O número não estava errado: respondia outra pergunta, o que é pior,
   // porque ninguém desconfia de um número plausível.
   const { m, estado } = useDeptPeriod(id)
+  const [busca, setBusca] = useState('')
   // ⚠️ Setor "cabe à Diretoria": cobrar do gestor uma avaliação que ele não pode
   // publicar é alerta que não se resolve — e alerta eterno se aprende a ignorar.
   // A rota já sabe quem está logado; aqui basta saber se ele alcança tudo.
@@ -120,87 +123,62 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <button onClick={() => router.push('/departamentos')} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar aos departamentos</button>
       {/*
-        ⚠️⚠️ A ORDEM DA PÁGINA É A ORDEM DO Z, e é uma decisão, não estética:
-          1. topo-esquerda  → o que EXIGE AÇÃO (é onde o olho começa)
-          2. topo-direita   → o veredito do setor, para situar
-          3. meio           → AS PESSOAS, comparadas entre si — o coração
-          4. abaixo         → tendência e rotatividade, ambas REAIS
-          5. rodapé         → o detalhe por sistema e o contexto da equipe
+        ⚠️⚠️ A ORDEM DA PÁGINA (decisão do dono, 03/09/2026):
+          1. QUEM responde pelo setor — a foto do gestor, os sub-encarregados
+             menores, e o que está aceso (rotatividade, advertência, atraso)
+          2. O que é FIXO: escolaridade e o retrato da equipe — não dependem do
+             filtro, então vêm antes dele
+          3. Só então os FILTROS (data e busca por pessoa) e tudo o que eles
+             mexem
 
-        Um relatório de setor é lido por quem PODE AGIR sobre ele. Score e
-        headcount não pedem nada de ninguém; "quatro pessoas sem avaliação e duas
-        com advertência" pede — e por isso vem primeiro.
+        ⚠️ O SCORE saiu do topo: ainda não foi validado e não vale. Um número
+        grande no topo é lido como o veredito da página, e o veredito não pode
+        ser um número que ninguém validou. A AVALIAÇÃO também saiu da hero — ela
+        tem o bloco dela mais abaixo.
       */}
-      <div className="dept-topo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 16, alignItems: 'start', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>
-            Relatório do setor · <b>{label}</b>
-          </div>
-          <h1 style={{ margin: '0 0 18px', fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
-          {m ? (
-            <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} atendeEmParte={atendeEmParte} ehAdmin={ehAdmin} onIr={irPara} />
-          ) : (
-            <div style={{ height: 92, background: 'var(--surface-2)', borderRadius: 'var(--radius)', opacity: 0.5 }} />
-          )}
-        </div>
-
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          {/* ⚠️ 28px e não 42: o score é CONTEXTO para ler o resto, e estava
-              roubando o olho do que pede ação (a faixa ao lado, em 25px). */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            {vm.comScore > 0 ? (
-              <>
-                <span className="cnum" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1.2px', color: vm.kpis[0].color as string, lineHeight: 1 }}>{vm.score}</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>/100 score do setor</span>
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--text-mute)', lineHeight: 1 }}>—</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>sem base para score</span>
-              </>
-            )}
-          </div>
-          {/* ⚠️ De quantas pessoas o score fala. Em setor não medido ele é
-              composto só de assiduidade + formação — régua diferente da dos
-              setores medidos, comparada lado a lado com a média da empresa. */}
-          {vm.comScore > 0 && vm.comScore < vm.totalDoSetor && (
-            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 5 }}>
-              cobre {vm.comScore} de {vm.totalDoSetor} pessoas · o resto não tem base para nota
-            </div>
-          )}
-          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {vm.comScore > 0 && <Barra nome={vm.name} valor={vm.score} largura={vm.barSelf} cor="var(--accent)" />}
-            <Barra nome="Média da empresa" valor={vm.compAvg} largura={vm.barComp} cor="var(--text-mute)" esmaecido />
-          </div>
-          <div style={{ display: 'flex', gap: 22, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Pessoas</div>
-              <div className="cnum" style={{ fontSize: 18, fontWeight: 700 }}>{m ? m.equipe.ativos : vm.kpis[1].value}</div>
-            </div>
-            {vm.comScore > 0 && (
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>vs. empresa</div>
-                <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: vm.score - vm.compAvg >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                  {vm.score - vm.compAvg >= 0 ? '+' : ''}{vm.score - vm.compAvg} pts
-                </div>
-              </div>
-            )}
-            {m && (
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Rotatividade</div>
-                <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: m.turnover.taxa12m >= 20 ? 'var(--danger)' : 'var(--text)' }}>
-                  {m.turnover.taxa12m}%
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Relatório do setor</div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
       </div>
 
-      {/* 3 · AS PESSOAS — o coração do relatório */}
+      {m && <Hero m={m} />}
+      {edu && <Escolaridade segs={edu.segs} informed={edu.informed} total={edu.total} />}
+
+      {/* ── A PARTIR DAQUI, TUDO OBEDECE AOS FILTROS ──────────────────────
+          A faixa deixa isso explícito. Sem ela, o leitor não tem como saber
+          por que a idade média não mexe quando ele troca o período. */}
+      <div className="tc-card filtros-setor" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)' }}>
+          Daqui para baixo
+        </div>
+        <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 340 }}>
+          <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)', display: 'flex' }}><Search size={15} /></span>
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar pessoa deste setor…"
+            style={{ width: '100%', height: 36, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0 12px 0 34px', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+          />
+        </div>
+        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>
+          Período: <b style={{ color: 'var(--text)' }}>{label}</b>
+          <span style={{ color: 'var(--text-mute)' }}> · trocar no alto da tela</span>
+        </div>
+        {busca.trim() && (
+          <button onClick={() => setBusca('')} className="tc-btn"
+            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', padding: '5px 12px', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>
+            Limpar busca
+          </button>
+        )}
+      </div>
+
+      {/* O que exige ação continua vindo antes das pessoas — mas depois dos
+          filtros, porque ele obedece a eles. */}
+      {m && <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} atendeEmParte={atendeEmParte} ehAdmin={ehAdmin} onIr={irPara} />}
+      <div style={{ height: 16 }} />
       <Tarja>As pessoas</Tarja>
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
-        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} avaliaveis={m.avaliacao.avaliaveis} />}
+        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} avaliaveis={m.avaliacao.avaliaveis} busca={busca} />}
       </div>
 
       {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais.
@@ -223,33 +201,6 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
       <Tarja>Assiduidade e contexto da equipe</Tarja>
       <div id="sec-assiduidade">{m && <Assiduidade m={m} />}</div>
       {m && <Equipe m={m} />}
-
-      {edu && (
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Escolaridade do setor</div>
-              {/* ⚠️ Retrato de hoje — o único bloco que não avisava. */}
-              <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>Retrato de hoje · não acompanha o filtro</div>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{edu.informed} de {edu.total} informados</span>
-          </div>
-          <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)' }}>
-            {edu.segs.map((s) => <div key={s.label} title={`${s.label}: ${s.count} (${s.pct}%)`} style={{ width: `${s.pct}%`, background: s.color }} />)}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px 16px', marginTop: 14 }}>
-            {edu.segs.map((s) => (
-              <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-dim)' }}>
-                {/* ⚠️⚠️ O `pct` é fatia ENTRE FORMAÇÕES (com multi-contagem: quem
-                    tem graduação e pós conta duas vezes), e NÃO percentual da
-                    equipe. A barra empilhada afirma visualmente que é da equipe.
-                    O rótulo agora diz o que o número é. */}
-                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color }} /> {s.label} <b style={{ color: 'var(--text)' }}>{s.count}</b> <span style={{ color: 'var(--text-mute)' }}>({s.pct}% das formações)</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/*
         ⚠️⚠️ Saíram daqui a "Evolução do score · 12 meses", o "Comparativo com a
@@ -307,6 +258,9 @@ function Card({ titulo, sub, cor, children }: { titulo: string; sub?: string; co
 
 /** Um número com rótulo. `vazio` mostra "—" em vez de zero. */
 function N({ label, valor, cor, nota }: { label: string; valor: number | string | null; cor?: string; nota?: string }) {
+  // ⚠️ Zero medido não vira caixa — ver o comentário gêmeo em `CardFonte`.
+  // `null` continua aparecendo como "—": "não medimos" é informação.
+  if (valor === 0 || valor === '0') return null
   return (
     <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
       <div className="cnum" style={{ fontSize: 22, fontWeight: 700, color: valor === null || valor === 0 ? 'var(--text-mute)' : (cor ?? 'var(--text)') }}>
@@ -581,22 +535,9 @@ function Equipe({ m }: { m: DeptMetrics }) {
   )
 }
 
-/** Uma barra de comparação com rótulo. Usada no cartão de veredito. */
-function Barra({ nome, valor, largura, cor, esmaecido }: {
-  nome: string; valor: number; largura: string; cor: string; esmaecido?: boolean
-}) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-        <span style={{ color: esmaecido ? 'var(--text-dim)' : 'var(--text)' }}>{nome}</span>
-        <span style={{ fontWeight: 700, color: esmaecido ? 'var(--text-dim)' : cor }}>{valor}</span>
-      </div>
-      <div style={{ height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-        <div className="cbar" style={{ height: '100%', width: largura, background: cor, borderRadius: 20 }} />
-      </div>
-    </div>
-  )
-}
+/* ⚠️ `Barra` foi removida junto com o cartão de veredito: o score saiu do topo
+   por não estar validado (decisão do dono, 03/09/2026). Quando ele voltar, volta
+   com a barra — não deixo componente órfão esperando um dono que pode não vir. */
 
 /** Estilo do voltar, repetido nos três estados da página. */
 const voltar: React.CSSProperties = {

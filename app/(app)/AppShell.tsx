@@ -87,6 +87,12 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /** Estilo dos dois campos de data do calendário. */
+/** Item da barra enxuta de quem não é Diretoria. */
+const navChip: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 500,
+  padding: '7px 12px', borderRadius: 8, color: 'var(--text-dim)', whiteSpace: 'nowrap',
+}
+
 const inputData: React.CSSProperties = {
   display: 'block', width: '100%', marginTop: 4,
   background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -95,12 +101,19 @@ const inputData: React.CSSProperties = {
   colorScheme: 'light dark', // o calendário nativo acompanha o tema da conta
 }
 
-function Topbar() {
+function Topbar({ soMeuSetor = false, meusSetores = [], nome = '', me, initials = '' }: {
+  soMeuSetor?: boolean
+  meusSetores?: { id: string; name: string }[]
+  nome?: string
+  me?: { id: string; cargo: string | null; hasAvatar: boolean }
+  initials?: string
+}) {
   const { period, setPeriod, from, to, setRange, label } = usePeriod()
   const [calOpen, setCalOpen] = useState(false)
   // Nada de data futura: atividade de amanhã não existe, e o campo aberto até
   // 2099 convida a um intervalo que sempre volta vazio.
   const hojeISO = new Date().toISOString().slice(0, 10)
+  const pathname = usePathname()
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
   const [search, setSearch] = useState('')
 
@@ -119,7 +132,30 @@ function Topbar() {
 
   return (
     <header style={{ height: 60, flex: 'none', borderBottom: '1px solid var(--border)', background: 'var(--header-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 16, padding: '0 28px' }}>
-      <div style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+      {/*
+        ⚠️⚠️ A NAVEGAÇÃO DE QUEM NÃO É DIRETORIA. O menu lateral é da Diretoria
+        (decisão do dono, 03/09/2026) — mas "sem menu" não pode virar "sem
+        saída": o gestor precisa alcançar a fila de avaliações e a própria página
+        de desempenho, e quem avalia mais de um setor (a Rosemeire avalia Limpeza
+        e Cozinha) precisa trocar entre eles. Tirar tudo o deixaria preso numa
+        página só, sem nem conseguir ver a própria nota.
+      */}
+      {soMeuSetor && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+          <Logo size={30} radius={8} />
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 0, overflowX: 'auto' }}>
+            {meusSetores.map((d) => (
+              <Link key={d.id} href={`/departamentos/${d.id}`}
+                className={'tc-nav' + (pathname === `/departamentos/${d.id}` ? ' on' : '')}
+                style={navChip}>{d.name}</Link>
+            ))}
+            <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
+            <Link href="/minha-avaliacao" className={'tc-nav' + (pathname === '/minha-avaliacao' ? ' on' : '')} style={navChip}>Meu desempenho</Link>
+          </nav>
+        </div>
+      )}
+
+      <div style={{ position: 'relative', flex: soMeuSetor ? 'none' : 1, maxWidth: 420, display: soMeuSetor ? 'none' : 'block' }}>
         <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)', display: 'flex' }}><Search size={16} /></span>
         <input
           placeholder="Buscar funcionários, departamentos…"
@@ -195,11 +231,29 @@ function Topbar() {
         <Bell size={18} />
         <span style={{ position: 'absolute', top: 8, right: 9, width: 7, height: 7, borderRadius: '50%', background: 'var(--danger)', border: '1.5px solid var(--surface-2)' }} />
       </button>
+      {/* Sem barra lateral, a identidade e a saída moram aqui — senão a pessoa
+          não tem como sair do sistema. */}
+      {soMeuSetor && me && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 6, borderLeft: '1px solid var(--border)' }}>
+          <Avatar id={me.id} hasAvatar={me.hasAvatar} initials={initials} color="var(--chart-1)" size={30} />
+          <div style={{ lineHeight: 1.2, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{nome.split(' ').slice(0, 2).join(' ')}</div>
+            <button onClick={() => signOut({ callbackUrl: '/login' })} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'var(--text-mute)', cursor: 'pointer', fontFamily: 'inherit' }}>Sair</button>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
 
-export default function AppShell({ name, roleLabel, isOwner = false, me, data, children }: { name: string; roleLabel: string; isOwner?: boolean; me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode }) {
+export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor = false, meusSetores = [], me, data, children }: {
+  name: string; roleLabel: string; isOwner?: boolean
+  /** Sem o menu lateral: gestor e sub-encarregado trabalham no setor deles. */
+  soMeuSetor?: boolean
+  /** Os setores que ele alcança — o dele e os que avalia. */
+  meusSetores?: { id: string; name: string }[]
+  me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode
+}) {
   const faltam = useFaltamAvaliar()
   const pathname = usePathname()
   const [settled, setSettled] = useState(false)
@@ -223,6 +277,7 @@ export default function AppShell({ name, roleLabel, isOwner = false, me, data, c
     <PeriodProvider>
      <TalentDataProvider value={data}>
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
+{!soMeuSetor && (
         <aside style={{ width: 240, flex: 'none', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
           <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 11 }}>
             <Logo size={34} radius={9} />
@@ -297,9 +352,10 @@ export default function AppShell({ name, roleLabel, isOwner = false, me, data, c
             </div>
           </div>
         </aside>
+        )}
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <Topbar />
+          <Topbar soMeuSetor={soMeuSetor} meusSetores={meusSetores} nome={name} me={me} initials={initials} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px 56px' }}>{children}</main>
         </div>
       </div>

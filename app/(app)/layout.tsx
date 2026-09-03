@@ -15,16 +15,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const roleLabel = role === 'ADMIN' ? 'Admin' : role === 'USUARIO' ? 'Usuário' : role ?? ''
   const uid = (session.user as { id?: string }).id
   const me = uid
-    ? await prisma.user.findUnique({ where: { id: uid }, select: { id: true, jobTitle: true, avatarUrl: true } })
+    ? await prisma.user.findUnique({ where: { id: uid }, select: { id: true, jobTitle: true, avatarUrl: true, departmentId: true } })
     : null
+  const meDept = me?.departmentId ?? null
   const data = await getTalentData()
   const isOwner = isOwnerEmail(session.user.email)
+
+  /*
+   * ⚠️⚠️ O MENU LATERAL É DA DIRETORIA (decisão do dono, 03/09/2026). Gestor e
+   * sub-encarregado não navegam pelo painel da empresa — eles caem no setor
+   * deles e trabalham ali.
+   *
+   * ⚠️ Mas "sem menu" não pode virar "sem saída": eles PRECISAM alcançar a fila
+   * de avaliações e a própria página de desempenho, e quem avalia mais de um
+   * setor (a Rosemeire avalia Limpeza e Cozinha) precisa trocar entre eles.
+   * Por isso não é ausência de navegação, é uma barra enxuta com o que é deles —
+   * ver `AppShell`. Tirar tudo os deixaria presos numa página só.
+   */
+  const soMeuSetor = role !== 'ADMIN'
+  const meusSetores = soMeuSetor && uid
+    ? await (async () => {
+        const v = await prisma.setorAvaliador.findMany({ where: { userId: uid }, select: { departmentId: true } })
+        const ids = [...new Set([...v.map((x) => x.departmentId), ...(meDept ? [meDept] : [])])]
+        if (ids.length === 0) return []
+        const ds = await prisma.department.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+        return ds.sort((a, b) => a.name.localeCompare(b.name))
+      })()
+    : []
 
   return (
     <AppShell
       name={session.user.name ?? 'Diretoria'}
       roleLabel={roleLabel}
       isOwner={isOwner}
+      soMeuSetor={soMeuSetor}
+      meusSetores={meusSetores}
       me={{ id: me?.id ?? uid ?? '', cargo: me?.jobTitle ?? null, hasAvatar: !!me?.avatarUrl }}
       data={data}
     >

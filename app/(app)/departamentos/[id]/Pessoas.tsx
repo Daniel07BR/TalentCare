@@ -29,13 +29,15 @@ const COLUNAS: { key: Coluna; label: string; dica: string }[] = [
   { key: 'atrasos', label: 'Atrasos', dica: 'Atrasos não abonados, no período' },
 ]
 
-export function Pessoas({ pessoas, periodo, competencia, avaliaveis }: {
+export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
   pessoas: PessoaDoSetor[]; periodo: string; competencia: string
   /* ⚠️ O MESMO denominador do cartão de Avaliação. A tela chegou a mostrar
      "N de 22" aqui e "de 21 pessoas" ali, lado a lado, sobre a mesma pergunta —
      a divergência que acabara de ser morta entre a tela e o selo do menu,
      sobrevivendo dentro da própria página. */
   avaliaveis: number
+  /** Busca por nome, vinda da faixa de filtros da página. */
+  busca: string
 }) {
   const router = useRouter()
   const [ordemPedida, setOrdem] = useState<Coluna>('nota')
@@ -53,7 +55,16 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis }: {
   const semNotas = comNota.length === 0
   const ordem: Coluna = semNotas && ordemPedida === 'nota' ? 'atividade' : ordemPedida
 
-  const ordenadas = [...pessoas].sort((a, b) => {
+  /* ⚠️ A busca filtra a EXIBIÇÃO, não a conta: a média do setor e o "N de M
+     avaliadas" no rodapé continuam sendo do setor inteiro. Recalcular sobre o
+     resultado da busca faria "média do setor" mudar conforme o que se digita —
+     e um número com esse nome não pode depender da caixa de texto. */
+  const chave = busca.trim().toLowerCase()
+  const filtradas = chave
+    ? pessoas.filter((p) => `${p.nome} ${p.cargo}`.toLowerCase().includes(chave))
+    : pessoas
+
+  const ordenadas = [...filtradas].sort((a, b) => {
     // ⚠️ Quem não é medido vai para o fim em QUALQUER ordenação, e não para o
     // fundo do ranking: não é o último colocado, é quem não está na corrida.
     /* ⚠️ "Não está na corrida" vale só para a coluna de ATIVIDADE. Atraso,
@@ -76,9 +87,11 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis }: {
         <div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>As pessoas do setor</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-            {pessoas.length === 1
-              ? 'a única pessoa do setor'
-              : `${pessoas.length} pessoas comparadas entre si`}
+            {chave
+              ? `${ordenadas.length} de ${pessoas.length} — busca por "${busca.trim()}"`
+              : pessoas.length === 1
+                ? 'a única pessoa do setor'
+                : `${pessoas.length} pessoas comparadas entre si`}
             {' · '}atividade e atrasos no período ({periodo}) · nota de {competencia}
           </div>
         </div>
@@ -112,6 +125,11 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis }: {
       </div>
 
       <div>
+        {ordenadas.length === 0 && (
+          <div style={{ fontSize: 12.5, color: 'var(--text-dim)', padding: '18px 10px' }}>
+            Ninguém deste setor com <b>{busca.trim()}</b> no nome ou no cargo.
+          </div>
+        )}
         {ordenadas.map((p, i) => {
           /* ⚠️ O selo dourado "TOPO" premiava quem tinha MAIS ATRASOS quando a
              ordenação era por atraso — a condição foi escrita para acender

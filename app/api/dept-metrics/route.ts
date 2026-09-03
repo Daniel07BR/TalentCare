@@ -42,6 +42,33 @@ export async function GET(req: NextRequest) {
     quem.escopo.tipo === 'tudo' || quem.escopo.avaliaDepartmentIds.includes(dept.id) || quem.departmentId === dept.id
   if (!podeVerSetor) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
+  /* A CHEFIA do setor, com foto — o rosto do relatório.
+   * ⚠️ Vem do VÍNCULO gravado (`setor_avaliador`), não do cargo: a Rosemeire tem
+   * cargo `Colaborador` e é o topo da Limpeza e da Cozinha. E pode ser gente de
+   * OUTRO setor (Entregas é chefiada pelo Evandro e pela Joice, do Legal), então
+   * o `user` vem por join e não da lista da equipe. */
+  const vinculos = await prisma.setorAvaliador.findMany({
+    where: { departmentId: dept.id },
+    select: { nivel: true, userId: true },
+  })
+  const chefes = vinculos.length
+    ? await prisma.user.findMany({
+        where: { id: { in: vinculos.map((v) => v.userId) } },
+        select: { id: true, name: true, jobTitle: true, avatarUrl: true, departmentId: true },
+      })
+    : []
+  const nivelPorId = new Map(vinculos.map((v) => [v.userId, v.nivel]))
+  const chefia = chefes
+    .map((c) => ({
+      id: c.id, nome: c.name, cargo: c.jobTitle ?? 'Colaborador',
+      hasAvatar: !!c.avatarUrl,
+      nivel: nivelPorId.get(c.id) ?? 'gestor',
+      // De onde a pessoa é, quando não é deste setor — senão "Evandro · Gestor"
+      // na chefia das Entregas parece cadastro errado.
+      deOutroSetor: c.departmentId !== dept.id,
+    }))
+    .sort((a, b) => (a.nivel === 'gestor' ? 0 : 1) - (b.nivel === 'gestor' ? 0 : 1) || a.nome.localeCompare(b.nome))
+
   // Gente do setor. `foraDoDiretorio` fora: conta de sistema não é equipe.
   const pessoas = await prisma.user.findMany({
     where: { departmentId: dept.id, origin: { in: ['nexus', 'staff'] }, foraDoDiretorio: false },
@@ -435,6 +462,7 @@ export async function GET(req: NextRequest) {
     pessoas: equipePessoas,
     rankings,
     setor: { id: dept.id, nome: dept.name, pelaDiretoria: dept.avaliadoPelaDiretoria },
+    chefia,
     // Quem está lendo alcança a empresa toda? Muda o que se pode COBRAR dele na
     // faixa de ação. Vem do servidor porque é a régua que sabe, não a tela.
     ehAdmin: quem.escopo.tipo === 'tudo',

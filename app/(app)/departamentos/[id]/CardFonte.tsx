@@ -118,8 +118,19 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
             No setor
           </div>
+          {/*
+            ⚠️⚠️ NÚMERO ZERADO NÃO VIRA CARTÃO (decisão do dono, 03/09/2026). O
+            Fiscal mostrava "0 Serviços entregues · 0 Km rodados · 0 Saídas ·
+            0 Viagens" ao lado de 397 protocolos abertos: quatro caixas cinzas
+            informando que o setor não faz mensageria — o que ninguém precisava
+            que a tela dissesse. Zero repetido também ensina a ignorar a faixa,
+            e no dia em que um deles for 3 ele estará entre outros zeros.
+
+            ⚠️ `null` CONTINUA aparecendo: "—" quer dizer "não medimos", que é
+            informação. Só o zero medido é que se cala.
+          */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(104px, 1fr))', gap: 9 }}>
-            {numeros.map((x) => (
+            {numeros.filter((x) => x.valor !== 0 && x.valor !== '0').map((x) => (
               <div key={x.label} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 13px' }}>
                 <div className="cnum" style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-.5px', color: x.valor === null || x.valor === 0 ? 'var(--text-mute)' : (x.cor ?? 'var(--text)') }}>
                   {fmt(x.valor)}
