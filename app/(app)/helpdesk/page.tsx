@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useHelpdeskPeriod } from '@/lib/ui/helpdesk-period'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { helpdeskVM, type HelpdeskPerson } from '@/lib/mock/helpdesk'
 import Avatar from '../Avatar'
 
@@ -16,7 +15,7 @@ const HdIcon = ({ size = 17, color = 'var(--chart-4)' }: { size?: number; color?
 export default function HelpdeskPage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { map } = useHelpdeskPeriod()
   const vm = helpdeskVM(data, map ?? undefined)
 
@@ -31,7 +30,7 @@ export default function HelpdeskPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <HdIcon size={24} /> HelpDesk
           </h1>

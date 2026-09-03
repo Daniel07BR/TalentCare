@@ -7,7 +7,7 @@ type DeptRow = { name: string; color: string | null; abertos: number }
 
 export default function WhatsappDeptCard() {
   const router = useRouter()
-  const { period } = usePeriod()
+  const { period, query, label } = usePeriod()
   const [rows, setRows] = useState<DeptRow[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -16,7 +16,7 @@ export default function WhatsappDeptCard() {
     let alive = true
     setLoading(true)
     setErr(null)
-    fetch(`/api/whatsapp-by-dept?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/whatsapp-by-dept?${query}`, { cache: 'no-store' })
       .then(async (r) => {
         if (!r.ok) throw new Error('Não foi possível carregar')
         return r.json()
@@ -30,7 +30,7 @@ export default function WhatsappDeptCard() {
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   const max = Math.max(1, ...(rows ?? []).map((d) => d.abertos))
 

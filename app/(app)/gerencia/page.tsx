@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useGerenciaPeriod } from '@/lib/ui/gerencia-period'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { gerenciaVM, type GerenciaPerson, type GerenciaDeptBar } from '@/lib/mock/gerencia'
 import Avatar from '../Avatar'
 
@@ -85,7 +84,7 @@ function Cabecalho({ labels }: { labels: string[] }) {
 
 export default function GerenciaPage() {
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { map } = useGerenciaPeriod()
   const vm = gerenciaVM(data, map ?? undefined)
   const t = vm.totais
@@ -95,7 +94,7 @@ export default function GerenciaPage() {
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <GerenciaIcon size={24} /> Gerência · Mensageria
         </h1>

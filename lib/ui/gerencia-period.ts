@@ -7,14 +7,14 @@ import type { GerenciaStat } from '@/lib/mock/data'
 // Busca a atividade da Gerência por usuário no período (do banco local,
 // /api/gerencia-metrics) e devolve um Map p/ alimentar o gerenciaVM(data, map).
 export function useGerenciaPeriod(): { map: GerenciaUsage | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<GerenciaUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/gerencia-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/gerencia-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byUser: ({ nexusUserId: string } & GerenciaStat)[] }) => {
         if (!alive) return
@@ -30,7 +30,7 @@ export function useGerenciaPeriod(): { map: GerenciaUsage | null; loading: boole
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   return { map, loading }
 }

@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { assiduidadeVM, fmtMin, type AssidPerson } from '@/lib/mock/assiduidade'
 import { scoreColor } from '@/lib/mock/data'
 import { AlarmClock } from 'lucide-react'
@@ -12,7 +11,7 @@ import Avatar from '../Avatar'
 export default function AssiduidadePage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { map } = useAssiduidadePeriod()
   const vm = assiduidadeVM(data, map ?? undefined)
   const aMax = Math.max(1, ...vm.deptBars.map((d) => d.atrasos))
@@ -30,7 +29,7 @@ export default function AssiduidadePage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Ponto eletrônico · atrasos no {PERIOD_LABEL[period].toLowerCase()} · advertências acumuladas</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Ponto eletrônico · atrasos no {label.toLowerCase()} · advertências acumuladas</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <AlarmClock size={24} color="var(--warning)" /> Assiduidade
           </h1>

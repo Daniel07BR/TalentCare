@@ -5,14 +5,14 @@ import type { ClassroomUsage } from '@/lib/mock/classroom'
 
 // Busca o uso do ClassRoom por usuário no período (banco local) p/ o classroomVM.
 export function useClassroomPeriod(): { map: ClassroomUsage | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<ClassroomUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/classroom-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/classroom-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byUser: { nexusUserId: string; videos: number; courses: number; created: number }[] }) => {
         if (!alive) return
@@ -25,7 +25,7 @@ export function useClassroomPeriod(): { map: ClassroomUsage | null; loading: boo
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   return { map, loading }
 }

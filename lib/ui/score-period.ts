@@ -6,14 +6,14 @@ import type { ScoreSignals } from '@/lib/mock/data'
 // Busca os sinais do score no período (/api/score-metrics) → Map por id.
 // Alimenta withRealScores(data, signals) p/ o score period-aware nas telas.
 export function useScoreSignals(): { signals: ScoreSignals | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [signals, setSignals] = useState<ScoreSignals | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/score-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/score-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byPerson: { id: string; activity: number; atrasos: number; advertencias: number }[] }) => {
         if (!alive) return
@@ -24,7 +24,7 @@ export function useScoreSignals(): { signals: ScoreSignals | null; loading: bool
       .catch(() => alive && setSignals(null))
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [period])
+  }, [query])
 
   return { signals, loading }
 }

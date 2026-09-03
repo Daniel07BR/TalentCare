@@ -5,13 +5,17 @@ import { geomSpark, geomLine, scoreColor, rnd, type TalentData, type Employee } 
 import { ESC_RANK, ESC_COLOR, personLevels } from '../education-edit'
 import type { PeriodAssid } from './assiduidade'
 
-export type Period = '7d' | '30d' | 'Trimestre' | 'Ano'
+// ⚠️ `custom` = intervalo escolhido no calendário. O rótulo dele NÃO cabe num
+// Record fixo (depende das datas) — use `rotuloDoIntervalo` de
+// `lib/period-range.ts` em vez de `PERIOD_LABEL` em tela nova.
+export type Period = '7d' | '30d' | 'Trimestre' | 'Ano' | 'custom'
 
 export const PERIOD_LABEL: Record<Period, string> = {
   '7d': 'Últimos 7 dias', '30d': 'Últimos 30 dias', Trimestre: 'Trimestre atual', Ano: 'Ano corrente',
+  custom: 'Intervalo escolhido',
 }
 function periodFactor(p: Period): number {
-  return ({ '7d': 0.55, '30d': 1, Trimestre: 2.6, Ano: 9 }[p]) || 1
+  return ({ '7d': 0.55, '30d': 1, Trimestre: 2.6, Ano: 9, custom: 1 }[p]) || 1
 }
 
 // Série REAL de turnover (saídas por bucket) no período selecionado. Buckets:

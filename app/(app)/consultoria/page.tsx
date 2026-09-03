@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useConsultoriaPeriod } from '@/lib/ui/consultoria-period'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { consultoriaVM, type ConsultoriaPerson } from '@/lib/mock/consultoria'
 import Avatar from '../Avatar'
 
@@ -26,7 +25,7 @@ const METRICS: { key: MetricKey; label: string; short: string; color: string; de
 export default function ConsultoriaPage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { map } = useConsultoriaPeriod()
   const vm = consultoriaVM(data, map ?? undefined)
 
@@ -34,7 +33,7 @@ export default function ConsultoriaPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <CPIcon size={24} /> Consultoria Plus
           </h1>

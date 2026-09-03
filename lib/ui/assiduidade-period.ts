@@ -8,14 +8,14 @@ type Row = { personKey: string; atrasos: number; abonados: number; minutos: numb
 // Busca a assiduidade por pessoa no período (do banco local, /api/assiduidade-metrics)
 // e devolve um Map p/ alimentar o assiduidadeVM(data, map).
 export function useAssiduidadePeriod(): { map: PeriodAssid | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<PeriodAssid | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/assiduidade-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/assiduidade-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byPerson: Row[] }) => {
         if (!alive) return
@@ -26,7 +26,7 @@ export function useAssiduidadePeriod(): { map: PeriodAssid | null; loading: bool
       .catch(() => alive && setMap(new Map()))
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [period])
+  }, [query])
 
   return { map, loading }
 }

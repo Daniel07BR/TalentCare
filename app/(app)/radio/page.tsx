@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useRadioPeriod } from '@/lib/ui/radio-period'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { radioVM, type RadioPerson } from '@/lib/mock/radio'
 import Avatar from '../Avatar'
 
@@ -19,7 +18,7 @@ const RadioIcon = ({ size = 17, color = 'var(--chart-2)' }: { size?: number; col
 export default function RadioPage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { map } = useRadioPeriod()
   const vm = radioVM(data, map ?? undefined)
   const rMax = Math.max(1, ...vm.deptBars.map((d) => d.horas))
@@ -35,7 +34,7 @@ export default function RadioPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <RadioIcon size={24} /> Rádio Itamarathy
           </h1>

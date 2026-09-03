@@ -6,14 +6,14 @@ import type { CideUsage } from '@/lib/mock/cide'
 // Busca a atividade do CIDE por usuário no período (do banco local,
 // /api/cide-metrics) e devolve um Map p/ alimentar o cideVM(data, map).
 export function useCidePeriod(): { map: CideUsage | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<CideUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/cide-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/cide-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byUser: { nexusUserId: string; atividades: number }[] }) => {
         if (!alive) return
@@ -26,7 +26,7 @@ export function useCidePeriod(): { map: CideUsage | null; loading: boolean } {
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   return { map, loading }
 }

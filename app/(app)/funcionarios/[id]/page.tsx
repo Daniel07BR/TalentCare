@@ -8,7 +8,6 @@ import { withRealScores } from '@/lib/mock/score'
 import { useEmployeePeriod } from '@/lib/ui/employee-period'
 import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
-import { PERIOD_LABEL } from '@/lib/mock/dashboard'
 import { buildEmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
@@ -41,7 +40,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const [tab, setTab] = useState('atividade')
   const { signals } = useScoreSignals()
   const data = withRealScores(useTalentData(), signals)
-  const { period } = usePeriod()
+  const { period, label } = usePeriod()
   const { m } = useEmployeePeriod(id)
   const { events: timeline } = useEmployeeTimeline(id)
   const vm = buildEmployeeVM(data, id)
@@ -73,7 +72,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m ? m.assiduidade : { assid: vm.assid, atrasos: vm.atrasos, atrasosAbon: vm.atrasosAbon, minutos: vm.minutosAtraso, advertencias: vm.advert, faltas: null, suspensoes: null }
-  const periodo = PERIOD_LABEL[period]
+  const periodo = label
 
   // "Concluídas" REAL = soma das atividades concluídas no período nos sistemas
   // integrados. Atrasadas/Pendentes não têm fonte (SLA vazio / sem estado) → ocultas.

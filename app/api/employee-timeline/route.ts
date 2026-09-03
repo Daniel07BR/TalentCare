@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { periodDays } from '@/lib/period-range'
+import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -32,8 +32,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const id = req.nextUrl.searchParams.get('id') ?? ''
-  const period = (req.nextUrl.searchParams.get('period') as Period) || '30d'
-  const { fromDay, toDay } = periodDays(period)
+  const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const user = await prisma.user.findUnique({
     where: { id },
     select: { id: true, nexusUserId: true, name: true, departmentId: true },

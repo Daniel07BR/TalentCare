@@ -34,7 +34,7 @@ const dayLabel = (d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)
 export default function WhatsappPage() {
   const router = useRouter()
   const data = useTalentData()
-  const { period } = usePeriod()
+  const { period, query, label } = usePeriod()
   const [ov, setOv] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('Geral')
@@ -42,13 +42,13 @@ export default function WhatsappPage() {
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/whatsapp-overview?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/whatsapp-overview?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: Overview) => { if (alive) setOv(d) })
       .catch(() => alive && setOv(null))
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [period])
+  }, [query])
 
   // Casa o nome do atendente com um funcionário (p/ foto), por nome normalizado.
   const empByName = useMemo(() => {
@@ -103,7 +103,7 @@ export default function WhatsappPage() {
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {PERIOD_LABEL[period]}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <WppIcon /> Atendimentos · WhatsApp
         </h1>

@@ -7,14 +7,14 @@ import type { ConsultoriaUsage } from '@/lib/mock/consultoria'
 // banco local, /api/consultoria-metrics) e devolve um Map p/ alimentar o
 // consultoriaVM(data, map).
 export function useConsultoriaPeriod(): { map: ConsultoriaUsage | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<ConsultoriaUsage | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/consultoria-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/consultoria-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byUser: { nexusUserId: string; studies: number; tickets: number; messages: number; comments: number }[] }) => {
         if (!alive) return
@@ -27,7 +27,7 @@ export function useConsultoriaPeriod(): { map: ConsultoriaUsage | null; loading:
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   return { map, loading }
 }

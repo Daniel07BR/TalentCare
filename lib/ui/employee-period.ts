@@ -30,20 +30,20 @@ export type EmployeeMetrics = {
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.
 export function useEmployeePeriod(id: string): { m: EmployeeMetrics | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [m, setM] = useState<EmployeeMetrics | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/employee-metrics?id=${encodeURIComponent(id)}&period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/employee-metrics?id=${encodeURIComponent(id)}&${query}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: EmployeeMetrics | null) => { if (alive) setM(d) })
       .catch(() => alive && setM(null))
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [id, period])
+  }, [id, query])
 
   return { m, loading }
 }

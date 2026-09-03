@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { periodDays } from '@/lib/period-range'
+import { rangeDaRequisicao } from '@/lib/period-range'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Atividade do HelpDesk por usuário NO PERÍODO, lida do espelho local
@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
-  const period = (req.nextUrl.searchParams.get('period') as Period) || '30d'
-  const { fromDay, toDay } = periodDays(period)
+  const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const rows = await prisma.helpdeskDaily.groupBy({
     by: ['nexusUserId'],
     where: { day: { gte: fromDay, lte: toDay } },

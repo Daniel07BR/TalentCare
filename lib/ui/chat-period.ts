@@ -9,7 +9,7 @@ import type { ChatUsage, ChatSetor } from '@/lib/mock/chat'
 // `desde` é o dia mais antigo do espelho — a tela avisa, senão o filtro de Ano
 // parece bug (a mensagem tem história do Mattermost; o chamado, só desde 21/08).
 export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; desde: string | null; loading: boolean } {
-  const { period } = usePeriod()
+  const { period, query } = usePeriod()
   const [map, setMap] = useState<ChatUsage | null>(null)
   const [setores, setSetores] = useState<ChatSetor[]>([])
   const [desde, setDesde] = useState<string | null>(null)
@@ -18,7 +18,7 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/chat-metrics?period=${encodeURIComponent(period)}`, { cache: 'no-store' })
+    fetch(`/api/chat-metrics?${query}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: { byUser: ({ nexusUserId: string } & Record<string, number>)[]; byDept: ChatSetor[]; desde: string | null }) => {
         if (!alive) return
@@ -43,7 +43,7 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
     return () => {
       alive = false
     }
-  }, [period])
+  }, [query])
 
   return { map, setores, desde, loading }
 }

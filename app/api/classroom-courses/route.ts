@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { periodDays } from '@/lib/period-range'
+import { rangeDaRequisicao } from '@/lib/period-range'
 import type { Period } from '@/lib/mock/dashboard'
 
 export const dynamic = 'force-dynamic'
@@ -15,10 +15,12 @@ export async function GET(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
-  const period = (req.nextUrl.searchParams.get('period') as Period) || '30d'
-  const { fromDay } = periodDays(period)
+  const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const from = `${fromDay}T00:00:00.000Z`
-  const to = new Date().toISOString()
+  // ⚠️ O fim do intervalo é o FIM DO DIA `toDay`, e não "agora": com o
+  // calendário, `toDay` pode ser uma data passada, e usar `agora` traria tudo
+  // o que veio depois dela — o filtro pareceria não funcionar.
+  const to = `${toDay}T23:59:59.999Z`
 
   const base = process.env.CLASSROOM_BASE_URL
   const key = process.env.CLASSROOM_INTEGRATION_KEY
