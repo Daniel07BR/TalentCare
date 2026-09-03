@@ -93,6 +93,18 @@ ssh talentcare@192.168.0.78 'sudo systemctl restart talentcare'
 
 - ⚠️ **`scp` quebra** com `(app)` e `[id]` no caminho — os parênteses e colchetes do
   App Router passam pelo shell remoto. Use `rsync` (ou `tar cf - … | ssh … tar xf -`).
+- ⚠️⚠️ **`rsync lib/nexus.ts host:/var/www/talentcare/` ACHATA o caminho**: o arquivo
+  vai parar em `/var/www/talentcare/nexus.ts`, e o `lib/nexus.ts` de produção fica
+  **velho**. O build passa, o serviço reinicia, e nada acusa.
+
+  Custou uma hora em 03/09/2026: o `run-sync.mjs` (que já mora na raiz) chegou certo
+  e promovia a pessoa a `GESTOR`; o `lib/nexus.ts` ficou para trás e o login dela a
+  rebaixava em seguida. Sintoma: alguém vê "acesso negado" logo depois de o banco
+  dizer que tem acesso.
+
+  **Sempre `--files-from=<lista>`** (preserva o caminho), ou `rsync src/a.ts
+  host:/dir/**a/**a.ts` com o destino completo. E confira no destino:
+  `grep -c <algo que você acabou de escrever> <caminho/no/servidor>`.
 - ⚠️ O branch é **`master`**, não `main` (`git push origin main` falha com *"src
   refspec main does not match any"*).
 - ⚠️ São **dois espelhos** no `origin`. Confira o que subiu com

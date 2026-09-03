@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
-import { mapRole, resolveRole } from '@/lib/nexus'
+import { mapRole, recalcularAcesso } from '@/lib/nexus'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
@@ -57,10 +57,22 @@ export async function GET(req: NextRequest) {
       dept = await prisma.department.create({ data: { name: nx.department, nexusDepartmentId: nx.departmentId ?? null } })
     }
 
-    const computed = mapRole(nx.email, nx.department)
+    /*
+     * ⚠️⚠️ ESTA ERA A TERCEIRA CÓPIA DA RÉGUA, e ela estava incompleta:
+     * `mapRole(nx.email, nx.department)` — **sem o cargo e sem o vínculo**.
+     *
+     * Efeito medido em 03/09/2026: a Joice, `GESTOR` no banco, era rebaixada a
+     * cada login pelo próprio SSO. O sync a promovia às :45 e o login dela a
+     * derrubava em seguida — ela via "acesso negado" logo depois de alguém
+     * confirmar, no banco, que ela tinha acesso.
+     *
+     * O `computed` daqui só serve para CRIAR alguém que ainda não existe (não há
+     * `local.id` para consultar vínculo). Para quem já existe, quem decide é
+     * `recalcularAcesso`, logo abaixo — a mesma função do sync.
+     */
+    const computed = mapRole(nx.email, nx.department, nx.role)
 
     if (local) {
-      const finalRole = resolveRole(computed, local.role)
       await prisma.user.update({
         where: { id: local.id },
         data: {
@@ -69,7 +81,6 @@ export async function GET(req: NextRequest) {
           name: nx.name,
           email: nx.email,
           active: true,
-          role: finalRole,
           jobTitle: nx.role ?? undefined,
           avatarUrl: nx.avatar ?? undefined,
           domainAccount: nx.username ?? undefined,
@@ -100,6 +111,12 @@ export async function GET(req: NextRequest) {
         },
       })
     }
+
+    /* ⚠️ UMA régua: a mesma função que o sync e a tela de vínculos usam. Ela lê o
+       cargo E o vínculo gravado — que é o que faz a Rosemeire (cargo
+       `Colaborador`, topo de dois setores) e a Joice alcançarem o que devem.
+       Roda DEPOIS do update, para enxergar o cargo e o setor recém-espelhados. */
+    await recalcularAcesso(local.id)
 
     const fresh = await prisma.user.findUnique({ where: { id: local.id } })
     if (!fresh || fresh.role === 'SEM_PERMISSAO') {
