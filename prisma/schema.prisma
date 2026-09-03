@@ -653,3 +653,213 @@ model AvaliacaoCiencia {
 
   @@map("avaliacao_ciencia")
 }
+
+/**
+ * ============================================================
+ * SERVIÇOS POR DEPARTAMENTO (planilha que o setor sobe) + PONTUAÇÃO.
+ * A 11ª fonte, e a segunda que NÃO tem cron: ela entra por upload, como o
+ * ponto. ⚠️⚠️ E o ponto é o caso que ensinou por que isso importa — ele parou em
+ * 25/06/2026 e o painel passou meses respondendo "0 atrasos" para janelas que
+ * ninguém mediu. Toda fonte por upload nasce com essa armadilha, então estes
+ * modelos guardam **até quando o arquivo mediu**, e não só o que ele disse.
+ * ============================================================
+ */
+
+/**
+ * Um envio de planilha. Existe para três coisas que um `insert` solto não dá:
+ * 1. **Idempotência.** O arquivo não tem id de linha; a chave é o `hash` do
+ * conteúdo. Subir o mesmo arquivo duas vezes tem de dizer "já importei isto
+ * em tal dia", não duplicar 6.980 serviços em silêncio.
+ * 2. **A janela coberta.** `diaDe`/`diaAte` são o que o ARQUIVO alcançou — a
+ * tela usa isso para dizer "medido até 31/08" em vez de mostrar zero.
+ * 3. **Desfazer.** As linhas carregam `loteId`; um envio errado se remove
+ * inteiro, sem adivinhar quais linhas eram dele.
+ */
+model ImportLote {
+  id               String   @id @default(cuid())
+  departmentId     String   @map("department_id")
+  arquivo          String
+  /**
+   * SHA-256 do arquivo — a idempotência.
+   */
+  hash             String   @unique
+  /**
+   * A janela que o arquivo cobriu (AAAA-MM-DD).
+   */
+  diaDe            String   @map("dia_de") @db.VarChar(10)
+  diaAte           String   @map("dia_ate") @db.VarChar(10)
+  linhas           Int
+  linhasSemVinculo Int      @default(0) @map("linhas_sem_vinculo")
+  /**
+   * Quem subiu — o gestor do setor sobe e a régua é dele; sem autor não há a
+   * quem perguntar quando o número mudar.
+   */
+  enviadoPor       String   @map("enviado_por")
+  enviadoEm        DateTime @default(now()) @map("enviado_em")
+  /**
+   * `false` = substituído por um envio posterior da mesma janela.
+   */
+  ativo            Boolean  @default(true)
+
+  @@index([departmentId, ativo])
+  @@map("import_lote")
+}
+
+/**
+ * Um serviço, como a planilha do setor o registra.
+ * ⚠️⚠️ `personKey` é NULO quando o nome do arquivo não corresponde a ninguém da
+ * casa, e a linha entra assim mesmo. Medido no primeiro arquivo do Legal: 1.986
+ * das 6.980 linhas (28,5%) são de quatro pessoas que não existem no TalentCare
+ * nem como desligadas. Descartá-las deixaria o total do setor 28,5% menor que o
+ * da planilha — e alguém compara os dois, não bate, e passa a desconfiar do
+ * painel inteiro. Elas entram, contam para o setor, e não creditam ninguém.
+ * ⚠️ `nomeOrigem` guarda o nome EXATAMENTE como veio. É o que permite refazer o
+ * vínculo depois sem reimportar, e é a prova de qual linha virou de quem.
+ */
+model ServicoDepto {
+  id           String  @id @default(cuid())
+  loteId       String  @map("lote_id")
+  departmentId String  @map("department_id")
+  /**
+   * `nexusUserId ?? id` da pessoa, ou null se o nome não casou.
+   */
+  personKey    String? @map("person_key")
+  nomeOrigem   String  @map("nome_origem")
+  dia          String  @db.VarChar(10)
+  /**
+   * 'concluida' | 'aberta' | 'desconsiderada'
+   */
+  status       String
+  tarefa       String
+  cliente      String?
+  /**
+   * Tempo do serviço em MINUTOS. A origem manda fração de dia (0,0073 = 10min);
+   * converter na entrada evita que cada consumidor reinvente a multiplicação.
+   */
+  minutos      Int     @default(0)
+
+  @@index([departmentId, dia])
+  @@index([personKey, dia])
+  @@index([loteId])
+  @@map("servico_depto")
+}
+
+/**
+ * O vínculo NOME-DO-ARQUIVO → pessoa, resolvido à mão. Durável: a reimportação
+ * consulta isto e credita a pessoa certa sem refazer o trabalho.
+ * ⚠️⚠️ Existe porque o casamento automático por nome ERRA, e erra feio. Medido
+ * no arquivo do Legal: "Wendel Ribeiro da Silva" casa com **Edileuza da Silva,
+ * da Limpeza** (pelos tokens "da" e "silva"), e "Joice Rocha da Silva" casa com
+ * as duas. Na aba de pontos, que traz só o primeiro nome, "Gabriel" casa com
+ * TRÊS pessoas. Nome não é identidade — é o mesmo motivo pelo qual a tela
+ * `/ponto` existe.
+ * `pessoaId` nulo com `confirmado = true` quer dizer "conferi, e esta pessoa
+ * não é da casa" — o que é diferente de "ainda não olhei".
+ */
+model ServicoVinculo {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  /**
+   * O nome como aparece no arquivo, normalizado (sem acento, minúsculo).
+   */
+  nomeNorm     String   @map("nome_norm")
+  nomeOrigem   String   @map("nome_origem")
+  personKey    String?  @map("person_key")
+  confirmado   Boolean  @default(false)
+  criadoPor    String?  @map("criado_por")
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  @@unique([departmentId, nomeNorm])
+  @@map("servico_vinculo")
+}
+
+/**
+ * A RÉGUA DE PONTUAÇÃO de um setor. Cada departamento define a sua.
+ * ⚠️⚠️ NUNCA SE EDITA — cria-se uma versão nova, com `vigenteDesde`. Uma régua
+ * editada no lugar reescreveria o passado: mudar o peso do atraso em dezembro
+ * mudaria também a nota de novembro, que a pessoa já leu. É o mesmo princípio
+ * de `AvaliacaoVersao` ("uma nota que se reescreve em silêncio depois de a
+ * pessoa ler não é registro — é negociação, e vence quem insiste mais").
+ * ⚠️ `criadoPor` é obrigatório: o GESTOR do setor edita a régua do próprio time
+ * (decisão do dono, 03/09/2026). Poder de mexer no próprio critério exige, no
+ * mínimo, que a mudança tenha autor e data.
+ */
+model PontuacaoRegra {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  /**
+   * Pontos com que todo mundo começa o mês. O Legal começa com 100.
+   */
+  base         Int      @default(100)
+  /**
+   * A partir de que competência (AAAA-MM) esta versão vale.
+   */
+  vigenteDesde String   @map("vigente_desde") @db.VarChar(7)
+  criadoPor    String   @map("criado_por")
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  /**
+   * Por que mudou — some da tela quando ninguém escreve, e é o que a conversa
+   * de seis meses depois precisa.
+   */
+  motivo       String?
+
+  itens PontuacaoRegraItem[]
+
+  @@unique([departmentId, vigenteDesde])
+  @@map("pontuacao_regra")
+}
+
+/**
+ * Uma linha da régua: que evento vale quantos pontos.
+ * `evento` hoje: 'atraso' · 'atraso_abonado' · 'advertencia' ·
+ * 'mes_sem_ocorrencia' · 'servico_concluido'. `pontos` é assinado — o Legal
+ * começou com atraso −10, advertência −15 e mês limpo +20.
+ */
+model PontuacaoRegraItem {
+  id      String @id @default(cuid())
+  regraId String @map("regra_id")
+  evento  String
+  pontos  Int
+
+  regra PontuacaoRegra @relation(fields: [regraId], references: [id], onDelete: Cascade)
+
+  @@unique([regraId, evento])
+  @@map("pontuacao_regra_item")
+}
+
+/**
+ * A pontuação de uma pessoa num mês.
+ * ⚠️⚠️ `origem` separa o que a régua CALCULOU do que o setor INFORMOU, e as duas
+ * nunca se misturam. Os 127 valores históricos da planilha do Legal (05/2025 a
+ * 07/2026) foram calculados à mão, por um critério anterior — 105 deles passam
+ * do teto de 120 que a régua atual permite, e nenhum termina em 5, o que prova
+ * que a penalidade de advertência nunca entrou neles. Exibi-los como se a régua
+ * de hoje os tivesse produzido seria inventar procedência para número de gente
+ * de verdade.
+ * ⚠️ `regraId` diz QUAL versão da régua produziu o número calculado. Sem isso,
+ * refazer a conta seis meses depois daria outro resultado e ninguém saberia por quê.
+ */
+model PontuacaoMes {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  personKey    String   @map("person_key")
+  /**
+   * AAAA-MM
+   */
+  competencia  String   @db.VarChar(7)
+  pontos       Int
+  /**
+   * 'informado' (veio na planilha) | 'calculado' (a régua produziu)
+   */
+  origem       String
+  regraId      String?  @map("regra_id")
+  /**
+   * A conta aberta, para a pessoa poder conferir: base 100 · 2 atrasos −20 · …
+   */
+  detalhe      String?
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@unique([personKey, competencia])
+  @@index([departmentId, competencia])
+  @@map("pontuacao_mes")
+}

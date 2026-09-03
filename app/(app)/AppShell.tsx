@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
+import { FileSpreadsheet,
   LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck, MessageSquareText,
@@ -25,6 +25,10 @@ const NAV_MAIN = [
   // A fila de avaliações do mês. O selo ao lado traz "quantas faltam" — ver
   // useFaltamAvaliar: é DERIVADO da fila, nunca um contador gravado.
   { href: '/avaliacoes', label: 'Avaliações', icon: ClipboardCheck },
+  // A planilha que cada setor sobe + a régua de pontuação dele. Fica junto das
+  // avaliações porque é a outra metade da mesma pergunta: o que a pessoa
+  // entregou, e por qual critério isso vira nota.
+  { href: '/servicos', label: 'Serviços do setor', icon: FileSpreadsheet },
   // A página da própria pessoa. Fica no topo de propósito: é a única do sistema
   // que TODO funcionário alcança, e escondê-la num menu faria o colaborador
   // entrar e achar que não há nada para ele.
@@ -164,6 +168,11 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
                 style={navChip}>{d.name}</Link>
             ))}
             <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
+            {/* ⚠️ A planilha do setor é trabalho DELE, e a barra do gestor é
+                enxuta de propósito — mas "sem menu" não pode virar "sem saída".
+                Sem este atalho, a área de serviços existiria e ninguém chegaria
+                nela sem digitar a URL. */}
+            <Link href="/servicos" className={'tc-nav' + (pathname === '/servicos' ? ' on' : '')} style={navChip}>Serviços</Link>
             <Link href="/minha-avaliacao" className={'tc-nav' + (pathname === '/minha-avaliacao' ? ' on' : '')} style={navChip}>Meu desempenho</Link>
           </nav>
           {/* ⚠️ O selo é o que impede o preview de virar confusão: sem ele, quem

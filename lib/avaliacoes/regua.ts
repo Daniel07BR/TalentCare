@@ -149,6 +149,26 @@ export function quemAvaliaEssa(
 export const podeGerirAvaliadores = (quem: Quem) => quem.role === 'ADMIN'
 
 /**
+ * Quem sobe a planilha de serviços de um setor e define a RÉGUA DE PONTUAÇÃO
+ * dele: o ADMIN, ou quem tem vínculo de avaliador naquele setor.
+ *
+ * ⚠️⚠️ Decisão do dono (03/09/2026), e ela é maior do que parece: o gestor passa
+ * a poder mexer no critério pelo qual o próprio time é medido. O que a torna
+ * defensável é o registro — toda versão da régua guarda `criadoPor`, `criadoEm`
+ * e `vigenteDesde`, e **nenhuma se edita no lugar**. Sem isso, afrouxar o
+ * critério de dezembro mudaria a nota de novembro, que a pessoa já leu.
+ *
+ * ⚠️ Vem daqui, e não do cargo lido na hora: o vínculo é gravado, o cargo muda
+ * numa promoção sem que ninguém decida nada. Mesmo princípio de `podeAvaliar`.
+ */
+export const podeGerirServicos = (quem: Quem, departmentId: string) =>
+  quem.role === 'ADMIN' || quem.escopo.avaliaDepartmentIds.includes(departmentId)
+
+/** Os setores em que a pessoa pode subir planilha e mexer na régua. */
+export const setoresQueGere = (quem: Quem): string[] | 'todos' =>
+  quem.role === 'ADMIN' ? 'todos' : quem.escopo.avaliaDepartmentIds
+
+/**
  * QUEM devia ser avaliado numa competência — a população, e só ela.
  *
  * ⚠️⚠️ Exportada porque o relatório de setor tinha a SUA PRÓPRIA conta
