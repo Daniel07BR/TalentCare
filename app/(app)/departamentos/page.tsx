@@ -30,10 +30,21 @@ export default function DepartamentosPage() {
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: d.color, marginTop: 6, flex: 'none' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 12 }}><span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: d.scoreColor }}>{d.score}</span><span style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>/100 score</span></div>
-            <svg width="100%" height="30" viewBox="0 0 120 28" preserveAspectRatio="none" style={{ marginBottom: 14, overflow: 'visible' }}><polyline points={d.spark} fill="none" stroke={d.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+            {/* ⚠️ Aqui havia uma sparkline `rnd(seed)` — passeio aleatório com o
+                score real só no último ponto. Saiu; não há série mensal de score
+                para pôr no lugar. */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 14 }}>
               <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Headcount</div><div style={{ fontSize: 14, fontWeight: 600 }}>{d.headcount}</div></div>
-              <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Turnover</div><div style={{ fontSize: 14, fontWeight: 600, color: 'var(--danger)' }}>{d.turnover}%</div></div>
+              {/* ⚠️⚠️ O turnover deste card era `3.5 + rnd(seed) × 13`. O Fiscal
+                  marcava 4% e é 30%; o Contábil 14,8% e é 40%. Agora é a MESMA
+                  conta do relatório do setor, e o card diz o numerador — 0% de
+                  um setor de 2 pessoas e 0% de um de 21 não são a mesma notícia. */}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Turnover 12 meses</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: d.turnover >= 20 ? 'var(--danger)' : d.turnover > 0 ? 'var(--warning)' : 'var(--text-mute)' }}>
+                  {d.turnover}% <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-mute)' }}>· {d.saidas12m} {d.saidas12m === 1 ? 'saída' : 'saídas'}</span>
+                </div>
+              </div>
             </div>
           </div>
         ))}

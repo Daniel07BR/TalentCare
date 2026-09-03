@@ -1,5 +1,140 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-03 (noite) — O dashboard e o `/ranking`: a ausência que lia como nota máxima
+
+As duas telas que ainda não tinham passado pela revisão. O agente crítico rodou de
+novo, com o briefing de `docs/AGENTE-CRITICO.md`, e achou três defeitos que eu não
+tinha visto — todos confirmados contra o banco de produção antes de consertar.
+
+### ⚠️⚠️ O defeito principal: ausência de dado lendo como 100
+
+Não era `rnd`, e é por isso que ele sobreviveu a todas as revisões anteriores: a
+conta estava certa e a fonte era real. `assiduidade = 100 − atrasos·2 −
+advertências·5` — quem o ponto não cobre entra com **0 atrasos e 0 advertências** e
+sai com **100**.
+
+Medido no `/ranking` por Assiduidade, "Todos os setores": **os 22 primeiros
+colocados, empatados em 100, eram exatamente as 22 pessoas sem registro de ponto
+nenhum.** O primeiro medido de verdade — a Andressa Romantini, com 98 — aparecia em
+**32º**. E o fundo era pior: **20 pessoas empatadas em 0**, porque a fórmula satura;
+a Yasmin (16 atrasos, 16 advertências) na mesma posição que a Bruna (42 e 29).
+
+Duas coisas o agravavam:
+
+1. **O ponto está 70 dias parado.** É a única das dez fontes sem cron — entra por
+   import à mão — e terminava em **25/06/2026**, com os oito espelhos de atividade
+   todos em `max(day) = 2026-09-03`. Em "7 dias", "30 dias" e "Trimestre atual" não
+   havia uma linha, então a assiduidade valia 100 para as **87 pessoas**.
+2. **O recorte de privacidade fabricava o 100.** Ele zera atrasos e advertências de
+   quem o leitor não alcança — o que é certo, o dado não pode viajar —, mas zerado
+   vira nota cheia: um gestor via a empresa inteira empatada em primeiro lugar,
+   acima do próprio time, que é a única gente de quem ele tem dado real.
+
+**O conserto** é `lib/ponto-cobertura.ts`, que responde as **duas** perguntas
+separadamente — *a pessoa é medida?* (o roster do ponto, não "tem ocorrência": quem
+é medido e nunca se atrasou merece os 100 dela) e *a janela foi medida?* (o
+intervalo que o import cobriu). `null` nos dois casos, com o peso redistribuído
+pelo mecanismo que já existia.
+
+> **A regra do `null` tem uma face invertida, e ela é mais difícil de ver.** Todo
+> mundo procura o zero que acusa. Aqui a ausência **elogiava** — e elogio não
+> levanta suspeita em ninguém.
+
+### O coorte do percentil incluía os desligados
+
+Achado do crítico. A produtividade é percentil dentro do setor, e o coorte era
+montado sobre `employees` inteiro, com os **33 desligados** dentro (o Contábil tem
+18 ativos e 13 desligados). Quem saiu não produz nada na janela, entra com 0 e vira
+o piso da distribuição: **70 das 87 pessoas ativas** tinham o percentil inflado por
+gente que não trabalha mais aqui. A Andrea Bratfisch subia de 50 para **100** de
+produtividade. Hoje a régua é o coorte de **ativos**; o desligado continua
+recebendo nota (a ficha dele existe), só não serve mais de referência.
+
+### Efeito somado no "Score médio" da home: **73 → 52**
+
+Vinte e um pontos, e nenhum deles era medição. As duas maiores quedas individuais:
+Andrea Bratfisch 60 → 8 e Bruna Costa 51 → 0.
+
+### O turnover `rnd` que a lista de dívida dava por quitado
+
+O conserto de 03/09 pela manhã chegou ao relatório do setor e **não** ao card da
+lista em `/departamentos`, que seguia imprimindo `3.5 + rnd(dseed × 5.3) × 13` em
+vermelho. Tela × verdade: **Fiscal 4% × 30,0%**, Contábil 14,8% × 40,0%, Recepção
+13,1% × 40,0%, TI 4,8% × 0%. O 4% do Fiscal é o mesmo número que o
+`AGENTE-CRITICO.md` cita como exemplo de achado do crítico — ele nunca tinha saído
+da tela, só da página de detalhe.
+
+### A curva de turnover ignorava o calendário
+
+Também do crítico. `turnoverSeries` tratava `Ano` e `Trimestre` e mandava todo o
+resto para o `else`, com buckets fixos de 5 dias × 6 = os últimos 30 dias — **`custom`
+incluído**. Escolher 1/jan a 30/jun devolvia a taxa e a curva de agosto, com o cartão
+rotulando aquilo de "Intervalo escolhido". Agora o intervalo sai de `periodDays`, o
+mesmo que as ~12 rotas usam.
+
+### Duas réguas de alcance, e a mais frouxa era a que embarcava no payload
+
+`lib/alcance.ts` diz, por escrito e com a medição ao lado, que o setor onde a pessoa
+senta **não** entra no alcance dela. O `app/(app)/layout.tsx` somava o `meDept` e
+passava isso ao `getTalentData` — que enche o `TalentDataProvider` de **toda**
+página. Navegação e alcance de dado agora estão separados: a barra continua com os
+setores dele, a régua de dado sai só dos vínculos.
+
+### Tempo de casa congelado em junho *(reportado pelo Daniel)*
+
+`monthsSince` contava até uma `BASE_DATE` fixa em **01/06/2026**, herança da época
+em que tudo aqui era determinístico — e atrasava mais um mês a cada mês. A ficha do
+Yuri Santana dizia **11 meses** ao lado da própria data de admissão, real, de
+17/07/2025: são **13**. **118 das 129 pessoas** estavam erradas.
+
+E o pior caso era o desligado, que continuava fazendo aniversário de casa: a lista de
+`/turnover` diz quanto tempo cada um **ficou**, e a Melissa Marcondes — que entrou em
+29/11/2024 e saiu em 15/01/2025 — aparecia com **19 meses** de casa em vez de **1**.
+Hoje conta até a saída, e conta o dia, não só o mês.
+
+### O resto que saiu do painel
+
+- **"Atualizado há 12 min"**, cravada no JSX e igual num painel fresco e num painel
+  morto — a mesma frase que o `scripts/tc-vigia.sh` deste repositório já citava, por
+  escrito, como o exemplo do problema. Virou `/api/frescor`: o **espelho mais
+  atrasado**, com a data. Hoje o painel diz "Dados até 25/06/2026 · Ponto".
+- Os **deltas literais** `+3` (Headcount) e `+2` (Score médio). O Headcount ganhou o
+  delta real — entradas **menos** saídas, que em 30 dias dá **−2** e não +3; o Score
+  médio perdeu delta e sparkline, porque média de percentil é quase constante por
+  construção.
+- As **quatro sparklines inventadas** (três `sp(seed)` e uma com array literal
+  `[74,75,74,76,…]` e o valor real só no último ponto). As que ficaram são medidas;
+  onde não há série, o cartão fica **sem gráfico**.
+- **`alerts`, `rankList`, `deptBars`, `turnoverNow`, `periodFactor`** — código morto
+  que ninguém renderizava, incluindo quatro "novidades" com data escrita à mão.
+- O **"Destaque por departamento"** era ordenado por score **entre setores** — a
+  comparação que o `/ranking` avisa, em amarelo, que não vale. Hoje é alfabético, e
+  a linha diz quando o destaque é o único avaliável do setor.
+
+### `/ranking`
+
+- A métrica Assiduidade **obedece ao filtro de período** (lia o acumulado) e lista
+  **só quem é medido**, com uma linha dizendo quantos ficaram de fora e por quê —
+  "ficar de fora não é ficar em último".
+- A **ordem** usa a penalidade sem piso, e cada linha mostra os atrasos e as
+  advertências que produziram o número, para o fundo da lista distinguir gente.
+- O painel "Comparação lado a lado" **nascia vazio em toda visita**: os defaults
+  eram `'e3'` e `'e23'`, ids do dataset mock antigo (os reais são cuid).
+- `/ranking` entrou na régua de Diretoria do `proxy.ts` — ele mostra a empresa
+  inteira e não estava em lista nenhuma.
+- `getTalentData` passou a respeitar **`foraDoDiretorio`**, que a fila de avaliação
+  já respeitava: uma conta que não é gente não podia ficar de fora numa tela e ser
+  classificada em primeiro lugar na outra.
+
+### Erro de rede não vira mais boa notícia
+
+`useAssiduidadePeriod` fazia `catch → new Map()`, e Map vazio é indistinguível de
+"ninguém se atrasou": uma queda de rede virava **0 atrasos**, em verde. `useScoreSignals`
+fazia `catch → null`, e `null` faz o `withRealScores` cair no score **acumulado** de
+toda a história, debaixo do rótulo "Últimos 30 dias" (média 57 contra 60 na janela,
+com saltos de até 57 pontos numa pessoa). Os dois hooks agora devolvem `erro`, e o
+painel diz, em vermelho, que o que está na tela não é a janela pedida.
+
 ## 2026-09-03 — O relatório de setor, a ficha, e o acesso do gestor
 
 Três frentes, e um agente **crítico** revisando cada rodada. A regra do laço foi:

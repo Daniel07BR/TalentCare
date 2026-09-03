@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { alcanceDeQuemLe, porNexus, porPersonKey, porNome } from '@/lib/alcance'
+import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Sinais do SCORE por pessoa NO PERÍODO (atividade nos sistemas + assiduidade),
@@ -62,5 +63,20 @@ export async function GET(req: NextRequest) {
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }
   })
 
-  return NextResponse.json({ period, fromDay, toDay, byPerson })
+  /* ⚠️⚠️ A JANELA FOI MEDIDA? O ponto entra por import à mão, não por cron, e em
+     03/09/2026 o dump terminava em 25/06: em "7 dias", "30 dias" e "Trimestre
+     atual" (jul–set) o `groupBy` acima devolve VAZIO para todo mundo, e vazio
+     vira `atrasos: 0` → assiduidade **100** para as 87 pessoas. Sem esta
+     bandeira o cliente não tem como distinguir "ninguém se atrasou" de "ninguém
+     mediu", e o score de toda a casa carrega 20 pontos de nota cheia comprada
+     com a ausência de dado. Ver `lib/ponto-cobertura.ts`. */
+  const cob = await coberturaDoPonto()
+  const janelaComPonto = janelaTemDado(cob, fromDay, toDay)
+
+  return NextResponse.json({
+    period, fromDay, toDay, byPerson,
+    janelaComPonto,
+    motivoSemPonto: janelaComPonto ? null : motivoSemPonto(cob, true, false),
+    pontoAte: cob.ultimoDia,
+  })
 }

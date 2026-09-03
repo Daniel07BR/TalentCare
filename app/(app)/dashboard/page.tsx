@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
+import { useFrescor } from '@/lib/ui/frescor'
 import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
 import { buildDashboard } from '@/lib/mock/dashboard'
@@ -16,14 +17,29 @@ import HelpdeskDeptCard from './HelpdeskDeptCard'
 import CideDeptCard from './CideDeptCard'
 
 export default function DashboardPage() {
-  const { period } = usePeriod()
+  const { period, from, to, label: periodLabel } = usePeriod()
   const router = useRouter()
-  const { signals } = useScoreSignals()
+  const { signals, loading: scoreLoading, erro: scoreErro } = useScoreSignals()
   const data = withRealScores(useTalentData(), signals)
-  const { map: assidMap } = useAssiduidadePeriod()
-  const vm = buildDashboard(data, period, assidMap ?? undefined)
+  const assid = useAssiduidadePeriod()
+  const frescor = useFrescor()
+  const vm = buildDashboard(data, period, {
+    assidMap: assid.map ?? undefined,
+    from, to,
+    janelaComPonto: assid.janelaComPonto,
+    motivoSemPonto: assid.motivoSemPonto ?? (assid.erro ? 'não foi possível ler o ponto' : null),
+    atrasosPorDia: assid.porDia,
+  })
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall
+  /* ⚠️⚠️ Enquanto os sinais do período não chegam, `withRealScores(data, null)`
+     devolve o score ACUMULADO de toda a história — e o cabeçalho já diz
+     "Período: Últimos 30 dias". Medido em 03/09/2026: média 57 no acumulado
+     contra 60 na janela, com saltos de até 57 pontos numa pessoa. A tela tem de
+     dizer que ainda está carregando, e tem de gritar se a leitura falhou: o
+     `catch` mudo deixava o acumulado ali para sempre, rotulado de período. */
+  const carregandoPeriodo = scoreLoading || assid.loading
+  const erroPeriodo = scoreErro || assid.erro
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -33,28 +49,59 @@ export default function DashboardPage() {
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Indicadores Grupo Itamarathy</h1>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.5 }}>
-          <div>Período: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{vm.periodLabel}</span></div>
-          <div>Atualizado há 12 min</div>
+          <div>Período: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{periodLabel}</span></div>
+          {/* ⚠️⚠️ Aqui dizia **"Atualizado há 12 min"**, cravado no JSX desde o
+              primeiro desenho e igual num painel fresco e num painel morto. O
+              `scripts/tc-vigia.sh` deste repositório já citava essa frase, por
+              escrito, como o exemplo do que dá errado: "o rádio ficou 39 dias
+              parado e o WhatsApp congelou — os crons rodavam, nada estourava, e
+              o painel dizia 'atualizado há 12 min'".
+              Agora é o espelho MAIS ATRASADO: um painel é tão fresco quanto a
+              fonte mais velha que ele soma. */}
+          <div title={frescor.detalhe}>{frescor.texto}</div>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 14, marginBottom: 16 }}>
-        {vm.kpis.map((k) => (
-          <div key={k.label} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 118 }}>
+      {carregandoPeriodo && !erroPeriodo && (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: 14 }}>
+          Carregando os números do período… <span style={{ color: 'var(--text-mute)' }}>até chegarem, o score mostrado é o acumulado de toda a história, não o da janela.</span>
+        </div>
+      )}
+      {erroPeriodo && (
+        <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(229,72,77,.08)', border: '1px solid rgba(229,72,77,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          <b>Não foi possível ler os números do período.</b> O que está na tela é o acumulado de toda a história — <b>não</b> a janela escolhida. Recarregue antes de decidir qualquer coisa com estes números.
+        </div>
+      )}
+
+      {/* KPIs — ⚠️ o grid era `repeat(6,1fr)` e ficou com 5 cartões desde que
+          "Tarefas concluídas" saiu: uma sexta coluna vazia à direita. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 16 }}>
+        {vm.kpis.map((k) => {
+          const semDado = k.value === '—'
+          return (
+          <div key={k.label} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 130 }}>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500 }}>{k.label}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-1px' }}>{k.value}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>{k.unit}</span>
+              {/* ⚠️ "—" em cinza, nunca um 0 grande: zero se lê como "não houve",
+                  e aqui o que houve foi ninguém medir. */}
+              <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-1px', color: semDado ? 'var(--text-mute)' : 'var(--text)' }}>{k.value}</span>
+              {!semDado && <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>{k.unit}</span>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
+            {/* A legenda que diz de QUE janela o número fala — ou por que não fala. */}
+            <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.35 }}>{k.nota}</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: k.deltaColor, display: 'inline-flex', alignItems: 'center', gap: 2 }}>{k.delta ? `${k.deltaArrow} ${k.delta}` : ''}</span>
-              <svg width="64" height="26" viewBox="0 0 64 26" style={{ overflow: 'visible' }}>
-                <polyline points={k.spark} fill="none" stroke={k.sparkColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {/* ⚠️ Sem série real, sem gráfico. Era aqui que moravam os quatro
+                  passeios aleatórios — um deles com o número verdadeiro só no
+                  último ponto, o que é pior que nenhum gráfico. */}
+              {k.spark && (
+                <svg width="64" height="26" viewBox="0 0 64 26" style={{ overflow: 'visible' }}>
+                  <polyline points={k.spark} fill="none" stroke={k.sparkColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Atendimentos por departamento (WhatsApp) + Curva de turnover */}
@@ -65,7 +112,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Curva de turnover</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.turnoverSub} · saídas · ver relatório</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.turnoverSaidas} {vm.turnoverSaidas === 1 ? 'saída' : 'saídas'} em {vm.turnoverDias} dias · ver relatório</div>
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{vm.turnoverWinRate}%</span>
           </div>
@@ -92,7 +139,12 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Destaque por departamento</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>O melhor de cada setor · comparado dentro do próprio depto</div>
+          {/* ⚠️⚠️ A lista está em ordem ALFABÉTICA de setor, de propósito. Ela era
+              ordenada por score — entre setores —, o que é exatamente a
+              comparação que o `/ranking` avisa, em amarelo, que não vale: o
+              score é percentil DENTRO do depto. Ordenada, ela virava um ranking
+              de setores pelo campeão de cada um, sem aviso nenhum. */}
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>O melhor de cada setor · cada um comparado só dentro do próprio depto, então os números <b>não</b> se comparam entre linhas</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 420, overflowY: 'auto' }}>
             {vm.deptHighlights.map((r) => (
               <div key={r.deptId} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
@@ -100,7 +152,13 @@ export default function DashboardPage() {
                 <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.deptNome} · {r.cargo}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.deptNome} · {r.cargo}
+                    {/* ⚠️ "Melhor de um" não é destaque — a tela diz contra
+                        quantos ele foi comparado em vez de coroar quem não teve
+                        com quem competir. */}
+                    {r.comparadoCom <= 1 && <span style={{ color: 'var(--warning)' }}> · único avaliável no setor</span>}
+                  </div>
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.score}</span>
               </div>

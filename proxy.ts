@@ -32,6 +32,23 @@ function alcanceDoColaborador(pathname: string): boolean {
   return false
 }
 
+/**
+ * Painéis que comparam a EMPRESA INTEIRA — mesma régua do `/dashboard`.
+ *
+ * ⚠️⚠️ O comentário abaixo já dizia que o painel da Diretoria mostra "score
+ * médio, **ranking**, turnover", mas a lista tinha só `/` e `/dashboard`: quem
+ * digitasse `/ranking` entrava. E ali o recorte de privacidade piorava o
+ * estrago — ele ZERA atrasos e advertências de quem o leitor não alcança
+ * (`lib/data/source.ts`), e `100 − 0·2 − 0·5` é **100**. O gestor via a empresa
+ * toda empatada em primeiro lugar, acima do time dele, que é a única gente de
+ * quem ele tem dado real. A régua que protege a privacidade fabricava a mentira.
+ *
+ * ⚠️ Comparação EXATA, não por prefixo: `/departamentos` é o painel da casa e
+ * fica de fora, mas `/departamentos/<id>` é o relatório do setor DELE, que é
+ * onde ele trabalha. Prefixo aqui trancaria o gestor para fora do próprio setor.
+ */
+const SO_DIRETORIA = ['/ranking']
+
 /** Áreas de administração do sistema. */
 const SO_ADMIN = [
   '/avaliadores', '/api/avaliadores',
@@ -97,7 +114,7 @@ export default auth((req) => {
    * caem no setor DELES (decisão do dono, 03/09/2026); `/meu-setor` resolve qual
    * é, porque aqui não há banco para perguntar.
    */
-  if (role !== 'ADMIN' && (pathname === '/' || pathname === '/dashboard' || pathname === '/login')) {
+  if (role !== 'ADMIN' && (pathname === '/' || pathname === '/dashboard' || SO_DIRETORIA.includes(pathname) || pathname === '/login')) {
     return NextResponse.redirect(new URL(role === 'COLABORADOR' ? '/minha-avaliacao' : '/meu-setor', req.url))
   }
   if (pathname === '/login') {

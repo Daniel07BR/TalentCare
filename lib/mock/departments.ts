@@ -5,9 +5,14 @@ import { geomSpark, geomLine, scoreColor, type TalentData } from './data'
 import { heatmapFor } from './employee'
 
 export function deptListVM(data: TalentData) {
+  /* ⚠️ A sparkline do card SAIU junto com o turnover sorteado: ela era
+     `rnd(dseed × 17 + m)`, um passeio aleatório de 12 pontos com o score real só
+     no último. Não existe série mensal de score (ele é percentil por janela), e
+     um gráfico inventado embaixo de um número certo empresta credibilidade ao
+     que não a tem. */
   const cards = [...data.departments].sort((a, b) => b.score - a.score).map((d) => ({
     id: d.id, nome: d.nome, score: d.score, scoreColor: scoreColor(d.score), headcount: d.headcount,
-    turnover: d.turnover, lider: d.lider, color: d.color, spark: geomSpark(d.spark, 120, 28),
+    turnover: d.turnover, saidas12m: d.saidas12m, lider: d.lider, color: d.color,
   }))
   // Totais consideram só ativos (headcount do dept já é ativo).
   const totalHc = data.departments.reduce((a, d) => a + d.headcount, 0)
@@ -28,7 +33,6 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   const totalDoSetor = data.employees.filter((e) => e.dept === dep.id && e.status !== 'Desligado').length
   const ativos = data.employees.filter((e) => e.status !== 'Desligado' && e.hasScore)
   const compAvg = ativos.length ? Math.round(ativos.reduce((a, e) => a + e.score, 0) / ativos.length) : dep.score
-  const hl = geomLine(dep.spark, 300, 84, 8)
   // Heatmap de OCORRÊNCIAS do setor = soma dos atrasos dos membros por dia (real).
   const deptDays = new Map<string, { day: string; atrasos: number; minutos: number }>()
   for (const e of data.employees.filter((e) => e.dept === dep.id)) {
@@ -51,7 +55,7 @@ export function deptDetailVM(data: TalentData, deptId: string) {
   return {
     comScore: emps.length,
     totalDoSetor,
-    name: dep.nome, kpis, ranking, histLine: hl.line, histArea: hl.area, compAvg, score: dep.score,
+    name: dep.nome, kpis, ranking, compAvg, score: dep.score,
     barSelf: dep.score + '%', barComp: compAvg + '%', heat: heatmapFor([...deptDays.values()]),
     classroom: {
       criados: dep.classroom.coursesCreated,

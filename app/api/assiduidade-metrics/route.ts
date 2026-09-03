@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { alcanceDeQuemLe, porPersonKey } from '@/lib/alcance'
+import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Assiduidade (ponto) por pessoa NO PERÍODO, lida dos espelhos locais
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
 
-  const [pontoRows, advRows] = await Promise.all([
+  const [pontoRows, advRows, atrasoPorDia] = await Promise.all([
     prisma.assiduidadeDaily.groupBy({
       by: ['personKey'],
       // ⚠️ `personKey` = `nexusUserId ?? id` — cobre o STAFF sem conta no Nexus.
@@ -25,6 +26,14 @@ export async function GET(req: NextRequest) {
       by: ['personKey'],
       where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) },
       _count: { _all: true },
+    }),
+    /* A série DIÁRIA de atrasos na janela — é o que a sparkline do KPI desenha.
+       ⚠️ Vem do mesmo `where` do número, para o gráfico e o número não
+       responderem a perguntas diferentes lado a lado. */
+    prisma.assiduidadeDaily.groupBy({
+      by: ['day'],
+      where: { day: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) },
+      _sum: { atrasos: true },
     }),
   ])
 
@@ -41,5 +50,26 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  return NextResponse.json({ period, fromDay, toDay, byPerson })
+  /* ⚠️⚠️ A JANELA FOI MEDIDA? O ponto entra por IMPORT À MÃO, não por cron — é a
+     única das dez fontes sem cron. Em 03/09/2026 os oito espelhos de atividade
+     estavam em `max(day) = 2026-09-03` e o ponto parava em **25/06**: em "7
+     dias", "30 dias" e "Trimestre atual" o `groupBy` acima devolve VAZIO, e a
+     tela lê vazio como **zero atraso** — "ninguém se atrasou este mês", que é
+     uma frase que o sistema não tem como sustentar.
+
+     Quem responde é `lib/ponto-cobertura.ts`, o MESMO arquivo que responde para
+     o `/api/score-metrics` e para o dataset. Três cópias desta pergunta
+     divergiriam em silêncio, e a que mente é sempre a mais tranquilizadora. */
+  const cob = await coberturaDoPonto()
+  const janelaComPonto = janelaTemDado(cob, fromDay, toDay)
+
+  return NextResponse.json({
+    period, fromDay, toDay, byPerson,
+    porDia: atrasoPorDia
+      .map((r) => ({ day: r.day, atrasos: r._sum.atrasos ?? 0 }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
+    janelaComPonto,
+    motivoSemPonto: janelaComPonto ? null : motivoSemPonto(cob, true, false),
+    pontoAte: cob.ultimoDia,
+  })
 }

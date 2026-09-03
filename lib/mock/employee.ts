@@ -2,7 +2,7 @@
    TalentCare — view-model da Ficha 360° (puro em função de data + empId)
    ============================================================ */
 import {
-  FACTORS, SYSTEMS, rnd, seedOf, scoreColor, admissao, statusMeta, fmtTempo, sysColor,
+  FACTORS, SYSTEMS, rnd, seedOf, scoreColor, statusMeta, fmtTempo, sysColor,
   type Employee, type TalentData,
 } from './data'
 import { personLevels, ESC_COLOR } from '../education-edit'

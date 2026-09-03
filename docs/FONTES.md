@@ -171,21 +171,97 @@ relógio e **1 hora** de escritório.
 - ~~Aba Reconhecimento~~ — "Destaque do trimestre" sorteado.
 - ~~Gauge de score e fatores na ficha~~ — não validado, e ficava logo acima do botão
   "Avaliar".
-- ~~Turnover por setor e "evolução do score · 12 meses"~~ — os dois eram `rnd(seed)`;
-  hoje são o turnover real (de `leftAt`) e a atividade mensal dos espelhos.
+- ~~Turnover por setor (relatório) e "evolução do score · 12 meses"~~ — os dois eram
+  `rnd(seed)`; hoje são o turnover real (de `leftAt`) e a atividade mensal dos
+  espelhos.
+
+  > ⚠️⚠️ **Esta linha estava ERRADA e ficou 24 horas assim.** O conserto chegou ao
+  > relatório do setor (`/departamentos/[id]`) e **não** ao card da lista em
+  > `/departamentos`, que seguiu imprimindo `3.5 + rnd(dseed × 5.3) × 13` em
+  > vermelho. Medido em 03/09/2026 — tela × verdade: **Fiscal 4% × 30,0%**,
+  > Contábil 14,8% × 40,0%, Recepção 13,1% × 40,0%, TI 4,8% × 0%. O 4% do Fiscal
+  > é o mesmo número que o `AGENTE-CRITICO.md` cita como exemplo de achado do
+  > crítico: ele nunca tinha saído da tela.
+  >
+  > **A lição não é sobre turnover.** Dar uma dívida por quitada tendo consertado
+  > *um* consumidor é o mesmo erro da checklist dos seis consumidores, e aqui ele
+  > custou mais caro, porque o mapa passou a dizer que estava tudo bem.
+  > **Antes de riscar uma linha daqui: `grep` do campo, não da tela.**
+
+### ✅ Quitado em 03/09/2026 (segunda rodada — dashboard e `/ranking`)
+
+- ~~Deltas dos KPIs (`+3` no Headcount, `+2` no Score médio)~~ — eram literais no
+  código. O Headcount ganhou o delta REAL (entradas − saídas na janela: em 30 dias,
+  3 entradas e 5 saídas = **−2**); o Score médio perdeu o delta, porque a média de
+  percentis é quase constante por construção e uma seta sobre ela não diria nada.
+- ~~As sparklines de Headcount, Advertências e Atrasos (`sp(seed)`)~~ e ~~a do Score
+  médio (array literal `[74,75,74,76,…]` com o valor real só no último ponto)~~ —
+  hoje: headcount reconstruído de `entry_date`/`left_at`, advertências acumuladas
+  mês a mês (o último ponto **é** o número do cartão) e atrasos por bucket da janela.
+  O Score médio ficou **sem** sparkline.
+- ~~A sparkline dos cartões de `/departamentos` (`Department.spark`)~~ e ~~o turnover
+  `rnd` do mesmo card~~ — a sparkline saiu (não existe série mensal de score: ele é
+  percentil recalculado por janela); o turnover virou a mesma conta do relatório.
+- ~~"Atualizado há 12 min"~~ — string fixa no JSX, igual num painel fresco e num
+  painel morto. Hoje é `/api/frescor`: o **espelho mais atrasado**, com a data.
+  Em 03/09/2026 o painel passa a dizer "Dados até 25/06/2026 · Ponto".
+- ~~`alerts`, `rankList`, `deptBars`, `turnoverNow`, `periodFactor` em
+  `buildDashboard`~~ — código morto que ninguém renderizava, incluindo quatro
+  "novidades" com data escrita à mão ("há 2 dias", "há 1 semana") e uma afirmação
+  sobre o ClassRoom que não olhava o espelho do ClassRoom.
+
+### ⚠️⚠️ A ausência de dado que lia como NOTA MÁXIMA (corrigida em 03/09/2026)
+
+Não era `rnd`, e por isso passou por todas as revisões anteriores: a conta estava
+certa e a fonte era real. `assiduidade = 100 − atrasos·2 − advertências·5` — quem
+o ponto não cobre entra com 0 e 0 e sai com **100**.
+
+- No `/ranking` por Assiduidade, "Todos os setores": **os 22 primeiros colocados,
+  empatados em 100, eram exatamente as 22 pessoas sem registro de ponto**. O
+  primeiro medido de verdade aparecia em 32º.
+- O ponto é a **única das dez fontes sem cron** (import à mão) e parou em
+  **25/06/2026**. Em "7 dias", "30 dias" e "Trimestre atual" não há uma linha —
+  então a assiduidade valia 100 para as **87** pessoas, e ela pesa 20 de 65 pontos
+  do score.
+- O recorte de privacidade **fabricava** o 100: ele zera atrasos e advertências de
+  quem o leitor não alcança, e zerado vira nota cheia. Um gestor via a empresa
+  inteira empatada em primeiro, acima do próprio time.
+
+Hoje: `lib/ponto-cobertura.ts` responde as **duas** perguntas — *a pessoa é medida?*
+(roster do ponto) e *a janela foi medida?* (o intervalo do import). `null` nos dois
+casos, com o peso redistribuído.
+
+> **⚠️⚠️ A regra do `null` tem uma FACE INVERTIDA, e ela é mais difícil de ver.**
+> Todo mundo procura o zero que acusa. Aqui a ausência **elogiava** — e elogio não
+> levanta suspeita em ninguém. Ao integrar métrica nova, pergunte também: *o que
+> este número mostra para quem a fonte não cobre?*
 
 ### Ainda em pé
 
-- **Os deltas dos KPIs** do dashboard (`+3`, `+12%`) e **as sparklines** são literais
-  ou `sp(seed)`.
-- **A sparkline dos cartões da lista de departamentos** (`Department.spark`) é um
-  passeio aleatório semeado pelo id do setor.
 - **`/relatorios`** nunca saiu do "Em breve".
+- **O score de 13 pessoas se apoia num fator só** (8 só produtividade, 5 só
+  formação). Para as 5 da Cozinha e da Limpeza o "Score geral" **é a escolaridade
+  delas**: Juscilia 25 (Fundamental), Rosemeire/Edileuza/Kaylane 40 (Médio), Lucia
+  55 (Superior Incompleto) — e o `/ranking` com esses setores selecionados as
+  ordena por isso, chamando de desempenho. A face inversa é pior: preencher a
+  escolaridade de quem não tem **derruba** o score (Yasmin, produtividade 90 e sem
+  registro, marca 90; com "Ensino Médio" cai para **73**). Decisão pendente do dono.
+- **Fonte parada por PESSOA não se distingue de pessoa parada.** `gerencia_daily`
+  do Gilberto termina em **24/02/2026** com o espelho fresco (outras pessoas até
+  03/09); o WhatsApp da Bianca Brito para em 20/07 e o CIDE dela em 08/07. Os dois
+  caem no fundo do ranking por "0 atividade no mês". Numa lista de piores, é a
+  diferença entre uma conversa e uma injustiça.
+- **Coorte sem volume** ainda produz percentil: Imóveis teve **9 atividades no mês
+  entre 4 pessoas**, e a Fabiana Higa, com 5, tira percentil 100. A trava de hoje
+  olha `total <= 0` e `MIN_PARES`, nunca o volume.
+- **Sem piso de tempo de casa**: Laryssa Oliveira, admitida em **31/08/2026**,
+  entra no ranking do mês com 0 atividade.
+- **A conta `Sistema`** (setor Pessoal, ativa, cargo `Colaborador`) é gente no
+  painel. `getTalentData` já respeita `foraDoDiretorio` — falta marcá-la, e isso é
+  escrita no banco de produção.
 
 > ⚠️ Mantenha esta lista em dia. Um mapa de dívida que aponta dívida já quitada faz
 > desconfiar do resto dele — e o resto é o que ainda mente.
-
----
 
 ## Como entra uma 9ª fonte
 

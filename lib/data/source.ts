@@ -2,6 +2,7 @@ import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { assembleData, type Identity, type TalentData, type TrainingItem } from '@/lib/mock/data'
 import { isHiddenDept } from '@/lib/hidden-depts'
+import { coberturaDoPonto } from '@/lib/ponto-cobertura'
 
 /**
  * Dataset do TalentCare: IDENTIDADE real (Nexus) + MÉTRICAS simuladas (até a frente B).
@@ -110,8 +111,20 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
       orderBy: { data: 'desc' },
     }),
   ])
-  // Oculta Diretoria/Sistemas do painel (mantém o login deles intacto).
-  const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name))
+  /* Oculta Diretoria/Sistemas do painel (mantém o login deles intacto).
+     ⚠️ E quem o Nexus tirou do diretório: `foraDoDiretorio` já é respeitado pela
+     FILA de avaliação (foi o que tirou de lá a conta `Axis Certificados`), mas
+     não era aqui — então uma conta que não é gente continuava no painel, no
+     ranking e nas médias. A régua tem de ser a mesma nos dois lugares; do
+     contrário o sistema diz "isto não é uma pessoa" numa tela e a classifica em
+     primeiro lugar na outra. A marca tem VOLTA: some quando a pessoa reaparece
+     no diretório. */
+  const users = usersRaw.filter((u) => !isHiddenDept(u.department?.name) && !u.foraDoDiretorio)
+  /* ⚠️⚠️ QUEM O PONTO MEDE. Sem isto, `atrasos: 0, advertencias: 0` — o que se lê
+     de quem o ponto não cobre — virava assiduidade **100**, e as 31 pessoas sem
+     registro apareciam empatadas no topo do `/ranking`. Ver
+     `lib/ponto-cobertura.ts`. */
+  const cobPonto = await coberturaDoPonto()
   const statByNexus = new Map(stats.map((s) => [s.nexusUserId, s]))
   const radioByNexus = new Map(radioStats.map((r) => [r.nexusUserId, r]))
   const consultoriaByNexus = new Map(consultoriaStats.map((c) => [c.nexusUserId, c]))
@@ -247,6 +260,14 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
         minutos: at?.minutosAtraso ?? 0,
         advertencias: disc.filter((d) => d.tipo === 'advertencia').length,
       },
+      /* ⚠️⚠️ O RECORTE DE PRIVACIDADE FABRICAVA O 100. Quem o leitor não alcança
+         sai daqui com atrasos e advertências zerados — que é o certo, o dado não
+         pode viajar —, mas `100 − 0·2 − 0·5` é **100**, e o `/ranking` publicava
+         a empresa inteira empatada em primeiro lugar acima do time do próprio
+         gestor, que é a única gente de quem ele tem dado real. A régua que
+         protege a privacidade não pode virar nota máxima: fora do alcance, a
+         pessoa NÃO É MEDIDA para quem está lendo. */
+      temPonto: alcanca(u.departmentId, u.id) && cobPonto.roster.has(personKey),
       assidDays: alcanca(u.departmentId, u.id) ? (assidDaysByKey.get(personKey) ?? []) : [],
       discEventos: alcanca(u.departmentId, u.id) ? disc : [],
     }

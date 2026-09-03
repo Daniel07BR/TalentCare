@@ -42,6 +42,10 @@ export type Employee = {
   atrasosAbon: number     // REAL: atrasos abonados (justificados, não punem)
   minutosAtraso: number   // REAL: soma de minutos de atraso (não abonados)
   advertencias: number    // REAL (ponto): nº de advertências (acumulado)
+  /** A pessoa É medida pelo ponto do Nexo? ⚠️ NÃO é "tem ocorrência": quem é
+   *  medido e nunca se atrasou merece os 100 dela; quem não é medido não tem
+   *  nota nenhuma. Ver `lib/ponto-cobertura.ts`. */
+  temPonto: boolean
   suspensoes: number      // SEM FONTE (dump não traz suspensão) → 0; ficha mostra "—"
   assidDays: AssidDay[]   // dias com ocorrência (últimas ~18 semanas) p/ heatmap
   discEventos: DiscEvento[] // eventos de disciplina reais (advertências), desc
@@ -126,8 +130,10 @@ export type Department = {
   nome: string
   headcount: number
   score: number
+  /** Turnover REAL: saídas em 12 meses ÷ quem passou pelo setor. Ver assembleData. */
   turnover: number
-  spark: number[]
+  /** Saídas nos últimos 12 meses — o numerador, para a tela poder mostrá-lo. */
+  saidas12m: number
   color: string
   lider: string
   classroom: ClassroomStat
@@ -170,6 +176,8 @@ export type Identity = {
   gerencia: GerenciaStat
   chat: ChatStat
   assid: AssidStat
+  /** Ver `Employee.temPonto`. */
+  temPonto: boolean
   assidDays: AssidDay[]
   discEventos: DiscEvento[]
   escolaridade: string | null
@@ -223,8 +231,6 @@ export const PALETTE = [
 // pessoa trabalha". É o 6º consumidor da checklist do `docs/FONTES.md`.
 export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE', 'Chat Interno', 'Gerência']
 
-const BASE_DATE = new Date(2026, 5, 1) // jun/2026 — referência fixa (determinístico)
-
 /** PRNG determinístico por seed (sin-based). */
 export function rnd(s: number): number {
   const x = Math.sin(s * 99.13 + 17.7) * 43758.5453
@@ -248,11 +254,10 @@ export function scoreColor(s: number): string {
   return s < 50 ? 'var(--danger)' : s < 75 ? 'var(--accent)' : 'var(--success)'
 }
 
-export function admissao(meses: number): string {
-  const d = new Date(BASE_DATE)
-  d.setMonth(d.getMonth() - meses)
-  return d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-}
+/* ⚠️ `admissao(meses)` REMOVIDA (03/09/2026). Ela reconstruía o mês de admissão
+   a PARTIR do tempo de casa — a função inversa da que já estava errada — e
+   ninguém a chamava: a ficha usa `emp.admissao`, que vem da `entry_date` real.
+   Era a última consumidora da `BASE_DATE`. */
 
 export function statusMeta(s: string): { color: string; bg: string } {
   const m: Record<string, [string, string]> = {
@@ -294,16 +299,34 @@ export function geomLine(vals: number[], w: number, h: number, pad = 6): { line:
   return { line, area, pts }
 }
 
-// ⚠️ Sem data de admissão devolve 0 = "não informado". Antes SORTEAVA um valor
-// entre 6 meses e 6 anos a partir do id da pessoa, e a ficha exibia isso como
-// tempo de casa e mês de admissão — número inventado numa tela que embasa
-// aumento e promoção. Quem não tem data agora mostra "—".
-function monthsSince(d: Date | null): number {
-  if (d && !isNaN(d.getTime())) {
-    const m = (BASE_DATE.getFullYear() - d.getFullYear()) * 12 + (BASE_DATE.getMonth() - d.getMonth())
-    return Math.max(1, Math.min(420, m))
-  }
-  return 0
+/**
+ * TEMPO DE CASA, em meses.
+ *
+ * ⚠️ Sem data de admissão devolve 0 = "não informado". Antes SORTEAVA um valor
+ * entre 6 meses e 6 anos a partir do id da pessoa, e a ficha exibia isso como
+ * tempo de casa e mês de admissão — número inventado numa tela que embasa
+ * aumento e promoção. Quem não tem data agora mostra "—".
+ *
+ * ⚠️⚠️ E contava até uma `BASE_DATE` FIXA em 01/06/2026 — herança da época em
+ * que tudo aqui tinha de ser determinístico. O tempo de casa da casa inteira
+ * ficou congelado em junho e **atrasava mais um mês a cada mês**: em 03/09/2026
+ * a ficha do Yuri Santana (admitido em 17/07/2025) dizia **11 meses** ao lado da
+ * própria data de admissão, que é real — 13 meses. Data certa, conta errada, e a
+ * tela mostrando as duas lado a lado.
+ *
+ * ⚠️ Conta até a SAÍDA de quem saiu. Senão o desligado continua fazendo
+ * aniversário de casa: a lista de `/turnover` diz quanto tempo cada um FICOU, e
+ * medir isso até hoje daria a um demitido em 2025 mais tempo do que ele teve.
+ *
+ * ⚠️ E conta o DIA, não só o mês: quem entrou em 17/07 não completa o mês no dia
+ * 3. É o que uma pessoa quer dizer com "tempo de casa".
+ */
+function monthsSince(entry: Date | null, left?: Date | null): number {
+  if (!entry || isNaN(entry.getTime())) return 0
+  const fim = left && !isNaN(left.getTime()) ? left : new Date()
+  let m = (fim.getFullYear() - entry.getFullYear()) * 12 + (fim.getMonth() - entry.getMonth())
+  if (fim.getDate() < entry.getDate()) m -= 1 // o mês ainda não fechou
+  return Math.max(1, Math.min(420, m))
 }
 
 /** Simula as MÉTRICAS de um funcionário a partir da identidade real. */
@@ -312,7 +335,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
   const score = 48 + Math.round(rnd(seed * 1.7) * 48) // 48..96
   // Escolaridade é dado REAL (planilha). Sem vínculo → "Não informado" (nada simulado).
   const escolaridade = id8.escolaridade ?? 'Não informado'
-  const tempoMeses = monthsSince(id8.entryDate)
+  const tempoMeses = monthsSince(id8.entryDate, id8.leftDate)
   const status = id8.active ? 'Ativo' : 'Desligado'
 
   const factors: Factor[] = FACTORS.map((f, fi) => {
@@ -336,7 +359,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     // ASSIDUIDADE REAL (ponto). faltas/suspensoes = 0 (sem fonte; a ficha mostra "—").
     faltas: 0, atrasos: id8.assid.atrasos,
     atrasosAbon: id8.assid.atrasosAbon, minutosAtraso: id8.assid.minutos,
-    advertencias: id8.assid.advertencias, suspensoes: 0,
+    advertencias: id8.assid.advertencias, suspensoes: 0, temPonto: id8.temPonto,
     assidDays: id8.assidDays, discEventos: id8.discEventos,
     radioHoras: Math.round(id8.radio.totalSeconds / 3600),
     radioSessoes: id8.radio.sessions,
@@ -421,7 +444,20 @@ export function activityOf(e: Employee): number {
 }
 
 // Sinais por pessoa NO PERÍODO (do /api/score-metrics) p/ o score period-aware.
-export type ScoreSignals = Map<string, { activity: number; atrasos: number; advertencias: number }>
+//
+// ⚠️⚠️ `janelaComPonto` é do PERÍODO, não da pessoa, e por isso não cabe no Map.
+// O ponto é import à mão: em 03/09/2026 o dump terminava em 25/06, e em "7 dias",
+// "30 dias" e "Trimestre atual" não havia uma linha. Sem esta bandeira, as 87
+// pessoas sairiam com `atrasos: 0` → assiduidade **100** — e 20 dos 65 pontos do
+// score de todo mundo seriam a ausência de dado lida como nota cheia. Medido: o
+// "Score médio" do painel marcava **68**; sem essa inflação, **52**.
+export type ScoreSignals = {
+  porPessoa: Map<string, { activity: number; atrasos: number; advertencias: number }>
+  /** A janela pedida cai dentro do que o ponto realmente cobriu? */
+  janelaComPonto: boolean
+  /** O que dizer na tela quando não cai (ex.: "ponto importado até 25/06/2026"). */
+  motivoSemPonto: string | null
+}
 
 // Pesos-base dos fatores COM fonte. Prazos(25)/Colaboração(10) ficam fora; a
 // normalização (÷ soma dos pesos aplicáveis) redistribui o peso deles.
@@ -431,6 +467,20 @@ export function assidNotaFrom(atrasos: number, advert: number): number {
   return Math.max(0, Math.min(100, 100 - atrasos * 2 - advert * 5))
 }
 
+/**
+ * A PENALIDADE de assiduidade, SEM o piso em 0.
+ *
+ * ⚠️ A nota satura: medido em 03/09/2026, **20 pessoas** empatavam em 0 no fundo
+ * do `/ranking`. A Yasmin (16 atrasos, 16 advertências) e a Bruna (42 e 29) liam
+ * o mesmo número — e o fundo de uma lista de pessoas é justamente onde o número
+ * precisa distinguir, porque é ele que vira conversa. O piso continua valendo
+ * para o SCORE (é um peso, e nota negativa não é nota); a ORDEM do ranking usa
+ * isto, e a linha mostra os atrasos e as advertências que produziram o número.
+ */
+export function assidPenalidade(atrasos: number, advert: number): number {
+  return 100 - atrasos * 2 - advert * 5
+}
+
 /** Calcula score + factors REAIS por funcionário. signals = override por período.
  *  hasScore=false quando a pessoa não tem NENHUM sinal real (sem produtividade
  *  aplicável, sem formação e sem registro de ponto) — assiduidade=100 por ausência
@@ -438,15 +488,33 @@ export function assidNotaFrom(atrasos: number, advert: number): number {
 export function computeScores(employees: Employee[], signals?: ScoreSignals | null): Map<string, { score: number; factors: Factor[]; hasScore: boolean }> {
   const act = new Map<string, number>(), atr = new Map<string, number>(), adv = new Map<string, number>()
   for (const e of employees) {
-    const s = signals?.get(e.id)
+    const s = signals?.porPessoa.get(e.id)
     act.set(e.id, s ? s.activity : activityOf(e))
     atr.set(e.id, s ? s.atrasos : e.atrasos)
     adv.set(e.id, s ? s.advertencias : e.advertencias)
   }
-  // Produtividade = percentil dentro do DEPARTAMENTO. Se o setor inteiro não tem
-  // atividade de sistema (ex.: Limpeza/Cozinha) → produtividade "não se aplica" (null).
+  /* ⚠️⚠️ A janela mediu ponto? Sem `signals` estamos no ACUMULADO (toda a
+     história importada), e aí a janela é a cobertura inteira — sempre válida. */
+  const janelaComPonto = signals ? signals.janelaComPonto : true
+  /* Produtividade = percentil dentro do DEPARTAMENTO. Se o setor inteiro não tem
+     atividade de sistema (ex.: Limpeza/Cozinha) → produtividade "não se aplica" (null).
+
+     ⚠️⚠️ O COORTE É SÓ DE QUEM ESTÁ ATIVO. Ele vinha sendo montado sobre
+     `employees` inteiro — com os **33 desligados** dentro (o Contábil tem 18
+     ativos e 13 desligados; o Fiscal, 21 e 10). Quem saiu não produz nada na
+     janela, entra com 0 e vira o piso da distribuição: **70 das 87 pessoas
+     ativas** tinham o percentil inflado por gente que não trabalha mais aqui. A
+     Andrea Bratfisch (Recepção) subia de 50 para **100** de produtividade, +34
+     no score; a Ághata Silva, com 3 atividades no mês, ganhava +33 de percentil.
+     O efeito é comprimir a lista para cima e esconder quem produz pouco.
+
+     ⚠️ O desligado continua RECEBENDO nota (a ficha dele existe) — ele só deixa
+     de servir de régua para os vivos. */
+  const cohort = employees.filter((e) => e.status !== 'Desligado')
   const byDept = new Map<string, Employee[]>()
   for (const e of employees) { const l = byDept.get(e.dept) ?? []; l.push(e); byDept.set(e.dept, l) }
+  const cohortByDept = new Map<string, Employee[]>()
+  for (const e of cohort) { const l = cohortByDept.get(e.dept) ?? []; l.push(e); cohortByDept.set(e.dept, l) }
   // ⚠️ TRAVA DE SETOR PEQUENO. Percentil precisa de PARES; num setor de 1 ou 2
   // pessoas ele não mede nada — o primeiro leva 100 e o segundo 0, qualquer que
   // seja o volume real. Foi o que deu 100 ao Marco Aurelio sozinho em
@@ -463,18 +531,21 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
     const eq = vals.filter((x) => x === v).length
     return Math.max(0, Math.min(100, Math.round(((less + (eq - 1) / 2) / (vals.length - 1)) * 100)))
   }
-  const valsGlobal = employees.map((e) => act.get(e.id) ?? 0)
+  const valsGlobal = cohort.map((e) => act.get(e.id) ?? 0)
   const prodNota = new Map<string, number | null>()
   const prodBase = new Map<string, 'dept' | 'global'>()
-  for (const [, list] of byDept) {
-    const total = list.reduce((a, e) => a + (act.get(e.id) ?? 0), 0)
+  for (const [deptId, list] of byDept) {
+    // A RÉGUA é o coorte de ativos do setor; a LISTA a ser medida inclui os
+    // desligados daquele setor (a ficha deles mostra o percentil que tiveram).
+    const regua = cohortByDept.get(deptId) ?? []
+    const total = regua.reduce((a, e) => a + (act.get(e.id) ?? 0), 0)
     // Setor inteiro sem atividade de sistema (Cozinha/Limpeza/Pousada/Marketing)
     // segue "não se aplica". ⚠️ NÃO cair no global aqui: daria nota ~7 a quem não
     // tem fonte nenhuma e os traria de volta ao ranking — o artefato que a regra
     // de hasScore existe justamente para evitar.
     if (total <= 0) { for (const e of list) prodNota.set(e.id, null); continue }
-    const usaGlobal = list.length < MIN_PARES
-    const vals = usaGlobal ? valsGlobal : list.map((e) => act.get(e.id) ?? 0)
+    const usaGlobal = regua.length < MIN_PARES
+    const vals = usaGlobal ? valsGlobal : regua.map((e) => act.get(e.id) ?? 0)
     for (const e of list) {
       prodNota.set(e.id, percentil(act.get(e.id) ?? 0, vals))
       prodBase.set(e.id, usaGlobal ? 'global' : 'dept')
@@ -484,7 +555,20 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
   for (const e of employees) {
     const pN = prodNota.get(e.id) ?? null
     const nAtr = atr.get(e.id) ?? 0, nAdv = adv.get(e.id) ?? 0
-    const aN = assidNotaFrom(nAtr, nAdv)
+    /* ⚠️⚠️ ASSIDUIDADE SÓ EXISTE QUANDO ALGUÉM MEDIU. `100 − atrasos·2 −
+       advert·5` com 0 e 0 dá **100**, e 0 e 0 é exatamente o que se lê de quem o
+       ponto não cobre e de uma janela que o dump nunca alcançou. É a regra do
+       `null` pela face invertida: a ausência não acusa a pessoa, ela a elogia —
+       e num painel que decide aumento isso é pior que o zero.
+
+       Medido em 03/09/2026: os 22 primeiros do `/ranking` por Assiduidade eram
+       as 22 pessoas sem ponto nenhum, e o "Score médio" do painel marcava 68
+       contra 52 reais, porque a assiduidade valia 100 para as 87.
+
+       `null` aqui não é castigo: o peso se redistribui sozinho entre os fatores
+       que existem (a divisão por `sumW`), o mesmo mecanismo da Produtividade num
+       setor sem sistema. Ver `lib/ponto-cobertura.ts`. */
+    const aN = e.temPonto && janelaComPonto ? assidNotaFrom(nAtr, nAdv) : null
     const fN = formacaoNota(e.escolaridade)
     // Score COMPARÁVEL só com fator de PERFORMANCE real: produtividade (atividade
     // em sistema) OU formação. Assiduidade sozinha (higiene/presença) NÃO basta —
@@ -494,7 +578,7 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
     const hasScore = pN != null || fN != null
     const parts: { w: number; nota: number }[] = []
     if (pN != null) parts.push({ w: SCORE_W.prod, nota: pN })
-    parts.push({ w: SCORE_W.assid, nota: aN })
+    if (aN != null) parts.push({ w: SCORE_W.assid, nota: aN })
     if (fN != null) parts.push({ w: SCORE_W.form, nota: fN })
     const sumW = parts.reduce((a, p) => a + p.w, 0) || 1
     const score = Math.round(parts.reduce((a, p) => a + p.w * p.nota, 0) / sumW)
@@ -539,15 +623,29 @@ export function assembleData(identities: Identity[]): TalentData {
       const scored = base.filter((e) => e.hasScore)
       const score = scored.length ? Math.round(scored.reduce((a, e) => a + e.score, 0) / scored.length) : 0
       const dseed = seedOf(id)
-      const turnover = +(3.5 + rnd(dseed * 5.3) * 13).toFixed(1)
-      const spark: number[] = []
-      let v = score - 6
-      for (let m = 0; m < 12; m++) {
-        v += Math.round(rnd(dseed * 17 + m) * 7 - 3)
-        v = Math.max(40, Math.min(97, v))
-        if (m === 11) v = score
-        spark.push(v)
-      }
+      /* ⚠️⚠️ TURNOVER REAL. Ele era `3.5 + rnd(seed × 5.3) × 13` — um número
+         sorteado pelo id do setor, impresso em VERMELHO no card de
+         `/departamentos`. Medido em 03/09/2026, o que a tela mostrava contra o
+         que era verdade: Fiscal **4% × 30,0%** (9 saídas de 30 que passaram),
+         Contábil 14,8% × 40,0%, Recepção 13,1% × 40,0%, TI 4,8% × 0%.
+
+         ⚠️ O conserto de 03/09 chegou ao relatório do setor (`/departamentos/[id]`,
+         via `/api/dept-metrics`) e NÃO ao card da lista — e o `docs/FONTES.md`
+         deu a dívida por quitada. O 4% do Fiscal é literalmente o mesmo número
+         que o `docs/AGENTE-CRITICO.md` cita como exemplo de achado do crítico:
+         ele nunca tinha saído da tela, só da página de detalhe.
+
+         A conta é a MESMA do relatório do setor (`Hero.tsx`): saídas em 12 meses
+         sobre quem passou pelo setor (ativos hoje + quem saiu). */
+      const doze = new Date(); doze.setFullYear(doze.getFullYear() - 1)
+      const saidas12m = all.filter((e) => e.leftISO && new Date(e.leftISO) >= doze).length
+      const passaram = hc + saidas12m
+      const turnover = passaram ? +((saidas12m / passaram) * 100).toFixed(1) : 0
+      /* ⚠️ A SPARKLINE do card saiu: era `rnd(dseed × 17 + m)` — um passeio
+         aleatório de 12 pontos com o score real cravado só no último, embaixo do
+         número verdadeiro. Não há série mensal de score para pôr no lugar (o
+         score é um percentil recalculado por janela), e gráfico inventado
+         embaixo de número certo é o pior dos dois mundos. */
       // ClassRoom (vídeos/cursos) SOMA todos, inclusive desligados.
       const classroom = all.reduce(
         (a, e) => ({
@@ -614,7 +712,7 @@ export function assembleData(identities: Identity[]): TalentData {
         }
       }, zeroChat())
       return {
-        id, nome: deptMeta[id], headcount: hc, score, turnover, spark, color: PALETTE[dseed % 6],
+        id, nome: deptMeta[id], headcount: hc, score, turnover, saidas12m, color: PALETTE[dseed % 6],
         radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia, chat,
         lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
         classroom,

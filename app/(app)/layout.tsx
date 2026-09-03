@@ -26,9 +26,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   /* ⚠️⚠️ O dataset vai INTEIRO para o navegador. Recortado pelo alcance de quem
      lê, para o histórico disciplinar da empresa não viajar no payload de toda
      página — ver `lib/data/source.ts`. */
+  /* ⚠️⚠️ O ALCANCE SAI DOS VÍNCULOS, NÃO DO SETOR EM QUE A PESSOA SENTA.
+     `meusSetoresIds` soma o `meDept` porque a BARRA precisa dele (o gestor troca
+     entre os setores que ele vê), e isso vinha sendo passado também como régua
+     de DADO — enquanto `lib/alcance.ts`, que é a régua das rotas, diz o
+     contrário, por escrito e com a medição ao lado: "a Ana Carolina,
+     `Colaborador` do Fiscal, alcançaria as 31 pessoas do setor — atividade,
+     atrasos e advertências de todo mundo — só por sentar lá".
+
+     Duas réguas para a mesma pergunta, e a mais frouxa era justamente a que
+     embarcava no `TalentDataProvider` de toda página. Um colaborador é
+     redirecionado para `/minha-avaliacao`, mas o layout roda igual: o payload
+     dele levava os atrasos e as DATAS das advertências do setor inteiro.
+
+     Navegação e alcance de dado são coisas diferentes e agora estão separadas. */
   const alcance: Alcance = role === 'ADMIN'
     ? { tipo: 'tudo' }
-    : { tipo: 'recorte', departmentIds: meusSetoresIds, meuId: uid ?? '' }
+    : { tipo: 'recorte', departmentIds: [...new Set(vinculosDele.map((v) => v.departmentId))], meuId: uid ?? '' }
   const data = await getTalentData(alcance)
   const isOwner = isOwnerEmail(session.user.email)
 
