@@ -21,8 +21,30 @@ Elas não são estilo. Cada uma nasceu de um defeito que chegou à produção.
 
 **(a) `null` nunca vira `0`.** "Não medimos" e "foi zero" são coisas diferentes, e num
 painel de performance o zero **acusa a pessoa**. A ficha chegou a mostrar
-"Assiduidade 100%" para quem não tem registro de ponto e "Atividades concluídas 0" em
-verde para quem não passa por fonte nenhuma. Mostre "—" e diga por quê.
+"Atividades concluídas 0" em verde para quem não passa por fonte nenhuma. Mostre "—"
+e diga por quê.
+
+> **⚠️⚠️ E a regra tem uma FACE INVERTIDA, que é mais difícil de ver.** Todo mundo
+> procura o zero que acusa. Em 03/09/2026 o defeito estava do outro lado: a
+> assiduidade é `100 − atrasos·2 − advertências·5`, e quem o ponto não cobre entra
+> com 0 e 0 e sai com **100**. Os **22 primeiros colocados** do `/ranking` por
+> Assiduidade eram exatamente as 22 pessoas sem registro de ponto; o primeiro medido
+> de verdade aparecia em 32º. A ausência **elogiava** — e elogio não levanta suspeita
+> em ninguém, o que é justamente por que passou por todas as revisões anteriores.
+>
+> São **duas** perguntas, e as duas precisam ser feitas: *a PESSOA é medida?* e *a
+> JANELA foi medida?* Quem responde é `lib/ponto-cobertura.ts`, num lugar só.
+>
+> ⚠️ Ao consertar, cuidado para não inverter de novo: a primeira versão do conserto
+> caía no acumulado da vida inteira para quem não vinha no map do período — e quem é
+> medido e foi **impecável** não vem no map. A Joice Rocha, zero ocorrências em
+> junho, apareceria com nota 0 e "19 atrasos · 15 advertências". Numa janela medida,
+> ausência de linha é **zero ocorrência**.
+>
+> ⚠️⚠️ **E percorra os consumidores.** Esta mesma falta reapareceu DUAS vezes na
+> mesma sessão por uma tela esquecida. A fórmula tinha **quatro** cópias; a quarta
+> estava dormente no view-model da ficha, plausível e pronta para a próxima pessoa
+> que precisasse dela. Ao mexer numa régua, `grep` do CAMPO, não da tela.
 
 **(b) Todo número ao lado do filtro de período tem de OBEDECER ao filtro.** O
 relatório de setor mostrava **59 cursos** debaixo de "Últimos 30 dias" quando no
@@ -100,10 +122,21 @@ sua.
 O Daniel estava seguindo por **telas e relatórios**. Pendências conhecidas:
 
 - **`/relatorios`** nunca saiu do "Em breve".
-- Os **deltas dos KPIs** do dashboard (`+3`, `+12%`) e as **sparklines** ainda são
-  literais/`rnd`; a sparkline dos cartões da lista de departamentos também.
-- O **dashboard** e o **`/ranking`** não passaram pela mesma revisão que o relatório
-  de setor e a ficha.
+- ✅ O **dashboard** e o **`/ranking`** passaram pela revisão em 03/09/2026 (noite),
+  e com eles os deltas literais, as quatro sparklines inventadas, o "Atualizado há
+  12 min" e o turnover `rnd` do card de `/departamentos`. Ver o `CHANGELOG` e a
+  lista do fim de [`FONTES.md`](FONTES.md).
+- **Cinco dívidas ficaram abertas por dependerem de régua nova** — decisão do dono,
+  todas medidas e listadas no fim de [`FONTES.md`](FONTES.md): fonte parada por
+  PESSOA (o Gilberto some do ranking porque o `gerencia_daily` dele para em 24/02
+  com o espelho fresco), coorte sem volume, piso de tempo de casa, a conta
+  `Sistema`, e a divergência do que é "advertência numa janela" entre o `/ranking`
+  (do período) e a `/assiduidade` (acumulada) — a mesma pessoa lê 100 numa tela e
+  25 na outra.
+- ⚠️ **O ponto está parado.** É a única das dez fontes **sem cron** (import à mão) e
+  terminava em **25/06/2026** com os oito espelhos de atividade todos em 03/09. Em
+  "7 dias", "30 dias" e "Trimestre atual" não há uma linha — as telas hoje dizem
+  isso em vez de mostrar zero, mas o dado continua faltando.
 
 ## 7. Como o Daniel trabalha (o que economiza tempo)
 
