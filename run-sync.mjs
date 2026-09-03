@@ -24,11 +24,14 @@ const norm = (s) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
  * aberto, quem rodasse por último venceria — e o cron roda por último sempre.
  */
 const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
+// ⚠️ Gêmea da lista em `lib/nexus.ts` — mexeu lá, mexa aqui (ver o aviso acima).
+const ACESSO_TESTE = (process.env.TALENTCARE_ACESSO_TESTE ?? '')
+  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
 const mapRole = (email, setor, cargo, temVinculo = false) => {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
-  if (!ACESSO_ABERTO) return 'SEM_PERMISSAO'
+  if (!ACESSO_ABERTO && !(email && ACESSO_TESTE.includes(email.toLowerCase()))) return 'SEM_PERMISSAO'
   // O VÍNCULO ganha do cargo: quem avalia alguém alcança a fila.
   if (temVinculo) return 'GESTOR'
   if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'

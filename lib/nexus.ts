@@ -35,16 +35,36 @@ export function isOwnerEmail(email: string | null | undefined): boolean {
  * `COLABORADOR`, com acesso à própria página de desempenho.
  *
  * Fica atrás de uma chave porque abrir é irreversível na prática: no instante em
- * que 88 pessoas entrarem e virem os próprios números, tirar o acesso de volta
- * não desfaz o que foi visto. E porque falta uma coisa antes (ver o README da
- * área): as rotas de dado agregado — `/api/chat-metrics`, `/api/helpdesk-metrics`
- * e as outras seis — hoje devolvem a EMPRESA INTEIRA para qualquer sessão
- * autenticada. Enquanto isso não for recortado por setor, um Gestor consegue
- * puxar o painel dos outros setores pela URL.
+ * que 87 pessoas entrarem e virem os próprios números, tirar o acesso de volta
+ * não desfaz o que foi visto.
+ *
+ * ✅ As duas dívidas que a bloqueavam foram fechadas em 03/09/2026: o dataset do
+ * cliente deixou de levar o histórico disciplinar da empresa (`lib/data/source.ts`)
+ * e as 11 rotas agregadas passaram a ser recortadas por setor (`lib/alcance.ts`).
+ *
+ * ⚠️ O que falta agora não é código: é o caminho do gestor ter sido percorrido
+ * por uma pessoa de verdade. Para isso existe a lista de ensaio abaixo.
  *
  * Ligar com `TALENTCARE_ACESSO_ABERTO=on` no `.env` e um novo sync de diretório.
  */
 const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
+
+/**
+ * ⚠️ A LISTA DE ENSAIO: e-mails que entram como se a chave estivesse ligada,
+ * enquanto ela está desligada para todos os outros.
+ *
+ * Existe porque a única forma honesta de conferir o caminho do gestor é uma
+ * PESSOA DE VERDADE entrando com a senha dela e olhando. Simular com a conta da
+ * Diretoria não prova nada — é justamente a régua que se quer testar. E ligar a
+ * chave geral para conferir uma coisa poria 87 pessoas dentro, o que não se
+ * desfaz.
+ *
+ * ⚠️ É nominal e revogável: tirar o e-mail daqui e rodar o sync devolve a pessoa
+ * a `SEM_PERMISSAO`. Nada aqui sobrevive por esquecimento — o sync recalcula
+ * `GESTOR`/`COLABORADOR` a cada rodada.
+ */
+const ACESSO_TESTE = (process.env.TALENTCARE_ACESSO_TESTE ?? '')
+  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 /** Cargos do Nexus que abrem o painel do próprio setor. */
 const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
@@ -71,7 +91,8 @@ export function mapRole(
 ): UserRole {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
-  if (!ACESSO_ABERTO) return 'SEM_PERMISSAO'
+  const emEnsaio = !!email && ACESSO_TESTE.includes(email.toLowerCase())
+  if (!ACESSO_ABERTO && !emEnsaio) return 'SEM_PERMISSAO'
   // ⚠️ O cargo decide só a PORTA (que telas), nunca o conteúdo. Quem avalia quem
   // continua vindo de `setor_avaliador`, confirmado por gente — ver
   // `lib/avaliacoes/regua.ts`. Um Gestor sem vínculo entra no painel do setor e
