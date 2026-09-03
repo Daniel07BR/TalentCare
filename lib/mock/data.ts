@@ -570,12 +570,30 @@ export function computeScores(employees: Employee[], signals?: ScoreSignals | nu
        setor sem sistema. Ver `lib/ponto-cobertura.ts`. */
     const aN = e.temPonto && janelaComPonto ? assidNotaFrom(nAtr, nAdv) : null
     const fN = formacaoNota(e.escolaridade)
-    // Score COMPARÁVEL só com fator de PERFORMANCE real: produtividade (atividade
-    // em sistema) OU formação. Assiduidade sozinha (higiene/presença) NÃO basta —
-    // senão uma faxineira com presença exemplar e nada mais lideraria o ranking.
-    // Quem cai aqui (staff de Limpeza/Cozinha/Entregas sem formação) = "avaliação
-    // parcial": fora de ranking/médias; a ficha mostra a assiduidade, sem score.
-    const hasScore = pN != null || fN != null
+    /* ⚠️⚠️ SÓ HÁ SCORE COM PRODUTIVIDADE. Ele era `pN != null || fN != null`, e
+       o `|| formação` transformava um ATRIBUTO ESTÁTICO em desempenho.
+
+       Medido em 03/09/2026, com a assiduidade já fora: **5 pessoas** tinham o
+       "Score geral" igual à própria escolaridade — Juscilia 25 (Fundamental),
+       Rosemeire, Edileuza e Kaylane 40 (Médio), Lucia 55 (Sup. Incompleto). O
+       `/ranking` com Limpeza ou Cozinha selecionada ordenava as faxineiras e a
+       cozinheira **pelo diploma delas** e chamava aquilo de desempenho.
+
+       É o mesmo argumento que este código já usava para recusar a assiduidade
+       sozinha ("higiene/presença NÃO basta"), e vale com mais força: presença ao
+       menos acontece no mês medido; a escolaridade é de dez anos atrás e não
+       muda com nada que a pessoa faça no trabalho.
+
+       ⚠️ E a face inversa era pior: como o peso se redistribui, **preencher o
+       cadastro punia**. A Yasmin, produtividade 90 e sem escolaridade
+       registrada, marcava 90; bastava alguém escrever "Ensino Médio" na ficha
+       dela para o score cair para **73**. Um sistema em que completar o dado
+       derruba a nota da pessoa ensina a não completar o dado.
+
+       A formação CONTINUA no cálculo e na ficha, como fator — ela só não
+       sustenta um score sozinha. Quem cai aqui é "avaliação parcial": fora de
+       ranking e de médias, com a ficha mostrando o que existe dela. */
+    const hasScore = pN != null
     const parts: { w: number; nota: number }[] = []
     if (pN != null) parts.push({ w: SCORE_W.prod, nota: pN })
     if (aN != null) parts.push({ w: SCORE_W.assid, nota: aN })

@@ -239,13 +239,6 @@ casos, com o peso redistribuído.
 ### Ainda em pé
 
 - **`/relatorios`** nunca saiu do "Em breve".
-- **O score de 13 pessoas se apoia num fator só** (8 só produtividade, 5 só
-  formação). Para as 5 da Cozinha e da Limpeza o "Score geral" **é a escolaridade
-  delas**: Juscilia 25 (Fundamental), Rosemeire/Edileuza/Kaylane 40 (Médio), Lucia
-  55 (Superior Incompleto) — e o `/ranking` com esses setores selecionados as
-  ordena por isso, chamando de desempenho. A face inversa é pior: preencher a
-  escolaridade de quem não tem **derruba** o score (Yasmin, produtividade 90 e sem
-  registro, marca 90; com "Ensino Médio" cai para **73**). Decisão pendente do dono.
 - **Fonte parada por PESSOA não se distingue de pessoa parada.** `gerencia_daily`
   do Gilberto termina em **24/02/2026** com o espelho fresco (outras pessoas até
   03/09); o WhatsApp da Bianca Brito para em 20/07 e o CIDE dela em 08/07. Os dois
@@ -256,9 +249,26 @@ casos, com o peso redistribuído.
   olha `total <= 0` e `MIN_PARES`, nunca o volume.
 - **Sem piso de tempo de casa**: Laryssa Oliveira, admitida em **31/08/2026**,
   entra no ranking do mês com 0 atividade.
-- **A conta `Sistema`** (setor Pessoal, ativa, cargo `Colaborador`) é gente no
-  painel. `getTalentData` já respeita `foraDoDiretorio` — falta marcá-la, e isso é
-  escrita no banco de produção.
+- **⚠️⚠️ A conta `Sistema` — e a marca que NÃO PEGA.** Ela é gente no painel (setor
+  Pessoal, ativa, cargo `Colaborador`, "admitida" em 17/06/2026), e é artefato do
+  import do Access: o mesmo nome que a Gerência já filtra com `u.name <> 'Sistema'`
+  porque carimbou 27.501 protocolos.
+
+  `getTalentData` já respeita `foraDoDiretorio`, mas **marcar o campo aqui não
+  resolve**: o Nexus devolve `Sistema` no `/api/integrations/employees` (conferido —
+  128 registros, ela entre eles), e `lib/nexus.ts:271` grava `foraDoDiretorio: false`
+  em quem aparece no diretório. A marca sobreviveria até o próximo cron e sumiria
+  **sem erro nenhum**, com a conta de volta ao ranking.
+
+  O conserto durável é no NEXUS: mover a conta para o setor **`Sistemas`**, que o
+  `notSystemDepartment` já exclui de todo diretório entregue a qualquer sistema da
+  casa (é a mesma porta pela qual o `Axis Certificados` saiu). Aí ela some das dez
+  integrações de uma vez, e o bloco de órfãos do TalentCare marca
+  `foraDoDiretorio = true` sozinho, com a VOLTA intacta.
+
+  > **A lição é a regra do estado com um caminho só:** escrever à mão um campo que
+  > um sync reescreve é combinar com o cron quem ganha — e o cron sempre roda por
+  > último.
 
 > ⚠️ Mantenha esta lista em dia. Um mapa de dívida que aponta dívida já quitada faz
 > desconfiar do resto dele — e o resto é o que ainda mente.
