@@ -157,12 +157,9 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
   const sm = statusMeta(emp.status)
   const seed = seedOf(emp.id)
 
-  const totalP = emp.tasksDone + emp.tasksLate + emp.tasksPend
-  const prodBar = [
-    { w: (emp.tasksDone / totalP * 100).toFixed(1) + '%', color: 'var(--success)' },
-    { w: (emp.tasksLate / totalP * 100).toFixed(1) + '%', color: 'var(--danger)' },
-    { w: (emp.tasksPend / totalP * 100).toFixed(1) + '%', color: 'var(--surface-3)' },
-  ]
+  /* ⚠️ `prodBar` (a barra Concluídas/Atrasadas/Pendentes) saiu: as três vinham
+     de `rnd(seed)`. A ficha já mostrava, no lugar delas, a soma REAL das
+     atividades concluídas nos sistemas no período. */
   const bySystem = SYSTEMS.map((s, i) => ({ sys: s, color: sysColor(s), value: Math.round(rnd(seed * 3 + i) * 40 + 8), pct: '0%' }))
   const maxSys = Math.max(...bySystem.map((x) => x.value))
   bySystem.forEach((b) => (b.pct = Math.round(b.value / maxSys * 100) + '%'))
@@ -224,7 +221,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
       baseGlobal: f.base === 'global',
     })),
     timeline: timelineFor(emp),
-    tasksDone: emp.tasksDone, tasksLate: emp.tasksLate, tasksPend: emp.tasksPend, prodBar, bySystem,
+    bySystem,
     // Assiduidade REAL: 100 − atrasos·2 − advertências·5 (atraso abonado já fora).
     // faltas/suspensões = null = "sem fonte" (a ficha mostra "—", não 0).
     assid: Math.max(0, 100 - emp.atrasos * 2 - emp.advertencias * 5),

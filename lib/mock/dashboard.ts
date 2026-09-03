@@ -77,7 +77,11 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   // Score médio/ranking só com quem é avaliável (hasScore) — exclui sem-dado.
   const scored = perf.filter((e) => e.hasScore)
   const compScore = scored.length ? Math.round(scored.reduce((a, e) => a + e.score, 0) / scored.length) : 0
-  const totalTasks = Math.round(perf.reduce((a, e) => a + e.tasksDone, 0) * (pf / 2.6 + 0.4))
+  /* ⚠️⚠️ "Tarefas concluídas" SAIU do painel (03/09/2026). O número (5.331) era
+     a soma de `24 + rnd(seed * 3) * 120` por pessoa, vezes um fator de período —
+     sorteio puro, em 26px, ao lado de medições de verdade, num painel usado para
+     decidir aumento. Nenhum sistema da casa registra "tarefa": o que existe é
+     chamado, serviço, curso, atendimento — e isso a tela já mostra por fonte. */
   // Ponto (REAL) — atrasos e advertências do quadro ativo. Period-aware quando o
   // assidMap (do /api/assiduidade-metrics) é passado; sem ele, cai no acumulado.
   const pk = (e: Employee) => e.nexusUserId ?? e.id
@@ -102,7 +106,6 @@ export function buildDashboard(data: TalentData, period: Period, assidMap?: Peri
   const kdef = [
     { label: 'Headcount', value: perf.length, unit: '', delta: '+3', up: true, vals: sp(1, perf.length - 3), color: 'var(--info)' },
     { label: 'Turnover', value: tser.rate, unit: '%', delta: '', up: false, vals: tser.vals.length > 1 ? tser.vals : [0, 0], color: 'var(--success)' },
-    { label: 'Tarefas concluídas', value: totalTasks.toLocaleString('pt-BR'), unit: '', delta: '+12%', up: true, vals: sp(3, totalTasks * 0.8), color: 'var(--chart-2)' },
     { label: 'Advertências', value: advertPonto, unit: '', delta: '', up: false, vals: sp(4, advertPonto / 12 + 2), color: 'var(--danger)' },
     { label: 'Atrasos', value: atrasosPonto, unit: '', delta: '', up: false, vals: sp(5, atrasosPonto / 12 + 3), color: 'var(--chart-5)' },
     { label: 'Score médio', value: compScore, unit: '/100', delta: '+2', up: true, vals: [74, 75, 74, 76, 77, 76, 78, 77, 79, 78, 79, compScore], color: 'var(--accent)' },

@@ -7,7 +7,7 @@ import { withRealScores } from '@/lib/mock/score'
 import { leaderboard, comparison, cmpOptions, metricLabel, type RankMetric } from '@/lib/mock/ranking'
 import Avatar from '../Avatar'
 
-const METRICS: RankMetric[] = ['score', 'tarefas', 'assiduidade']
+const METRICS: RankMetric[] = ['score', 'assiduidade']
 
 export default function RankingPage() {
   const router = useRouter()

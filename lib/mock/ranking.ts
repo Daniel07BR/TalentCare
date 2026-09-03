@@ -4,16 +4,18 @@
 import { FACTORS, scoreColor, fmtTempo, type Employee, type TalentData } from './data'
 import { deptName, findEmployee } from './employee'
 
-export type RankMetric = 'score' | 'tarefas' | 'assiduidade'
+/* ⚠️⚠️ 'tarefas' SAIU (03/09/2026). Ela devolvia `e.tasksDone`, que é
+   `24 + rnd(seed * 3) * 120` — um número sorteado pelo id da pessoa. O ranking
+   inteiro da empresa podia ser ordenado por ele, com nome, foto e posição. */
+export type RankMetric = 'score' | 'assiduidade'
 
 export function metricVal(e: Employee, m: RankMetric): number {
-  if (m === 'tarefas') return e.tasksDone
   // Assiduidade REAL (ponto): 100 − atrasos·2 − advertências·5 (faltas sem fonte).
   if (m === 'assiduidade') return Math.max(0, 100 - e.atrasos * 2 - e.advertencias * 5)
   return e.score
 }
 export function metricLabel(m: RankMetric): string {
-  return ({ score: 'Score geral', tarefas: 'Tarefas concluídas', assiduidade: 'Assiduidade' })[m]
+  return ({ score: 'Score geral', assiduidade: 'Assiduidade' })[m]
 }
 
 export function leaderboard(data: TalentData, m: RankMetric, deptId?: string) {
