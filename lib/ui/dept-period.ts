@@ -6,15 +6,22 @@ export type PessoaDoSetor = {
   id: string; nome: string; cargo: string
   /** Sem conta no Nexus → não aparece em fonte nenhuma. `0` seria mentira. */
   semFonte: boolean
+  hasAvatar: boolean
   atividade: number; mensagens: number
   atrasos: number; minutosAtraso: number; advertencias: number
   /** null = ainda não avaliada nesta competência (≠ nota zero). */
   nota: number | null
 }
 
+export type PessoaRank = { id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number }
+
 export type DeptMetrics = {
   pessoas: PessoaDoSetor[]
+  /** Quem fez o quê em cada fonte, do maior para o menor. Só quem tem valor > 0. */
+  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio', PessoaRank[]>
   setor: { id: string; nome: string; pelaDiretoria: boolean }
+  /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
+  ehAdmin: boolean
   /** Turnover REAL. `taxa12m` não acompanha o filtro — taxa só diz algo em 12 meses. */
   turnover: { saidasNoPeriodo: number; nomesQueSairam: string[]; saidas12m: number; taxa12m: number }
   /** Atividade real mês a mês, do primeiro mês COM registro. */
@@ -54,21 +61,34 @@ export type DeptMetrics = {
 // ⚠️ A URL sai do `query` do contexto: é o único lugar que sabe montar
 // `period=…&from=…&to=…`, e um hook que montasse a URL sozinho passaria a
 // ignorar o calendário em silêncio.
-export function useDeptPeriod(id: string): { m: DeptMetrics | null; loading: boolean } {
+/**
+ * ⚠️⚠️ Distingue CARREGANDO de PROIBIDO de QUEBRADO. Antes os três davam
+ * `m === null` e a tela ficava idêntica nos três casos — e, pior, o topo
+ * continuava mostrando nome, score, escolaridade e o mapa de atrasos do setor,
+ * porque esses vêm do dataset do cliente e não passam pela régua da rota. Um
+ * gestor que trocasse o `id` na URL levava 403 e ainda via aquilo.
+ */
+export type EstadoDept = 'carregando' | 'ok' | 'negado' | 'erro'
+
+export function useDeptPeriod(id: string): { m: DeptMetrics | null; estado: EstadoDept } {
   const { query } = usePeriod()
   const [m, setM] = useState<DeptMetrics | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [estado, setEstado] = useState<EstadoDept>('carregando')
 
   useEffect(() => {
     let vivo = true
-    setLoading(true)
+    setEstado('carregando')
     fetch(`/api/dept-metrics?id=${encodeURIComponent(id)}&${query}`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: DeptMetrics | null) => { if (vivo) setM(d) })
-      .catch(() => vivo && setM(null))
-      .finally(() => vivo && setLoading(false))
+      .then(async (r) => {
+        if (!vivo) return
+        if (r.status === 401 || r.status === 403) { setM(null); setEstado('negado'); return }
+        if (!r.ok) { setM(null); setEstado('erro'); return }
+        setM(await r.json())
+        setEstado('ok')
+      })
+      .catch(() => { if (vivo) { setM(null); setEstado('erro') } })
     return () => { vivo = false }
   }, [id, query])
 
-  return { m, loading }
+  return { m, estado }
 }

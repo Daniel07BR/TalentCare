@@ -27,16 +27,28 @@ type Item = {
   peso: number
 }
 
-export function Atencao({ m, abaixoDoEsperado, onIr }: {
+type Nomeada = { id: string; nome: string; nota: number }
+
+const primeiros = (l: Nomeada[]) =>
+  l.slice(0, 3).map((p) => p.nome.split(' ')[0]).join(', ') + (l.length > 3 ? ` e mais ${l.length - 3}` : '')
+
+export function Atencao({ m, abaixoDoEsperado, atendeEmParte, ehAdmin, onIr }: {
   m: DeptMetrics
-  abaixoDoEsperado: { id: string; nome: string; nota: number }[]
+  abaixoDoEsperado: Nomeada[]
+  atendeEmParte: Nomeada[]
+  /** Quem lê é da Diretoria? Muda o que se pode cobrar dele. */
+  ehAdmin: boolean
   onIr: (destino: string) => void
 }) {
   const itens: Item[] = []
   const a = m.avaliacao
   const faltam = Math.max(0, a.avaliaveis - a.publicadas)
 
-  if (faltam > 0) {
+  /* ⚠️⚠️ Setor cuja avaliação CABE À DIRETORIA não gera cobrança para o gestor:
+     ele não pode publicar (a régua responde 403) e o alerta ficaria aceso para
+     sempre. Quem é da Diretoria continua vendo, porque para ele É ação. */
+  const cobravel = !m.setor.pelaDiretoria || ehAdmin
+  if (faltam > 0 && cobravel) {
     itens.push({
       chave: 'avaliar', Icone: ClipboardCheck, peso: 90,
       valor: String(faltam),
@@ -45,6 +57,9 @@ export function Atencao({ m, abaixoDoEsperado, onIr }: {
       cor: 'var(--warning)',
     })
   }
+  // ⚠️ Duas faixas SEPARADAS, porque a escala da casa separa: 0–4 é "abaixo do
+  // esperado" e 5–6 é "atende em parte". Juntar as duas em vermelho acusava de
+  // "abaixo do esperado" quem a própria régua diz que atende, em parte.
   if (abaixoDoEsperado.length > 0) {
     itens.push({
       chave: 'abaixo', Icone: TrendingDown, peso: 100,
@@ -52,9 +67,17 @@ export function Atencao({ m, abaixoDoEsperado, onIr }: {
       titulo: abaixoDoEsperado.length === 1 ? 'nota abaixo do esperado' : 'notas abaixo do esperado',
       // Nomear é o que transforma o número em ação — sem os nomes, o gestor
       // teria de caçar quem são na tabela de baixo.
-      detalhe: abaixoDoEsperado.slice(0, 3).map((p) => p.nome.split(' ')[0]).join(', ')
-        + (abaixoDoEsperado.length > 3 ? ` e mais ${abaixoDoEsperado.length - 3}` : ''),
+      detalhe: primeiros(abaixoDoEsperado),
       cor: 'var(--danger)',
+    })
+  }
+  if (atendeEmParte.length > 0) {
+    itens.push({
+      chave: 'abaixo', Icone: TrendingDown, peso: 60,
+      valor: String(atendeEmParte.length),
+      titulo: atendeEmParte.length === 1 ? 'atende em parte' : 'atendem em parte',
+      detalhe: primeiros(atendeEmParte),
+      cor: 'var(--warning)',
     })
   }
   if (m.assiduidade.advertencias > 0) {
@@ -78,7 +101,11 @@ export function Atencao({ m, abaixoDoEsperado, onIr }: {
   // ⚠️ Turnover vira ALERTA só acima de 20% em 12 meses. Abaixo disso ele é um
   // dado, e dado não pertence à faixa de ação — senão todo setor com uma saída
   // acende luz e a faixa perde o sentido.
-  if (m.turnover.taxa12m >= 20) {
+  /* ⚠️ Em equipe pequena a TAXA não é taxa: Programação com 1 pessoa e um
+     antecessor daria 50%, vermelho, "de rotatividade" — não é rotatividade, é
+     uma pessoa. Abaixo de 5 de base, mostra-se a CONTAGEM. */
+  const basePequena = m.equipe.ativos + m.turnover.saidas12m < 5
+  if (m.turnover.taxa12m >= 20 && !basePequena) {
     itens.push({
       chave: 'turnover', Icone: LogOut, peso: 70,
       valor: `${m.turnover.taxa12m}%`,
@@ -86,13 +113,21 @@ export function Atencao({ m, abaixoDoEsperado, onIr }: {
       detalhe: `${m.turnover.saidas12m} ${m.turnover.saidas12m === 1 ? 'saída' : 'saídas'} em 12 meses`,
       cor: 'var(--danger)',
     })
+  } else if (basePequena && m.turnover.saidas12m > 0) {
+    itens.push({
+      chave: 'turnover', Icone: LogOut, peso: 50,
+      valor: String(m.turnover.saidas12m),
+      titulo: m.turnover.saidas12m === 1 ? 'saída em 12 meses' : 'saídas em 12 meses',
+      detalhe: `equipe de ${m.equipe.ativos} — pequena demais para uma taxa`,
+      cor: 'var(--warning)',
+    })
   }
 
   itens.sort((x, y) => y.peso - x.peso)
 
   if (itens.length === 0) {
     return (
-      <div className="tc-card cpop" style={{ background: 'var(--surface)', border: '1px solid var(--success)33', borderRadius: 'var(--radius)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 13 }}>
+      <div className="tc-card cpop" style={{ background: 'var(--surface)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)', borderRadius: 'var(--radius)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 13 }}>
         <CheckCircle2 size={22} color="var(--success)" />
         <div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Setor em dia</div>

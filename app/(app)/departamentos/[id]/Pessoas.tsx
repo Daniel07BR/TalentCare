@@ -20,14 +20,17 @@ import Avatar from '../../Avatar'
 type Coluna = 'nota' | 'atividade' | 'atrasos'
 
 const COLUNAS: { key: Coluna; label: string; dica: string }[] = [
-  { key: 'nota', label: 'Nota do mês', dica: 'Avaliação do gestor, 0 a 10' },
+  // ⚠️ A nota é da COMPETÊNCIA (mês fechado) e não do filtro. Sem dizer isso na
+  // própria coluna, quem troca para "7 dias" acha que vê a nota daquela semana —
+  // e a nota é o maior número da linha.
+  { key: 'nota', label: 'Nota', dica: 'Avaliação do gestor (0–10) da competência mensal — não acompanha o filtro' },
   { key: 'atividade', label: 'Atividade', dica: 'Ações registradas nos sistemas, no período' },
   { key: 'atrasos', label: 'Atrasos', dica: 'Atrasos não abonados, no período' },
 ]
 
-export function Pessoas({ pessoas, periodo }: { pessoas: PessoaDoSetor[]; periodo: string }) {
+export function Pessoas({ pessoas, periodo, competencia }: { pessoas: PessoaDoSetor[]; periodo: string; competencia: string }) {
   const router = useRouter()
-  const [ordem, setOrdem] = useState<Coluna>('nota')
+  const [ordemPedida, setOrdem] = useState<Coluna>('nota')
 
   const medidas = pessoas.filter((p) => !p.semFonte)
   const maxAtiv = Math.max(1, ...medidas.map((p) => p.atividade))
@@ -36,10 +39,19 @@ export function Pessoas({ pessoas, periodo }: { pessoas: PessoaDoSetor[]; period
     ? Math.round((comNota.reduce((a, p) => a + (p.nota ?? 0), 0) / comNota.length) * 10) / 10
     : null
 
+  /* ⚠️ Sem NENHUMA nota publicada, ordenar "por nota" caía no desempate por
+     atividade — a lista ficava ordenada por atividade com o botão "Nota" aceso,
+     e o selo do topo ia para quem mais registrou, parecendo o melhor avaliado. */
+  const semNotas = comNota.length === 0
+  const ordem: Coluna = semNotas && ordemPedida === 'nota' ? 'atividade' : ordemPedida
+
   const ordenadas = [...pessoas].sort((a, b) => {
     // ⚠️ Quem não é medido vai para o fim em QUALQUER ordenação, e não para o
     // fundo do ranking: não é o último colocado, é quem não está na corrida.
-    if (a.semFonte !== b.semFonte) return a.semFonte ? 1 : -1
+    /* ⚠️ "Não está na corrida" vale só para a coluna de ATIVIDADE. Atraso,
+       advertência e nota EXISTEM para quem não tem conta no Nexus — empurrar
+       essa pessoa para o fim escondia, na última linha, quem tinha 12 atrasos. */
+    if (ordem === 'atividade' && a.semFonte !== b.semFonte) return a.semFonte ? 1 : -1
     if (ordem === 'nota') {
       if (a.nota == null && b.nota == null) return b.atividade - a.atividade
       if (a.nota == null) return 1
@@ -56,22 +68,39 @@ export function Pessoas({ pessoas, periodo }: { pessoas: PessoaDoSetor[]; period
         <div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>As pessoas do setor</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-            {pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'} · comparadas entre si · {periodo}
+            {pessoas.length === 1
+              ? 'a única pessoa do setor'
+              : `${pessoas.length} pessoas comparadas entre si`}
+            {' · '}atividade e atrasos no período ({periodo}) · nota de {competencia}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 3, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
-          {COLUNAS.map((c) => (
-            <button key={c.key} title={c.dica} onClick={() => setOrdem(c.key)}
-              className={'seg' + (ordem === c.key ? ' on' : '')} style={{ fontSize: 11.5, padding: '5px 10px' }}>
-              {c.label}
-            </button>
-          ))}
+          {COLUNAS.map((c) => {
+            const inerte = c.key === 'nota' && semNotas
+            return (
+              <button key={c.key} disabled={inerte} onClick={() => setOrdem(c.key)}
+                title={inerte ? 'Nenhuma avaliação publicada nesta competência' : c.dica}
+                className={'seg' + (ordem === c.key ? ' on' : '')}
+                style={{ fontSize: 11.5, padding: '5px 10px', opacity: inerte ? 0.45 : 1, cursor: inerte ? 'not-allowed' : 'pointer' }}>
+                {c.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       <div style={{ marginTop: 16 }}>
         {ordenadas.map((p, i) => {
-          const destaque = i === 0 && !p.semFonte && (ordem !== 'atrasos' || p.atrasos > 0)
+          /* ⚠️ O selo dourado "TOPO" premiava quem tinha MAIS ATRASOS quando a
+             ordenação era por atraso — a condição foi escrita para acender
+             justamente nesse caso. Numa tela lida pela Diretoria, era uma
+             legenda errada sobre uma pessoa nomeada. Agora o selo diz o que
+             significa, e some quando não há do que se orgulhar. */
+          const selo = pessoas.length < 2 || p.semFonte ? null
+            : i !== 0 ? null
+            : ordem === 'nota' ? (p.nota != null ? { texto: 'MAIOR NOTA', cor: 'var(--accent)' } : null)
+            : ordem === 'atividade' ? (p.atividade > 0 ? { texto: 'MAIS ATIVO', cor: 'var(--accent)' } : null)
+            : (p.atrasos > 0 ? { texto: 'MAIS ATRASOS', cor: 'var(--warning)' } : null)
           return (
             <div
               key={p.id}
@@ -89,7 +118,13 @@ export function Pessoas({ pessoas, periodo }: { pessoas: PessoaDoSetor[]; period
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {p.nome}
-                    {destaque && <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--accent)44', borderRadius: 20, padding: '1px 7px' }}>TOPO</span>}
+                    {selo && (
+                      /* ⚠️ `var(--accent)44` NÃO é cor: a substituição do custom
+                         property é por TOKEN, então vira `#f5a623 44` e o
+                         navegador descarta a declaração inteira — a borda
+                         simplesmente não existia. `color-mix` funciona. */
+                      <span style={{ fontSize: 9.5, fontWeight: 700, color: selo.cor, border: `1px solid ${`color-mix(in srgb, ${selo.cor} 35%, transparent)`}`, borderRadius: 20, padding: '1px 7px', whiteSpace: 'nowrap' }}>{selo.texto}</span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{p.cargo}</div>
                 </div>

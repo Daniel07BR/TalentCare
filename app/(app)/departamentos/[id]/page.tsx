@@ -14,8 +14,9 @@ import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
 import { Atencao } from './Atencao'
 import { Pessoas } from './Pessoas'
 import { Tendencia, Turnover } from './Tendencia'
+import { CardFonte } from './CardFonte'
 import { usePeriod } from '@/lib/ui/period'
-import { criterioDe, ancoraDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
+import { criterioDe, ancoraDe, competenciaLabel, ANCORAS } from '@/lib/avaliacoes/criterios'
 import Avatar from '../../Avatar'
 
 export default function DepartamentoDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,15 +32,24 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   // com 59 cursos criados debaixo do rótulo "Últimos 30 dias", quando no período
   // eram 4. O número não estava errado: respondia outra pergunta, o que é pior,
   // porque ninguém desconfia de um número plausível.
-  const { m } = useDeptPeriod(id)
+  const { m, estado } = useDeptPeriod(id)
+  // ⚠️ Setor "cabe à Diretoria": cobrar do gestor uma avaliação que ele não pode
+  // publicar é alerta que não se resolve — e alerta eterno se aprende a ignorar.
+  // A rota já sabe quem está logado; aqui basta saber se ele alcança tudo.
+  const ehAdmin = !!m?.ehAdmin
 
-  /* ⚠️ "Abaixo do esperado" = nota < 7, a âncora da escala (7–8 é "atende").
-     O corte vem de `criterios.ts` e não de um número escolhido aqui — dois
-     limiares diferentes para a mesma pergunta seria o começo de duas verdades. */
-  const abaixoDoEsperado = (m?.pessoas ?? [])
-    .filter((p): p is typeof p & { nota: number } => p.nota != null && p.nota < 7)
-    .sort((a, b) => a.nota - b.nota)
-    .map((p) => ({ id: p.id, nome: p.nome, nota: p.nota }))
+  /* ⚠️⚠️ O corte sai das ÂNCORAS (`criterios.ts`), e não de um número escrito
+     aqui. Antes era `< 7`, e isso contradizia a própria escala da casa: 5–6 é
+     "atende em parte", não "abaixo do esperado". A pessoa com 6,5 aparecia em
+     VERMELHO e NOMEADA no canto mais nobre da tela, e em laranja na tabela logo
+     abaixo — duas cores para a mesma nota na mesma página. */
+  const CORTE_ABAIXO = ANCORAS[0].ate // 4 → "abaixo do esperado"
+  const CORTE_PARCIAL = ANCORAS[1].ate // 6 → "atende em parte"
+  const notas = (m?.pessoas ?? []).filter((p): p is typeof p & { nota: number } => p.nota != null)
+  const abaixoDoEsperado = notas.filter((p) => p.nota <= CORTE_ABAIXO)
+    .sort((a, b) => a.nota - b.nota).map((p) => ({ id: p.id, nome: p.nome, nota: p.nota }))
+  const atendeEmParte = notas.filter((p) => p.nota > CORTE_ABAIXO && p.nota <= CORTE_PARCIAL)
+    .sort((a, b) => a.nota - b.nota).map((p) => ({ id: p.id, nome: p.nome, nota: p.nota }))
 
   // Clicar num alerta leva ao bloco que o explica — alerta que não leva a lugar
   // nenhum obriga o gestor a caçar na página o que o número quis dizer.
@@ -47,6 +57,33 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
     const destino = chave === 'avaliar' || chave === 'abaixo' ? 'sec-pessoas'
       : chave === 'turnover' ? 'sec-tendencia' : 'sec-assiduidade'
     document.getElementById(destino)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  /* ⚠️⚠️ Estados distintos, e ANTES de desenhar o topo. O nome do setor, o
+     score, a escolaridade e o heatmap vêm do dataset do cliente e NÃO passam
+     pela régua da rota — desenhá-los enquanto a rota nega vaza o setor alheio
+     para quem trocou o id na URL. */
+  if (estado === 'negado') {
+    return (
+      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Você não tem acesso a este setor</div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>O relatório de um setor é visível para quem avalia nele e para a Diretoria.</div>
+        </div>
+      </div>
+    )
+  }
+  if (estado === 'erro') {
+    return (
+      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Não deu para carregar este relatório</div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Recarregue a página. Se continuar, o servidor de métricas pode estar fora.</div>
+        </div>
+      </div>
+    )
   }
 
   if (!vm) {
@@ -80,7 +117,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           </div>
           <h1 style={{ margin: '0 0 18px', fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
           {m ? (
-            <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} onIr={irPara} />
+            <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} atendeEmParte={atendeEmParte} ehAdmin={ehAdmin} onIr={irPara} />
           ) : (
             <div style={{ height: 92, background: 'var(--surface-2)', borderRadius: 'var(--radius)', opacity: 0.5 }} />
           )}
@@ -120,7 +157,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
 
       {/* 3 · AS PESSOAS — o coração do relatório */}
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
-        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} />}
+        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} />}
       </div>
 
       {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais */}
@@ -273,161 +310,133 @@ function Avaliacao({ m }: { m: DeptMetrics }) {
   )
 }
 
-/* ── A atividade nas 8 fontes, NO PERÍODO ──────────────────────────────────── */
+/* ── A atividade nas 8 fontes, NO PERÍODO ──────────────────────────────────
+   ⚠️⚠️ Cada fonte virou um CARTÃO com quem fez à esquerda e o total à direita.
+   A tira de números que havia antes respondia "quanto o setor fez" e sumia com
+   QUEM fez — num relatório lido para decidir sobre gente, o nome é o dado.  */
 function Atividade({ m }: { m: DeptMetrics }) {
   const tem = (...vs: number[]) => vs.some((v) => v > 0)
-  const blocos: { titulo: string; cor: string; Icone: typeof GraduationCap; mostrar: boolean; filhos: React.ReactNode }[] = [
-    {
-      titulo: 'Chat Interno', cor: 'var(--chart-3)', Icone: MessageSquareText,
-      mostrar: tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos),
-      filhos: (
-        <div style={grade}>
-          <N label="Mensagens" valor={m.chat.msgCanais + m.chat.msgDiretas + m.chat.msgChamados} cor="var(--chart-3)" nota="não entra no score" />
-          <N label="Em canais" valor={m.chat.msgCanais} />
-          <N label="Conversas diretas" valor={m.chat.msgDiretas} />
-          <N label="Chamados abertos" valor={m.chat.chamadosAbertos} cor="var(--info)" />
-          <N label="Chamados concluídos" valor={m.chat.chamadosConcluidos} cor="var(--success)" />
-          {/* ⚠️ 1 d = 10 h aqui: o tempo do chamado é contado só no expediente
-              (8h–18h, seg a sex) e vem pronto do chat. */}
-          <N label="Tempo médio" valor={m.chat.chamadosConcluidos ? dur(Math.round(m.chat.segundos / m.chat.chamadosConcluidos), 10) : null} nota="só expediente" />
+  const r = m.rankings
+  const cards: React.ReactNode[] = []
+  const fora: string[] = []
+
+  const add = (chave: string, mostrar: boolean, node: React.ReactNode) => {
+    if (mostrar) cards.push(<div key={chave}>{node}</div>)
+    else fora.push(chave)
+  }
+
+  add('Painel de Atendimento', tem(m.whatsapp.abertos, m.whatsapp.finalizados),
+    <CardFonte
+      titulo="Painel de Atendimento · WhatsApp" cor="var(--chart-1)" Icone={MessageCircle}
+      ranking={r.whatsapp} unidade="mais finalizou atendimento"
+      numeros={[
+        { label: 'Atendimentos abertos', valor: m.whatsapp.abertos, cor: 'var(--info)' },
+        { label: 'Finalizados', valor: m.whatsapp.finalizados, cor: 'var(--success)' },
+        { label: 'Tempo médio', valor: m.whatsapp.finalizados ? dur(Math.round(m.whatsapp.handleSum / m.whatsapp.finalizados)) : null },
+      ]}
+    />)
+
+  add('Chat Interno', tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos),
+    <CardFonte
+      titulo="Chat Interno" cor="var(--chart-3)" Icone={MessageSquareText}
+      ranking={r.chat} unidade="mais concluiu chamado"
+      numeros={[
+        { label: 'Chamados abertos por estas pessoas', valor: m.chat.chamadosAbertos, cor: 'var(--info)' },
+        { label: 'Concluídos', valor: m.chat.chamadosConcluidos, cor: 'var(--success)' },
+        { label: 'Tempo médio', valor: m.chat.chamadosConcluidos ? dur(Math.round(m.chat.segundos / m.chat.chamadosConcluidos), 10) : null, nota: 'só expediente' },
+        { label: 'Mensagens', valor: m.chat.msgCanais + m.chat.msgDiretas + m.chat.msgChamados, nota: 'não entra no score' },
+      ]}
+      rodape={<>Das mensagens, {m.chat.msgCanais.toLocaleString('pt-BR')} em canais, {m.chat.msgDiretas.toLocaleString('pt-BR')} em conversas diretas e {m.chat.msgChamados.toLocaleString('pt-BR')} dentro de chamados.</>}
+    />)
+
+  add('HelpDesk', tem(m.helpdesk.abertos, m.helpdesk.resolvidos),
+    <CardFonte
+      titulo="HelpDesk" cor="var(--chart-4)" Icone={LifeBuoy}
+      ranking={r.helpdesk} unidade="mais resolveu"
+      numeros={[
+        { label: 'Chamados abertos', valor: m.helpdesk.abertos, cor: 'var(--info)' },
+        { label: 'Resolvidos', valor: m.helpdesk.resolvidos, cor: 'var(--success)' },
+        { label: 'Tempo médio', valor: m.helpdesk.resolvidosNormais ? dur(Math.round(m.helpdesk.segundos / m.helpdesk.resolvidosNormais)) : null, nota: `sobre ${m.helpdesk.resolvidosNormais} resolvidos no fluxo normal` },
+      ]}
+    />)
+
+  add('ClassRoom', tem(m.classroom.criados, m.classroom.assistidos, m.classroom.videos),
+    <CardFonte
+      titulo="ClassRoom" cor="var(--chart-2)" Icone={GraduationCap}
+      ranking={r.classroom} unidade="mais concluiu e criou curso"
+      numeros={[
+        { label: 'Cursos criados', valor: m.classroom.criados, cor: 'var(--accent)' },
+        { label: 'Cursos concluídos', valor: m.classroom.assistidos, cor: 'var(--chart-2)' },
+        { label: 'Vídeos assistidos', valor: m.classroom.videos, cor: 'var(--info)' },
+      ]}
+    />)
+
+  add('Gerência', tem(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km),
+    <CardFonte
+      titulo="Gerência · mensageria" cor="var(--chart-2)" Icone={Truck}
+      ranking={r.gerencia} unidade="mais entregou e pediu"
+      numeros={[
+        { label: 'Serviços entregues', valor: m.gerencia.servicos, cor: 'var(--chart-2)' },
+        { label: 'Km rodados', valor: m.gerencia.km },
+        { label: 'Saídas', valor: m.gerencia.saidas },
+        { label: 'Viagens', valor: m.gerencia.viagens, nota: 'fora do estado' },
+        { label: 'Protocolos abertos', valor: m.gerencia.protAbertos, cor: 'var(--info)' },
+        { label: 'Serviços criados', valor: m.gerencia.servCriados },
+      ]}
+    />)
+
+  add('Consultoria Plus', tem(m.consultoria.estudos, m.consultoria.chamados, m.consultoria.mensagens, m.consultoria.comentarios),
+    <CardFonte
+      titulo="Consultoria Plus" cor="var(--chart-3)" Icone={MessagesSquare}
+      ranking={r.consultoria} unidade="mais registrou atividade"
+      numeros={[
+        { label: 'Estudos publicados', valor: m.consultoria.estudos, cor: 'var(--chart-3)' },
+        { label: 'Chamados abertos', valor: m.consultoria.chamados },
+        { label: 'Mensagens', valor: m.consultoria.mensagens },
+        { label: 'Comentários', valor: m.consultoria.comentarios },
+      ]}
+    />)
+
+  add('CIDE', tem(m.cide.atividades),
+    <CardFonte
+      titulo="CIDE" cor="var(--chart-5)" Icone={Landmark}
+      ranking={r.cide} unidade="mais alterou cadastro"
+      numeros={[{ label: 'Alterações no cadastro', valor: m.cide.atividades, cor: 'var(--chart-5)' }]}
+    />)
+
+  add('Rádio', tem(m.radio.horas, m.radio.sessoes),
+    <CardFonte
+      titulo="Rádio Itamarathy" cor="var(--info)" Icone={Radio}
+      ranking={r.radio} unidade="mais ouviu"
+      numeros={[
+        { label: 'Horas ouvidas', valor: m.radio.horas, cor: 'var(--info)', nota: 'não entra no score' },
+        { label: 'Sessões', valor: m.radio.sessoes },
+      ]}
+      rodape="Escuta não é trabalho — a rádio é vitrine e fica fora do score."
+    />)
+
+  if (cards.length === 0) {
+    return (
+      <Card titulo="Atividade nos sistemas" cor="var(--chart-2)">
+        {/* ⚠️ "Sem atividade REGISTRADA", e não "sem atividade": o setor pode
+            trabalhar fora dos sistemas medidos (Limpeza, Cozinha). A diferença
+            entre as duas frases é a diferença entre um fato e uma acusação. */}
+        <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+          Nenhuma atividade <b>registrada nos sistemas medidos</b> neste período. Isso não quer dizer
+          que o setor não trabalhou — quer dizer que o trabalho dele não passa por estes oito sistemas.
         </div>
-      ),
-    },
-    {
-      titulo: 'HelpDesk', cor: 'var(--chart-4)', Icone: LifeBuoy,
-      mostrar: tem(m.helpdesk.abertos, m.helpdesk.resolvidos),
-      filhos: (
-        <div style={grade}>
-          <N label="Chamados abertos" valor={m.helpdesk.abertos} cor="var(--info)" />
-          <N label="Resolvidos" valor={m.helpdesk.resolvidos} cor="var(--success)" />
-          <N label="Tempo médio" valor={m.helpdesk.resolvidosNormais ? dur(Math.round(m.helpdesk.segundos / m.helpdesk.resolvidosNormais)) : null} />
-        </div>
-      ),
-    },
-    {
-      titulo: 'ClassRoom', cor: 'var(--chart-2)', Icone: GraduationCap,
-      mostrar: tem(m.classroom.criados, m.classroom.assistidos, m.classroom.videos),
-      filhos: (
-        <div style={grade}>
-          <N label="Cursos criados" valor={m.classroom.criados} cor="var(--accent)" />
-          <N label="Cursos concluídos" valor={m.classroom.assistidos} cor="var(--chart-2)" />
-          <N label="Vídeos assistidos" valor={m.classroom.videos} cor="var(--info)" />
-        </div>
-      ),
-    },
-    {
-      titulo: 'Painel de Atendimento · WhatsApp', cor: 'var(--chart-1)', Icone: MessageCircle,
-      mostrar: tem(m.whatsapp.abertos, m.whatsapp.finalizados),
-      filhos: (
-        <div style={grade}>
-          <N label="Atendimentos abertos" valor={m.whatsapp.abertos} cor="var(--info)" />
-          <N label="Finalizados" valor={m.whatsapp.finalizados} cor="var(--success)" />
-          <N label="Tempo médio" valor={m.whatsapp.finalizados ? dur(Math.round(m.whatsapp.handleSum / m.whatsapp.finalizados)) : null} />
-        </div>
-      ),
-    },
-    {
-      titulo: 'Consultoria Plus', cor: 'var(--chart-3)', Icone: MessagesSquare,
-      mostrar: tem(m.consultoria.estudos, m.consultoria.chamados, m.consultoria.mensagens, m.consultoria.comentarios),
-      filhos: (
-        <div style={grade}>
-          <N label="Estudos publicados" valor={m.consultoria.estudos} cor="var(--chart-3)" />
-          <N label="Chamados abertos" valor={m.consultoria.chamados} />
-          <N label="Mensagens" valor={m.consultoria.mensagens} />
-          <N label="Comentários" valor={m.consultoria.comentarios} />
-        </div>
-      ),
-    },
-    {
-      titulo: 'CIDE', cor: 'var(--chart-5)', Icone: Landmark,
-      mostrar: tem(m.cide.atividades),
-      filhos: <div style={grade}><N label="Alterações no cadastro" valor={m.cide.atividades} cor="var(--chart-5)" /></div>,
-    },
-    {
-      titulo: 'Gerência · mensageria', cor: 'var(--chart-2)', Icone: Truck,
-      mostrar: tem(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km),
-      filhos: (
-        <div style={grade}>
-          <N label="Serviços entregues" valor={m.gerencia.servicos} cor="var(--chart-2)" />
-          <N label="Km rodados" valor={m.gerencia.km} />
-          <N label="Saídas" valor={m.gerencia.saidas} />
-          <N label="Viagens" valor={m.gerencia.viagens} nota="fora do estado" />
-          <N label="Protocolos abertos" valor={m.gerencia.protAbertos} cor="var(--info)" />
-          <N label="Aprovações" valor={m.gerencia.protAprovados} />
-          <N label="Serviços criados" valor={m.gerencia.servCriados} />
-          <N label="Reagend. / cancel." valor={`${m.gerencia.reagendados} / ${m.gerencia.cancelados}`} />
-        </div>
-      ),
-    },
-    {
-      titulo: 'Rádio Itamarathy', cor: 'var(--info)', Icone: Radio,
-      mostrar: tem(m.radio.horas, m.radio.sessoes),
-      filhos: (
-        <div style={grade}>
-          {/* ⚠️ A rádio é VITRINE: escuta não é trabalho e não entra no score. */}
-          <N label="Horas ouvidas" valor={m.radio.horas} cor="var(--info)" nota="não entra no score" />
-          <N label="Sessões" valor={m.radio.sessoes} />
-        </div>
-      ),
-    },
-  ]
-  const ativos = blocos.filter((b) => b.mostrar)
+      </Card>
+    )
+  }
 
   return (
     <>
-      {/* Chamados ENTRE SETORES: as duas faces, que não se somam. */}
-      {m.chamadosDoSetor && (m.chamadosDoSetor.pediu > 0 || m.chamadosDoSetor.recebeu > 0) && (
-        <Card
-          titulo="Chamados entre setores"
-          sub="Duas faces do mesmo pedido: o que este setor pediu aos outros e o que recebeu para atender. Não se somam."
-          cor="var(--chart-3)"
-        >
-          <div style={grade}>
-            <N label="Pediu aos outros" valor={m.chamadosDoSetor.pediu} cor="var(--info)" />
-            <N label="Desses, atendidos" valor={m.chamadosDoSetor.pediuConcluidos} />
-            <N label="Recebeu para atender" valor={m.chamadosDoSetor.recebeu} cor="var(--chart-3)" />
-            <N label="Concluiu" valor={m.chamadosDoSetor.recebeuConcluidos} cor="var(--success)" />
-            <N label="Cancelados" valor={m.chamadosDoSetor.cancelados} nota="fora da média" />
-            <N
-              label="Tempo médio de atendimento"
-              valor={m.chamadosDoSetor.recebeuConcluidos ? dur(Math.round(m.chamadosDoSetor.segundos / m.chamadosDoSetor.recebeuConcluidos), 10) : null}
-              nota="só expediente · 1 d = 10 h"
-            />
-          </div>
-        </Card>
+      {cards}
+      {fora.length > 0 && (
+        <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5, margin: '-4px 0 16px 2px' }}>
+          Sem nenhum registro deste setor no período, e por isso fora da lista: {fora.join(', ')}.
+        </div>
       )}
-
-      <Card titulo="Atividade nos sistemas" sub={`Somada no período · ${m.label}`} cor="var(--chart-2)">
-        {ativos.length === 0 ? (
-          /* ⚠️ "Sem atividade REGISTRADA", e não "sem atividade": o setor pode
-             trabalhar fora dos sistemas medidos (Limpeza, Cozinha). A diferença
-             entre as duas frases é a diferença entre um fato e uma acusação. */
-          <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-            Nenhuma atividade <b>registrada nos sistemas medidos</b> neste período. Isso não quer
-            dizer que o setor não trabalhou — quer dizer que o trabalho dele não passa por estes
-            oito sistemas.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {ativos.map((b) => (
-              <div key={b.titulo}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-dim)' }}>
-                  <b.Icone size={14} color={b.cor} /> {b.titulo}
-                </div>
-                {b.filhos}
-              </div>
-            ))}
-            {/* Só as fontes COM número aparecem; dizer quais ficaram de fora
-                evita a leitura de que o sistema perdeu dado. */}
-            {ativos.length < blocos.length && (
-              <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5 }}>
-                Fontes sem nenhum registro deste setor no período ficam de fora da lista:{' '}
-                {blocos.filter((b) => !b.mostrar).map((b) => b.titulo.split(' ·')[0]).join(', ')}.
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
     </>
   )
 }
@@ -494,4 +503,10 @@ function Barra({ nome, valor, largura, cor, esmaecido }: {
       </div>
     </div>
   )
+}
+
+/** Estilo do voltar, repetido nos três estados da página. */
+const voltar: React.CSSProperties = {
+  background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer',
+  fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18,
 }

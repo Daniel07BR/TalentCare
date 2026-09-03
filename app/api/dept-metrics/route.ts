@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     where: { departmentId: dept.id, origin: { in: ['nexus', 'staff'] }, foraDoDiretorio: false },
     select: {
       id: true, name: true, nexusUserId: true, active: true, jobTitle: true,
-      birthDate: true, gender: true, entryDate: true, leftAt: true,
+      avatarUrl: true, birthDate: true, gender: true, entryDate: true, leftAt: true,
     },
   })
   const ativos = pessoas.filter((p) => p.active)
@@ -158,28 +158,38 @@ export async function GET(req: NextRequest) {
    */
   const inicioSerie = new Date(hojeRef.getFullYear(), hojeRef.getMonth() - 11, 1)
   const diaInicioSerie = inicioSerie.toISOString().slice(0, 10)
+  /*
+   * ⚠️⚠️ A série para no último mês FECHADO. O mês corrente tem 2 ou 3 dias e a
+   * variação "vs. mês anterior" compararia 2 dias contra 30: em 03/09/2026 o
+   * HelpDesk daria 45 contra 191, ou seja **−76% em vermelho e 20px** — e todo
+   * dia 1º de todo mês a empresa inteira despencaria na tela.
+   *
+   * É o mesmo defeito do "dia parcial apaga o dia cheio" dos espelhos, só que
+   * na leitura em vez de na escrita.
+   */
+  const fimSerie = `${hojeRef.getFullYear()}-${String(hojeRef.getMonth() + 1).padStart(2, '0')}-01`
   const mensal = nx.length
     ? await prisma.$queryRaw<{ mes: string; atividade: bigint }[]>`
         SELECT mes, SUM(atividade)::bigint AS atividade FROM (
           SELECT substring(day, 1, 7) AS mes, SUM(courses + created)::bigint AS atividade
-            FROM classroom_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM classroom_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           SELECT substring(day, 1, 7), SUM(opened + resolved + formalized)::bigint
-            FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           SELECT substring(day, 1, 7), SUM(atividades)::bigint
-            FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           SELECT substring(day, 1, 7), SUM(studies + tickets + messages + comments)::bigint
-            FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           SELECT substring(day, 1, 7), SUM(servicos + prot_abertos + prot_aprovados + serv_criados)::bigint
-            FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           -- ⚠️ Do Chat entra só CHAMADO. Mensagem é vitrine e fora do score; numa
           -- série de produção ela abafaria as outras seis fontes somadas.
           SELECT substring(day, 1, 7), SUM(chamados_abertos + chamados_concluidos)::bigint
-            FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} GROUP BY 1
+            FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
         ) t GROUP BY mes ORDER BY mes`
     : []
   const serie = mensal.map((r) => ({ mes: r.mes, atividade: Number(r.atividade) }))
@@ -228,9 +238,26 @@ export async function GET(req: NextRequest) {
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true, msgCanais: true, msgDiretas: true, msgChamados: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, ...range }, _sum: { atrasos: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
-  ]) : [[], [], [], [], [], [], [], []] as never
+    prisma.radioDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { seconds: true } }),
+    /*
+     * ⚠️⚠️ O WhatsApp FALTAVA aqui, e o comentário abaixo garantia que esta era
+     * "a mesma conta do score". Não era: `/api/score-metrics` soma
+     * `whatsappAttendantDaily.finalizados` e este bloco não somava.
+     *
+     * O efeito era o pior tipo de zero — o que passa por medição: a atendente do
+     * Painel aparecia com **barra vazia e atividade 0** na comparação entre
+     * pessoas, enquanto o cartão logo abaixo, na MESMA página, mostrava os 1.186
+     * atendimentos dela. Numa tela que decide aumento.
+     *
+     * ⚠️ Casa por NOME (a origem não tem id do Nexus), igual ao score.
+     */
+    prisma.whatsappAttendantDaily.groupBy({
+      by: ['name'], where: { name: { in: nomes }, ...range },
+      _sum: { abertos: true, finalizados: true, handleSum: true },
+    }),
+  ]) : [[], [], [], [], [], [], [], [], [], []] as never
 
-  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv] = grupos
+  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gRadio, gWpp] = grupos
   const mapa = <T,>(rows: T[], chave: (r: T) => string | null, valor: (r: T) => number) =>
     new Map(rows.map((r) => [chave(r), valor(r)] as const))
 
@@ -245,6 +272,11 @@ export async function GET(req: NextRequest) {
   const mMin = mapa(gAss, (r) => r.personKey, (r) => n(r._sum.minutosAtraso))
   const mAdv = mapa(gAdv, (r) => r.personKey, (r) => r._count._all)
 
+  const normNome = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const mWppFin = new Map(gWpp.map((r) => [normNome(r.name), n(r._sum.finalizados)]))
+  const mWppAb = new Map(gWpp.map((r) => [normNome(r.name), n(r._sum.abertos)]))
+  const mRadio = new Map(gRadio.map((r) => [r.nexusUserId, n(r._sum.seconds)]))
+
   const notaDe = new Map(avals.map((a) => [a.avaliadoId, a.media]))
   const equipePessoas = ativos.map((p) => {
     const k = p.nexusUserId
@@ -256,8 +288,12 @@ export async function GET(req: NextRequest) {
       // ⚠️ Quem não tem conta no Nexus não aparece em fonte nenhuma. `semFonte`
       // existe para a tela não mostrar "0 de atividade" ao lado de quem trabalha
       // — zero e "não medimos" são coisas diferentes.
-      semFonte: !k,
-      atividade: k ? (mCls.get(k) ?? 0) + (mHd.get(k) ?? 0) + (mCide.get(k) ?? 0) + (mCons.get(k) ?? 0) + (mGer.get(k) ?? 0) + (mChatCham.get(k) ?? 0) : 0,
+      hasAvatar: !!p.avatarUrl,
+      // ⚠️ `semFonte` = sem conta no Nexus E sem registro de WhatsApp (que casa
+      // por nome). Quem atende no Painel sem conta do Nexus É medido.
+      semFonte: !k && !mWppFin.has(normNome(p.name)),
+      atividade: (k ? (mCls.get(k) ?? 0) + (mHd.get(k) ?? 0) + (mCide.get(k) ?? 0) + (mCons.get(k) ?? 0) + (mGer.get(k) ?? 0) + (mChatCham.get(k) ?? 0) : 0)
+        + (mWppFin.get(normNome(p.name)) ?? 0),
       mensagens: k ? (mChatMsg.get(k) ?? 0) : 0,
       atrasos: mAtr.get(pk) ?? 0,
       minutosAtraso: mMin.get(pk) ?? 0,
@@ -267,9 +303,58 @@ export async function GET(req: NextRequest) {
     }
   })
 
+  /* ── RANKING POR FONTE ─────────────────────────────────────────────────────
+   * ⚠️⚠️ Pedido do dono (03/09/2026): *"ao invés de apresentar a tira e um monte
+   * de número, mostre um card com o rank de atendimento dos funcionários com
+   * quantidade, foto e nome, e o restante dos dados ao lado."*
+   *
+   * E ele está certo por um motivo além do visual: uma tira de totais responde
+   * "quanto o setor fez" e some com QUEM fez. Num relatório lido para decidir
+   * sobre gente, o nome é o dado — o total é o contexto.
+   *
+   * ⚠️ Só entra quem tem valor > 0. Listar a equipe inteira com zeros faria a
+   * lista acusar quem não passa por aquela fonte — e quase ninguém passa por
+   * todas as oito.
+   */
+  const nomeDe = new Map(ativos.map((p) => [p.id, p]))
+  const rank = (
+    valores: Map<string | null, number>,
+    porNome = false,
+  ): { id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number }[] =>
+    ativos
+      .map((p) => ({
+        id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl,
+        valor: (porNome ? valores.get(normNome(p.name)) : p.nexusUserId ? valores.get(p.nexusUserId) : 0) ?? 0,
+      }))
+      .filter((x) => x.valor > 0)
+      .sort((a, b) => b.valor - a.valor)
+  void nomeDe
+
+  const mHdResolvidos = new Map(gHd.map((r) => [r.nexusUserId, n(r._sum.resolved)]))
+  const mClsConcl = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.courses) + n(r._sum.created)]))
+  const mConsTudo = new Map(gCons.map((r) => [r.nexusUserId, n(r._sum.studies) + n(r._sum.tickets) + n(r._sum.messages) + n(r._sum.comments)]))
+  const mGerServ = new Map(gGer.map((r) => [r.nexusUserId, n(r._sum.servicos) + n(r._sum.servCriados) + n(r._sum.protAbertos)]))
+  const mChatConcl = new Map(gChat.map((r) => [r.nexusUserId, n(r._sum.chamadosConcluidos)]))
+  const mCideAt = new Map(gCide.map((r) => [r.nexusUserId, n(r._sum.atividades)]))
+
+  const rankings = {
+    whatsapp: rank(mWppFin, true),
+    helpdesk: rank(mHdResolvidos),
+    classroom: rank(mClsConcl),
+    consultoria: rank(mConsTudo),
+    cide: rank(mCideAt),
+    gerencia: rank(mGerServ),
+    chat: rank(mChatConcl),
+    radio: rank(new Map([...mRadio].map(([k, v]) => [k, Math.round(v / 3600)]))),
+  }
+
   return NextResponse.json({
     pessoas: equipePessoas,
+    rankings,
     setor: { id: dept.id, nome: dept.name, pelaDiretoria: dept.avaliadoPelaDiretoria },
+    // Quem está lendo alcança a empresa toda? Muda o que se pode COBRAR dele na
+    // faixa de ação. Vem do servidor porque é a régua que sabe, não a tela.
+    ehAdmin: quem.escopo.tipo === 'tudo',
     turnover,
     serie,
     period, fromDay, toDay, dias, label: rotuloDoIntervalo(period, fromDay, toDay),
