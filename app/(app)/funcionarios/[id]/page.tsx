@@ -15,14 +15,6 @@ import FormacaoEditor from './FormacaoEditor'
 import DadosEditor from './DadosEditor'
 import TreinamentosEditor from './TreinamentosEditor'
 
-const TABS: [string, string][] = [
-  ['atividade', 'Atividade'], ['produtividade', 'Produtividade'], ['assiduidade', 'Assiduidade'],
-  /* ⚠️ "Trajetória" e "Reconhecimento" saíram: as duas eram INVENTADAS —
-     promoções, reajustes e prêmios que a pessoa não teve, com datas plausíveis,
-     na ficha dela. Voltam no dia em que houver histórico de cargo e de salário
-     de verdade. Ver `lib/mock/employee.ts`. */
-  ['formacao', 'Formação'],
-]
 
 // Cor de destaque por nível de formação (chave = rótulo exibido no card, sem acento).
 const FORM_COR: Record<string, string> = {
@@ -41,7 +33,7 @@ const formCor = (label: string, i: number) => FORM_COR[normLbl(label)] ?? FORM_P
 export default function FichaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [tab, setTab] = useState('atividade')
+  const [editando, setEditando] = useState(false)
   const { signals } = useScoreSignals()
   const data = withRealScores(useTalentData(), signals)
   const { period, label } = usePeriod()
@@ -193,48 +185,55 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Abas + o painel de quem vai avaliar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', gap: 22, padding: '0 22px', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
-            {TABS.map(([k, label]) => (
-              <button key={k} className={'tab' + (tab === k ? ' on' : '')} onClick={() => setTab(k)} style={{ fontSize: 13, fontWeight: 600, padding: '11px 2px', marginBottom: -1 }}>{label}</button>
+        <div style={{ display: 'flex', gap: 26, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 28 }}>
+          <div style={{ position: 'relative', width: 172, textAlign: 'center' }}>
+            <svg viewBox="0 0 200 116" style={{ width: 172, display: 'block' }}>
+              <path d={vm.gaugeTrack} fill="none" stroke="var(--surface-2)" strokeWidth="14" strokeLinecap="round" />
+              <path d={vm.gaugeValue} fill="none" stroke={vm.gaugeColor} strokeWidth="14" strokeLinecap="round" />
+            </svg>
+            <div style={{ position: 'absolute', top: 36, left: 0, right: 0 }}>
+              <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, color: vm.hasScore ? vm.scoreColor : 'var(--text-mute)' }}>{vm.scoreLabel}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>
+                {vm.hasScore ? <>Score geral · <span style={{ color: vm.deltaColor, fontWeight: 600 }}>{vm.delta}</span></> : vm.scoreNote}
+              </div>
+            </div>
+          </div>
+          <div style={{ width: 206, display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {vm.factors.map((f) => (
+              <div key={f.label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 3 }}>
+                  <span style={{ color: 'var(--text-dim)' }}>{f.label} <span style={{ color: 'var(--text-mute)' }}>· {f.peso}%</span></span>
+                  <span style={{ fontWeight: 700, color: f.color, fontSize: f.semFonte ? 10 : undefined }}>{f.notaLabel}</span>
+                </div>
+                <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div className="cbar" style={{ height: '100%', width: f.pct, background: f.color, borderRadius: 20 }} /></div>
+                {f.baseGlobal && (
+                  <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="O setor tem menos de 3 pessoas, o que não dá base de comparação — a nota vale contra a empresa toda.">comparado com a empresa (setor pequeno)</div>
+                )}
+              </div>
             ))}
           </div>
-          <div style={{ padding: 22 }}>
-            {tab === 'atividade' && (
-              <>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18 }}>Linha do tempo cross-sistema · dados reais · {periodo}</div>
-                {timeline !== null && timeline.length === 0 ? (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Sem atividade registrada nos sistemas integrados neste período.</div>
-                ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {(timeline ?? []).map((ev, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 14 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: 11, height: 11, borderRadius: '50%', background: ev.color, marginTop: 4, flex: 'none' }} />
-                        <div style={{ width: 2, flex: 1, background: 'var(--border)', margin: '3px 0' }} />
-                      </div>
-                      <div style={{ paddingBottom: 18, flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                          <span style={{ fontSize: 10.5, fontWeight: 600, color: ev.color, background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 5 }}>{ev.system}</span>
-                          <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{ev.when}</span>
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{ev.action}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 1 }}>{ev.detail}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                )}
-              </>
-            )}
+        </div>
+      </div>
 
-            {tab === 'produtividade' && (
-              <>
-                {/* Concluídas REAL no período (soma das atividades concluídas nos sistemas).
+      {/*
+        ⚠️⚠️ PÁGINA ÚNICA, e não abas (decisão do dono, 03/09/2026).
+
+        O leitor é o GESTOR PRESTES A AVALIAR, e ele não vem com UMA pergunta —
+        vem formar um juízo que cruza dimensões. Os oito critérios da avaliação
+        atravessam o que eram as abas: *Entrega* vive na atividade, *Conduta* na
+        assiduidade, *Iniciativa* está espalhada. Com abas ele visitava quatro
+        vezes e montava o quadro de memória — e memória entre cliques é onde a
+        impressão vira "acho que ela andou faltando".
+
+        Rolar é mais barato que clicar e lembrar. Depois de sair a Trajetória e o
+        Reconhecimento (que eram inventados), sobraram quatro blocos: cabe.
+      */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+          <Secao titulo="O que os sistemas registraram" sub={`Por fonte · ${periodo}`}>
+{/* Concluídas REAL no período (soma das atividades concluídas nos sistemas).
                     Atrasadas/Pendentes não têm fonte → ocultas. */}
                 <div style={{ display: 'flex', gap: 14, marginBottom: 22, alignItems: 'stretch' }}>
                   <div style={{ flex: 'none', minWidth: 150, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -440,17 +439,40 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     )}
                   </div>
                 )}
-              </>
-            )}
+          </Secao>
 
-            {/* ⚠️ A aba só desenha com o dado do PERÍODO — ver o comentário no
-                topo do arquivo sobre não cair no acumulado enquanto carrega. */}
-            {tab === 'assiduidade' && !ass && (
-              <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-mute)', fontSize: 13 }}>Carregando o período…</div>
-            )}
-            {tab === 'assiduidade' && ass && (
+          <Secao titulo="Linha do tempo" sub={`O que aconteceu, dia a dia · ${periodo}`}>
+<div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18 }}>Linha do tempo cross-sistema · dados reais · {periodo}</div>
+                {timeline !== null && timeline.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '14px 16px' }}>Sem atividade registrada nos sistemas integrados neste período.</div>
+                ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {(timeline ?? []).map((ev, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{ width: 11, height: 11, borderRadius: '50%', background: ev.color, marginTop: 4, flex: 'none' }} />
+                        <div style={{ width: 2, flex: 1, background: 'var(--border)', margin: '3px 0' }} />
+                      </div>
+                      <div style={{ paddingBottom: 18, flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 600, color: ev.color, background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 5 }}>{ev.system}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{ev.when}</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{ev.action}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 1 }}>{ev.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                )}
+          </Secao>
+
+          <Secao titulo="Assiduidade e disciplina" sub={`Ponto eletrônico · ${periodo}`}>
+            {!ass ? (
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-mute)', fontSize: 13 }}>Carregando o período…</div>
+            ) : (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>Ponto eletrônico · {periodo}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
@@ -533,10 +555,25 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 </div>
               </>
             )}
+          </Secao>
 
-            {tab === 'formacao' && (
-              <>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/*
+            ⚠️ A FORMAÇÃO é leitura aqui; a EDIÇÃO fica atrás de um botão.
+            Campo editável no meio do fluxo de quem está julgando alguém é
+            convite a mexer sem querer — e o cadastro de escolaridade é
+            manutenção, não parte do juízo.
+          */}
+          <Secao
+            titulo="Formação"
+            sub="Retrato de hoje · não acompanha o filtro de período"
+            acao={
+              <button onClick={() => setEditando((v) => !v)} className="tc-btn"
+                style={{ background: editando ? 'var(--accent)' : 'transparent', border: `1px solid ${editando ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: editando ? '#fff' : 'var(--text-dim)', padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                {editando ? 'Fechar edição' : 'Editar cadastro'}
+              </button>
+            }
+          >
+<div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                 </div>
                 <div style={{ marginBottom: 22 }}>
@@ -579,12 +616,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 ) : (
                   <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>
                 )}
-                <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
-                <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
-              </>
-            )}
-          </div>
+                {editando && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-soft)' }}>
+                    <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
+                    <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
+                  </div>
+                )}
+          </Secao>
         </div>
+
 
         {/*
           ⚠️⚠️ AQUI HAVIA "Fatores para decisão" · Resumo executivo · aumento /
@@ -693,6 +733,25 @@ function PainelDoAvaliador({ vm, m, periodo }: {
         Estes números são o que os sistemas viram — não são a nota. A nota é sua, e o que ela mede
         (entrega, prazo, conduta, equipe) nenhum sistema registra.
       </div>
+    </div>
+  )
+}
+
+/** Um bloco da ficha. Substitui as abas: mesmo peso visual, título próprio, e
+ *  um canto para a ação daquele bloco (hoje só a Formação usa). */
+function Secao({ titulo, sub, acao, children }: {
+  titulo: string; sub?: string; acao?: React.ReactNode; children: React.ReactNode
+}) {
+  return (
+    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{titulo}</div>
+          {sub && <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>{sub}</div>}
+        </div>
+        {acao}
+      </div>
+      {children}
     </div>
   )
 }
