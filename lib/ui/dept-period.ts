@@ -57,7 +57,13 @@ export type DeptMetrics = {
     cancelados: number; segundos: number
   }
   whatsapp: { abertos: number; finalizados: number; handleSum: number }
-  assiduidade: { atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null }
+  assiduidade: {
+    atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
+    /** A janela pedida foi coberta pelo import do ponto? Ver `lib/ponto-cobertura.ts`.
+     *  Opcional porque resposta antiga em cache não traz o campo. */
+    janelaComPonto?: boolean
+    motivoSemPonto?: string | null
+  }
   demografia: {
     idadeMedia: number | null; idadesInformadas: number
     tempoCasaMeses: number | null; generos: Record<string, number>

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
 import { quemEh, filtroDeAvaliaveis } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
+import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 
 /* ============================================================
    O RELATÓRIO DE UM DEPARTAMENTO, no período pedido.
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
 
   const id = req.nextUrl.searchParams.get('id') ?? ''
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
+  const cobPonto = await coberturaDoPonto()
   const range = { day: { gte: fromDay, lte: toDay } }
 
   const dept = await prisma.department.findUnique({
@@ -505,6 +507,14 @@ export async function GET(req: NextRequest) {
     assiduidade: {
       atrasos: n(assid._sum.atrasos), abonados: n(assid._sum.atrasosAbon),
       minutos: n(assid._sum.minutosAtraso), advertencias: adv,
+      /* ⚠️⚠️ A JANELA FOI MEDIDA? Sem isto o relatório do setor mostrava
+         "Advertências 0 · no período" e "Atrasos 0 · 0 min somados" em cinza
+         tranquilo — em "Últimos 30 dias", que é justamente a janela em que o
+         import do ponto (parado em 25/06/2026) não alcança. Zero aqui se lê como
+         "o setor não teve ocorrência", e o que houve foi ninguém medir.
+         É o QUINTO consumidor da mesma régua; ver `lib/ponto-cobertura.ts`. */
+      janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
+      motivoSemPonto: janelaTemDado(cobPonto, fromDay, toDay) ? null : motivoSemPonto(cobPonto, true, false),
       // ⚠️ FALTA não tem fonte no dump do Nexo → `null`, e a tela mostra "—".
       // Zero se leria como "ninguém faltou", que é o que não se sabe.
       faltas: null as number | null,

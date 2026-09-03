@@ -34,6 +34,12 @@ export function Hero({ m }: { m: DeptMetrics }) {
     + ` ÷ ${m.equipe.ativos + m.turnover.saidas12m} pessoas que passaram pelo setor`
     + ` (${m.equipe.ativos} ativas hoje + ${m.turnover.saidas12m} que saíram) = ${m.turnover.taxa12m}%`
 
+  /* ⚠️ `?? true` aqui, ao contrário do `?? false` dos hooks: uma resposta ANTIGA
+     em cache, de antes desta rota devolver a bandeira, traz números que eram
+     válidos. O que não pode é a bandeira nova dizer `false` e a tela ignorar. */
+  const semPonto = m.assiduidade.janelaComPonto === false
+  const motivoPonto = m.assiduidade.motivoSemPonto ?? 'sem dado de ponto nesta janela'
+
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22, marginBottom: 16 }}>
       <div className="hero-setor" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 26, alignItems: 'center' }}>
@@ -90,16 +96,29 @@ export function Hero({ m }: { m: DeptMetrics }) {
               dica={contaTurnover}
               cor={m.turnover.taxa12m >= 20 ? 'var(--danger)' : m.turnover.taxa12m > 0 ? 'var(--warning)' : 'var(--text-mute)'}
             />
+            {/* ⚠️⚠️ "—" e não 0 quando a janela não foi medida. O ponto é a única
+                fonte sem cron (entra por import à mão) e parava em 25/06/2026:
+                em "Últimos 30 dias" estes dois cartões diziam **0**, em cinza
+                tranquilo, sobre um setor que ninguém mediu. Zero se lê como "não
+                houve ocorrência" — e é a leitura que inocenta e a que acusa,
+                dependendo do cartão, sempre sem base. */}
             <Sinal
-              Icone={AlertTriangle} rotulo="Advertências" valor={String(m.assiduidade.advertencias)}
-              nota="no período" dica="Eventos de advertência registrados no ponto, dentro do intervalo selecionado."
-              cor={m.assiduidade.advertencias > 0 ? 'var(--danger)' : 'var(--text-mute)'}
+              Icone={AlertTriangle} rotulo="Advertências"
+              valor={semPonto ? '—' : String(m.assiduidade.advertencias)}
+              nota={semPonto ? motivoPonto : 'no período'}
+              dica={semPonto
+                ? 'O ponto entra por importação manual e não alcançou esta janela. Zero aqui significaria "não houve advertência", e o que houve foi ninguém medir.'
+                : 'Eventos de advertência registrados no ponto, dentro do intervalo selecionado.'}
+              cor={!semPonto && m.assiduidade.advertencias > 0 ? 'var(--danger)' : 'var(--text-mute)'}
             />
             <Sinal
-              Icone={AlarmClock} rotulo="Atrasos" valor={String(m.assiduidade.atrasos)}
-              nota={`${m.assiduidade.minutos.toLocaleString('pt-BR')} min somados`}
-              dica={`Atrasos NÃO abonados no período. Os abonados (${m.assiduidade.abonados}) são justificados e não punem.`}
-              cor={m.assiduidade.atrasos > 0 ? 'var(--warning)' : 'var(--text-mute)'}
+              Icone={AlarmClock} rotulo="Atrasos"
+              valor={semPonto ? '—' : String(m.assiduidade.atrasos)}
+              nota={semPonto ? motivoPonto : `${m.assiduidade.minutos.toLocaleString('pt-BR')} min somados`}
+              dica={semPonto
+                ? 'O ponto entra por importação manual e não alcançou esta janela.'
+                : `Atrasos NÃO abonados no período. Os abonados (${m.assiduidade.abonados}) são justificados e não punem.`}
+              cor={!semPonto && m.assiduidade.atrasos > 0 ? 'var(--warning)' : 'var(--text-mute)'}
             />
           </div>
 
