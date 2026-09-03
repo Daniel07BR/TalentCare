@@ -2,8 +2,23 @@
 import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
+export type PessoaDoSetor = {
+  id: string; nome: string; cargo: string
+  /** Sem conta no Nexus → não aparece em fonte nenhuma. `0` seria mentira. */
+  semFonte: boolean
+  atividade: number; mensagens: number
+  atrasos: number; minutosAtraso: number; advertencias: number
+  /** null = ainda não avaliada nesta competência (≠ nota zero). */
+  nota: number | null
+}
+
 export type DeptMetrics = {
+  pessoas: PessoaDoSetor[]
   setor: { id: string; nome: string; pelaDiretoria: boolean }
+  /** Turnover REAL. `taxa12m` não acompanha o filtro — taxa só diz algo em 12 meses. */
+  turnover: { saidasNoPeriodo: number; nomesQueSairam: string[]; saidas12m: number; taxa12m: number }
+  /** Atividade real mês a mês, do primeiro mês COM registro. */
+  serie: { mes: string; atividade: number }[]
   period: string; fromDay: string; toDay: string; dias: number; label: string
   equipe: { ativos: number; total: number; comNexus: number }
   classroom: { criados: number; assistidos: number; videos: number }

@@ -11,6 +11,9 @@ import { withRealScores } from '@/lib/mock/score'
 import { deptDetailVM } from '@/lib/mock/departments'
 import { educationByDept } from '@/lib/mock/education'
 import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
+import { Atencao } from './Atencao'
+import { Pessoas } from './Pessoas'
+import { Tendencia, Turnover } from './Tendencia'
 import { usePeriod } from '@/lib/ui/period'
 import { criterioDe, ancoraDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
 import Avatar from '../../Avatar'
@@ -30,6 +33,22 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   // porque ninguém desconfia de um número plausível.
   const { m } = useDeptPeriod(id)
 
+  /* ⚠️ "Abaixo do esperado" = nota < 7, a âncora da escala (7–8 é "atende").
+     O corte vem de `criterios.ts` e não de um número escolhido aqui — dois
+     limiares diferentes para a mesma pergunta seria o começo de duas verdades. */
+  const abaixoDoEsperado = (m?.pessoas ?? [])
+    .filter((p): p is typeof p & { nota: number } => p.nota != null && p.nota < 7)
+    .sort((a, b) => a.nota - b.nota)
+    .map((p) => ({ id: p.id, nome: p.nome, nota: p.nota }))
+
+  // Clicar num alerta leva ao bloco que o explica — alerta que não leva a lugar
+  // nenhum obriga o gestor a caçar na página o que o número quis dizer.
+  const irPara = (chave: string) => {
+    const destino = chave === 'avaliar' || chave === 'abaixo' ? 'sec-pessoas'
+      : chave === 'turnover' ? 'sec-tendencia' : 'sec-assiduidade'
+    document.getElementById(destino)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   if (!vm) {
     return (
       <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -42,25 +61,80 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <button onClick={() => router.push('/departamentos')} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar aos departamentos</button>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>
-          Relatório do setor · <b>{label}</b>
-        </div>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>{vm.name}</h1>
-      </div>
+      {/*
+        ⚠️⚠️ A ORDEM DA PÁGINA É A ORDEM DO Z, e é uma decisão, não estética:
+          1. topo-esquerda  → o que EXIGE AÇÃO (é onde o olho começa)
+          2. topo-direita   → o veredito do setor, para situar
+          3. meio           → AS PESSOAS, comparadas entre si — o coração
+          4. abaixo         → tendência e rotatividade, ambas REAIS
+          5. rodapé         → o detalhe por sistema e o contexto da equipe
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
-        {vm.kpis.map((k) => (
-          <div key={k.label} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>{k.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-1px', color: k.color }}>{k.value}</span><span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{k.unit}</span></div>
+        Um relatório de setor é lido por quem PODE AGIR sobre ele. Score e
+        headcount não pedem nada de ninguém; "quatro pessoas sem avaliação e duas
+        com advertência" pede — e por isso vem primeiro.
+      */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 16, alignItems: 'start', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>
+            Relatório do setor · <b>{label}</b>
           </div>
-        ))}
+          <h1 style={{ margin: '0 0 18px', fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
+          {m ? (
+            <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} onIr={irPara} />
+          ) : (
+            <div style={{ height: 92, background: 'var(--surface-2)', borderRadius: 'var(--radius)', opacity: 0.5 }} />
+          )}
+        </div>
+
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span className="cnum" style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-2px', color: vm.kpis[0].color as string, lineHeight: 1 }}>{vm.score}</span>
+            <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>/100 score do setor</span>
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 11 }}>
+            <Barra nome={vm.name} valor={vm.score} largura={vm.barSelf} cor="var(--accent)" />
+            <Barra nome="Média da empresa" valor={vm.compAvg} largura={vm.barComp} cor="var(--text-mute)" esmaecido />
+          </div>
+          <div style={{ display: 'flex', gap: 22, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Pessoas</div>
+              <div className="cnum" style={{ fontSize: 18, fontWeight: 700 }}>{m ? m.equipe.ativos : vm.kpis[1].value}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>vs. empresa</div>
+              <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: vm.score - vm.compAvg >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                {vm.score - vm.compAvg >= 0 ? '+' : ''}{vm.score - vm.compAvg} pts
+              </div>
+            </div>
+            {m && (
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Rotatividade</div>
+                <div className="cnum" style={{ fontSize: 18, fontWeight: 700, color: m.turnover.taxa12m >= 20 ? 'var(--danger)' : 'var(--text)' }}>
+                  {m.turnover.taxa12m}%
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* 3 · AS PESSOAS — o coração do relatório */}
+      <div id="sec-pessoas" style={{ marginBottom: 16 }}>
+        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} />}
+      </div>
+
+      {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais */}
+      {m && (
+        <div id="sec-tendencia" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+          <Tendencia m={m} />
+          <Turnover m={m} />
+        </div>
+      )}
+
+      <div id="sec-avaliacao" />
       {m && <Avaliacao m={m} />}
       {m && <Atividade m={m} />}
-      {m && <Assiduidade m={m} />}
+      <div id="sec-assiduidade">{m && <Assiduidade m={m} />}</div>
       {m && <Equipe m={m} />}
 
       {edu && (
@@ -82,39 +156,30 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Evolução do score</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Últimos 12 meses</div>
-          <svg viewBox="0 0 300 84" preserveAspectRatio="none" style={{ width: '100%', height: 120 }}>
-            <path d={vm.histArea} fill="url(#dgrad)" opacity="0.5" />
-            <path d={vm.histLine} fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            <defs><linearGradient id="dgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--accent)" stopOpacity="0.3" /><stop offset="100%" stopColor="var(--accent)" stopOpacity="0" /></linearGradient></defs>
-          </svg>
-        </div>
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Comparativo com a empresa</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}><span>{vm.name}</span><span style={{ fontWeight: 700, color: 'var(--accent)' }}>{vm.score}</span></div><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: vm.barSelf, background: 'var(--accent)', borderRadius: 20 }} /></div></div>
-            <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5 }}><span style={{ color: 'var(--text-dim)' }}>Média da empresa</span><span style={{ fontWeight: 700 }}>{vm.compAvg}</span></div><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: vm.barComp, background: 'var(--text-mute)', borderRadius: 20 }} /></div></div>
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 600, margin: '22px 0 4px' }}>Atrasos do setor · últimas 18 semanas</div>
-          <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12 }}>Soma dos atrasos dos membros por dia; mais escuro = mais minutos.</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 3 }}>{vm.heat.map((c, i) => <div key={i} title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}` : `${c.iso}: sem ocorrência`} style={{ aspectRatio: '1', borderRadius: 2, background: c.bg, opacity: c.future ? 0 : 1 }} />)}</div>
-        </div>
-      </div>
+      {/*
+        ⚠️⚠️ Saíram daqui a "Evolução do score · 12 meses", o "Comparativo com a
+        empresa" e o "Ranking interno".
 
+        A evolução do score era `rnd(seed)` — passeio aleatório semeado pelo id do
+        setor, terminando no score de hoje. Uma linha sem relação com o passado, no
+        lugar mais nobre da tela. Virou a ATIVIDADE mês a mês, que é real.
+
+        O comparativo subiu para o cartão de veredito, no topo: é contexto para ler
+        o resto, não conclusão de rodapé.
+
+        E o ranking virou `<Pessoas>` — um ranking só por score ordena gente sem
+        dizer POR QUE; a comparação mostra nota, atividade e ocorrências lado a
+        lado, que é o que deixa agir.
+      */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Ranking interno · {vm.name}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {vm.ranking.map((r) => (
-            <div key={r.id} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 9, borderRadius: 8, cursor: 'pointer' }}>
-              <span style={{ width: 20, fontSize: 12, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center', flex: 'none' }}>{r.rank}</span>
-              <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={30} />
-              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 600 }}>{r.nome}</div><div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{r.cargo}</div></div>
-              <div style={{ width: 120, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden', flex: 'none' }}><div style={{ height: '100%', width: r.scorePct, background: r.scoreColor, borderRadius: 20 }} /></div>
-              <span style={{ width: 32, textAlign: 'right', fontSize: 14, fontWeight: 700, color: r.scoreColor }}>{r.score}</span>
-            </div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atrasos do setor · últimas 18 semanas</div>
+        <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginBottom: 14 }}>
+          Soma dos atrasos dos membros por dia; mais escuro = mais minutos. São sempre 18 semanas — não acompanha o filtro.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 3 }}>
+          {vm.heat.map((c, i) => (
+            <div key={i} className="cpop" style={{ animationDelay: `${Math.min(i, 40) * 8}ms`, aspectRatio: '1', borderRadius: 2, background: c.bg, opacity: c.future ? 0 : 1 }}
+              title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}` : `${c.iso}: sem ocorrência`} />
           ))}
         </div>
       </div>
@@ -411,5 +476,22 @@ function Equipe({ m }: { m: DeptMetrics }) {
         )}
       </div>
     </Card>
+  )
+}
+
+/** Uma barra de comparação com rótulo. Usada no cartão de veredito. */
+function Barra({ nome, valor, largura, cor, esmaecido }: {
+  nome: string; valor: number; largura: string; cor: string; esmaecido?: boolean
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+        <span style={{ color: esmaecido ? 'var(--text-dim)' : 'var(--text)' }}>{nome}</span>
+        <span style={{ fontWeight: 700, color: esmaecido ? 'var(--text-dim)' : cor }}>{valor}</span>
+      </div>
+      <div style={{ height: 9, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
+        <div className="cbar" style={{ height: '100%', width: largura, background: cor, borderRadius: 20 }} />
+      </div>
+    </div>
   )
 }
