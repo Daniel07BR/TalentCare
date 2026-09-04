@@ -15,13 +15,18 @@ import Avatar from '../../Avatar'
    ninguém passa pelas oito.
    ============================================================ */
 
-export type Pessoa = { id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number }
+export type Pessoa = {
+  id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number
+  /** Legenda ao lado de quem está em ZERO — ex.: "último em 02/07". Só a
+   *  planilha do setor usa; ver `todos` abaixo. */
+  nota?: string
+}
 export type Numero = { label: string; valor: number | string | null; cor?: string; nota?: string }
 
 const fmt = (v: number | string | null) =>
   v === null ? '—' : typeof v === 'number' ? v.toLocaleString('pt-BR') : v
 
-export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNinguem, numeros, rodape }: {
+export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNinguem, numeros, rodape, todos }: {
   titulo: string
   sub?: string
   cor: string
@@ -33,13 +38,29 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
   semNinguem?: string
   numeros: Numero[]
   rodape?: React.ReactNode
+  /**
+   * Mostra TAMBÉM quem está em zero.
+   *
+   * ⚠️⚠️ Falso para as oito fontes espelhadas, e verdadeiro para a planilha que o
+   * SETOR mantém — e a diferença não é de gosto. Quem RESOLVE chamado de
+   * HelpDesk é o T.I; listar as outras 80 pessoas com zero ali acusaria quem
+   * nunca passou por aquele sistema. Mas na planilha do próprio setor **todo
+   * mundo do setor deveria estar**, e quem não está é NOTÍCIA.
+   *
+   * Foi o caso do Gabriel Santana em 04/09/2026: 692 serviços concluídos no
+   * arquivo, o último em 02/07, e em agosto ele simplesmente SUMIU da lista em
+   * vez de aparecer com zero. Sumir da lista é a ausência de dado sendo lida
+   * como ausência de pessoa — e é justamente o que o gestor precisa ver.
+   */
+  todos?: boolean
 }) {
   const router = useRouter()
   const max = Math.max(1, ...ranking.map((p) => p.valor))
-  // Corta em 6: o cartão não pode crescer com o setor, ou o Fiscal (22 pessoas)
-  // empurra todo o resto da página para fora da tela. O resto tem caminho — a
-  // linha abaixo aponta para "As pessoas", onde a lista é completa.
-  const visiveis = ranking.slice(0, 6)
+  // Corta em 6 nas fontes espelhadas: o cartão não pode crescer com o setor, ou
+  // o Fiscal (22 pessoas) empurra todo o resto da página para fora da tela. Na
+  // planilha do setor mostra todo mundo — o time inteiro cabe, e faltar alguém
+  // é o dado.
+  const visiveis = todos ? ranking : ranking.slice(0, 6)
   const resto = ranking.length - visiveis.length
 
   return (
@@ -87,17 +108,25 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
                     fontFamily: 'inherit', textAlign: 'left', width: '100%',
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? cor : 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 && p.valor > 0 ? cor : 'var(--text-mute)', textAlign: 'center' }}>{p.valor > 0 ? i + 1 : '·'}</span>
                   <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color={cor} size={30} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: p.valor > 0 ? 'var(--text)' : 'var(--text-dim)' }}>
+                      {p.nome}
+                      {/* ⚠️ Zero sem explicação vira acusação. A legenda diz
+                          desde quando — "último em 02/07" é uma conversa; um
+                          zero mudo é um julgamento. */}
+                      {p.valor === 0 && p.nota && (
+                        <span style={{ fontWeight: 500, color: 'var(--text-mute)', fontSize: 11 }}> · {p.nota}</span>
+                      )}
+                    </div>
                     {/* A barra fica SOB o nome: ela compara dentro desta fonte e
                         deste setor, e não é uma nota sobre a pessoa. */}
                     <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 4, marginTop: 3, overflow: 'hidden' }}>
                       <div className="cbar" style={{ height: '100%', width: `${Math.round((p.valor / max) * 100)}%`, background: cor, borderRadius: 4, opacity: i === 0 ? 1 : 0.62 }} />
                     </div>
                   </div>
-                  <span className="cnum" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 800, color: i === 0 ? cor : 'var(--text)', letterSpacing: '-.3px' }}>
+                  <span className="cnum" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 800, color: p.valor === 0 ? 'var(--text-mute)' : (i === 0 ? cor : 'var(--text)'), letterSpacing: '-.3px' }}>
                     {p.valor.toLocaleString('pt-BR')}
                   </span>
                 </button>

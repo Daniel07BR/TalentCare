@@ -348,6 +348,9 @@ function Atividade({ m }: { m: DeptMetrics }) {
         titulo="Serviços do setor" sub={sv.cobertura ? `da planilha ${sv.cobertura.arquivo}` : undefined}
         cor="var(--chart-2)" Icone={FileSpreadsheet}
         ranking={r.servicos?.gente ?? []} unidade={r.servicos?.rotulo || 'mais concluiu serviço'}
+        /* ⚠️ TODO MUNDO do setor, inclusive em zero: nesta fonte faltar da lista
+           é o dado. Ver `CardFonte.todos`. */
+        todos
         semNinguem="Há serviços no período, mas nenhum está vinculado a alguém do quadro."
         numeros={[
           { label: 'Concluídos', valor: sv.concluidos, cor: 'var(--success)' },

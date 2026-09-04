@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id') ?? ''
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const cobPonto = await coberturaDoPonto()
-  const [servicosDoSetor, coberturaServicos, totalDaPlanilha] = await Promise.all([
+  const [servicosDoSetor, coberturaServicos, totalDaPlanilha, ultimoPorPessoa] = await Promise.all([
     prisma.servicoDepto.findMany({
       where: { departmentId: id, dia: { gte: fromDay, lte: toDay } },
       select: { personKey: true, status: true, minutos: true },
@@ -55,6 +55,17 @@ export async function GET(req: NextRequest) {
     prisma.servicoDepto.groupBy({
       by: ['status'],
       where: { departmentId: id },
+      _count: { _all: true },
+    }),
+    /* ⚠️⚠️ O ÚLTIMO SERVIÇO DE CADA UM, sem filtro de período. É o que transforma
+       um zero mudo em conversa: o Gabriel Santana tem 692 concluídos no arquivo
+       e o último em 02/07/2026 — em agosto ele sumia da lista em vez de aparecer
+       com zero e a data ao lado. Sumir é a ausência de dado sendo lida como
+       ausência de pessoa. */
+    prisma.servicoDepto.groupBy({
+      by: ['personKey'],
+      where: { departmentId: id, status: 'concluida', personKey: { not: null } },
+      _max: { dia: true },
       _count: { _all: true },
     }),
   ])
@@ -471,14 +482,25 @@ export async function GET(req: NextRequest) {
   const mServConcl = new Map(servicosDoSetor
     .filter((x) => x.personKey && x.status === 'concluida')
     .reduce((m, x) => m.set(x.personKey!, (m.get(x.personKey!) ?? 0) + 1), new Map<string, number>()))
-  const rankPorChave = (valores: Map<string, number>) =>
+  const ultimoDe = new Map(ultimoPorPessoa.map((r) => [r.personKey!, r._max.dia]))
+  const totalDe = new Map(ultimoPorPessoa.map((r) => [r.personKey!, r._count._all]))
+  const br = (d: string) => d.split('-').reverse().slice(0, 2).join('/')
+  /** O TIME INTEIRO, com zeros — e a legenda que explica o zero. */
+  const rankTimeInteiro = (valores: Map<string, number>) =>
     ativos
-      .map((p) => ({
-        id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl,
-        valor: valores.get(p.nexusUserId ?? p.id) ?? 0,
-      }))
-      .filter((x) => x.valor > 0)
-      .sort((a, b) => b.valor - a.valor)
+      .map((p) => {
+        const chave = p.nexusUserId ?? p.id
+        const ultimo = ultimoDe.get(chave)
+        const total = totalDe.get(chave) ?? 0
+        return {
+          id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl,
+          valor: valores.get(chave) ?? 0,
+          nota: ultimo
+            ? `último em ${br(ultimo)} · ${total.toLocaleString('pt-BR')} no total`
+            : 'nenhum serviço na planilha',
+        }
+      })
+      .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome))
 
   type Rk = { rotulo: string; gente: ReturnType<typeof rank> }
   const comAlternativa = (
@@ -501,7 +523,9 @@ export async function GET(req: NextRequest) {
     // com foto e posição, na mesma gramática dos cartões de entrega, numa tela
     // lida para decidir aumento.
     radio: { rotulo: '', gente: [] },
-    servicos: { rotulo: 'mais concluiu serviço', gente: rankPorChave(mServConcl) },
+    /* ⚠️ A planilha do setor lista TODO MUNDO do setor, inclusive em zero — ao
+       contrário das oito fontes espelhadas. Ver `CardFonte.todos`. */
+    servicos: { rotulo: 'mais concluiu serviço', gente: rankTimeInteiro(mServConcl) },
   }
 
   return NextResponse.json({

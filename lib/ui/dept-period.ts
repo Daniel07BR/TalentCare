@@ -13,7 +13,11 @@ export type PessoaDoSetor = {
   nota: number | null
 }
 
-export type PessoaRank = { id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number }
+export type PessoaRank = {
+  id: string; nome: string; cargo: string; hasAvatar: boolean; valor: number
+  /** Legenda de quem está em ZERO — "último em 02/07 · 692 no total". */
+  nota?: string
+}
 
 export type DeptMetrics = {
   pessoas: PessoaDoSetor[]
