@@ -5,11 +5,17 @@ import { ListChecks, RotateCcw, TriangleAlert } from 'lucide-react'
 type Tarefa = {
   tarefa: string; amostras: number
   mediaMedida: number; mediaEmUso: number; mediaAjustada: number | null
-  medianaMinutos: number; maiores: number[]; menores: number[]
+  cronometradas: number; zerados: number
+  medianaMinutos: number
+  maiores: { minutos: number; quem: string }[]
+  menores: { minutos: number; quem: string }[]
   pontosAuto: number; pontos: number; pontosAjustados: boolean
   ajustado: boolean; ajustadoPor: string | null; ajustadoEm: string | null
   pontosAutoNaEpoca: number | null
 }
+
+const dataBr = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'
 
 const dur = (min: number) => {
   if (min < 60) return `${min} min`
@@ -119,7 +125,8 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                     <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={t.tarefa}>
                       {t.tarefa}
                     </span>
-                    <span style={{ textAlign: 'right', color: poucasAmostras ? 'var(--warning)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ textAlign: 'right', color: poucasAmostras ? 'var(--warning)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}
+                      title={t.zerados ? `${t.amostras} feitos, ${t.cronometradas} com tempo cronometrado` : undefined}>
                       {t.amostras}
                     </span>
 
@@ -135,7 +142,14 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                           if (Number.isFinite(v) && v !== t.mediaEmUso) salvar(t, 'media', v)
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                        title={t.mediaAjustada != null ? `Você definiu ${t.mediaAjustada} min. O medido na planilha é ${t.mediaMedida} min.` : 'A média medida na planilha, em minutos. Pode mudar.'}
+                        /* ⚠️⚠️ QUEM LANÇOU E QUANDO (pedido do dono). Um número
+                           que define o peso de um serviço, e que alguém pode ter
+                           mudado à mão, precisa dizer de quem ele é. Sem ajuste,
+                           diz de onde a medição saiu — quantos serviços e quantos
+                           ficaram de fora por virem sem tempo. */
+                        title={t.mediaAjustada != null
+                          ? `Lançado por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\nO medido na planilha é ${t.mediaMedida} min, em ${t.cronometradas} serviços cronometrados.`
+                          : `Medido em ${t.cronometradas} ${t.cronometradas === 1 ? 'serviço cronometrado' : 'serviços cronometrados'}${t.zerados ? `, com ${t.zerados} fora da conta por virem sem tempo` : ''}.\nPode mudar — o valor que você digitar passa a valer no lugar deste.`}
                         style={{
                           height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 8px',
                           background: 'var(--surface-2)',
@@ -188,11 +202,23 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5 }}>
                     <span>
                       <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>mais longos:</b>{' '}
-                      {t.maiores.map((m) => dur(m)).join(' · ') || '—'}
+                      {t.maiores.length
+                        ? t.maiores.map((m, i) => (
+                            <span key={i} title={`Feito por ${m.quem}`} style={{ cursor: 'help' }}>
+                              {i ? ' · ' : ''}{dur(m.minutos)}
+                            </span>
+                          ))
+                        : '—'}
                     </span>
                     <span>
                       <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>mais curtos:</b>{' '}
-                      {t.menores.map((m) => dur(m)).join(' · ') || '—'}
+                      {t.menores.length
+                        ? t.menores.map((m, i) => (
+                            <span key={i} title={`Feito por ${m.quem}`} style={{ cursor: 'help' }}>
+                              {i ? ' · ' : ''}{dur(m.minutos)}
+                            </span>
+                          ))
+                        : '—'}
                     </span>
                     {puxada && t.mediaAjustada == null && (
                       <span style={{ color: 'var(--warning)' }}>
@@ -204,9 +230,17 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                         {t.amostras === 1 ? 'aconteceu uma única vez — não é média, é o caso' : `só ${t.amostras} ocorrências`}
                       </span>
                     )}
+                    {/* ⚠️ Os zerados ficam VISÍVEIS. Tempo 0 é "não cronometrado"
+                        e sai da média — dizer quantos saíram é o que impede o
+                        número de parecer apurado sobre o total. */}
+                    {t.zerados > 0 && (
+                      <span>
+                        <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>{t.zerados} sem tempo</b> — fora da média
+                      </span>
+                    )}
                     {t.mediaAjustada != null && (
                       <span style={{ color: 'var(--accent)' }}>
-                        média definida por {t.ajustadoPor} · o medido na planilha é {dur(t.mediaMedida)}
+                        média lançada por {t.ajustadoPor} em {dataBr(t.ajustadoEm)} · o medido na planilha é {dur(t.mediaMedida)}
                       </span>
                     )}
                   </div>

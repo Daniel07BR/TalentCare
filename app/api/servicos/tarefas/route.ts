@@ -33,9 +33,14 @@ export type TarefaPontuada = {
   mediaEmUso: number
   mediaAjustada: number | null
   medianaMinutos: number
-  /** Os dois maiores e os dois menores tempos — o que a média esconde. */
-  maiores: number[]
-  menores: number[]
+  /** Quantas entraram na conta (têm tempo) e quantas vieram zeradas. */
+  cronometradas: number
+  zerados: number
+  /** Os dois maiores e os dois menores tempos, com quem fez e quando — é o que
+   *  explica um extremo: "9h24" sozinho não distingue tarefa longa de tarefa
+   *  que travou num dia. */
+  maiores: { minutos: number; quem: string }[]
+  menores: { minutos: number; quem: string }[]
   /** O que a régua calcula: média em uso × fator. */
   pontosAuto: number
   /** O que vale hoje — o override direto, se houver. */
@@ -59,18 +64,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
   }
 
-  const [linhas, ajustes, regra] = await Promise.all([
+  const [linhas, ajustes, regra, usuariosDoSetor] = await Promise.all([
     /* ⚠️ SÓ CONCLUÍDO. Um serviço "aberto" tem tempo PARCIAL — o relógio dele
        ainda está correndo —, e "desconsiderado" o próprio setor descartou.
        Misturar os três faria a média de cada tarefa cair sem que ninguém tivesse
        trabalhado mais rápido. */
     prisma.servicoDepto.findMany({
       where: { departmentId, status: 'concluida' },
-      select: { tarefa: true, minutos: true },
+      select: { tarefa: true, minutos: true, dia: true, nomeOrigem: true, personKey: true },
     }),
     prisma.pontuacaoTarefaAjuste.findMany({ where: { departmentId } }),
     prisma.pontuacaoRegra.findFirst({
       where: { departmentId }, orderBy: { vigenteDesde: 'desc' }, select: { fatorPorMinuto: true },
+    }),
+    prisma.user.findMany({
+      where: { origin: { in: ['nexus', 'staff'] } },
+      select: { id: true, nexusUserId: true, name: true },
     }),
   ])
 
@@ -82,17 +91,41 @@ export async function GET(req: NextRequest) {
   const nomePorId = new Map(autores.map((a) => [a.id, a.name]))
   const ajustePorTarefa = new Map(ajustes.map((a) => [a.tarefa, a]))
 
-  const porTarefa = new Map<string, number[]>()
+  /* ⚠️⚠️ TEMPO ZERO É "NÃO CRONOMETRADO", NÃO "INSTANTÂNEO" (confirmado pelo dono
+     em 04/09/2026). São 138 dos 5.227 concluídos — 2,6% —, e eles estavam
+     entrando na média puxando-a para BAIXO: um CERTIFICADO de 0 minuto barateava
+     os outros 388. É a regra da casa outra vez, no mesmo dia e em mais uma
+     roupa: ausência de medição não é medição de zero.
+
+     ⚠️ O efeito é honestamente pequeno (CERTIFICADO 47 → 49 min, ABERTURA
+     SIMPLES NACIONAL 28 → 30), e vale dizer isso em vez de vender o conserto
+     como grande. O que importa é que a conta passa a descrever o que foi
+     medido — e no dia em que um tipo vier com metade das linhas zerada, ela não
+     vai desabar em silêncio. */
+  const porTarefa = new Map<string, typeof linhas>()
   for (const l of linhas) {
     const arr = porTarefa.get(l.tarefa) ?? []
-    arr.push(l.minutos)
+    arr.push(l)
     porTarefa.set(l.tarefa, arr)
   }
 
-  const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, mins]) => {
-    const ordenado = [...mins].sort((a, b) => a - b)
-    const mediaMedida = Math.round(mins.reduce((a, b) => a + b, 0) / mins.length)
-    const mediana = ordenado[Math.floor(ordenado.length / 2)]
+  const nomeDaChave = new Map(usuariosDoSetor.map((u) => [u.nexusUserId ?? u.id, u.name]))
+  const brDia = (d: string) => d.split('-').reverse().join('/')
+  /** Quem fez e quando — é o que explica um extremo. */
+  const quemFez = (l: { personKey: string | null; nomeOrigem: string; dia: string }) =>
+    `${(l.personKey && nomeDaChave.get(l.personKey)) || l.nomeOrigem} · ${brDia(l.dia)}`
+
+  const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, todas]) => {
+    const cronometradas = todas.filter((l) => l.minutos > 0)
+    const zerados = todas.length - cronometradas.length
+    /* Tipo em que NINGUÉM cronometrou nada: a média não existe. Devolver 0 aqui
+       daria 1 ponto ao serviço e ninguém saberia por quê. */
+    const base = cronometradas.length ? cronometradas : []
+    const ordenado = [...base].sort((a, b) => a.minutos - b.minutos)
+    const mediaMedida = base.length
+      ? Math.round(base.reduce((a, l) => a + l.minutos, 0) / base.length)
+      : 0
+    const mediana = ordenado.length ? ordenado[Math.floor(ordenado.length / 2)].minutos : 0
     const aj = ajustePorTarefa.get(tarefa)
     /* A média EM USO é a que a liderança escolheu, quando escolheu. A medida
        continua viajando ao lado: trocar uma pela outra faria o sistema afirmar
@@ -101,7 +134,11 @@ export async function GET(req: NextRequest) {
     const pontosAuto = Math.max(1, Math.round(mediaEmUso * fator))
     return {
       tarefa,
-      amostras: mins.length,
+      amostras: todas.length,
+      /** Quantas entraram na conta — as cronometradas. */
+      cronometradas: cronometradas.length,
+      /** Quantas vieram sem tempo e ficaram FORA da média. */
+      zerados,
       mediaMedida,
       mediaEmUso,
       mediaAjustada: aj?.mediaMinutos ?? null,
@@ -111,8 +148,8 @@ export async function GET(req: NextRequest) {
          esperasse. Quem define o peso de um serviço precisa ver que o
          CERTIFICADO tem casos de 9h24 e casos de 1 minuto: é o que separa "esta
          tarefa é longa" de "esta tarefa travou um dia". */
-      maiores: [...ordenado].reverse().slice(0, 2),
-      menores: ordenado.slice(0, 2),
+      maiores: [...ordenado].reverse().slice(0, 2).map((l) => ({ minutos: l.minutos, quem: quemFez(l) })),
+      menores: ordenado.slice(0, 2).map((l) => ({ minutos: l.minutos, quem: quemFez(l) })),
       pontosAuto,
       pontos: aj?.pontos ?? pontosAuto,
       pontosAjustados: aj?.pontos != null,
