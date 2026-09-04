@@ -4,7 +4,7 @@ import { Scale } from 'lucide-react'
 import { calcular, type EventoPontuacao } from '@/lib/servicos/pontuacao'
 
 type Versao = {
-  id: string; base: number; vigenteDesde: string; motivo: string | null
+  id: string; base: number; fatorPorMinuto?: number; vigenteDesde: string; motivo: string | null
   criadoEm: string; criadoPor: string
   itens: { evento: string; pontos: number }[]
 }
@@ -21,6 +21,7 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
   const [versoes, setVersoes] = useState<Versao[]>([])
   const [compAtual, setCompAtual] = useState('')
   const [base, setBase] = useState(100)
+  const [fator, setFator] = useState(0.5)
   const [pontos, setPontos] = useState<Record<string, number>>({})
   const [vigencia, setVigencia] = useState('')
   const [motivo, setMotivo] = useState('')
@@ -38,6 +39,7 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
         setVigencia(d.competenciaAtual ?? '')
         const vigente = d.versoes?.[0]
         setBase(vigente?.base ?? 100)
+        setFator(vigente?.fatorPorMinuto ?? 0.5)
         const p: Record<string, number> = {}
         for (const e of d.eventos ?? []) {
           p[e.chave] = vigente?.itens.find((i) => i.evento === e.chave)?.pontos ?? e.sugestao
@@ -54,7 +56,7 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
     const r = await fetch('/api/servicos/regra', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        departmentId, base, vigenteDesde: vigencia, motivo,
+        departmentId, base, fatorPorMinuto: fator, vigenteDesde: vigencia, motivo,
         itens: eventos.map((e) => ({ evento: e.chave, pontos: pontos[e.chave] ?? 0 })),
       }),
     })
@@ -89,6 +91,11 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12, marginBottom: 16 }}>
             <Campo label="Base do mês" descricao="com quantos pontos todo mundo começa" valor={base} onChange={setBase} />
+            {/* ⚠️⚠️ O multiplicador de TODA a pontuação de serviço. Ver o
+                comentário na rota: com 0,5 a parte de serviço vale milhares e a
+                disciplinar dezenas. */}
+            <Campo label="Ponto por minuto de serviço" descricao="× a duração média de cada tipo — define o peso da tabela abaixo"
+              valor={fator} onChange={setFator} decimal />
             {eventos.map((e) => (
               <Campo key={e.chave} label={e.label} descricao={e.descricao}
                 valor={pontos[e.chave] ?? 0} onChange={(v) => setPontos((p) => ({ ...p, [e.chave]: v }))} />
@@ -133,7 +140,7 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {versoes.map((v) => (
                   <div key={v.id} style={{ fontSize: 12, background: 'var(--surface-2)', borderRadius: 6, padding: '8px 10px', lineHeight: 1.5 }}>
-                    <b>a partir de {v.vigenteDesde}</b> · base {v.base}
+                    <b>a partir de {v.vigenteDesde}</b> · base {v.base}{v.fatorPorMinuto != null ? ` · ${v.fatorPorMinuto} pt/min de serviço` : ''}
                     {v.itens.filter((i) => i.pontos).map((i) => ` · ${rotulo(eventos, i.evento)} ${i.pontos > 0 ? '+' : ''}${i.pontos}`).join('')}
                     <div style={{ color: 'var(--text-mute)', fontSize: 11 }}>
                       {v.criadoPor} · {new Date(v.criadoEm).toLocaleDateString('pt-BR')}{v.motivo ? ` · ${v.motivo}` : ''}
@@ -151,12 +158,13 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
 
 const rotulo = (eventos: EventoPontuacao[], chave: string) => eventos.find((e) => e.chave === chave)?.label ?? chave
 
-function Campo({ label, descricao, valor, onChange }: { label: string; descricao: string; valor: number; onChange: (v: number) => void }) {
+function Campo({ label, descricao, valor, onChange, decimal }: { label: string; descricao: string; valor: number; onChange: (v: number) => void; decimal?: boolean }) {
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginBottom: 6, minHeight: 26, lineHeight: 1.3 }}>{descricao}</div>
-      <input type="number" value={valor} onChange={(e) => onChange(parseInt(e.target.value || '0', 10))}
+      <input type="number" step={decimal ? '0.01' : '1'} value={valor}
+        onChange={(e) => onChange(decimal ? (parseFloat(e.target.value || '0') || 0) : parseInt(e.target.value || '0', 10))}
         style={{ width: '100%', height: 34, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: valor < 0 ? 'var(--danger)' : valor > 0 ? 'var(--success)' : 'var(--text)', padding: '0 10px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums' }} />
     </div>
   )

@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     eventos: EVENTOS,
     competenciaAtual: competenciaAtual(),
     versoes: versoes.map((v) => ({
-      id: v.id, base: v.base, vigenteDesde: v.vigenteDesde, motivo: v.motivo,
+      id: v.id, base: v.base, fatorPorMinuto: v.fatorPorMinuto, vigenteDesde: v.vigenteDesde, motivo: v.motivo,
       criadoEm: v.criadoEm, criadoPor: nomePorId.get(v.criadoPor) ?? '—',
       itens: v.itens.map((i) => ({ evento: i.evento, pontos: i.pontos })),
     })),
@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
   if (!quem) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await req.json().catch(() => null) as {
-    departmentId?: string; base?: number; vigenteDesde?: string; motivo?: string
+    departmentId?: string; base?: number; fatorPorMinuto?: number
+    vigenteDesde?: string; motivo?: string
     itens?: { evento: string; pontos: number }[]
   } | null
   const departmentId = body?.departmentId ?? ''
@@ -71,6 +72,16 @@ export async function POST(req: NextRequest) {
   if (!Number.isFinite(base) || base < 0 || base > 1000) {
     return NextResponse.json({ error: 'A base tem de ser um número entre 0 e 1000.' }, { status: 422 })
   }
+  /* ⚠️⚠️ O FATOR é o botão que mais pesa. Com 0,5 — o pedido inicial — agosto de
+     2026 daria 4.639 pontos à Marcia e 3.787 ao Ezequiel, contra uma base mensal
+     de 100 e uma advertência de −15: a metade disciplinar da régua sumiria ao
+     lado da metade de serviço. Editável para que essa proporção seja uma
+     ESCOLHA, e não uma descoberta no fim do mês. */
+  const fatorPorMinuto = Number(body?.fatorPorMinuto ?? 0.5)
+  if (!Number.isFinite(fatorPorMinuto) || fatorPorMinuto < 0 || fatorPorMinuto > 100) {
+    return NextResponse.json({ error: 'O fator por minuto tem de ser um número entre 0 e 100.' }, { status: 422 })
+  }
+
   const vigenteDesde = (body?.vigenteDesde ?? '').trim()
   if (!competenciaValida(vigenteDesde)) {
     return NextResponse.json({ error: 'A vigência tem de ser uma competência no formato AAAA-MM.' }, { status: 422 })
@@ -95,18 +106,18 @@ export async function POST(req: NextRequest) {
   const regra = await prisma.pontuacaoRegra.upsert({
     where: { departmentId_vigenteDesde: { departmentId, vigenteDesde } },
     create: {
-      departmentId, base, vigenteDesde, criadoPor: quem.id, motivo: body?.motivo?.trim() || null,
+      departmentId, base, fatorPorMinuto, vigenteDesde, criadoPor: quem.id, motivo: body?.motivo?.trim() || null,
       itens: { create: itens.map((i) => ({ evento: i.evento, pontos: Math.round(i.pontos) })) },
     },
     /* Reeditar a versão do MÊS CORRENTE, antes de ela ter produzido nota
        fechada, é ajuste — não reescrita de história. De competências passadas o
        guarda-corpo acima já protege. */
     update: {
-      base, criadoPor: quem.id, motivo: body?.motivo?.trim() || null,
+      base, fatorPorMinuto, criadoPor: quem.id, motivo: body?.motivo?.trim() || null,
       itens: { deleteMany: {}, create: itens.map((i) => ({ evento: i.evento, pontos: Math.round(i.pontos) })) },
     },
     include: { itens: true },
   })
 
-  return NextResponse.json({ ok: true, regra: { id: regra.id, base: regra.base, vigenteDesde: regra.vigenteDesde, itens: regra.itens.map((i) => ({ evento: i.evento, pontos: i.pontos })) } })
+  return NextResponse.json({ ok: true, regra: { id: regra.id, base: regra.base, fatorPorMinuto: regra.fatorPorMinuto, vigenteDesde: regra.vigenteDesde, itens: regra.itens.map((i) => ({ evento: i.evento, pontos: i.pontos })) } })
 }

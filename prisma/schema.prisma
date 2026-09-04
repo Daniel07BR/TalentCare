@@ -796,23 +796,33 @@ model ServicoVinculo {
  * mínimo, que a mudança tenha autor e data.
  */
 model PontuacaoRegra {
-  id           String   @id @default(cuid())
-  departmentId String   @map("department_id")
+  id             String   @id @default(cuid())
+  departmentId   String   @map("department_id")
   /**
    * Pontos com que todo mundo começa o mês. O Legal começa com 100.
    */
-  base         Int      @default(100)
+  base           Int      @default(100)
+  /**
+   * Pontos por MINUTO da duração média de cada tipo de serviço.
+   * ⚠️⚠️ É o multiplicador de TODA a pontuação de serviço, e é o botão que mais
+   * pesa. Com 0,5 — o pedido inicial do dono — agosto de 2026 daria 4.639 pontos
+   * à Marcia Borges e 3.787 ao Ezequiel Castro, contra uma base mensal de 100 e
+   * uma advertência de −15: a metade disciplinar da régua sumiria ao lado da
+   * metade de serviço. Editável para que essa proporção seja uma ESCOLHA, e não
+   * uma descoberta no fim do mês.
+   */
+  fatorPorMinuto Float    @default(0.5) @map("fator_por_minuto")
   /**
    * A partir de que competência (AAAA-MM) esta versão vale.
    */
-  vigenteDesde String   @map("vigente_desde") @db.VarChar(7)
-  criadoPor    String   @map("criado_por")
-  criadoEm     DateTime @default(now()) @map("criado_em")
+  vigenteDesde   String   @map("vigente_desde") @db.VarChar(7)
+  criadoPor      String   @map("criado_por")
+  criadoEm       DateTime @default(now()) @map("criado_em")
   /**
    * Por que mudou — some da tela quando ninguém escreve, e é o que a conversa
    * de seis meses depois precisa.
    */
-  motivo       String?
+  motivo         String?
 
   itens PontuacaoRegraItem[]
 
@@ -873,4 +883,27 @@ model PontuacaoMes {
   @@unique([personKey, competencia])
   @@index([departmentId, competencia])
   @@map("pontuacao_mes")
+}
+
+/**
+ * O AJUSTE MANUAL dos pontos de um tipo de serviço.
+ * ⚠️⚠️ Guarda só o que a LIDERANÇA mudou, nunca o valor calculado. A média de
+ * duração de uma tarefa é derivada da planilha e muda a cada importação — se
+ * fosse gravada, congelaria no dia em que alguém abriu a tela, e o número na
+ * tela deixaria de bater com o arquivo sem nada acusar. O calculado é sempre
+ * recalculado; aqui mora a decisão humana que o sobrepõe.
+ * ⚠️ `pontosAutoNaEpoca` guarda quanto o sistema sugeria QUANDO a pessoa mudou.
+ * Sem isso não há como responder "ele aumentou ou o dado mudou?" seis meses
+ * depois — e essa é exatamente a pergunta que aparece numa conversa de aumento.
+ */
+model PontuacaoTarefaAjuste {
+  departmentId      String   @map("department_id")
+  tarefa            String
+  pontos            Int
+  pontosAutoNaEpoca Int      @map("pontos_auto_na_epoca")
+  ajustadoPor       String   @map("ajustado_por")
+  ajustadoEm        DateTime @updatedAt @map("ajustado_em")
+
+  @@id([departmentId, tarefa])
+  @@map("pontuacao_tarefa_ajuste")
 }

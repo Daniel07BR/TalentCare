@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Upload, FileSpreadsheet, TriangleAlert, Check, X } from 'lucide-react'
 import RegraEditor from './RegraEditor'
+import TarefasEditor from './TarefasEditor'
 
 export type Setor = { id: string; name: string }
 export type Lote = {
@@ -250,6 +251,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
       )}
 
       <RegraEditor departmentId={setorId} setorNome={setor.name} />
+      <TarefasEditor departmentId={setorId} setorNome={setor.name} />
 
       {/* ── histórico de envios ───────────────────────────────────────────── */}
       {lotesDoSetor.length > 0 && (
