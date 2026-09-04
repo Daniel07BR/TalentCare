@@ -69,6 +69,8 @@ export type Employee = {
   cide: CideStat
   gerencia: GerenciaStat
   chat: ChatStat
+  /** Serviços CONCLUÍDOS na planilha do setor (11ª fonte), acumulado. */
+  servicosConcluidos: number
 }
 
 /** Métricas REAIS do ClassRoom (frente B). */
@@ -176,6 +178,8 @@ export type Identity = {
   gerencia: GerenciaStat
   chat: ChatStat
   assid: AssidStat
+  /** Serviços CONCLUÍDOS na planilha do setor, acumulado. */
+  servicosConcluidos: number
   /** Ver `Employee.temPonto`. */
   temPonto: boolean
   assidDays: AssidDay[]
@@ -360,6 +364,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     faltas: 0, atrasos: id8.assid.atrasos,
     atrasosAbon: id8.assid.atrasosAbon, minutosAtraso: id8.assid.minutos,
     advertencias: id8.assid.advertencias, suspensoes: 0, temPonto: id8.temPonto,
+    servicosConcluidos: id8.servicosConcluidos,
     assidDays: id8.assidDays, discEventos: id8.discEventos,
     radioHoras: Math.round(id8.radio.totalSeconds / 3600),
     radioSessoes: id8.radio.sessions,
@@ -441,6 +446,9 @@ export function activityOf(e: Employee): number {
     // passaria a medir quem mais escreve. Mensagem aparece na ficha e na tela
     // do Chat; no score, não. Mesmo raciocínio de km/jornada na Gerência.
     + t.chamadosAbertos + t.chamadosConcluidos
+    // PLANILHA DO SETOR: só o CONCLUÍDO. Aberta não é entrega; o tempo fica de
+    // fora porque é a magnitude do mesmo serviço (ver /api/score-metrics).
+    + e.servicosConcluidos
 }
 
 // Sinais por pessoa NO PERÍODO (do /api/score-metrics) p/ o score period-aware.

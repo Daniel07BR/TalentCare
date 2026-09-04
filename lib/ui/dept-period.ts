@@ -20,7 +20,7 @@ export type DeptMetrics = {
   /** Quem fez o quê em cada fonte, do maior para o menor. Só quem tem valor > 0. */
   /** Por fonte: por QUAL grandeza está ranqueado, e quem. `gente` vazia é o
    *  caso comum (o setor abre chamado e não resolve) — o cartão diz isso. */
-  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio',
+  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio' | 'servicos',
     { rotulo: string; gente: PessoaRank[] }>
   setor: { id: string; nome: string; pelaDiretoria: boolean }
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
@@ -63,6 +63,17 @@ export type DeptMetrics = {
      *  Opcional porque resposta antiga em cache não traz o campo. */
     janelaComPonto?: boolean
     motivoSemPonto?: string | null
+  }
+  /** Serviços da planilha do setor (11ª fonte). `temFonte` distingue "este setor
+   *  não manda planilha" de "o setor não fez nada". Opcional: resposta em cache
+   *  de antes desta rota devolver o campo não traz. */
+  servicos?: {
+    temFonte: boolean
+    concluidos: number; abertos: number; minutos: number
+    /** Linhas de gente que não é da casa — contam para o setor, não creditam ninguém. */
+    semDono: number
+    cobertura: { de: string; ate: string; arquivo: string } | null
+    porPessoa: { personKey: string; concluidos: number; minutos: number }[]
   }
   demografia: {
     idadeMedia: number | null; idadesInformadas: number

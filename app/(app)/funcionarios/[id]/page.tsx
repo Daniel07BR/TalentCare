@@ -11,6 +11,7 @@ import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
 import DadosEditor from './DadosEditor'
+import ServicosCard from './ServicosCard'
 import TreinamentosEditor from './TreinamentosEditor'
 
 
@@ -201,6 +202,10 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
       */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+          {/* A planilha do setor (11ª fonte). Some sozinho em quem não tem essa
+              fonte — ver o comentário do componente. */}
+          <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} />
 
           <Secao titulo="O que os sistemas registraram" sub={`Por fonte · ${periodo}`}>
 {/* Concluídas REAL no período (soma das atividades concluídas nos sistemas).

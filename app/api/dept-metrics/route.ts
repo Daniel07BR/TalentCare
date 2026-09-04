@@ -30,6 +30,20 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id') ?? ''
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const cobPonto = await coberturaDoPonto()
+  const [servicosDoSetor, coberturaServicos] = await Promise.all([
+    prisma.servicoDepto.findMany({
+      where: { departmentId: id, dia: { gte: fromDay, lte: toDay } },
+      select: { personKey: true, status: true, minutos: true },
+    }),
+    /* Até quando a planilha do setor mediu. ⚠️ É a segunda fonte por upload, e a
+       primeira (o ponto) passou meses respondendo zero para janelas que ninguém
+       mediu. A tela diz "planilha vai até tal dia" em vez de mostrar 0. */
+    prisma.importLote.findFirst({
+      where: { departmentId: id, ativo: true },
+      orderBy: { diaAte: 'desc' },
+      select: { diaDe: true, diaAte: true, arquivo: true },
+    }),
+  ])
   const range = { day: { gte: fromDay, lte: toDay } }
 
   const dept = await prisma.department.findUnique({
@@ -437,6 +451,21 @@ export async function GET(req: NextRequest) {
   const mClsVideos = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.videos)]))
   const mGerKm = new Map(gGer.map((r) => [r.nexusUserId, n(r._sum.km)]))
 
+  /* A planilha do setor casa por `personKey` (= nexusUserId ?? id), que é a
+     chave que cobre o STAFF sem conta no Nexus — os outros espelhos casam por
+     `nexusUserId`. Daí o rank próprio. */
+  const mServConcl = new Map(servicosDoSetor
+    .filter((x) => x.personKey && x.status === 'concluida')
+    .reduce((m, x) => m.set(x.personKey!, (m.get(x.personKey!) ?? 0) + 1), new Map<string, number>()))
+  const rankPorChave = (valores: Map<string, number>) =>
+    ativos
+      .map((p) => ({
+        id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl,
+        valor: valores.get(p.nexusUserId ?? p.id) ?? 0,
+      }))
+      .filter((x) => x.valor > 0)
+      .sort((a, b) => b.valor - a.valor)
+
   type Rk = { rotulo: string; gente: ReturnType<typeof rank> }
   const comAlternativa = (
     a: [string, Map<string | null, number>], b: [string, Map<string | null, number>], porNome = false,
@@ -458,6 +487,7 @@ export async function GET(req: NextRequest) {
     // com foto e posição, na mesma gramática dos cartões de entrega, numa tela
     // lida para decidir aumento.
     radio: { rotulo: '', gente: [] },
+    servicos: { rotulo: 'mais concluiu serviço', gente: rankPorChave(mServConcl) },
   }
 
   return NextResponse.json({
@@ -515,6 +545,32 @@ export async function GET(req: NextRequest) {
          É o QUINTO consumidor da mesma régua; ver `lib/ponto-cobertura.ts`. */
       janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
       motivoSemPonto: janelaTemDado(cobPonto, fromDay, toDay) ? null : motivoSemPonto(cobPonto, true, false),
+    },
+    /* SERVIÇOS da planilha do setor. ⚠️ `temFonte` distingue "este setor não
+       manda planilha" de "o setor não fez nada" — 14 dos 15 setores estão no
+       primeiro caso, e um cartão zerado neles seria acusação sem fonte.
+       ⚠️ `semDono` fica VISÍVEL: as linhas de quem não é da casa contam para o
+       total do setor e não creditam ninguém, e o gestor precisa saber que a
+       diferença entre a soma das pessoas e o total do setor é isso, não erro. */
+    servicos: {
+      temFonte: servicosDoSetor.length > 0,
+      concluidos: servicosDoSetor.filter((x) => x.status === 'concluida').length,
+      abertos: servicosDoSetor.filter((x) => x.status === 'aberta').length,
+      minutos: servicosDoSetor.filter((x) => x.status === 'concluida').reduce((a, x) => a + x.minutos, 0),
+      semDono: servicosDoSetor.filter((x) => !x.personKey).length,
+      cobertura: coberturaServicos
+        ? { de: coberturaServicos.diaDe, ate: coberturaServicos.diaAte, arquivo: coberturaServicos.arquivo }
+        : null,
+      porPessoa: (() => {
+        const m = new Map<string, { concluidos: number; minutos: number }>()
+        for (const x of servicosDoSetor) {
+          if (!x.personKey || x.status !== 'concluida') continue
+          const a = m.get(x.personKey) ?? { concluidos: 0, minutos: 0 }
+          a.concluidos++; a.minutos += x.minutos
+          m.set(x.personKey, a)
+        }
+        return [...m].map(([personKey, v]) => ({ personKey, ...v })).sort((a, b) => b.concluidos - a.concluidos)
+      })(),
       // ⚠️ FALTA não tem fonte no dump do Nexo → `null`, e a tela mostra "—".
       // Zero se leria como "ninguém faltou", que é o que não se sabe.
       faltas: null as number | null,

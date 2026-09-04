@@ -39,6 +39,17 @@ export type EmployeeMetrics = {
        `janelaComPonto` = o import alcançou esta janela. Ver `lib/ponto-cobertura.ts`. */
     pessoaMedida?: boolean; janelaComPonto?: boolean; motivoSemPonto?: string | null
   }
+  /** Serviços da planilha do setor (11ª fonte). Opcional: resposta em cache
+   *  de antes desta rota devolver o campo não traz. */
+  servicos?: {
+    /** `false` = este setor não manda planilha. NÃO é "fez zero serviços". */
+    temFonte: boolean
+    concluidos: number; abertos: number; desconsiderados: number; minutos: number
+    porMes: { mes: string; concluidos: number; minutos: number }[]
+    porTarefa: { tarefa: string; n: number; minutos: number }[]
+  }
+  /** Pontuação mensal do setor. `origem` distingue informado de calculado. */
+  pontuacao?: { competencia: string; pontos: number; origem: string; detalhe: string | null }[]
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

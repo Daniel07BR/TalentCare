@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const range = { day: { gte: fromDay, lte: toDay } }
 
-  const [users, cls, hd, cide, cons, wpp, ger, chat, ponto, adv] = await Promise.all([
+  const [users, cls, hd, cide, cons, wpp, ger, chat, ponto, adv, serv] = await Promise.all([
     prisma.user.findMany({
       where: alcance.tipo === 'tudo'
         ? { origin: { in: ['nexus', 'staff'] } }
@@ -39,6 +39,21 @@ export async function GET(req: NextRequest) {
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { ...range, ...porPersonKey(alcance) }, _sum: { atrasos: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) }, _count: { _all: true } }),
+    /* SERVIÇOS DA PLANILHA DO SETOR — a 11ª fonte, e ela ENTRA no score
+       (decisão do dono, 03/09/2026). O paralelo é exato com o chamado do
+       HelpDesk e o serviço da Gerência, que já entram: pedido feito, pedido
+       entregue.
+       ⚠️ Só CONCLUÍDO. "Aberta" não é entrega, e "desconsiderada" o próprio
+       setor já descartou — contá-las premiaria abrir, que é o oposto.
+       ⚠️ O TEMPO fica de fora, pelo mesmo motivo que tirou km e jornada da
+       Gerência: é a MAGNITUDE do mesmo serviço. Somado, faria quem faz tarefa
+       longa abafar quem faz muitas curtas — e a média por serviço varia 6x
+       entre as pessoas do Legal por mix de tarefa, não por esforço. */
+    prisma.servicoDepto.groupBy({
+      by: ['personKey'],
+      where: { status: 'concluida', dia: { gte: fromDay, lte: toDay }, personKey: { not: null }, ...porPersonKey(alcance) },
+      _count: { _all: true },
+    }),
   ])
 
   const clsM = new Map(cls.map((r) => [r.nexusUserId, (r._sum.videos ?? 0) + (r._sum.courses ?? 0) + (r._sum.created ?? 0)]))
@@ -53,13 +68,15 @@ export async function GET(req: NextRequest) {
   const wppM = new Map(wpp.map((r) => [normName(r.name), r._sum.finalizados ?? 0]))
   const atrM = new Map(ponto.map((r) => [r.personKey, r._sum.atrasos ?? 0]))
   const advM = new Map(adv.map((r) => [r.personKey, r._count._all]))
+  const servM = new Map(serv.map((r) => [r.personKey, r._count._all]))
 
   const byPerson = users.map((u) => {
     const nk = u.nexusUserId
     const pk = u.nexusUserId ?? u.id
     const activity =
       (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) + (chatM.get(nk) ?? 0) : 0) +
-      (wppM.get(normName(u.name)) ?? 0)
+      (wppM.get(normName(u.name)) ?? 0) +
+      (servM.get(pk) ?? 0)
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }
   })
 

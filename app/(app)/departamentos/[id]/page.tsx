@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
   MessageSquareText, MessageCircle, Search,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptDetailVM } from '@/lib/mock/departments'
@@ -335,6 +336,34 @@ function Atividade({ m }: { m: DeptMetrics }) {
   const add = (chave: string, mostrar: boolean, node: React.ReactNode) => {
     if (mostrar) cards.push(<div key={chave}>{node}</div>)
     else fora.push(chave)
+  }
+
+  /* ⚠️⚠️ A PLANILHA DO SETOR entra PRIMEIRO quando existe: é a fonte que aquele
+     setor mantém à mão, e é a que ele reconhece. As outras oito são espelhos de
+     sistemas que ele usa de passagem. */
+  if (m.servicos?.temFonte) {
+    const sv = m.servicos
+    add('Serviços do setor', true,
+      <CardFonte
+        titulo="Serviços do setor" sub={sv.cobertura ? `da planilha ${sv.cobertura.arquivo}` : undefined}
+        cor="var(--chart-2)" Icone={FileSpreadsheet}
+        ranking={r.servicos?.gente ?? []} unidade={r.servicos?.rotulo || 'mais concluiu serviço'}
+        semNinguem="Há serviços no período, mas nenhum está vinculado a alguém do quadro."
+        numeros={[
+          { label: 'Concluídos', valor: sv.concluidos, cor: 'var(--success)' },
+          { label: 'Em aberto', valor: sv.abertos, cor: 'var(--warning)' },
+          { label: 'Tempo somado', valor: sv.minutos ? dur(sv.minutos * 60) : null },
+          /* ⚠️ Linha sem dono é NOTÍCIA. Sem ela, a soma das pessoas não fecha
+             com o total do setor e o gestor procura um erro que não existe. */
+          { label: 'Sem vínculo', valor: sv.semDono || null, cor: 'var(--text-mute)', nota: 'gente fora do quadro' },
+        ]}
+        rodape={sv.cobertura ? (
+          <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
+            A planilha cobre de {sv.cobertura.de.split('-').reverse().join('/')} a {sv.cobertura.ate.split('-').reverse().join('/')}.
+            {' '}Fora dessa janela o setor não mediu — não é zero.
+          </span>
+        ) : undefined}
+      />)
   }
 
   add('Painel de Atendimento', tem(m.whatsapp.abertos, m.whatsapp.finalizados),

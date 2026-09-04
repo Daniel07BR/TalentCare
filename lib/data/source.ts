@@ -29,7 +29,7 @@ export type Alcance =
 export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
   const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
-  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, edu, train, assidTot, assidRecent, discAll] = await Promise.all([
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, edu, train, assidTot, assidRecent, servTot, discAll] = await Promise.all([
     prisma.user.findMany({
       // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
       // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
@@ -101,6 +101,14 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
       where: { day: { gte: heatCutoff } },
       select: { personKey: true, day: true, atrasos: true, minutosAtraso: true },
     }),
+    /* Serviços CONCLUÍDOS por pessoa (11ª fonte). ⚠️ É o 6º consumidor da
+       checklist do `docs/FONTES.md`: integrar a fonte não basta, e esquecer o
+       acumulado deixa o score inconsistente entre a base e o filtro. */
+    prisma.servicoDepto.groupBy({
+      by: ['personKey'],
+      where: { status: 'concluida', personKey: { not: null } },
+      _count: { _all: true },
+    }),
     // Eventos de disciplina (advertências) — lista real da ficha + contagem.
     prisma.disciplinaEvento.findMany({
       /* ⚠️ O `motivo` NÃO entra no dataset do cliente, nem para quem alcança a
@@ -141,6 +149,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
   const trainByNexus = new Map(train.map((t) => [t.nexusUserId, t]))
   // Assiduidade/disciplina por personKey (= nexusUserId ?? id, cobre STAFF).
   const assidTotByKey = new Map(assidTot.map((a) => [a.personKey, a._sum]))
+  const servTotByKey = new Map(servTot.map((r) => [r.personKey, r._count._all]))
   const assidDaysByKey = new Map<string, { day: string; atrasos: number; minutos: number }[]>()
   for (const r of assidRecent) {
     const arr = assidDaysByKey.get(r.personKey) ?? []
@@ -267,6 +276,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
          gestor, que é a única gente de quem ele tem dado real. A régua que
          protege a privacidade não pode virar nota máxima: fora do alcance, a
          pessoa NÃO É MEDIDA para quem está lendo. */
+      servicosConcluidos: servTotByKey.get(personKey) ?? 0,
       temPonto: alcanca(u.departmentId, u.id) && cobPonto.roster.has(personKey),
       assidDays: alcanca(u.departmentId, u.id) ? (assidDaysByKey.get(personKey) ?? []) : [],
       discEventos: alcanca(u.departmentId, u.id) ? disc : [],

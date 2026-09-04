@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, discLista] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, servicos, pontuacoes, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -98,6 +98,20 @@ export async function GET(req: NextRequest) {
     /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
        confere `podeVer`; aquele dataset viaja inteiro no payload de toda página.
        Contagem pode viajar; o texto da advertência, não. */
+    /* SERVIÇOS da planilha do setor (11ª fonte). Vêm por aqui e não por rota
+       nova porque a ficha evita fetch extra de propósito — ver o comentário no
+       topo dela. ⚠️ `personKey` não nulo: linha sem dono conta para o setor e
+       não credita ninguém, então não pode aparecer na ficha de alguém. */
+    prisma.servicoDepto.findMany({
+      where: { personKey, dia: { gte: fromDay, lte: toDay } },
+      select: { dia: true, status: true, tarefa: true, minutos: true },
+    }),
+    /* A pontuação mensal. NÃO se recorta por período: é mensal por natureza, e a
+       tela diz isso — mesma regra da avaliação mensal no `PERIODO-E-DEPLOY.md`. */
+    prisma.pontuacaoMes.findMany({
+      where: { personKey }, orderBy: { competencia: 'asc' },
+      select: { competencia: true, pontos: true, origem: true, detalhe: true },
+    }),
     prisma.disciplinaEvento.findMany({
       where: { personKey, tipo: 'advertencia' },
       select: { data: true, motivo: true, dias: true, tipo: true },
@@ -201,5 +215,42 @@ export async function GET(req: NextRequest) {
     })(),
     // Histórico completo de advertências (não é do período — é a ficha da pessoa).
     disciplina: discLista.map((d) => ({ data: d.data, motivo: d.motivo, tipo: d.tipo, dias: d.dias })),
+
+    /* SERVIÇOS do setor, no período. ⚠️ `temFonte` distingue "este setor não
+       manda planilha" de "esta pessoa não fez nada": sem ele, todo mundo dos
+       outros 14 setores apareceria com "0 serviços", que é a mesma falta do
+       ponto com outra roupa. */
+    servicos: (() => {
+      const concl = servicos.filter((x) => x.status === 'concluida')
+      const porMesMap = new Map<string, { concluidos: number; minutos: number }>()
+      for (const x of concl) {
+        const mes = x.dia.slice(0, 7)
+        const a = porMesMap.get(mes) ?? { concluidos: 0, minutos: 0 }
+        a.concluidos++; a.minutos += x.minutos
+        porMesMap.set(mes, a)
+      }
+      const porTarefa = new Map<string, { n: number; minutos: number }>()
+      for (const x of concl) {
+        const a = porTarefa.get(x.tarefa) ?? { n: 0, minutos: 0 }
+        a.n++; a.minutos += x.minutos
+        porTarefa.set(x.tarefa, a)
+      }
+      return {
+        temFonte: servicos.length > 0,
+        concluidos: concl.length,
+        abertos: servicos.filter((x) => x.status === 'aberta').length,
+        desconsiderados: servicos.filter((x) => x.status === 'desconsiderada').length,
+        minutos: concl.reduce((a, x) => a + x.minutos, 0),
+        porMes: [...porMesMap].sort((a, b) => a[0].localeCompare(b[0])).map(([mes, v]) => ({ mes, ...v })),
+        porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).slice(0, 8).map(([tarefa, v]) => ({ tarefa, ...v })),
+      }
+    })(),
+
+    /* A PONTUAÇÃO mensal. ⚠️ `origem` viaja junto e a tela TEM de mostrá-la:
+       "informado pelo setor" e "calculado pela régua" são procedências
+       diferentes, e o histórico do Legal é todo informado — 105 dos 127 valores
+       passam do teto que a régua atual permite. Exibir os dois com a mesma cara
+       seria inventar procedência para número de gente de verdade. */
+    pontuacao: pontuacoes.map((p) => ({ competencia: p.competencia, pontos: p.pontos, origem: p.origem, detalhe: p.detalhe })),
   })
 }
