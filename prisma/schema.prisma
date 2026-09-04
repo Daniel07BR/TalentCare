@@ -701,6 +701,7 @@ model ImportLote {
    */
   ativo            Boolean  @default(true)
 
+  @@unique([departmentId, hash])
   @@index([departmentId, ativo])
   @@map("import_lote")
 }

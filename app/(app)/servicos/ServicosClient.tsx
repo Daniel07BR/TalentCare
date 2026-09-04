@@ -27,6 +27,7 @@ type Previa = {
   porStatus: { concluida: number; aberta: number; desconsiderada: number }
   minutosConcluidos: number
   linhasSemVinculo: number; substituir: number
+  alertaSetor: { setorProvavel: string; quantas: number; de: number } | null
   avisos: string[]; nomes: NomeLido[]
   jaImportado?: { em: string; arquivo: string; linhas: number; ativo: boolean }
   ok?: boolean
@@ -133,6 +134,25 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
             </div>
           )}
 
+          {/* ⚠️⚠️ O ARQUIVO PARECE SER DE OUTRO SETOR.
+              Aconteceu em 04/09/2026: a planilha do Legal foi importada com o
+              seletor em Entregas e 6.980 linhas foram para o setor errado, sem
+              nada acusar. O sistema tinha a informação — das 9 pessoas que ele
+              reconheceu, 8 eram do Legal. Um campo que decide o destino de
+              milhares de linhas não pode ser um dropdown no alto da tela que a
+              pessoa esquece de olhar. */}
+          {previa.alertaSetor && !gravado && (
+            <div style={{ fontSize: 13, color: 'var(--danger)', background: 'rgba(229,72,77,.08)', border: '2px solid var(--danger)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: 16, lineHeight: 1.6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <TriangleAlert size={17} />
+                <b style={{ fontSize: 14 }}>Este arquivo parece ser do {previa.alertaSetor.setorProvavel}, não do {setor.name}.</b>
+              </div>
+              <b>{previa.alertaSetor.quantas} das {previa.alertaSetor.de} pessoas</b> que reconheci neste arquivo são do
+              {' '}<b>{previa.alertaSetor.setorProvavel}</b>, e você está importando para o <b>{setor.name}</b>.
+              {' '}Se estiver certo, siga; se não, <b>troque o setor no alto da tela</b> e envie de novo.
+            </div>
+          )}
+
           {/* ── o que vai entrar ──────────────────────────────────────────── */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>O que vai entrar</div>
@@ -208,7 +228,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
               <button onClick={() => arquivo && enviar(arquivo, true)} disabled={ocupado}
                 style={{ height: 40, padding: '0 20px', background: 'var(--success)', color: '#04210c', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: ocupado ? 'wait' : 'pointer' }}>
-                {ocupado ? 'Gravando…' : 'Confirmar e importar'}
+                {ocupado ? 'Gravando…' : `Confirmar e importar para ${setor.name}`}
               </button>
               <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                 {pendentes.length > 0

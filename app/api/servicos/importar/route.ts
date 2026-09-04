@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
   }
 
   // ── já importamos este arquivo? ────────────────────────────────────────────
-  const jaImportado = await prisma.importLote.findUnique({ where: { hash: lida.hash } })
+  /* ⚠️ Por SETOR + hash, não só hash. O mesmo arquivo importado para o setor
+     errado precisa poder ir para o certo — e com a chave global ele ficava
+     preso, sem saída pela tela. */
+  const jaImportado = await prisma.importLote.findFirst({ where: { departmentId, hash: lida.hash } })
   if (jaImportado && !confirmar) {
     return NextResponse.json({
       jaImportado: {
@@ -190,6 +193,28 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
   const porNome = new Map(nomes.map((n) => [n.nomeNorm, n]))
   const linhasSemVinculo = lida.servicos.filter((s) => !porNome.get(normalizarNome(s.nomeOrigem))?.personKey).length
 
+  /* ⚠️⚠️ ESTE ARQUIVO É DESTE SETOR MESMO?
+     Aconteceu em 04/09/2026: a planilha "Controle Indicadores - Legal" foi
+     importada com o seletor em **Entregas**, e 6.980 linhas foram parar no setor
+     errado. Nada acusou — e o sistema tinha toda a informação para acusar: das
+     9 pessoas que ele mesmo reconheceu no arquivo, 8 são do Legal.
+
+     O seletor de setor fica no alto da tela e a confirmação embaixo; entre um e
+     outro cabe uma rolagem inteira de conferência de nomes. Um campo que decide
+     para onde vão 6.980 linhas não pode ser um dropdown que a pessoa esquece de
+     olhar — a tela tem de dizer, na hora de confirmar, para onde isso vai e por
+     que isso parece errado. */
+  const setoresDaGente = new Map<string, number>()
+  for (const n of nomes) {
+    if (!n.personKey || !n.pessoa?.setor) continue
+    setoresDaGente.set(n.pessoa.setor, (setoresDaGente.get(n.pessoa.setor) ?? 0) + 1)
+  }
+  const maioria = [...setoresDaGente].sort((a, b) => b[1] - a[1])[0] ?? null
+  const totalReconhecidos = [...setoresDaGente.values()].reduce((a, b) => a + b, 0)
+  const alertaSetor = maioria && maioria[0] !== setorNome && maioria[1] > totalReconhecidos / 2
+    ? { setorProvavel: maioria[0], quantas: maioria[1], de: totalReconhecidos }
+    : null
+
   const substituir = lida.diaDe && lida.diaAte
     ? await prisma.servicoDepto.count({ where: { departmentId, dia: { gte: lida.diaDe, lte: lida.diaAte } } })
     : 0
@@ -210,6 +235,8 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
     totalPontos: lida.pontos.length,
     porStatus, minutosConcluidos,
     linhasSemVinculo,
+    /** "Você está importando para X, mas as pessoas do arquivo são de Y." */
+    alertaSetor,
     /** Quantas linhas já existentes seriam apagadas e regravadas por este envio. */
     substituir,
     avisos: lida.avisos,
