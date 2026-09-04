@@ -35,6 +35,26 @@ const PUXADA = 1.6
  *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
 const COLS = 'minmax(0,1fr) 58px 84px 84px 100px 80px 92px 32px'
 
+/** A ordenação, num lugar só — usada ao carregar e ao clicar num título. */
+function ordenar(lista: Tarefa[], ordem: { col: Coluna; desc: boolean }): string[] {
+  return [...lista].sort((a, b) => {
+    const { col, desc } = ordem
+    if (col === 'tarefa') {
+      const r = a.tarefa.localeCompare(b.tarefa, 'pt-BR')
+      return desc ? -r : r
+    }
+    const va = a[col] as number | null
+    const vb = b[col] as number | null
+    /* ⚠️ Nulos por último, nos DOIS sentidos: ausência não é "menor que". Sem
+       isso, ordenar por mínimo traria ao topo as 47 tarefas que ninguém limitou
+       como se todas tivessem mínimo zero. */
+    if (va == null && vb == null) return a.tarefa.localeCompare(b.tarefa, 'pt-BR')
+    if (va == null) return 1
+    if (vb == null) return -1
+    return desc ? vb - va : va - vb
+  }).map((t) => t.tarefa)
+}
+
 /* As colunas que dá para ordenar, e por qual número cada uma ordena.
    ⚠️ `null` (mínimo/máximo não definidos) vai SEMPRE para o fim, nos dois
    sentidos: ausência não é "menor que", é ausência — a mesma regra que vale
@@ -59,6 +79,13 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string; maximo?: string }>>({})
   const [msg, setMsg] = useState<string | null>(null)
   const [ordem, setOrdem] = useState<{ col: Coluna; desc: boolean }>({ col: 'amostras', desc: true })
+  /* ⚠️⚠️ A ORDEM É CONGELADA numa lista de nomes, e só muda quando a pessoa
+     clica num título ou o setor é recarregado. Recalculá-la a cada valor
+     digitado faria a linha PULAR de posição no instante em que ela é editada —
+     o outro jeito de perder o lugar, e mais desconcertante que o recarregamento,
+     porque a tela nem pisca: o número simplesmente vai parar em outro canto. */
+  const [ordemNomes, setOrdemNomes] = useState<string[]>([])
+  const [salvando, setSalvando] = useState<Record<string, boolean>>({})
 
   async function carregar() {
     setCarregando(true)
@@ -68,43 +95,61 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
       if (!r.ok) { setMsg(d.error ?? 'Não consegui ler os tipos de serviço.'); setTarefas([]); return }
       setTarefas(d.tarefas ?? []); setFator(d.fatorPorMinuto ?? 0.5); setTotal(d.totalConcluidos ?? 0)
       setRascunho({})
+      /* A ordem é FIXADA aqui, não recalculada a cada tecla — ver `nomesEmOrdem`. */
+      setOrdemNomes(ordenar(d.tarefas ?? [], ordem))
     } finally { setCarregando(false) }
   }
   useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId])
 
+  /**
+   * ⚠️⚠️ SALVAR NÃO RECARREGA A TELA.
+   *
+   * Antes cada tecla nos campos de mínimo/máximo disparava um `carregar()`
+   * completo: a tabela sumia atrás de "Medindo a duração de cada tipo…", as 74
+   * linhas remontavam e a pessoa perdia o lugar no meio do trabalho. A rota
+   * passou a devolver A LINHA recalculada, e aqui a gente troca só ela.
+   *
+   * ⚠️ Enquanto salva, a linha fica marcada (`salvando`) em vez de a tela
+   * inteira parar: o retorno visual continua existindo, sem custar o contexto.
+   */
   async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar', valor: number | null) {
-    const r = await fetch('/api/servicos/tarefas', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ departmentId, tarefa: t.tarefa, campo, valor, pontosAuto: t.pontosAuto }),
-    })
-    if (!r.ok) { setMsg((await r.json()).error ?? 'Não consegui salvar.'); return }
-    setMsg(null)
-    await carregar()
+    setSalvando((v) => ({ ...v, [t.tarefa]: true }))
+    try {
+      const r = await fetch('/api/servicos/tarefas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ departmentId, tarefa: t.tarefa, campo, valor, pontosAuto: t.pontosAuto }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setMsg(d.error ?? 'Não consegui salvar.'); return }
+      setMsg(null)
+      if (d.tarefa) setTarefas((ts) => ts.map((x) => (x.tarefa === d.tarefa.tarefa ? d.tarefa : x)))
+      // O rascunho DESTA linha sai; o das outras fica como estava.
+      setRascunho((r2) => { const c = { ...r2 }; delete c[t.tarefa]; return c })
+    } catch {
+      setMsg('A rede falhou — o valor pode não ter sido salvo. Recarregue para conferir.')
+    } finally {
+      setSalvando((v) => { const c = { ...v }; delete c[t.tarefa]; return c })
+    }
   }
 
   if (!carregando && !tarefas.length) return null
 
   /* Um clique ordena; clicar de novo na MESMA coluna inverte. Texto começa
      A→Z e número começa do maior — é o que a pessoa espera de cada um. */
-  const clicar = (col: Coluna) =>
-    setOrdem((o) => o.col === col
-      ? { col, desc: !o.desc }
-      : { col, desc: ORDENAVEIS.find((c) => c.chave === col)!.numerica })
+  const clicar = (col: Coluna) => {
+    const nova = ordem.col === col
+      ? { col, desc: !ordem.desc }
+      : { col, desc: ORDENAVEIS.find((c) => c.chave === col)!.numerica }
+    setOrdem(nova)
+    setOrdemNomes(ordenar(tarefas, nova))
+  }
 
-  const ordenadas = [...tarefas].sort((a, b) => {
-    const { col, desc } = ordem
-    if (col === 'tarefa') {
-      const r = a.tarefa.localeCompare(b.tarefa, 'pt-BR')
-      return desc ? -r : r
-    }
-    const va = a[col] as number | null
-    const vb = b[col] as number | null
-    // Nulos por último, nos DOIS sentidos.
-    if (va == null && vb == null) return a.tarefa.localeCompare(b.tarefa, 'pt-BR')
-    if (va == null) return 1
-    if (vb == null) return -1
-    return desc ? vb - va : va - vb
-  })
+  // Renderiza pela ordem congelada; o que entrou depois vai para o fim.
+  const porNome = new Map(tarefas.map((t) => [t.tarefa, t]))
+  const ordenadas = ordemNomes.length
+    ? [...ordemNomes.map((n) => porNome.get(n)).filter((t): t is Tarefa => !!t),
+       ...tarefas.filter((t) => !ordemNomes.includes(t.tarefa))]
+    : tarefas
 
   const poucas = tarefas.filter((t) => t.amostras < POUCAS_AMOSTRAS).length
   const ajustadas = tarefas.filter((t) => t.ajustado).length
@@ -182,7 +227,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
               const mostrarPontos = rascunho[t.tarefa]?.pontos != null ? rPontos : String(pontosPrevistos)
 
               return (
-                <div key={t.tarefa} style={{ padding: '9px 6px', borderBottom: '1px solid var(--border)' }}>
+                <div key={t.tarefa} style={{ padding: '9px 6px', borderBottom: '1px solid var(--border)', opacity: salvando[t.tarefa] ? 0.55 : 1, transition: 'opacity .12s' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', fontSize: 12.5 }}>
                     <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={t.tarefa}>
                       {t.tarefa}

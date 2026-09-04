@@ -59,17 +59,16 @@ export type TarefaPontuada = {
   pontosAutoNaEpoca: number | null
 }
 
-export async function GET(req: NextRequest) {
-  const session = await auth()
-  const uid = (session?.user as { id?: string } | undefined)?.id
-  const quem = uid ? await quemEh(uid) : null
-  if (!quem) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
-  const departmentId = req.nextUrl.searchParams.get('departmentId') ?? ''
-  if (!podeGerirServicos(quem, departmentId)) {
-    return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
-  }
-
+/**
+ * Calcula o catálogo inteiro de um setor.
+ *
+ * ⚠️ Usada pelo GET e, depois de gravar, pelo POST — que devolve A LINHA já
+ * recalculada. Antes a tela buscava as 74 de novo a cada tecla e entrava em
+ * "carregando", o que apagava a tabela e fazia a pessoa perder o lugar. O
+ * cálculo é o MESMO nos dois caminhos: duplicá-lo faria a linha devolvida
+ * divergir da lista na próxima leitura.
+ */
+async function calcularCatalogo(departmentId: string) {
   const [linhas, ajustes, regra, usuariosDoSetor] = await Promise.all([
     /* ⚠️ SÓ CONCLUÍDO. Um serviço "aberto" tem tempo PARCIAL — o relógio dele
        ainda está correndo —, e "desconsiderado" o próprio setor descartou.
@@ -183,11 +182,20 @@ export async function GET(req: NextRequest) {
     }
   }).sort((a, b) => b.amostras - a.amostras)
 
-  return NextResponse.json({
-    fatorPorMinuto: fator,
-    totalConcluidos: linhas.length,
-    tarefas,
-  })
+  return { fatorPorMinuto: fator, totalConcluidos: linhas.length, tarefas }
+}
+
+export async function GET(req: NextRequest) {
+  const session = await auth()
+  const uid = (session?.user as { id?: string } | undefined)?.id
+  const quem = uid ? await quemEh(uid) : null
+  if (!quem) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  const departmentId = req.nextUrl.searchParams.get('departmentId') ?? ''
+  if (!podeGerirServicos(quem, departmentId)) {
+    return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
+  }
+  return NextResponse.json(await calcularCatalogo(departmentId))
 }
 
 export async function POST(req: NextRequest) {
@@ -215,7 +223,7 @@ export async function POST(req: NextRequest) {
      deixaria de acompanhar a planilha na próxima importação. */
   if (body?.campo === 'limpar') {
     await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
-    return NextResponse.json({ ok: true, voltouAoCalculado: true })
+    return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa)) })
   }
   /* Esvaziar UM limite tira só aquele limite — apagar o ajuste inteiro levaria
      junto o outro limite e a média, que a pessoa não pediu para mexer. */
@@ -234,11 +242,11 @@ export async function POST(req: NextRequest) {
         data: { ...campo, mediaMinutos: null, pontos: null, ajustadoPor: quem.id },
       })
     }
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa)) })
   }
   if (body?.valor == null) {
     await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
-    return NextResponse.json({ ok: true, voltouAoCalculado: true })
+    return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa)) })
   }
 
   const valor = Math.round(Number(body.valor))
@@ -266,5 +274,11 @@ export async function POST(req: NextRequest) {
     create: { departmentId, tarefa, ...dados },
     update: dados,
   })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa)) })
+}
+
+/** A linha recalculada, para a tela trocar só ela. */
+async function umaTarefa(departmentId: string, tarefa: string) {
+  const cat = await calcularCatalogo(departmentId)
+  return { tarefa: cat.tarefas.find((t) => t.tarefa === tarefa) ?? null }
 }
