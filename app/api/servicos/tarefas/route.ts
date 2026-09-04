@@ -27,13 +27,20 @@ import { quemEh, podeGerirServicos } from '@/lib/avaliacoes/regua'
 export type TarefaPontuada = {
   tarefa: string
   amostras: number
-  mediaMinutos: number
+  /** A média MEDIDA na planilha — nunca muda com o ajuste. */
+  mediaMedida: number
+  /** A média EM USO: a que a liderança escolheu, ou a medida. */
+  mediaEmUso: number
+  mediaAjustada: number | null
   medianaMinutos: number
-  maiorMinutos: number
-  /** O que a régua calcula: média × fator. */
+  /** Os dois maiores e os dois menores tempos — o que a média esconde. */
+  maiores: number[]
+  menores: number[]
+  /** O que a régua calcula: média em uso × fator. */
   pontosAuto: number
-  /** O que vale hoje — o ajuste manual, se houver. */
+  /** O que vale hoje — o override direto, se houver. */
   pontos: number
+  pontosAjustados: boolean
   ajustado: boolean
   ajustadoPor: string | null
   ajustadoEm: string | null
@@ -84,18 +91,31 @@ export async function GET(req: NextRequest) {
 
   const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, mins]) => {
     const ordenado = [...mins].sort((a, b) => a - b)
-    const media = mins.reduce((a, b) => a + b, 0) / mins.length
+    const mediaMedida = Math.round(mins.reduce((a, b) => a + b, 0) / mins.length)
     const mediana = ordenado[Math.floor(ordenado.length / 2)]
-    const pontosAuto = Math.max(1, Math.round(media * fator))
     const aj = ajustePorTarefa.get(tarefa)
+    /* A média EM USO é a que a liderança escolheu, quando escolheu. A medida
+       continua viajando ao lado: trocar uma pela outra faria o sistema afirmar
+       que mediu o que alguém decidiu. */
+    const mediaEmUso = aj?.mediaMinutos ?? mediaMedida
+    const pontosAuto = Math.max(1, Math.round(mediaEmUso * fator))
     return {
       tarefa,
       amostras: mins.length,
-      mediaMinutos: Math.round(media),
+      mediaMedida,
+      mediaEmUso,
+      mediaAjustada: aj?.mediaMinutos ?? null,
       medianaMinutos: mediana,
-      maiorMinutos: ordenado[ordenado.length - 1],
+      /* ⚠️⚠️ OS EXTREMOS, que a média esconde. Estavam só no `title` do HTML —
+         ou seja, existiam para quem passasse o mouse por cima e por acaso
+         esperasse. Quem define o peso de um serviço precisa ver que o
+         CERTIFICADO tem casos de 9h24 e casos de 1 minuto: é o que separa "esta
+         tarefa é longa" de "esta tarefa travou um dia". */
+      maiores: [...ordenado].reverse().slice(0, 2),
+      menores: ordenado.slice(0, 2),
       pontosAuto,
       pontos: aj?.pontos ?? pontosAuto,
+      pontosAjustados: aj?.pontos != null,
       ajustado: !!aj,
       ajustadoPor: aj ? (nomePorId.get(aj.ajustadoPor) ?? '—') : null,
       ajustadoEm: aj ? aj.ajustadoEm.toISOString() : null,
@@ -117,7 +137,11 @@ export async function POST(req: NextRequest) {
   if (!quem) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await req.json().catch(() => null) as {
-    departmentId?: string; tarefa?: string; pontos?: number | null; pontosAuto?: number
+    departmentId?: string; tarefa?: string
+    /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
+    campo?: 'media' | 'pontos' | 'limpar'
+    valor?: number | null
+    pontosAuto?: number
   } | null
   const departmentId = body?.departmentId ?? ''
   const tarefa = (body?.tarefa ?? '').trim()
@@ -126,24 +150,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
   }
 
-  /* `pontos: null` VOLTA ao calculado — apaga o ajuste em vez de gravar o valor
-     sugerido. Gravar o sugerido faria o ajuste "vazio" congelar aquele número, e
-     ele deixaria de acompanhar a planilha na próxima importação. */
-  if (body?.pontos == null) {
+  /* `limpar` VOLTA ao medido — apaga o ajuste em vez de gravar o valor sugerido.
+     Gravar o sugerido faria o ajuste "vazio" congelar aquele número, e ele
+     deixaria de acompanhar a planilha na próxima importação. */
+  if (body?.campo === 'limpar' || body?.valor == null) {
     await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
     return NextResponse.json({ ok: true, voltouAoCalculado: true })
   }
 
-  const pontos = Math.round(Number(body.pontos))
-  if (!Number.isFinite(pontos) || pontos < 0 || pontos > 100000) {
-    return NextResponse.json({ error: 'Pontos têm de ser um número entre 0 e 100.000.' }, { status: 422 })
+  const valor = Math.round(Number(body.valor))
+  if (!Number.isFinite(valor) || valor < 0 || valor > 100000) {
+    return NextResponse.json({ error: 'O valor tem de ser um número entre 0 e 100.000.' }, { status: 422 })
   }
   const pontosAutoNaEpoca = Math.round(Number(body.pontosAuto ?? 0)) || 0
+  const eMedia = body.campo === 'media'
+
+  /* ⚠️⚠️ MEXER NA MÉDIA LIMPA O OVERRIDE DE PONTOS. Foi o pedido — "o campo
+     pontos atualiza automaticamente com a média editada" — e é o que faz a tela
+     se comportar como a pessoa espera: se o número digitado antes continuasse
+     preso, mudar a média não teria efeito nenhum. */
+  const dados = eMedia
+    ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
+    : { pontos: valor, pontosAutoNaEpoca, ajustadoPor: quem.id }
 
   await prisma.pontuacaoTarefaAjuste.upsert({
     where: { departmentId_tarefa: { departmentId, tarefa } },
-    create: { departmentId, tarefa, pontos, pontosAutoNaEpoca, ajustadoPor: quem.id },
-    update: { pontos, pontosAutoNaEpoca, ajustadoPor: quem.id },
+    create: { departmentId, tarefa, ...dados },
+    update: dados,
   })
-  return NextResponse.json({ ok: true, pontos })
+  return NextResponse.json({ ok: true })
 }

@@ -4,8 +4,9 @@ import { ListChecks, RotateCcw, TriangleAlert } from 'lucide-react'
 
 type Tarefa = {
   tarefa: string; amostras: number
-  mediaMinutos: number; medianaMinutos: number; maiorMinutos: number
-  pontosAuto: number; pontos: number
+  mediaMedida: number; mediaEmUso: number; mediaAjustada: number | null
+  medianaMinutos: number; maiores: number[]; menores: number[]
+  pontosAuto: number; pontos: number; pontosAjustados: boolean
   ajustado: boolean; ajustadoPor: string | null; ajustadoEm: string | null
   pontosAutoNaEpoca: number | null
 }
@@ -18,23 +19,20 @@ const dur = (min: number) => {
 
 /** Amostra pequena demais para a palavra "média" significar alguma coisa. */
 const POUCAS_AMOSTRAS = 5
+/** A média está sendo puxada por poucos casos longos. */
+const PUXADA = 1.6
 
-/**
- * O catálogo de tipos de serviço do setor, com a duração medida e o peso de cada
- * um — calculado pelo sistema e editável pela liderança.
- *
- * ⚠️⚠️ A tela mostra MÉDIA e MEDIANA lado a lado de propósito. Só a média vira
- * ponto (é o que o dono pediu), mas ela é puxada por poucos casos longos:
- * CERTIFICADO tem média 47 min e mediana 31, com um caso de 564. Quem decide o
- * peso de um serviço precisa ver o quanto as duas divergem — senão define o
- * valor de 389 certificados a partir de um dia em que um deles travou.
- */
+/** As colunas, num grid único — cabeçalho e linhas usam a MESMA definição, para
+ *  não desalinharem quando uma das duas mudar. Sem largura fixa total: a coluna
+ *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
+const COLS = 'minmax(0,1fr) 68px 104px 92px 104px 34px'
+
 export default function TarefasEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
-  const [rascunho, setRascunho] = useState<Record<string, string>>({})
+  const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string }>>({})
   const [msg, setMsg] = useState<string | null>(null)
 
   async function carregar() {
@@ -49,19 +47,20 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   }
   useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId])
 
-  async function salvar(t: Tarefa, valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'limpar', valor: number | null) {
     const r = await fetch('/api/servicos/tarefas', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ departmentId, tarefa: t.tarefa, pontos: valor, pontosAuto: t.pontosAuto }),
+      body: JSON.stringify({ departmentId, tarefa: t.tarefa, campo, valor, pontosAuto: t.pontosAuto }),
     })
     if (!r.ok) { setMsg((await r.json()).error ?? 'Não consegui salvar.'); return }
+    setMsg(null)
     await carregar()
   }
 
   if (!carregando && !tarefas.length) return null
 
-  const somaSePessoaFizerUmDeCada = tarefas.reduce((a, t) => a + t.pontos, 0)
   const poucas = tarefas.filter((t) => t.amostras < POUCAS_AMOSTRAS).length
+  const ajustadas = tarefas.filter((t) => t.ajustado).length
 
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
@@ -69,11 +68,12 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         <ListChecks size={16} color="var(--chart-2)" />
         <div style={{ fontSize: 14, fontWeight: 600 }}>Pontos por tipo de serviço — {setorNome}</div>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.55 }}>
-        Cada tipo vale <b>{fator} ponto por minuto</b> da duração média que ele levou, medida em{' '}
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
+        Cada tipo vale <b>{fator} ponto por minuto</b> do tempo médio, medido em{' '}
         <b>{total.toLocaleString('pt-BR')} serviços concluídos</b> da planilha inteira — não do período selecionado,
-        porque quanto um serviço leva é uma característica dele, não da janela que você está olhando.
-        {' '}<b>Os pontos são editáveis:</b> mude o número e ele passa a valer no lugar do calculado.
+        porque quanto um serviço leva é característica dele, não da janela que você está olhando.
+        {' '}<b>A média e os pontos são editáveis</b>: mudar a média recalcula os pontos na hora.
+        {ajustadas > 0 && <> · <b style={{ color: 'var(--accent)' }}>{ajustadas} {ajustadas === 1 ? 'ajustado' : 'ajustados'} à mão</b></>}
       </div>
 
       {poucas > 0 && (
@@ -92,71 +92,133 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Medindo a duração de cada tipo…</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 62px 78px 78px 96px 30px', gap: 10, alignItems: 'center', padding: '0 8px 8px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-mute)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '0 6px 8px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-mute)', borderBottom: '1px solid var(--border)' }}>
             <span>Tipo de serviço</span>
             <span style={{ textAlign: 'right' }}>Feitos</span>
-            <span style={{ textAlign: 'right' }}>Média</span>
+            <span style={{ textAlign: 'right' }}>Média usada</span>
             <span style={{ textAlign: 'right' }}>Mediana</span>
             <span style={{ textAlign: 'right' }}>Pontos</span>
             <span />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 560, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {tarefas.map((t) => {
               const poucasAmostras = t.amostras < POUCAS_AMOSTRAS
-              const valor = rascunho[t.tarefa] ?? String(t.pontos)
-              const mudou = Number(valor) !== t.pontos
-              /* A média está MUITO acima da mediana → poucos casos longos estão
-                 puxando o peso. A tela marca em vez de esconder. */
-              const puxada = t.mediaMinutos >= t.medianaMinutos * 1.6 && t.amostras >= POUCAS_AMOSTRAS
+              const puxada = t.mediaMedida >= t.medianaMinutos * PUXADA && t.amostras >= POUCAS_AMOSTRAS
+              const rMedia = rascunho[t.tarefa]?.media ?? String(t.mediaEmUso)
+              const rPontos = rascunho[t.tarefa]?.pontos ?? String(t.pontos)
+              /* ⚠️ O ESPELHO NA TELA: enquanto a pessoa digita a média, os pontos
+                 já mostram o resultado, com a MESMA conta do servidor. Esperar o
+                 salvamento para ver o efeito faria a régua ser ajustada às cegas. */
+              const pontosPrevistos = Math.max(1, Math.round((parseInt(rMedia || '0', 10) || 0) * fator))
+              const mostrarPontos = rascunho[t.tarefa]?.pontos != null ? rPontos : String(pontosPrevistos)
+
               return (
-                <div key={t.tarefa} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 62px 78px 78px 96px 30px', gap: 10, alignItems: 'center', padding: '7px 8px', borderBottom: '1px solid var(--border-soft, var(--border))', fontSize: 12 }}>
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.tarefa}>
-                    {t.tarefa}
-                    {t.ajustado && <span style={{ color: 'var(--accent)', fontSize: 10.5 }}> · ajustado</span>}
-                  </span>
-                  <span style={{ textAlign: 'right', color: poucasAmostras ? 'var(--warning)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}
-                    title={poucasAmostras ? 'Poucas ocorrências — a média não se sustenta' : undefined}>
-                    {t.amostras}
-                  </span>
-                  <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: puxada ? 'var(--warning)' : 'var(--text)' }}
-                    title={puxada ? `A média está bem acima da mediana — poucos casos longos a puxam (o maior levou ${dur(t.maiorMinutos)}).` : `O maior levou ${dur(t.maiorMinutos)}`}>
-                    {dur(t.mediaMinutos)}
-                  </span>
-                  <span style={{ textAlign: 'right', color: 'var(--text-mute)', fontVariantNumeric: 'tabular-nums' }}>{dur(t.medianaMinutos)}</span>
-                  <input
-                    type="number" value={valor}
-                    onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: e.target.value }))}
-                    onBlur={() => { if (mudou && valor !== '') salvar(t, Number(valor)) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                    title={t.ajustado
-                      ? `Ajustado por ${t.ajustadoPor} — o sistema calculava ${t.pontosAutoNaEpoca} na época e calcula ${t.pontosAuto} hoje.`
-                      : `Calculado: ${dur(t.mediaMinutos)} × ${fator} = ${t.pontosAuto}`}
-                    style={{
-                      height: 30, width: '100%', textAlign: 'right', padding: '0 8px',
-                      background: 'var(--surface-2)',
-                      border: `1px solid ${t.ajustado ? 'var(--accent)' : 'var(--border)'}`,
-                      borderRadius: 'var(--radius-sm)', color: 'var(--text)',
-                      fontSize: 13, fontWeight: 700, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
-                    }}
-                  />
-                  {/* Volta ao calculado — apaga o ajuste, não grava o sugerido. */}
-                  <button
-                    onClick={() => salvar(t, null)} disabled={!t.ajustado}
-                    title={t.ajustado ? `Voltar ao calculado (${t.pontosAuto})` : 'Está no valor calculado'}
-                    style={{ height: 26, width: 26, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: t.ajustado ? 'var(--text-dim)' : 'var(--border)', cursor: t.ajustado ? 'pointer' : 'default' }}
-                  >
-                    <RotateCcw size={13} />
-                  </button>
+                <div key={t.tarefa} style={{ padding: '9px 6px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', fontSize: 12.5 }}>
+                    <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }} title={t.tarefa}>
+                      {t.tarefa}
+                    </span>
+                    <span style={{ textAlign: 'right', color: poucasAmostras ? 'var(--warning)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                      {t.amostras}
+                    </span>
+
+                    {/* MÉDIA EDITÁVEL, em minutos. ⚠️ A medida continua ao lado
+                        quando a pessoa muda: trocar uma pela outra faria o
+                        sistema afirmar que mediu o que alguém decidiu. */}
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number" value={rMedia}
+                        onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: { ...r[t.tarefa], media: e.target.value, pontos: undefined } }))}
+                        onBlur={() => {
+                          const v = parseInt(rMedia || '', 10)
+                          if (Number.isFinite(v) && v !== t.mediaEmUso) salvar(t, 'media', v)
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                        title={t.mediaAjustada != null ? `Você definiu ${t.mediaAjustada} min. O medido na planilha é ${t.mediaMedida} min.` : 'A média medida na planilha, em minutos. Pode mudar.'}
+                        style={{
+                          height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 8px',
+                          background: 'var(--surface-2)',
+                          border: `1px solid ${t.mediaAjustada != null ? 'var(--accent)' : (puxada ? 'rgba(245,166,35,.5)' : 'var(--border)')}`,
+                          borderRadius: 'var(--radius-sm)',
+                          color: puxada && t.mediaAjustada == null ? 'var(--warning)' : 'var(--text)',
+                          fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
+                        }}
+                      />
+                      <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-mute)', pointerEvents: 'none' }}>min</span>
+                    </div>
+
+                    <span style={{ textAlign: 'right', color: 'var(--text-mute)', fontVariantNumeric: 'tabular-nums' }}>{dur(t.medianaMinutos)}</span>
+
+                    <input
+                      type="number" value={mostrarPontos}
+                      onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: { ...r[t.tarefa], pontos: e.target.value } }))}
+                      onBlur={() => {
+                        const v = parseInt(rPontos || '', 10)
+                        if (rascunho[t.tarefa]?.pontos != null && Number.isFinite(v) && v !== t.pontos) salvar(t, 'pontos', v)
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                      title={t.pontosAjustados
+                        ? `Definido à mão por ${t.ajustadoPor}. O cálculo dá ${t.pontosAuto}${t.pontosAutoNaEpoca ? ` (dava ${t.pontosAutoNaEpoca} quando foi mudado)` : ''}.`
+                        : `${t.mediaEmUso} min × ${fator} = ${t.pontosAuto}`}
+                      style={{
+                        height: 30, width: '100%', textAlign: 'right', padding: '0 8px',
+                        background: 'var(--surface-2)',
+                        border: `1px solid ${t.pontosAjustados ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                        fontSize: 13, fontWeight: 700, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
+                      }}
+                    />
+
+                    <button
+                      onClick={() => salvar(t, 'limpar', null)} disabled={!t.ajustado}
+                      title={t.ajustado ? `Voltar ao medido (${t.mediaMedida} min → ${Math.max(1, Math.round(t.mediaMedida * fator))} pontos)` : 'Está no valor medido'}
+                      style={{ height: 28, width: 28, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: t.ajustado ? 'var(--text-dim)' : 'var(--border)', cursor: t.ajustado ? 'pointer' : 'default' }}
+                    >
+                      <RotateCcw size={13} />
+                    </button>
+                  </div>
+
+                  {/* ⚠️⚠️ A OBSERVAÇÃO SAIU DO TOOLTIP. Os extremos existiam só no
+                      `title` do HTML — ou seja, para quem passasse o mouse por
+                      cima e por acaso esperasse. Quem define o peso de um serviço
+                      precisa ver, de graça, que o CERTIFICADO tem casos de 9h24 e
+                      casos de 1 minuto: é o que separa "esta tarefa é longa" de
+                      "esta tarefa travou num dia". */}
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5 }}>
+                    <span>
+                      <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>mais longos:</b>{' '}
+                      {t.maiores.map((m) => dur(m)).join(' · ') || '—'}
+                    </span>
+                    <span>
+                      <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>mais curtos:</b>{' '}
+                      {t.menores.map((m) => dur(m)).join(' · ') || '—'}
+                    </span>
+                    {puxada && t.mediaAjustada == null && (
+                      <span style={{ color: 'var(--warning)' }}>
+                        a média ({dur(t.mediaMedida)}) está bem acima da mediana ({dur(t.medianaMinutos)}) — poucos casos longos a puxam
+                      </span>
+                    )}
+                    {poucasAmostras && (
+                      <span style={{ color: 'var(--warning)' }}>
+                        {t.amostras === 1 ? 'aconteceu uma única vez — não é média, é o caso' : `só ${t.amostras} ocorrências`}
+                      </span>
+                    )}
+                    {t.mediaAjustada != null && (
+                      <span style={{ color: 'var(--accent)' }}>
+                        média definida por {t.ajustadoPor} · o medido na planilha é {dur(t.mediaMedida)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
 
           <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 12, lineHeight: 1.6 }}>
-            {tarefas.length} tipos de serviço · somados, um de cada valeria <b>{somaSePessoaFizerUmDeCada.toLocaleString('pt-BR')}</b> pontos.
-            {' '}<b>Média</b> é o que vira ponto; a <b>mediana</b> está ao lado porque poucos casos longos puxam a média para cima,
-            {' '}e é ela que mostra o serviço típico.
+            {tarefas.length} tipos de serviço. A <b>média usada</b> é o que vira ponto; a <b>mediana</b> fica ao lado porque
+            {' '}poucos casos longos puxam a média para cima, e é ela que mostra o serviço típico. Os extremos de cada linha
+            {' '}estão ali para mostrar o que a média esconde.
           </div>
         </>
       )}

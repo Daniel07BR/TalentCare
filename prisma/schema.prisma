@@ -899,7 +899,28 @@ model PontuacaoMes {
 model PontuacaoTarefaAjuste {
   departmentId      String   @map("department_id")
   tarefa            String
-  pontos            Int
+  /**
+   * A média que a LIDERANÇA decidiu considerar, em minutos. `null` = usa a
+   * medida na planilha.
+   * ⚠️⚠️ Existe porque a média medida às vezes não descreve o serviço. O
+   * CERTIFICADO tem média 47 min e mediana 31, e um caso de 9h24 — a média está
+   * pagando 389 certificados pelo preço de um dia em que um deles travou. Quem
+   * conhece o trabalho precisa poder dizer "considere 31" sem que o sistema
+   * finja que 31 foi o que ele mediu: por isso é um campo separado, e a tela
+   * mostra os dois números lado a lado.
+   */
+  mediaMinutos      Int?     @map("media_minutos")
+  /**
+   * Override DIRETO dos pontos. `null` = calcula da média (ajustada ou medida).
+   * ⚠️ Editar a média RECALCULA os pontos e limpa este campo — senão o valor
+   * digitado antes ficaria preso e a média nova não teria efeito nenhum, que é
+   * o oposto do que a pessoa acabou de pedir ao mexer nela.
+   */
+  pontos            Int?
+  /**
+   * Quanto o sistema sugeria QUANDO a pessoa mudou — sem isso não há como
+   * responder "ele aumentou ou o dado mudou?" seis meses depois.
+   */
   pontosAutoNaEpoca Int      @map("pontos_auto_na_epoca")
   ajustadoPor       String   @map("ajustado_por")
   ajustadoEm        DateTime @updatedAt @map("ajustado_em")

@@ -90,8 +90,10 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
   const resolvidos = previa?.nomes.filter((n) => n.resolvidoPor !== 'pendente') ?? []
   const lotesDoSetor = lotes.filter((l) => l.departmentId === setorId)
 
+  /* ⚠️ 1280 como o dashboard: a tabela de tipos de serviço tem seis colunas e,
+     em 1080, a do nome espremia e a tela rolava na horizontal. */
   return (
-    <div className="tc-anim" style={{ maxWidth: 1080, margin: '0 auto' }}>
+    <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Planilha do setor</div>
