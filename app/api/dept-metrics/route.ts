@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
-import { quemEh, filtroDeAvaliaveis } from '@/lib/avaliacoes/regua'
+import { quemEh, filtroDeAvaliaveis, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 
@@ -493,7 +493,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     pessoas: equipePessoas,
     rankings,
-    setor: { id: dept.id, nome: dept.name, pelaDiretoria: dept.avaliadoPelaDiretoria },
+    setor: {
+      id: dept.id, nome: dept.name, pelaDiretoria: dept.avaliadoPelaDiretoria,
+      /* ⚠️ Quem PODE enviar a planilha deste setor. Vem do servidor, e não de um
+         palpite da tela: a mesma régua que a rota de importação aplica. Botão
+         que aparece para quem vai levar 403 é pior que botão que não aparece. */
+      podeGerir: podeGerirServicos(quem, dept.id),
+    },
     chefia,
     // Quem está lendo alcança a empresa toda? Muda o que se pode COBRAR dele na
     // faixa de ação. Vem do servidor porque é a régua que sabe, não a tela.

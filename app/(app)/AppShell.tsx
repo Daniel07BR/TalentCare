@@ -168,11 +168,12 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
                 style={navChip}>{d.name}</Link>
             ))}
             <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
-            {/* ⚠️ A planilha do setor é trabalho DELE, e a barra do gestor é
-                enxuta de propósito — mas "sem menu" não pode virar "sem saída".
-                Sem este atalho, a área de serviços existiria e ninguém chegaria
-                nela sem digitar a URL. */}
-            <Link href="/servicos" className={'tc-nav' + (pathname === '/servicos' ? ' on' : '')} style={navChip}>Serviços</Link>
+            {/* ⚠️ "Serviços" SAIU daqui (pedido do dono, 04/09/2026). O caminho
+                para a planilha é o botão no RESUMO DO SETOR, onde o gestor já
+                está quando lembra dela e onde ele vê o que ela produziu. Um item
+                de menu obriga a lembrar que a tela existe; um botão no resumo
+                aparece na hora em que faz sentido — e leva o setor na URL, o que
+                fecha a porta pela qual 6.980 linhas foram para o setor errado. */}
             <Link href="/minha-avaliacao" className={'tc-nav' + (pathname === '/minha-avaliacao' ? ' on' : '')} style={navChip}>Meu desempenho</Link>
           </nav>
           {/* ⚠️ O selo é o que impede o preview de virar confusão: sem ele, quem

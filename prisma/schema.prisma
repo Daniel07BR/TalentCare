@@ -767,6 +767,16 @@ model ServicoVinculo {
   nomeOrigem   String   @map("nome_origem")
   personKey    String?  @map("person_key")
   confirmado   Boolean  @default(false)
+  /**
+   * POR QUE não credita ninguém. `personKey` nulo tem mais de um motivo, e a
+   * tela mentia ao chamar todos de "não é da casa":
+   * 'nao_e_da_casa'  — nunca foi gente daqui (os 4 ex-terceiros do Legal)
+   * 'ex_funcionario' — foi, saiu (o Augusto)
+   * 'outro_setor'    — é da casa, mas de outro setor, e vai ser medido pela
+   * régua DE LÁ (o Arthur, hoje no Financeiro)
+   * Nos três casos as linhas contam para o setor e não creditam a pessoa.
+   */
+  motivo       String?
   criadoPor    String?  @map("criado_por")
   criadoEm     DateTime @default(now()) @map("criado_em")
 

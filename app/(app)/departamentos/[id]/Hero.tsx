@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap } from 'lucide-react'
+import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap, FileSpreadsheet, Upload } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import Avatar from '../../Avatar'
 
@@ -18,7 +18,7 @@ import Avatar from '../../Avatar'
 
 const CIN = { display: 'flex', filter: 'grayscale(1)', opacity: 0.9 } as React.CSSProperties
 
-export function Hero({ m }: { m: DeptMetrics }) {
+export function Hero({ m, podeEnviar }: { m: DeptMetrics; podeEnviar?: boolean }) {
   const router = useRouter()
   const gestores = m.chefia.filter((c) => c.nivel === 'gestor')
   const subs = m.chefia.filter((c) => c.nivel !== 'gestor')
@@ -102,6 +102,23 @@ export function Hero({ m }: { m: DeptMetrics }) {
                 tranquilo, sobre um setor que ninguém mediu. Zero se lê como "não
                 houve ocorrência" — e é a leitura que inocenta e a que acusa,
                 dependendo do cartão, sempre sem base. */}
+            {/* ⚠️⚠️ A PLANILHA DO SETOR ENTRA NO RESUMO (pedido do dono,
+                04/09/2026), e não só lá embaixo no bloco de fontes. É a fonte
+                que o setor mantém à mão e a que ele reconhece como o próprio
+                trabalho — enterrá-la entre oito espelhos de sistemas que ele usa
+                de passagem é dizer que ela vale o mesmo que as outras. Vale
+                mais, para quem lê ESTE relatório. */}
+            {m.servicos?.temFonte && (
+              <Sinal
+                Icone={FileSpreadsheet} rotulo="Serviços concluídos"
+                valor={m.servicos.concluidos.toLocaleString('pt-BR')}
+                nota={m.servicos.minutos ? `${Math.round(m.servicos.minutos / 60)} h somadas` : 'no período'}
+                dica={m.servicos.cobertura
+                  ? `Da planilha do setor, que cobre de ${m.servicos.cobertura.de.split('-').reverse().join('/')} a ${m.servicos.cobertura.ate.split('-').reverse().join('/')}. Fora dessa janela o setor não mediu — não é zero.`
+                  : 'Da planilha que o setor envia.'}
+                cor="var(--chart-2)"
+              />
+            )}
             <Sinal
               Icone={AlertTriangle} rotulo="Advertências"
               valor={semPonto ? '—' : String(m.assiduidade.advertencias)}
@@ -132,6 +149,27 @@ export function Hero({ m }: { m: DeptMetrics }) {
               nota={d.generos['?'] ? `${d.generos['?']} não informado` : undefined} />
             {m.equipe.comNexus < m.equipe.ativos && (
               <Dado rotulo="Sem conta no Nexus" valor={String(m.equipe.ativos - m.equipe.comNexus)} nota="fora das 8 fontes" />
+            )}
+
+            {/* ⚠️⚠️ O CAMINHO PARA A PLANILHA MORA AQUI (pedido do dono,
+                04/09/2026), e não num item de menu lá em cima. O gestor abre o
+                relatório do PRÓPRIO setor — é aqui que ele está quando lembra da
+                planilha, e é aqui que ele vê o que ela produziu. Um botão de
+                menu obriga a lembrar que a tela existe; um botão no resumo
+                aparece na hora em que faz sentido.
+
+                ⚠️ Ele também LEVA O SETOR na URL: era um dropdown no alto da
+                outra tela, e em 04/09 uma planilha do Legal foi importada para
+                Entregas justamente porque ninguém olhou aquele campo. */}
+            {podeEnviar && (
+              <button
+                onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
+                style={{ marginLeft: 'auto', alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                title="Enviar a planilha de serviços e definir a régua de pontuação deste setor"
+              >
+                <Upload size={14} />
+                {m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
+              </button>
             )}
           </div>
         </div>

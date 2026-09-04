@@ -22,7 +22,7 @@ export type DeptMetrics = {
    *  caso comum (o setor abre chamado e não resolve) — o cartão diz isso. */
   rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio' | 'servicos',
     { rotulo: string; gente: PessoaRank[] }>
-  setor: { id: string; nome: string; pelaDiretoria: boolean }
+  setor: { id: string; nome: string; pelaDiretoria: boolean; podeGerir?: boolean }
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
   ehAdmin: boolean
   /** Gestor e sub-encarregados do setor, do vínculo gravado. */

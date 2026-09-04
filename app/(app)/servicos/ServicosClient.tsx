@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Upload, FileSpreadsheet, TriangleAlert, Check, X } from 'lucide-react'
 import RegraEditor from './RegraEditor'
 
@@ -36,7 +37,15 @@ type Previa = {
 const br = (d: string) => (d ? d.split('-').reverse().join('/') : '—')
 
 export default function ServicosClient({ setores, lotes }: { setores: Setor[]; lotes: Lote[] }) {
-  const [setorId, setSetorId] = useState(setores[0].id)
+  /* ⚠️⚠️ O SETOR VEM NA URL quando se chega pelo relatório do setor — que é o
+     caminho normal desde 04/09/2026. Ele deixou de ser um dropdown que a pessoa
+     precisa lembrar de conferir: em 04/09 uma planilha do Legal foi importada
+     para Entregas exatamente porque ninguém olhou aquele campo, e foram 6.980
+     linhas para o setor errado sem nada acusar. */
+  const params = useSearchParams()
+  const daUrl = params.get('setor')
+  const inicial = setores.find((s) => s.id === daUrl)?.id ?? setores[0].id
+  const [setorId, setSetorId] = useState(inicial)
   const [previa, setPrevia] = useState<Previa | null>(null)
   const [arquivo, setArquivo] = useState<File | null>(null)
   const [erro, setErro] = useState<string | null>(null)

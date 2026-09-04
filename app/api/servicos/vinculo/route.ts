@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   if (!quem) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await req.json().catch(() => null) as {
-    departmentId?: string; nomeOrigem?: string; personKey?: string | null; naoEhDaCasa?: boolean
+    departmentId?: string; nomeOrigem?: string; personKey?: string | null
+    naoEhDaCasa?: boolean; motivo?: string
   } | null
   const departmentId = body?.departmentId ?? ''
   const nomeOrigem = (body?.nomeOrigem ?? '').trim()
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
      ausência. Guardar as duas do mesmo jeito faria a tela pedir a mesma
      confirmação todo mês, e alerta que não se apaga é alerta que ninguém lê. */
   const personKey = body?.naoEhDaCasa ? null : (body?.personKey || null)
+  const MOTIVOS = ['nao_e_da_casa', 'ex_funcionario', 'outro_setor']
+  const motivo = personKey ? null : (MOTIVOS.includes(body?.motivo ?? '') ? body!.motivo! : 'nao_e_da_casa')
   if (!body?.naoEhDaCasa && !personKey) {
     return NextResponse.json({ error: 'Escolha a pessoa ou marque "não é da casa".' }, { status: 400 })
   }
@@ -51,8 +54,8 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.servicoVinculo.upsert({
       where: { departmentId_nomeNorm: { departmentId, nomeNorm } },
-      create: { departmentId, nomeNorm, nomeOrigem, personKey, confirmado: true, criadoPor: quem.id },
-      update: { personKey, nomeOrigem, confirmado: true, criadoPor: quem.id },
+      create: { departmentId, nomeNorm, nomeOrigem, personKey, confirmado: true, criadoPor: quem.id, motivo },
+      update: { personKey, nomeOrigem, confirmado: true, criadoPor: quem.id, motivo },
     }),
     // Recredita o que já está no banco — ver o aviso do topo.
     prisma.servicoDepto.updateMany({ where: { departmentId, nomeOrigem }, data: { personKey } }),

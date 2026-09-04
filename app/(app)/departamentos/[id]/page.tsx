@@ -142,7 +142,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
       </div>
 
-      {m && <Hero m={m} />}
+      {m && <Hero m={m} podeEnviar={!!m.setor.podeGerir} />}
       {edu && <Escolaridade segs={edu.segs} informed={edu.informed} total={edu.total} />}
 
       {/* ── A PARTIR DAQUI, TUDO OBEDECE AOS FILTROS ──────────────────────
