@@ -112,7 +112,9 @@ export function Hero({ m, podeEnviar }: { m: DeptMetrics; podeEnviar?: boolean }
               <Sinal
                 Icone={FileSpreadsheet} rotulo="Serviços concluídos"
                 valor={m.servicos.concluidos.toLocaleString('pt-BR')}
-                nota={m.servicos.minutos ? `${Math.round(m.servicos.minutos / 60)} h somadas` : 'no período'}
+                nota={m.servicos.total && m.servicos.total.concluidos > m.servicos.concluidos
+                  ? `no período · ${m.servicos.total.concluidos.toLocaleString('pt-BR')} na planilha inteira`
+                  : (m.servicos.minutos ? `${Math.round(m.servicos.minutos / 60)} h somadas` : 'no período')}
                 dica={m.servicos.cobertura
                   ? `Da planilha do setor, que cobre de ${m.servicos.cobertura.de.split('-').reverse().join('/')} a ${m.servicos.cobertura.ate.split('-').reverse().join('/')}. Fora dessa janela o setor não mediu — não é zero.`
                   : 'Da planilha que o setor envia.'}

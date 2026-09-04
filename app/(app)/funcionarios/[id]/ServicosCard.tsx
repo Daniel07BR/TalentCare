@@ -6,6 +6,7 @@ type Servicos = NonNullable<{
   concluidos: number; abertos: number; desconsiderados: number; minutos: number
   porMes: { mes: string; concluidos: number; minutos: number }[]
   porTarefa: { tarefa: string; n: number; minutos: number }[]
+  totalConcluidos?: number
 }>
 type Ponto = { competencia: string; pontos: number; origem: string; detalhe: string | null }
 
@@ -43,8 +44,13 @@ export default function ServicosCard({ servicos, pontuacao, periodo }: {
         <FileSpreadsheet size={16} color="var(--chart-2)" />
         <div style={{ fontSize: 14, fontWeight: 600 }}>Serviços do setor</div>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-        Da planilha que o setor envia · {periodo.toLowerCase()}
+      {/* ⚠️⚠️ O período E o total, lado a lado. Sem o segundo, quem subiu 18
+          meses de planilha lê o recorte de 30 dias como se fosse tudo. */}
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.5 }}>
+        Da planilha que o setor envia · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b>
+        {servicos?.totalConcluidos != null && servicos.totalConcluidos > servicos.concluidos && (
+          <> · na planilha inteira são <b style={{ color: 'var(--text)' }}>{servicos.totalConcluidos.toLocaleString('pt-BR')} concluídos</b></>
+        )}
       </div>
 
       {temServico && servicos && (

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, servicos, pontuacoes, discLista] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -106,6 +106,12 @@ export async function GET(req: NextRequest) {
       where: { personKey, dia: { gte: fromDay, lte: toDay } },
       select: { dia: true, status: true, tarefa: true, minutos: true },
     }),
+    /* ⚠️⚠️ O TOTAL da pessoa na planilha, sem filtro. Sem ele a ficha mostra o
+       recorte de 30 dias e quem subiu 18 meses de arquivo pergunta onde foram
+       parar os dados — foi exatamente o que aconteceu em 04/09/2026. O número
+       do período estava certo e mesmo assim enganava, porque nada dizia que era
+       um recorte. */
+    prisma.servicoDepto.count({ where: { personKey, status: 'concluida' } }),
     /* A pontuação mensal. NÃO se recorta por período: é mensal por natureza, e a
        tela diz isso — mesma regra da avaliação mensal no `PERIODO-E-DEPLOY.md`. */
     prisma.pontuacaoMes.findMany({
@@ -236,13 +242,15 @@ export async function GET(req: NextRequest) {
         porTarefa.set(x.tarefa, a)
       }
       return {
-        temFonte: servicos.length > 0,
+        temFonte: servicos.length > 0 || servTotal > 0,
         concluidos: concl.length,
         abertos: servicos.filter((x) => x.status === 'aberta').length,
         desconsiderados: servicos.filter((x) => x.status === 'desconsiderada').length,
         minutos: concl.reduce((a, x) => a + x.minutos, 0),
         porMes: [...porMesMap].sort((a, b) => a[0].localeCompare(b[0])).map(([mes, v]) => ({ mes, ...v })),
         porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).slice(0, 8).map(([tarefa, v]) => ({ tarefa, ...v })),
+        /** Concluídos na planilha INTEIRA — o contexto que faz o recorte se ler. */
+        totalConcluidos: servTotal,
       }
     })(),
 

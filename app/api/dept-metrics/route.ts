@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id') ?? ''
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const cobPonto = await coberturaDoPonto()
-  const [servicosDoSetor, coberturaServicos] = await Promise.all([
+  const [servicosDoSetor, coberturaServicos, totalDaPlanilha] = await Promise.all([
     prisma.servicoDepto.findMany({
       where: { departmentId: id, dia: { gte: fromDay, lte: toDay } },
       select: { personKey: true, status: true, minutos: true },
@@ -42,6 +42,20 @@ export async function GET(req: NextRequest) {
       where: { departmentId: id, ativo: true },
       orderBy: { diaAte: 'desc' },
       select: { diaDe: true, diaAte: true, arquivo: true },
+    }),
+    /* ⚠️⚠️ O TOTAL DA PLANILHA, sem filtro de data.
+       A regra da casa manda todo número ao lado do filtro OBEDECER ao filtro, e
+       ele obedece — mas isso, sozinho, produziu a pergunta certa do dono:
+       "subi 6.980 linhas e a tela mostra 236, cadê os dados?". O recorte estava
+       certo e mesmo assim enganava, porque nada dizia que era recorte.
+
+       Quem sobe um arquivo de 18 meses precisa ver o período E o todo, lado a
+       lado. É a face espelhada do defeito do acumulado com rótulo de período:
+       lá o total se passava por período; aqui o período parecia ser o total. */
+    prisma.servicoDepto.groupBy({
+      by: ['status'],
+      where: { departmentId: id },
+      _count: { _all: true },
     }),
   ])
   const range = { day: { gte: fromDay, lte: toDay } }
@@ -559,7 +573,7 @@ export async function GET(req: NextRequest) {
        total do setor e não creditam ninguém, e o gestor precisa saber que a
        diferença entre a soma das pessoas e o total do setor é isso, não erro. */
     servicos: {
-      temFonte: servicosDoSetor.length > 0,
+      temFonte: servicosDoSetor.length > 0 || totalDaPlanilha.length > 0,
       concluidos: servicosDoSetor.filter((x) => x.status === 'concluida').length,
       abertos: servicosDoSetor.filter((x) => x.status === 'aberta').length,
       minutos: servicosDoSetor.filter((x) => x.status === 'concluida').reduce((a, x) => a + x.minutos, 0),
@@ -567,6 +581,11 @@ export async function GET(req: NextRequest) {
       cobertura: coberturaServicos
         ? { de: coberturaServicos.diaDe, ate: coberturaServicos.diaAte, arquivo: coberturaServicos.arquivo }
         : null,
+      /** O arquivo INTEIRO, sem filtro — o contexto que faz o recorte se ler. */
+      total: {
+        linhas: totalDaPlanilha.reduce((a, r) => a + r._count._all, 0),
+        concluidos: totalDaPlanilha.find((r) => r.status === 'concluida')?._count._all ?? 0,
+      },
       porPessoa: (() => {
         const m = new Map<string, { concluidos: number; minutos: number }>()
         for (const x of servicosDoSetor) {

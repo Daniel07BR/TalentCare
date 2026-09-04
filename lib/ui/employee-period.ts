@@ -47,6 +47,8 @@ export type EmployeeMetrics = {
     concluidos: number; abertos: number; desconsiderados: number; minutos: number
     porMes: { mes: string; concluidos: number; minutos: number }[]
     porTarefa: { tarefa: string; n: number; minutos: number }[]
+    /** Concluídos na planilha inteira, sem filtro de período. */
+    totalConcluidos?: number
   }
   /** Pontuação mensal do setor. `origem` distingue informado de calculado. */
   pontuacao?: { competencia: string; pontos: number; origem: string; detalhe: string | null }[]

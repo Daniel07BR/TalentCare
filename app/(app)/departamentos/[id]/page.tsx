@@ -357,12 +357,27 @@ function Atividade({ m }: { m: DeptMetrics }) {
              com o total do setor e o gestor procura um erro que não existe. */
           { label: 'Sem vínculo', valor: sv.semDono || null, cor: 'var(--text-mute)', nota: 'gente fora do quadro' },
         ]}
-        rodape={sv.cobertura ? (
-          <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
-            A planilha cobre de {sv.cobertura.de.split('-').reverse().join('/')} a {sv.cobertura.ate.split('-').reverse().join('/')}.
-            {' '}Fora dessa janela o setor não mediu — não é zero.
+        rodape={
+          <span style={{ fontSize: 11, color: 'var(--text-mute)', lineHeight: 1.55, display: 'block' }}>
+            {/* ⚠️⚠️ O RECORTE TEM DE SE ANUNCIAR. Os números acima obedecem ao
+                filtro — e mesmo assim enganavam: quem subiu um arquivo de 6.980
+                linhas e leu "236" perguntou, com razão, onde estavam os dados.
+                Número certo que responde outra pergunta é o defeito que esta
+                casa mais conhece; aqui ele aparece pelo avesso, com o período se
+                passando pelo total. */}
+            {sv.total && sv.total.concluidos > sv.concluidos && (
+              <>
+                Os números acima são <b>do período selecionado</b>. A planilha inteira tem{' '}
+                <b style={{ color: 'var(--text-dim)' }}>{sv.total.concluidos.toLocaleString('pt-BR')} concluídos</b>
+                {' '}em {sv.total.linhas.toLocaleString('pt-BR')} linhas — troque o período no alto da tela para ver mais.<br />
+              </>
+            )}
+            {sv.cobertura && (
+              <>A planilha cobre de {sv.cobertura.de.split('-').reverse().join('/')} a {sv.cobertura.ate.split('-').reverse().join('/')}.
+              {' '}Fora dessa janela o setor não mediu — não é zero.</>
+            )}
           </span>
-        ) : undefined}
+        }
       />)
   }
 

@@ -73,6 +73,8 @@ export type DeptMetrics = {
     /** Linhas de gente que não é da casa — contam para o setor, não creditam ninguém. */
     semDono: number
     cobertura: { de: string; ate: string; arquivo: string } | null
+    /** O arquivo inteiro, sem filtro de período. */
+    total?: { linhas: number; concluidos: number }
     porPessoa: { personKey: string; concluidos: number; minutos: number }[]
   }
   demografia: {
