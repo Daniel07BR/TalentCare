@@ -682,7 +682,7 @@ model ImportLote {
   /**
    * SHA-256 do arquivo — a idempotência.
    */
-  hash             String   @unique
+  hash             String
   /**
    * A janela que o arquivo cobriu (AAAA-MM-DD).
    */
