@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { ListChecks, RotateCcw, TriangleAlert } from 'lucide-react'
+import { ListChecks, RotateCcw, TriangleAlert, ChevronUp, ChevronDown } from 'lucide-react'
 
 type Tarefa = {
   tarefa: string; amostras: number
@@ -35,6 +35,22 @@ const PUXADA = 1.6
  *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
 const COLS = 'minmax(0,1fr) 58px 84px 84px 100px 80px 92px 32px'
 
+/* As colunas que dá para ordenar, e por qual número cada uma ordena.
+   ⚠️ `null` (mínimo/máximo não definidos) vai SEMPRE para o fim, nos dois
+   sentidos: ausência não é "menor que", é ausência — a mesma regra que vale
+   para o resto do painel. Ordenar por mínimo com os nulos misturados faria
+   parecer que 47 tarefas têm mínimo zero. */
+type Coluna = 'tarefa' | 'amostras' | 'tempoMinimo' | 'tempoMaximo' | 'mediaEmUso' | 'medianaMinutos' | 'pontos'
+const ORDENAVEIS: { chave: Coluna; label: string; dica?: string; numerica: boolean }[] = [
+  { chave: 'tarefa', label: 'Tipo de serviço', numerica: false },
+  { chave: 'amostras', label: 'Feitos', numerica: true },
+  { chave: 'tempoMinimo', label: 'Mínimo', dica: 'Serviço mais rápido que isto sai da média — o trabalho continua contando, o tempo não', numerica: true },
+  { chave: 'tempoMaximo', label: 'Máximo', dica: 'Serviço mais lento que isto sai da média — o trabalho continua contando, o tempo não', numerica: true },
+  { chave: 'mediaEmUso', label: 'Média usada', numerica: true },
+  { chave: 'medianaMinutos', label: 'Mediana', numerica: true },
+  { chave: 'pontos', label: 'Pontos', numerica: true },
+]
+
 export default function TarefasEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
@@ -42,6 +58,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   const [carregando, setCarregando] = useState(true)
   const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string; maximo?: string }>>({})
   const [msg, setMsg] = useState<string | null>(null)
+  const [ordem, setOrdem] = useState<{ col: Coluna; desc: boolean }>({ col: 'amostras', desc: true })
 
   async function carregar() {
     setCarregando(true)
@@ -66,6 +83,28 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   }
 
   if (!carregando && !tarefas.length) return null
+
+  /* Um clique ordena; clicar de novo na MESMA coluna inverte. Texto começa
+     A→Z e número começa do maior — é o que a pessoa espera de cada um. */
+  const clicar = (col: Coluna) =>
+    setOrdem((o) => o.col === col
+      ? { col, desc: !o.desc }
+      : { col, desc: ORDENAVEIS.find((c) => c.chave === col)!.numerica })
+
+  const ordenadas = [...tarefas].sort((a, b) => {
+    const { col, desc } = ordem
+    if (col === 'tarefa') {
+      const r = a.tarefa.localeCompare(b.tarefa, 'pt-BR')
+      return desc ? -r : r
+    }
+    const va = a[col] as number | null
+    const vb = b[col] as number | null
+    // Nulos por último, nos DOIS sentidos.
+    if (va == null && vb == null) return a.tarefa.localeCompare(b.tarefa, 'pt-BR')
+    if (va == null) return 1
+    if (vb == null) return -1
+    return desc ? vb - va : va - vb
+  })
 
   const poucas = tarefas.filter((t) => t.amostras < POUCAS_AMOSTRAS).length
   const ajustadas = tarefas.filter((t) => t.ajustado).length
@@ -100,19 +139,31 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Medindo a duração de cada tipo…</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '0 6px 8px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-mute)', borderBottom: '1px solid var(--border)' }}>
-            <span>Tipo de serviço</span>
-            <span style={{ textAlign: 'right' }}>Feitos</span>
-            <span style={{ textAlign: 'right' }} title="Serviço mais rápido que isto sai da média — o trabalho continua contando, o tempo não">Mínimo</span>
-            <span style={{ textAlign: 'right' }} title="Serviço mais lento que isto sai da média — o trabalho continua contando, o tempo não">Máximo</span>
-            <span style={{ textAlign: 'right' }}>Média usada</span>
-            <span style={{ textAlign: 'right' }}>Mediana</span>
-            <span style={{ textAlign: 'right' }}>Pontos</span>
+          {/* ⚠️ O cabeçalho ORDENA. Com 74 tipos, "qual serviço vale mais" e
+              "quais eu ainda não limitei" são perguntas que a lista fixa por
+              frequência não responde. */}
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '0 6px 8px', borderBottom: '1px solid var(--border)' }}>
+            {ORDENAVEIS.map((c) => {
+              const ativa = ordem.col === c.chave
+              return (
+                <button key={c.chave} onClick={() => clicar(c.chave)} title={c.dica ?? `Ordenar por ${c.label.toLowerCase()}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    justifyContent: c.numerica ? 'flex-end' : 'flex-start',
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase',
+                    color: ativa ? 'var(--accent)' : 'var(--text-mute)',
+                  }}>
+                  {c.label}
+                  {ativa && (ordem.desc ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                </button>
+              )
+            })}
             <span />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {tarefas.map((t) => {
+            {ordenadas.map((t) => {
               const poucasAmostras = t.amostras < POUCAS_AMOSTRAS
               const puxada = t.mediaMedida >= t.medianaMinutos * PUXADA && t.amostras >= POUCAS_AMOSTRAS
               const rMedia = rascunho[t.tarefa]?.media ?? String(t.mediaEmUso)
