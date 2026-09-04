@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Upload, FileSpreadsheet, TriangleAlert, Check, X } from 'lucide-react'
 import RegraEditor from './RegraEditor'
 import TarefasEditor from './TarefasEditor'
@@ -43,6 +43,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
      precisa lembrar de conferir: em 04/09 uma planilha do Legal foi importada
      para Entregas exatamente porque ninguém olhou aquele campo, e foram 6.980
      linhas para o setor errado sem nada acusar. */
+  const router = useRouter()
   const params = useSearchParams()
   const daUrl = params.get('setor')
   const inicial = setores.find((s) => s.id === daUrl)?.id ?? setores[0].id
@@ -54,6 +55,9 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
   const [gravado, setGravado] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const setor = setores.find((s) => s.id === setorId)!
+  /* De qual relatório a pessoa veio. ⚠️ É o setor da URL, não o selecionado: se
+     ela trocar o seletor aqui, a volta continua sendo para onde ela estava. */
+  const setorDeOrigem = setores.find((s) => s.id === daUrl) ?? null
 
   async function enviar(f: File, confirmar: boolean) {
     setOcupado(true); setErro(null)
@@ -94,6 +98,25 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
      em 1080, a do nome espremia e a tela rolava na horizontal. */
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      {/* ⚠️⚠️ A VOLTA. Quem chega aqui vem do relatório do setor, pelo botão
+          "Atualizar planilha do setor" — e ficava sem caminho de volta: o menu
+          lateral leva a `/servicos` genérico e a barra do gestor nem tem o item.
+          Sair de uma tela e não conseguir voltar de onde se veio é o tipo de
+          beco que faz a pessoa usar o botão do navegador e perder o setor
+          selecionado.
+
+          ⚠️ Só aparece quando o setor VEIO na URL: quem entrou pelo menu não
+          estava em relatório nenhum, e um "voltar" para uma tela que a pessoa
+          não visitou é pior que nenhum. */}
+      {setorDeOrigem && (
+        <button
+          onClick={() => router.push(`/departamentos/${setorDeOrigem.id}`)}
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}
+        >
+          ‹ Voltar ao relatório de {setorDeOrigem.name}
+        </button>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Planilha do setor</div>
