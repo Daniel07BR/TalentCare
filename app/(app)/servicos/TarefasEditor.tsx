@@ -5,7 +5,9 @@ import { ListChecks, RotateCcw, TriangleAlert } from 'lucide-react'
 type Tarefa = {
   tarefa: string; amostras: number
   mediaMedida: number; mediaEmUso: number; mediaAjustada: number | null
-  cronometradas: number; zerados: number; abaixoDoMinimo: number; tempoMinimo: number | null
+  cronometradas: number; zerados: number
+  abaixoDoMinimo: number; acimaDoMaximo: number
+  tempoMinimo: number | null; tempoMaximo: number | null
   medianaMinutos: number
   maiores: { minutos: number; quem: string }[]
   menores: { minutos: number; quem: string }[]
@@ -31,14 +33,14 @@ const PUXADA = 1.6
 /** As colunas, num grid único — cabeçalho e linhas usam a MESMA definição, para
  *  não desalinharem quando uma das duas mudar. Sem largura fixa total: a coluna
  *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
-const COLS = 'minmax(0,1fr) 64px 96px 104px 86px 96px 34px'
+const COLS = 'minmax(0,1fr) 58px 84px 84px 100px 80px 92px 32px'
 
 export default function TarefasEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
-  const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string }>>({})
+  const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string; maximo?: string }>>({})
   const [msg, setMsg] = useState<string | null>(null)
 
   async function carregar() {
@@ -53,7 +55,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   }
   useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId])
 
-  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'limpar', valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar', valor: number | null) {
     const r = await fetch('/api/servicos/tarefas', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ departmentId, tarefa: t.tarefa, campo, valor, pontosAuto: t.pontosAuto }),
@@ -102,6 +104,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
             <span>Tipo de serviço</span>
             <span style={{ textAlign: 'right' }}>Feitos</span>
             <span style={{ textAlign: 'right' }} title="Serviço mais rápido que isto sai da média — o trabalho continua contando, o tempo não">Mínimo</span>
+            <span style={{ textAlign: 'right' }} title="Serviço mais lento que isto sai da média — o trabalho continua contando, o tempo não">Máximo</span>
             <span style={{ textAlign: 'right' }}>Média usada</span>
             <span style={{ textAlign: 'right' }}>Mediana</span>
             <span style={{ textAlign: 'right' }}>Pontos</span>
@@ -114,6 +117,12 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
               const puxada = t.mediaMedida >= t.medianaMinutos * PUXADA && t.amostras >= POUCAS_AMOSTRAS
               const rMedia = rascunho[t.tarefa]?.media ?? String(t.mediaEmUso)
               const rMinimo = rascunho[t.tarefa]?.minimo ?? (t.tempoMinimo != null ? String(t.tempoMinimo) : '')
+              const rMaximo = rascunho[t.tarefa]?.maximo ?? (t.tempoMaximo != null ? String(t.tempoMaximo) : '')
+              /* ⚠️ Teto abaixo do piso não filtra nada — sobra zero. A tela
+                 avisa em vez de mostrar uma média vazia sem explicação. */
+              const limitesInvertidos = t.tempoMinimo != null && t.tempoMaximo != null && t.tempoMaximo <= t.tempoMinimo
+              /* Cortou mais da metade: não é exceção que saiu, é outra tarefa. */
+              const cortouMuito = (t.abaixoDoMinimo + t.acimaDoMaximo) > (t.cronometradas + t.abaixoDoMinimo + t.acimaDoMaximo) / 2
               const rPontos = rascunho[t.tarefa]?.pontos ?? String(t.pontos)
               /* ⚠️ O ESPELHO NA TELA: enquanto a pessoa digita a média, os pontos
                  já mostram o resultado, com a MESMA conta do servidor. Esperar o
@@ -154,6 +163,29 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                           height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 6px',
                           background: 'var(--surface-2)',
                           border: `1px solid ${t.tempoMinimo != null ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                          fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
+                        }}
+                      />
+                      <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-mute)', pointerEvents: 'none' }}>min</span>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number" value={rMaximo} placeholder="—"
+                        onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: { ...r[t.tarefa], maximo: e.target.value, media: undefined, pontos: undefined } }))}
+                        onBlur={() => {
+                          const v = rMaximo === '' ? null : parseInt(rMaximo, 10)
+                          if (v !== (t.tempoMaximo ?? null)) salvar(t, 'maximo', v)
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                        title={t.tempoMaximo != null
+                          ? `Definido por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\n${t.acimaDoMaximo} ${t.acimaDoMaximo === 1 ? 'serviço ficou' : 'serviços ficaram'} de fora da média por ser mais lento que isto.`
+                          : 'O tempo máximo que este serviço leva. Nada mais lento que isto entra na média — o serviço continua contando como feito.'}
+                        style={{
+                          height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 6px',
+                          background: 'var(--surface-2)',
+                          border: `1px solid ${limitesInvertidos ? 'var(--danger)' : (t.tempoMaximo != null ? 'var(--accent)' : 'var(--border)')}`,
                           borderRadius: 'var(--radius-sm)', color: 'var(--text)',
                           fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
                         }}
@@ -280,10 +312,31 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                         <b style={{ fontWeight: 600 }}>{t.abaixoDoMinimo} abaixo do mínimo</b> de {t.tempoMinimo} min — fora da média
                       </span>
                     )}
-                    {/* Sobrou pouca coisa para medir: o mínimo cortou fundo. */}
-                    {t.tempoMinimo != null && t.cronometradas < POUCAS_AMOSTRAS && (
+                    {/* ⚠️⚠️ O MÁXIMO desce a média — o incentivo inverso do mínimo.
+                        Juntos, os dois afinam o número nas duas direções, e por
+                        isso quantos cada um removeu fica visível. */}
+                    {t.acimaDoMaximo > 0 && (
+                      <span style={{ color: 'var(--accent)' }}>
+                        <b style={{ fontWeight: 600 }}>{t.acimaDoMaximo} acima do máximo</b> de {t.tempoMaximo} min — fora da média
+                      </span>
+                    )}
+                    {limitesInvertidos && (
                       <span style={{ color: 'var(--danger)' }}>
-                        só {t.cronometradas} {t.cronometradas === 1 ? 'serviço sobrou' : 'serviços sobraram'} para a média — o mínimo cortou quase tudo
+                        o máximo ({t.tempoMaximo} min) está abaixo do mínimo ({t.tempoMinimo} min) — assim nenhum serviço entra na média
+                      </span>
+                    )}
+                    {/* ⚠️⚠️ Cortar MAIS DA METADE não é remover exceção: é dizer
+                        que a tarefa é outra coisa. Medido: um teto de 4h em
+                        SERVIÇOS INTERNOS - ARQUIVO tira 130 dos 264 e derruba a
+                        média de 231 para 115 minutos. */}
+                    {cortouMuito && !limitesInvertidos && (
+                      <span style={{ color: 'var(--danger)' }}>
+                        os limites tiraram mais da metade dos serviços — restaram {t.cronometradas} de {t.cronometradas + t.abaixoDoMinimo + t.acimaDoMaximo}
+                      </span>
+                    )}
+                    {(t.tempoMinimo != null || t.tempoMaximo != null) && t.cronometradas < POUCAS_AMOSTRAS && !limitesInvertidos && (
+                      <span style={{ color: 'var(--danger)' }}>
+                        só {t.cronometradas} {t.cronometradas === 1 ? 'serviço sobrou' : 'serviços sobraram'} para a média
                       </span>
                     )}
                     {t.mediaAjustada != null && (

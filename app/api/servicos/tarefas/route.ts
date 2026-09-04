@@ -38,8 +38,10 @@ export type TarefaPontuada = {
   cronometradas: number
   zerados: number
   abaixoDoMinimo: number
-  /** O mínimo que o gestor definiu, em minutos (`null` = não definiu). */
+  acimaDoMaximo: number
+  /** Os limites que o gestor definiu, em minutos (`null` = não definiu). */
   tempoMinimo: number | null
+  tempoMaximo: number | null
   /** Os dois maiores e os dois menores tempos, com quem fez e quando — é o que
    *  explica um extremo: "9h24" sozinho não distingue tarefa longa de tarefa
    *  que travou num dia. */
@@ -122,13 +124,19 @@ export async function GET(req: NextRequest) {
   const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, todas]) => {
     const aj0 = ajustePorTarefa.get(tarefa)
     const minimo = aj0?.tempoMinimo ?? null
+    const maximo = aj0?.tempoMaximo ?? null
     const comTempo = todas.filter((l) => l.minutos > 0)
     const zerados = todas.length - comTempo.length
     /* ⚠️⚠️ ABAIXO DO MÍNIMO SAI DA MÉDIA — mas o serviço CONTINUA contando como
        feito. O gestor pediu para desconsiderar o tempo, não o trabalho: um
        certificado de 1 minuto foi entregue, o que não foi foi o cronômetro. */
-    const cronometradas = minimo != null ? comTempo.filter((l) => l.minutos >= minimo) : comTempo
-    const abaixoDoMinimo = comTempo.length - cronometradas.length
+    const dentroDoMinimo = minimo != null ? comTempo.filter((l) => l.minutos >= minimo) : comTempo
+    const abaixoDoMinimo = comTempo.length - dentroDoMinimo.length
+    /* ⚠️ O MÁXIMO é o espelho do mínimo e o incentivo é invertido: tira os
+       lentos e DESCE a média. Juntos, os dois afinam o número nas duas
+       direções — daí o rastro visível de quantos cada um removeu. */
+    const cronometradas = maximo != null ? dentroDoMinimo.filter((l) => l.minutos <= maximo) : dentroDoMinimo
+    const acimaDoMaximo = dentroDoMinimo.length - cronometradas.length
     /* Tipo em que NINGUÉM cronometrou nada: a média não existe. Devolver 0 aqui
        daria 1 ponto ao serviço e ninguém saberia por quê. */
     const base = cronometradas.length ? cronometradas : []
@@ -151,7 +159,9 @@ export async function GET(req: NextRequest) {
       /** Quantas vieram sem tempo e ficaram FORA da média. */
       zerados,
       abaixoDoMinimo,
+      acimaDoMaximo,
       tempoMinimo: minimo,
+      tempoMaximo: maximo,
       mediaMedida,
       mediaEmUso,
       mediaAjustada: aj?.mediaMinutos ?? null,
@@ -189,7 +199,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     departmentId?: string; tarefa?: string
     /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
-    campo?: 'media' | 'pontos' | 'minimo' | 'limpar'
+    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar'
     valor?: number | null
     pontosAuto?: number
   } | null
@@ -203,7 +213,30 @@ export async function POST(req: NextRequest) {
   /* `limpar` VOLTA ao medido — apaga o ajuste em vez de gravar o valor sugerido.
      Gravar o sugerido faria o ajuste "vazio" congelar aquele número, e ele
      deixaria de acompanhar a planilha na próxima importação. */
-  if (body?.campo === 'limpar' || body?.valor == null) {
+  if (body?.campo === 'limpar') {
+    await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
+    return NextResponse.json({ ok: true, voltouAoCalculado: true })
+  }
+  /* Esvaziar UM limite tira só aquele limite — apagar o ajuste inteiro levaria
+     junto o outro limite e a média, que a pessoa não pediu para mexer. */
+  if (body?.valor == null && (body?.campo === 'minimo' || body?.campo === 'maximo')) {
+    const campo = body.campo === 'minimo' ? { tempoMinimo: null } : { tempoMaximo: null }
+    const atual = await prisma.pontuacaoTarefaAjuste.findUnique({ where: { departmentId_tarefa: { departmentId, tarefa } } })
+    if (!atual) return NextResponse.json({ ok: true })
+    const restou = { ...atual, ...campo }
+    // Nada mais ajustado nesta tarefa → some com a linha em vez de deixar um
+    // registro vazio dizendo que alguém mexeu.
+    if (restou.tempoMinimo == null && restou.tempoMaximo == null && restou.mediaMinutos == null && restou.pontos == null) {
+      await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
+    } else {
+      await prisma.pontuacaoTarefaAjuste.update({
+        where: { departmentId_tarefa: { departmentId, tarefa } },
+        data: { ...campo, mediaMinutos: null, pontos: null, ajustadoPor: quem.id },
+      })
+    }
+    return NextResponse.json({ ok: true })
+  }
+  if (body?.valor == null) {
     await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
     return NextResponse.json({ ok: true, voltouAoCalculado: true })
   }
@@ -225,6 +258,7 @@ export async function POST(req: NextRequest) {
   const dados =
     body.campo === 'media' ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
     : body.campo === 'minimo' ? { tempoMinimo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
+    : body.campo === 'maximo' ? { tempoMaximo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
     : { pontos: valor, pontosAutoNaEpoca, ajustadoPor: quem.id }
 
   await prisma.pontuacaoTarefaAjuste.upsert({

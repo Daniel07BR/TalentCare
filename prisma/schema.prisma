@@ -927,6 +927,20 @@ model PontuacaoTarefaAjuste {
    */
   tempoMinimo       Int?     @map("tempo_minimo")
   /**
+   * O tempo MÁXIMO que este serviço leva, em minutos. Mais lento que isso sai da
+   * média.
+   * ⚠️⚠️ É o espelho do mínimo, e o incentivo é INVERTIDO: o mínimo tira os
+   * rápidos e SOBE a média; o máximo tira os lentos e a DESCE. Juntos, os dois
+   * afinam a média nas duas direções — e por isso o rastro (autor, data, quantos
+   * saíram) importa mais aqui do que em qualquer outro campo desta tela.
+   * ⚠️ E ele corta MAIS FUNDO que o mínimo. Medido em 04/09/2026 com um teto de
+   * 4h: SERVIÇOS INTERNOS - ARQUIVO cairia de 231 para 115 minutos — metade —,
+   * porque 130 dos 264 passam de 4 horas. Quando o teto tira MAIS DA METADE das
+   * amostras, ele não está removendo exceção: está dizendo que a tarefa é outra
+   * coisa. A tela avisa.
+   */
+  tempoMaximo       Int?     @map("tempo_maximo")
+  /**
    * Override DIRETO dos pontos. `null` = calcula da média (ajustada ou medida).
    * ⚠️ Editar a média RECALCULA os pontos e limpa este campo — senão o valor
    * digitado antes ficaria preso e a média nova não teria efeito nenhum, que é
