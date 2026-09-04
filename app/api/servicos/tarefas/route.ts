@@ -33,9 +33,13 @@ export type TarefaPontuada = {
   mediaEmUso: number
   mediaAjustada: number | null
   medianaMinutos: number
-  /** Quantas entraram na conta (têm tempo) e quantas vieram zeradas. */
+  /** Quantas entraram na conta, quantas vieram zeradas e quantas ficaram de
+   *  fora por serem mais rápidas que o mínimo do gestor. */
   cronometradas: number
   zerados: number
+  abaixoDoMinimo: number
+  /** O mínimo que o gestor definiu, em minutos (`null` = não definiu). */
+  tempoMinimo: number | null
   /** Os dois maiores e os dois menores tempos, com quem fez e quando — é o que
    *  explica um extremo: "9h24" sozinho não distingue tarefa longa de tarefa
    *  que travou num dia. */
@@ -116,8 +120,15 @@ export async function GET(req: NextRequest) {
     `${(l.personKey && nomeDaChave.get(l.personKey)) || l.nomeOrigem} · ${brDia(l.dia)}`
 
   const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, todas]) => {
-    const cronometradas = todas.filter((l) => l.minutos > 0)
-    const zerados = todas.length - cronometradas.length
+    const aj0 = ajustePorTarefa.get(tarefa)
+    const minimo = aj0?.tempoMinimo ?? null
+    const comTempo = todas.filter((l) => l.minutos > 0)
+    const zerados = todas.length - comTempo.length
+    /* ⚠️⚠️ ABAIXO DO MÍNIMO SAI DA MÉDIA — mas o serviço CONTINUA contando como
+       feito. O gestor pediu para desconsiderar o tempo, não o trabalho: um
+       certificado de 1 minuto foi entregue, o que não foi foi o cronômetro. */
+    const cronometradas = minimo != null ? comTempo.filter((l) => l.minutos >= minimo) : comTempo
+    const abaixoDoMinimo = comTempo.length - cronometradas.length
     /* Tipo em que NINGUÉM cronometrou nada: a média não existe. Devolver 0 aqui
        daria 1 ponto ao serviço e ninguém saberia por quê. */
     const base = cronometradas.length ? cronometradas : []
@@ -126,7 +137,7 @@ export async function GET(req: NextRequest) {
       ? Math.round(base.reduce((a, l) => a + l.minutos, 0) / base.length)
       : 0
     const mediana = ordenado.length ? ordenado[Math.floor(ordenado.length / 2)].minutos : 0
-    const aj = ajustePorTarefa.get(tarefa)
+    const aj = aj0
     /* A média EM USO é a que a liderança escolheu, quando escolheu. A medida
        continua viajando ao lado: trocar uma pela outra faria o sistema afirmar
        que mediu o que alguém decidiu. */
@@ -139,6 +150,8 @@ export async function GET(req: NextRequest) {
       cronometradas: cronometradas.length,
       /** Quantas vieram sem tempo e ficaram FORA da média. */
       zerados,
+      abaixoDoMinimo,
+      tempoMinimo: minimo,
       mediaMedida,
       mediaEmUso,
       mediaAjustada: aj?.mediaMinutos ?? null,
@@ -176,7 +189,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     departmentId?: string; tarefa?: string
     /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
-    campo?: 'media' | 'pontos' | 'limpar'
+    campo?: 'media' | 'pontos' | 'minimo' | 'limpar'
     valor?: number | null
     pontosAuto?: number
   } | null
@@ -200,14 +213,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'O valor tem de ser um número entre 0 e 100.000.' }, { status: 422 })
   }
   const pontosAutoNaEpoca = Math.round(Number(body.pontosAuto ?? 0)) || 0
-  const eMedia = body.campo === 'media'
+  /* ⚠️⚠️ MEXER NA MÉDIA OU NO MÍNIMO LIMPA O OVERRIDE DE PONTOS. Foi o pedido —
+     "o campo pontos atualiza automaticamente" — e é o que faz a tela se
+     comportar como a pessoa espera: se o número digitado antes continuasse
+     preso, mudar a média não teria efeito nenhum.
 
-  /* ⚠️⚠️ MEXER NA MÉDIA LIMPA O OVERRIDE DE PONTOS. Foi o pedido — "o campo
-     pontos atualiza automaticamente com a média editada" — e é o que faz a tela
-     se comportar como a pessoa espera: se o número digitado antes continuasse
-     preso, mudar a média não teria efeito nenhum. */
-  const dados = eMedia
-    ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
+     ⚠️ O MÍNIMO limpa TAMBÉM a média ajustada: ele existe para que o sistema
+     recalcule a média sem os tempos impossíveis. Se a média digitada à mão
+     ficasse por cima, definir o mínimo não mudaria nada — e a pessoa
+     concluiria, com razão, que o campo não faz nada. */
+  const dados =
+    body.campo === 'media' ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
+    : body.campo === 'minimo' ? { tempoMinimo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
     : { pontos: valor, pontosAutoNaEpoca, ajustadoPor: quem.id }
 
   await prisma.pontuacaoTarefaAjuste.upsert({

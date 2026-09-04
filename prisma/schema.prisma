@@ -911,6 +911,22 @@ model PontuacaoTarefaAjuste {
    */
   mediaMinutos      Int?     @map("media_minutos")
   /**
+   * O tempo MÍNIMO que este serviço leva, em minutos, segundo quem conhece o
+   * trabalho. Serviço mais rápido que isso sai da média.
+   * ⚠️⚠️ É a mesma família do tempo zero, um degrau acima: zero é "ninguém
+   * cronometrou" e o sistema descobre sozinho; abaixo do mínimo é "isto não
+   * pode ter sido feito de verdade", e só o gestor sabe. Medido em 04/09/2026:
+   * há 166 serviços de 1 a 2 minutos e 490 abaixo de 5 — um CERTIFICADO de 1
+   * minuto, ao lado de outros que levam 9 horas, é cronômetro esquecido, não
+   * trabalho relâmpago.
+   * ⚠️⚠️ E ELE SÓ SOBE A MÉDIA — logo, só sobe os pontos. Quem define o mínimo é
+   * o gestor do próprio time, então o número tem autor e data (`ajustadoPor`,
+   * `ajustadoEm`) e a tela mostra quantos serviços ele tirou da conta. Um filtro
+   * que aumenta a nota da própria equipe sem deixar rastro seria a porta mais
+   * fácil do sistema inteiro.
+   */
+  tempoMinimo       Int?     @map("tempo_minimo")
+  /**
    * Override DIRETO dos pontos. `null` = calcula da média (ajustada ou medida).
    * ⚠️ Editar a média RECALCULA os pontos e limpa este campo — senão o valor
    * digitado antes ficaria preso e a média nova não teria efeito nenhum, que é

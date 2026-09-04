@@ -5,7 +5,7 @@ import { ListChecks, RotateCcw, TriangleAlert } from 'lucide-react'
 type Tarefa = {
   tarefa: string; amostras: number
   mediaMedida: number; mediaEmUso: number; mediaAjustada: number | null
-  cronometradas: number; zerados: number
+  cronometradas: number; zerados: number; abaixoDoMinimo: number; tempoMinimo: number | null
   medianaMinutos: number
   maiores: { minutos: number; quem: string }[]
   menores: { minutos: number; quem: string }[]
@@ -31,14 +31,14 @@ const PUXADA = 1.6
 /** As colunas, num grid único — cabeçalho e linhas usam a MESMA definição, para
  *  não desalinharem quando uma das duas mudar. Sem largura fixa total: a coluna
  *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
-const COLS = 'minmax(0,1fr) 68px 104px 92px 104px 34px'
+const COLS = 'minmax(0,1fr) 64px 96px 104px 86px 96px 34px'
 
 export default function TarefasEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
-  const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string }>>({})
+  const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string }>>({})
   const [msg, setMsg] = useState<string | null>(null)
 
   async function carregar() {
@@ -53,7 +53,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   }
   useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId])
 
-  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'limpar', valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'limpar', valor: number | null) {
     const r = await fetch('/api/servicos/tarefas', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ departmentId, tarefa: t.tarefa, campo, valor, pontosAuto: t.pontosAuto }),
@@ -101,6 +101,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
           <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '0 6px 8px', fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-mute)', borderBottom: '1px solid var(--border)' }}>
             <span>Tipo de serviço</span>
             <span style={{ textAlign: 'right' }}>Feitos</span>
+            <span style={{ textAlign: 'right' }} title="Serviço mais rápido que isto sai da média — o trabalho continua contando, o tempo não">Mínimo</span>
             <span style={{ textAlign: 'right' }}>Média usada</span>
             <span style={{ textAlign: 'right' }}>Mediana</span>
             <span style={{ textAlign: 'right' }}>Pontos</span>
@@ -112,6 +113,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
               const poucasAmostras = t.amostras < POUCAS_AMOSTRAS
               const puxada = t.mediaMedida >= t.medianaMinutos * PUXADA && t.amostras >= POUCAS_AMOSTRAS
               const rMedia = rascunho[t.tarefa]?.media ?? String(t.mediaEmUso)
+              const rMinimo = rascunho[t.tarefa]?.minimo ?? (t.tempoMinimo != null ? String(t.tempoMinimo) : '')
               const rPontos = rascunho[t.tarefa]?.pontos ?? String(t.pontos)
               /* ⚠️ O ESPELHO NA TELA: enquanto a pessoa digita a média, os pontos
                  já mostram o resultado, com a MESMA conta do servidor. Esperar o
@@ -129,6 +131,35 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                       title={t.zerados ? `${t.amostras} feitos, ${t.cronometradas} com tempo cronometrado` : undefined}>
                       {t.amostras}
                     </span>
+
+                    {/* ⚠️⚠️ O TEMPO MÍNIMO. Serviço mais rápido que isto sai da
+                        MÉDIA — o trabalho continua contando, o tempo não. É a
+                        mesma família do tempo zero, um degrau acima: zero é
+                        "ninguém cronometrou" e o sistema descobre sozinho;
+                        abaixo do mínimo é "isto não pode ter sido feito de
+                        verdade", e só quem conhece o trabalho sabe. */}
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number" value={rMinimo} placeholder="—"
+                        onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: { ...r[t.tarefa], minimo: e.target.value, media: undefined, pontos: undefined } }))}
+                        onBlur={() => {
+                          const v = rMinimo === '' ? null : parseInt(rMinimo, 10)
+                          if (v !== (t.tempoMinimo ?? null)) salvar(t, v == null ? 'limpar' : 'minimo', v)
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                        title={t.tempoMinimo != null
+                          ? `Definido por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\n${t.abaixoDoMinimo} ${t.abaixoDoMinimo === 1 ? 'serviço ficou' : 'serviços ficaram'} de fora da média por ser mais rápido que isto.`
+                          : 'O tempo mínimo que este serviço leva. Nada mais rápido que isto entra na média — o serviço continua contando como feito.'}
+                        style={{
+                          height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 6px',
+                          background: 'var(--surface-2)',
+                          border: `1px solid ${t.tempoMinimo != null ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                          fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums',
+                        }}
+                      />
+                      <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-mute)', pointerEvents: 'none' }}>min</span>
+                    </div>
 
                     {/* MÉDIA EDITÁVEL, em minutos. ⚠️ A medida continua ao lado
                         quando a pessoa muda: trocar uma pela outra faria o
@@ -236,6 +267,23 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                     {t.zerados > 0 && (
                       <span>
                         <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>{t.zerados} sem tempo</b> — fora da média
+                      </span>
+                    )}
+                    {/* ⚠️⚠️ O MÍNIMO SÓ SOBE A MÉDIA — e portanto só sobe os
+                        pontos. Quem o define é o gestor do próprio time, então
+                        quantos serviços ele tirou da conta fica VISÍVEL, não só
+                        no tooltip. Um filtro que aumenta a nota da própria
+                        equipe sem deixar rastro seria a porta mais fácil do
+                        sistema inteiro. */}
+                    {t.abaixoDoMinimo > 0 && (
+                      <span style={{ color: 'var(--accent)' }}>
+                        <b style={{ fontWeight: 600 }}>{t.abaixoDoMinimo} abaixo do mínimo</b> de {t.tempoMinimo} min — fora da média
+                      </span>
+                    )}
+                    {/* Sobrou pouca coisa para medir: o mínimo cortou fundo. */}
+                    {t.tempoMinimo != null && t.cronometradas < POUCAS_AMOSTRAS && (
+                      <span style={{ color: 'var(--danger)' }}>
+                        só {t.cronometradas} {t.cronometradas === 1 ? 'serviço sobrou' : 'serviços sobraram'} para a média — o mínimo cortou quase tudo
                       </span>
                     )}
                     {t.mediaAjustada != null && (
