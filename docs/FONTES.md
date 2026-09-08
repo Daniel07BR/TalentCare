@@ -268,6 +268,26 @@ julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido a
 ### Ainda em pé
 
 - **`/relatorios`** nunca saiu do "Em breve".
+- **⚠️⚠️ Inativo que SAI do diretório nunca é percebido.** O varredor de órfãos
+  do `lib/nexus.ts` só olha registros `active: true` — e está **certo**: o
+  TalentCare pede ao Nexus só os funcionários ATIVOS
+  (`/api/integrations/employees` sem `includeInactive`), então todo desligado
+  "sumiu do diretório" e tirar essa trava marcaria as **32** pessoas inativas
+  como fora do diretório, apagando saídas reais da rotatividade.
+
+  O preço é que uma conta **inativa** removida do diretório (uma duplicada
+  movida para `Sistemas`, por exemplo) segue no painel para sempre, e a marca
+  tem de ser posta à mão. Foi o caso da **Ísis Mossinato** em 08/09/2026: duas
+  contas da mesma pessoa no Fiscal, com `nexus_user_id` diferentes, uma com
+  e-mail real e outra `staff-…@staff.local` — o setor lia **9 saídas e 30%**
+  quando são **8 e 27,6%**, com a mesma pessoa duas vezes na lista que o gestor
+  abre.
+
+  ⚠️ A marca à mão sobrevive AQUI (ao contrário do caso da conta `Sistema`)
+  justamente porque o registro é inativo: ele nunca volta na resposta do
+  diretório, então nenhuma carga reescreve `foraDoDiretorio`. O conserto de
+  verdade é pedir `includeInactive=true` no sync e comparar o conjunto inteiro —
+  aí o desligado que continua no diretório se distingue do que saiu dele.
 - **Fonte parada por PESSOA não se distingue de pessoa parada.** `gerencia_daily`
   do Gilberto termina em **24/02/2026** com o espelho fresco (outras pessoas até
   03/09); o WhatsApp da Bianca Brito para em 20/07 e o CIDE dela em 08/07. Os dois
