@@ -138,6 +138,65 @@ O Daniel estava seguindo por **telas e relatórios**. Pendências conhecidas:
   "7 dias", "30 dias" e "Trimestre atual" não há uma linha — as telas hoje dizem
   isso em vez de mostrar zero, mas o dado continua faltando.
 
+### A 11ª fonte: a PLANILHA QUE O SETOR SOBE (04/09/2026)
+
+O Legal exporta de outro sistema uma planilha de serviços e um controle mensal de
+pontos. Ela virou a **11ª fonte** — e a **segunda sem cron**, ao lado do ponto.
+
+**No ar e funcionando:** a tela `/servicos` (envio em duas fases, conferência de
+vínculo, régua de pontuação versionada, catálogo dos 74 tipos de serviço com
+duração medida e pontos editáveis); o cartão no resumo e no bloco de fontes do
+relatório de setor; o cartão na ficha com gráficos por mês e por tarefa; e
+serviço concluído entrando no `score`.
+
+**Números do primeiro arquivo (Legal):** 6.980 linhas, 5.227 concluídas, de
+05/03/2025 a 31/08/2026. 4.994 linhas com dono, **1.986 (28,5%) de quatro
+ex-terceiros que nunca estiveram no Nexus** — elas entram, contam para o setor e
+não creditam ninguém.
+
+⚠️⚠️ **O caminho da tela é o botão no RESUMO do setor**, não um item de menu
+(decisão do dono). "Serviços" foi removido da barra do gestor de propósito; o
+botão leva o setor na URL — foi por um seletor esquecido no alto da tela que
+**6.980 linhas do Legal foram importadas para Entregas** e nada acusou. Hoje a
+prévia compara o setor de destino com o setor das pessoas reconhecidas e abre
+faixa vermelha quando divergem.
+
+⚠️⚠️ **A régua de pontuação tem VERSÃO, autor, data e vigência**, e a vigência não
+pode ser anterior ao mês corrente. Quem a edita é o **gestor do próprio time**
+(decisão do dono) — o registro é o que separa "mudamos o critério" de "mudei a
+nota dele". Pelo mesmo motivo, o **mínimo e o máximo por tarefa mostram quantos
+serviços cada um tirou da conta**: o mínimo só sobe a média (e os pontos), o
+máximo só desce, e um filtro que mexe na nota da própria equipe sem rastro seria
+a porta mais fácil do sistema.
+
+**O que falta nesta frente:**
+
+- ⚠️⚠️ **A pontuação mensal AINDA NÃO É CALCULADA pela régua.** Os 15 meses do
+  Legal estão gravados como `origem: 'informado'` (vieram na planilha, feitos à
+  mão por um critério anterior). A conta existe em `lib/servicos/pontuacao.ts` e a
+  régua existe — falta rodá-la por competência e gravar como `'calculado'`.
+- ⚠️⚠️ **O FATOR de 0,5 ponto por minuto precisa de decisão.** Medido: agosto de
+  2026 daria **4.639 pontos à Marcia Borges e 3.787 ao Ezequiel**, contra uma base
+  mensal de 100 e uma advertência de −15 — a metade disciplinar da régua ficaria
+  invisível. O campo é editável; o número não foi decidido.
+- O cálculo automático **depende do ponto**, que está 70 dias atrás do controle
+  manual do Legal (aquele é de agosto; o import parou em 25/06). Provavelmente
+  esse controle também precisa virar upload.
+- O **vínculo nome→pessoa é por SETOR** e deveria cair para qualquer vínculo
+  confirmado quando não houver um do próprio setor. Sem isso, cada setor refaz o
+  mesmo trabalho — e dá para resolver no setor errado sem perceber.
+
+### O acesso, hoje
+
+`TALENTCARE_ACESSO_ABERTO` continua **off** — e virar essa chave segue sendo
+decisão do Daniel. Quem entra: a Diretoria (por setor) e a lista nominal
+`TALENTCARE_ACESSO_TESTE`, hoje com **Joice Rocha e Evandro Padilha**.
+
+⚠️ `mapRole` (`lib/nexus.ts:95`) devolve `SEM_PERMISSAO` **antes** de olhar o
+vínculo. Foi por isso que o Evandro, Gestor do Legal com dois vínculos gravados,
+não conseguia entrar: ele não estava na lista de ensaio. Acrescentar alguém à
+lista é a saída reversível; a chave grande não é.
+
 ## 7. Como o Daniel trabalha (o que economiza tempo)
 
 - Ele **testa no navegador** e traz print. Entregue e peça a conferência — não invente
