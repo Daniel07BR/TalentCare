@@ -32,6 +32,31 @@ Nexus é apontada ao vivo; a planilha de serviços do Legal sobe no fim do mês.
 Setembro do Legal até 08/09: Lucas 258, Joice 194, Yago 137, Gabriel 80,
 Marcia 35, Evandro 20, Ezequiel 20, Marcos 2.
 
+### A régua calibrada e AGOSTO REGRAVADO
+
+O dono ajustou na tela (com autor e data gravados): **WhatsApp 48 → 30 min**
+(5 → 3 pontos) e **CIDE 15 → 30 min** (2 → 3), porque a unidade deixou de ser
+uma linha da trilha e passou a ser uma empresa atendida — que leva mais tempo.
+`ger_servico` ficou gravado em 46, o valor que já vinha da mediana medida.
+
+Agosto/2026 do Legal, regravado (backup do valor anterior em
+`~/backups-pontuacao/` antes de escrever):
+
+| pessoa | antes | agora |
+|---|---|---|
+| Lucas Souza | 2.061 | **1.319** |
+| Ezequiel Castro | 1.251 | **1.136** |
+| Marcia Borges | 898 | 816 |
+| Joice Rocha | **1.991** | **756** |
+| Gabriel Santana | 773 | 448 |
+| Yago Santos | 1.093 | 400 |
+| Marcos Gabriel | 454 | 198 |
+| Evandro Padilha | −26 | −34 |
+
+**O teste de sanidade passou**: ninguém mais recebe crédito por mais horas do que
+o mês tem. Lucas 162 h (92% de ~176), Yago 105 h, Joice 89 h — contra 251 h,
+187 h e 236 h antes desta sessão.
+
 ### A tela do mês corrente ficou LIMPA (decisão do dono, depois de ver as duas)
 
 O dono viu a versão com a ressalva longa e a faixa de aviso e pediu o contrário:
