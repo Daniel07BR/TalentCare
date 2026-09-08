@@ -32,6 +32,29 @@ Nexus é apontada ao vivo; a planilha de serviços do Legal sobe no fim do mês.
 Setembro do Legal até 08/09: Lucas 258, Joice 194, Yago 137, Gabriel 80,
 Marcia 35, Evandro 20, Ezequiel 20, Marcos 2.
 
+### A tela do mês corrente ficou LIMPA (decisão do dono, depois de ver as duas)
+
+O dono viu a versão com a ressalva longa e a faixa de aviso e pediu o contrário:
+*"no atual, não precisa entrar esse monte de ressalva, só mostre a pontuação até
+o momento, com o gráfico igual dos demais meses."* A faixa saiu, a barra e a
+ordenação voltaram, e o que o número é ficou dito em **uma linha**, no
+sub-rótulo — *"pontuação parcial de setembro de 2026 (até 08/09)"* —, ao lado de
+"nota de setembro". A conta aberta continua no `title` da linha.
+
+⚠️ A ressalva medida abaixo **continua verdadeira** e fica registrada aqui: no
+parcial falta a metade dos serviços, ela não é distribuída por igual, e quem
+executa serviço aparece mais embaixo enquanto a planilha não sobe. O dono
+conhece o efeito e preferiu a tela limpa.
+
+### E a linha de 20/09 era 20/08
+
+Confirmado pelo dono. Corrigida: `assiduidade_daily` da Tabata Vieira (1 atraso
+de 2 min) foi de `2026-09-20` para `2026-08-20`. Conferido antes de escrever —
+não havia linha no destino e nenhuma advertência derivada dependia dela (é o
+único atraso dela nos dois meses, e a regra da casa só aplica advertência a
+partir do 2º). Depois: **último dia do ponto = 08/09** e **zero** linhas com data
+futura.
+
 ### ⚠️⚠️ O que o agente crítico pegou: a distorção era entre PESSOAS, não entre meses
 
 Meu aviso dizia "não comparável com um mês fechado". Mas a tela **não compara

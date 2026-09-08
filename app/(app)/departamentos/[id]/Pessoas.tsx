@@ -36,11 +36,9 @@ const dm = (iso: string | null) => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 
 
 export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliaveis, busca }: {
   pessoas: PessoaDoSetor[]; periodo: string; competencia: string
-  /** ⚠️ O mês CORRENTE pontua ao vivo, e o número é PARCIAL — ver o aviso
-   *  abaixo da lista de colunas. Um parcial exibido como se fosse mês fechado
-   *  é a mesma armadilha do acumulado com rótulo de período, pelo avesso: aqui
-   *  o número é menor do que será, e quem lê conclui que a pessoa produziu
-   *  menos. */
+  /** ⚠️ O mês CORRENTE pontua ao vivo, e o número é PARCIAL: menor do que
+   *  será, porque faltam os dias que não aconteceram e a planilha de serviços
+   *  do mês. Quem diz isso é o sub-rótulo, em uma linha. */
   pontuacaoDoMes: DeptMetrics['pontuacaoDoMes']
   /* ⚠️ O MESMO denominador do cartão de Avaliação. A tela chegou a mostrar
      "N de 22" aqui e "de 21 pessoas" ali, lado a lado, sobre a mesma pergunta —
@@ -59,16 +57,17 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
      durante o mês todo, para ele saltar no último dia. */
   const parcial = pontuacaoDoMes.parcial
   const previa = pontuacaoDoMes.previa
-  /* ⚠️⚠️ A BARRA É UMA AFIRMAÇÃO DE COMPARAÇÃO, e ela cai quando a metade de
-     serviço não existe para ninguém. O achado do crítico (08/09/2026): o aviso
-     do parcial dizia "não comparável com um mês fechado", mas a tela não
-     compara meses — compara as 8 pessoas ENTRE SI, e o parcial retira uma
-     metade que não é distribuída por igual. Em agosto o serviço era 70% da
-     pontuação do Marcos, 66% da Marcia e 58% do Ezequiel, e 12% do Lucas: no
-     parcial de setembro o Ezequiel, dos 105 serviços, cai de 3º para 7º de 8
-     com barra de 8% da do primeiro. O número segue (é real); o que sai é o
-     desenho que diz "este vale um oitavo daquele". */
-  const semBarra = pontuacaoDoMes.semPlanilhaDoMes && (parcial || previa)
+  /* ⚠️ O mês em curso mostra a pontuação COMO OS DEMAIS MESES — com barra e
+     ordenação (decisão do dono, 08/09/2026, depois de ver as duas versões na
+     tela). A ressalva longa saiu: o que o número é fica dito em UMA linha, no
+     sub-rótulo ("pontuação parcial de setembro de 2026 (até 08/09)"), ao lado
+     de "nota de setembro".
+     ⚠️⚠️ O que isso custa, para quem for mexer aqui: no parcial falta a metade
+     dos serviços da planilha (o setor a sobe no fim do mês), e ela NÃO é
+     distribuída por igual — em agosto era 70% da pontuação do Marcos, 66% da
+     Marcia e 58% do Ezequiel, contra 12% do Lucas. Quem executa serviço fica
+     mais embaixo enquanto a planilha não sobe. O dono conhece a ressalva e
+     preferiu a tela limpa; ela segue registrada no CHANGELOG de 08/09. */
 
   const medidas = pessoas.filter((p) => !p.semFonte)
   /* ⚠️ A barra compara a PONTUAÇÃO do mês dentro do setor. Só as positivas
@@ -154,41 +153,6 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
         </div>
       </div>
 
-      {/* ⚠️⚠️ O AVISO DO PARCIAL — dito UMA vez, onde se lê, e não repetido em
-          cada linha (sete frases idênticas não informam nada; foi a lição da
-          lista de advertências da ficha). Ele carrega as DUAS pontas da
-          medição, que não coincidem: a atividade vem de sync diário e o ponto é
-          import à mão. */}
-      {(parcial || previa) && (
-        <div style={{ marginTop: 14, padding: '9px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 11.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
-          {parcial ? (
-            <>
-              <b style={{ color: 'var(--text)' }}>Mês em curso.</b> Soma o que já aconteceu, até <b>{dm(pontuacaoDoMes.ateDia)}</b>
-              {/* ⚠️ Só diz a segunda data quando ela DIFERE: data repetida sugere
-                  uma distinção que ali não existe. */}
-              {pontuacaoDoMes.disciplinaAteDia == null
-                ? <> — <b>sem disciplina medida</b> neste mês: o ponto ainda não foi importado até aqui</>
-                : pontuacaoDoMes.disciplinaAteDia !== pontuacaoDoMes.ateDia
-                  ? <> (atrasos e advertências só até <b>{dm(pontuacaoDoMes.disciplinaAteDia)}</b>, que é onde o ponto foi importado)</>
-                  : null}
-              . O bônus de mês sem ocorrência só entra quando o mês terminar.
-            </>
-          ) : (
-            <>
-              <b style={{ color: 'var(--text)' }}>Prévia.</b> O mês fechou e a régua ainda não foi gravada — este é o número que ela produz hoje, calculado na hora.
-            </>
-          )}
-          {pontuacaoDoMes.semPlanilhaDoMes && (
-            /* ⚠️⚠️ O AVISO QUE IMPORTA. Sem ele, quem executa serviço aparece
-               embaixo por FALTA DE FONTE e se lê como falta de produção. */
-            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border-soft)' }}>
-              <b style={{ color: 'var(--text)' }}>Falta a metade dos serviços da planilha</b>, que o setor sobe no fim do mês.
-              Quem executa serviço (marcado com <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--warn, #b45309)' }}>◍</span>) está aqui com só uma parte da pontuação —
-              está embaixo por falta de fonte, não por produção. Por isso a barra de comparação não é desenhada.
-            </div>
-          )}
-        </div>
-      )}
       {/* ⚠️ CABEÇALHO. As três colunas eram identificadas só pelo segmentado de
           ordenação, que fica no canto DIREITO — alinhado sobre as ocorrências,
           não sobre as colunas que nomeia. O leitor descobria o que era o "8.4"
@@ -198,8 +162,6 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'center' }}>Nota</span>
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>
           Pontuação do mês
-          {parcial && <span style={{ color: 'var(--warn, #b45309)' }}> · parcial</span>}
-          {previa && <span style={{ color: 'var(--warn, #b45309)' }}> · prévia</span>}
         </span>
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'right' }}>Ocorrências</span>
         <span />
@@ -287,17 +249,9 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                   </span>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }} title={p.detalhe ?? undefined}>
-                    {semBarra ? (
-                      <span style={{ flex: 1 }} />
-                    ) : (
-                      <div style={{ flex: 1, height: 7, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                        <div className="cbar" style={{ height: '100%', width: `${p.pontuacao > 0 ? Math.round((p.pontuacao / maxPont) * 100) : 0}%`, background: 'var(--chart-2)', borderRadius: 4 }} />
-                      </div>
-                    )}
-                    {semBarra && p.fazServico && (
-                      <span title="Executa serviço da planilha — a metade dele ainda não entrou neste mês"
-                        style={{ fontSize: 11, fontWeight: 700, color: 'var(--warn, #b45309)' }}>◍</span>
-                    )}
+                    <div style={{ flex: 1, height: 7, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div className="cbar" style={{ height: '100%', width: `${p.pontuacao > 0 ? Math.round((p.pontuacao / maxPont) * 100) : 0}%`, background: 'var(--chart-2)', borderRadius: 4 }} />
+                    </div>
                     <span className="cnum" style={{ width: 46, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: p.pontuacao < 0 ? 'var(--danger)' : p.pontuacao > 0 ? 'var(--text)' : 'var(--text-mute)' }}>
                       {p.pontuacao.toLocaleString('pt-BR')}
                     </span>

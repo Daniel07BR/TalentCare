@@ -460,15 +460,6 @@ export async function GET(req: NextRequest) {
      sumia exatamente no dia em que a competência fecha e a decisão é tomada. */
   const mesCorrente = compAtual === competenciaAtual()
   const detalheDe = new Map<string, string>()
-  /* Quem executa serviço da planilha — ver `semPlanilhaDoMes`. É "alguma vez",
-     não "no mês": a pergunta é se ESTA pessoa depende da metade que falta. */
-  const gComServico = await prisma.servicoDepto.groupBy({
-    by: ['personKey'],
-    where: { departmentId: dept.id, status: 'concluida', personKey: { not: null } },
-    _count: { _all: true },
-  })
-  const fazServicoSet = new Set(gComServico.map((r) => r.personKey).filter((v): v is string => !!v))
-
   let pontuacaoDoMes: {
     competencia: string
     /** Mês em curso: falta o que ainda não aconteceu. */
@@ -550,9 +541,6 @@ export async function GET(req: NextRequest) {
          ficha o mostra; o calculado na hora só existe aqui — jogá-lo fora
          deixava o único número do painel sem como conferir. */
       detalhe: detalheDe.get(p.nexusUserId ?? p.id) ?? null,
-      /* Executa serviço da planilha: enquanto a planilha do mês não subir, a
-         pontuação desta pessoa está sem uma das metades. */
-      fazServico: fazServicoSet.has(p.nexusUserId ?? p.id),
     }
   })
 

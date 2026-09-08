@@ -17,8 +17,6 @@ export type PessoaDoSetor = {
   /** A conta aberta do que foi calculado na hora (parcial/prévia). O mês
    *  gravado guarda o dela no banco e a ficha a mostra. */
   detalhe: string | null
-  /** Executa serviço da planilha — enquanto ela não sobe, falta uma metade. */
-  fazServico: boolean
 }
 
 export type PessoaRank = {
