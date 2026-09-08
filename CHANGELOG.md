@@ -1,5 +1,33 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (madrugada, 4) — Cada advertência diz de qual atraso ela veio
+
+A lista da ficha repetia, em **todas** as sete linhas, a mesma frase: *"Atraso
+(2º ou seguinte no mês) — contagem derivada da regra da casa, não é advertência
+assinada"*. Sete linhas idênticas não informam nada, e escondiam justamente o que
+a lista tem de útil.
+
+A regra é **ordinal**, e por isso é derivável: a 1ª advertência do mês vem do 2º
+atraso, a 2ª do 3º, e assim por diante. O motivo passa a dizer isso —
+`2º atraso do mês`, `3º atraso do mês` —, e a ficha mostra a **progressão dentro
+do mês** em vez de uma parede de texto igual.
+
+⚠️ A ressalva não sumiu: subiu para o cabeçalho do cartão, dita **uma vez**, onde
+se lê. "A casa aplica advertência a partir do 2º atraso do mês. Esta é a contagem
+por essa regra — não é registro de advertência assinada." Um painel que decide
+aumento não pode deixar essa diferença implícita, mas também não precisa
+repeti-la sete vezes.
+
+**As 1.004 advertências já gravadas foram renomeadas sem o dump** (que foi
+apagado por conter PII): a ordem é derivável do próprio banco, porque elas foram
+geradas dos atrasos do mês ordenados por dia, pulando o primeiro — então a
+k-ésima advertência do mês corresponde ao atraso k+1. A distribuição resultante
+confirma a regra: **413** "2º atraso", **278** "3º", **181** "4º", 105 "5º", 17
+"6º", 5 "7º", 4 "8º", 1 "9º" — decrescente, como tem de ser.
+
+⚠️ E o rótulo do tipo deixou de sair da chave crua do banco: `advertencia`
+capitalizado punha **"Advertencia"**, sem acento, na ficha de gente de verdade.
+
 ## 2026-09-08 (madrugada, 3) — O mapa do setor também virou calendário, e a cor mudou de eixo
 
 Mesmo tratamento da ficha: blocos de mês com o dia escrito dentro, obedecendo ao

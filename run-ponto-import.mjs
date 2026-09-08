@@ -323,15 +323,21 @@ async function main() {
     const personKey = k.split('\0')[0]
     // O 1º atraso do mês não gera advertência; do 2º em diante, um por atraso.
     const ordenadas = [...ocorrencias].sort((x, y) => x.dia.localeCompare(y.dia) || x.id.localeCompare(y.id))
-    for (const o of ordenadas.slice(1)) {
-      const dia = o.dia
+    /* ⚠️⚠️ CADA ADVERTÊNCIA DIZ DE QUAL ATRASO ELA VEIO. A regra é ordinal — a
+       1ª advertência do mês é do 2º atraso, a 2ª do 3º, e assim por diante —,
+       então o motivo pode dizer isso em vez de repetir a mesma frase longa em
+       toda linha. Sete linhas idênticas na ficha não informam nada e ainda
+       escondem o que a lista tem de útil: a progressão dentro do mês.
+       ⚠️ A ressalva de que isto é contagem derivada, e não advertência
+       assinada, passou para o cabeçalho do cartão — dita UMA vez, onde se lê. */
+    ordenadas.slice(1).forEach((o, i) => {
       eventos.push({
         personKey, source: 'nexo', sourceId: `regra2:${o.id}`,
-        data: dia, tipo: 'advertencia',
-        motivo: 'Atraso (2º ou seguinte no mês) — contagem derivada da regra da casa, não é advertência assinada',
+        data: o.dia, tipo: 'advertencia',
+        motivo: `${i + 2}º atraso do mês`,
         dias: null,
       })
-    }
+    })
   }
   const advertNaTabela = adverts.filter((a) => matchOf.has(a.userId)).length
 

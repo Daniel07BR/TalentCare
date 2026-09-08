@@ -589,7 +589,20 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     )}
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
+                    {/* ⚠️⚠️ A RESSALVA VEM UMA VEZ, AQUI — e não repetida em cada
+                        linha. Ela estava no `motivo` de todas as advertências, e
+                        sete linhas com a mesma frase longa não informam nada:
+                        escondiam justamente o que a lista tem de útil, que é a
+                        progressão dentro do mês (2º atraso, 3º, 4º…).
+                        ⚠️ Mas ela precisa continuar existindo: o que está aqui é
+                        contagem derivada da regra da casa, não advertência
+                        assinada, e um painel que decide aumento não pode deixar
+                        essa diferença implícita. */}
+                    <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12, lineHeight: 1.5 }}>
+                      A casa aplica advertência <b>a partir do 2º atraso do mês</b>. Esta é a contagem por essa regra —
+                      não é registro de advertência assinada.
+                    </div>
                     {(m?.disciplina.length ?? 0) === 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 96, textAlign: 'center', gap: 6 }}>
                         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(63,178,85,.13)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✓</div>
@@ -601,7 +614,12 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                           <div key={i} className="cpop" style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'color-mix(in srgb, var(--danger) 9%, var(--surface-2))', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger)', flex: 'none' }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--danger)', textTransform: 'capitalize' }}>{d.tipo}</div>
+                              {/* ⚠️ O `tipo` é a chave do banco (`advertencia`, sem
+                                  acento). Capitalizar a chave crua põe "Advertencia"
+                                  na cara de quem lê a ficha de uma pessoa real. */}
+                              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--danger)' }}>
+                                {d.tipo === 'advertencia' ? 'Advertência' : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}
+                              </div>
                               <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{d.motivo ?? 'sem motivo registrado'}</div>
                             </div>
                             <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
