@@ -72,7 +72,17 @@ export const TIPOS_ATIVIDADE: TipoAtividade[] = [
   { chave: 'hd_aberto', label: 'Chamado aberto', sistema: 'HelpDesk', descricao: 'cada chamado que a pessoa abriu', fonte: { modelo: 'helpdeskDaily', campos: ['opened'] } },
   { chave: 'hd_resolvido', label: 'Chamado resolvido', sistema: 'HelpDesk', descricao: 'cada chamado resolvido', fonte: { modelo: 'helpdeskDaily', campos: ['resolved'] } },
   // ── CIDE ──
-  { chave: 'cide_alteracao', label: 'Alteração cadastral', sistema: 'CIDE', descricao: 'cada alteração de cadastro registrada', fonte: { modelo: 'cideDaily', campos: ['atividades'] } },
+  /* ⚠️⚠️ CONTA EMPRESAS TOCADAS, NÃO LINHAS DA TRILHA (08/09/2026).
+     `cide_daily.atividades` é a trilha de auditoria do CIDE: salvar o cadastro
+     de UMA empresa grava uma linha por campo mexido. Medido em agosto/2026,
+     1.920 das 1.961 linhas com responsável humano (98%) são `origem =
+     'SISTEMA'`, e a inflação NÃO é uniforme — 700 linhas em 73 empresas-dia
+     (9,6×) contra 330 em 112 (2,9×). Pontuar por linha, a 15 min cada, dizia
+     que uma pessoa trabalhou 43 HORAS num dia, e punha no topo do setor quem a
+     trilha mais infla.
+     ⚠️ A MÉDIA EM MINUTOS PRECISA SER REDECIDIDA pelo gestor: 15 min era o
+     tempo de uma linha da trilha; agora a unidade é a empresa atendida. */
+  { chave: 'cide_alteracao', label: 'Empresa atendida', sistema: 'CIDE', descricao: 'cada empresa cujo cadastro a pessoa mexeu no dia', fonte: { modelo: 'cideDaily', campos: ['empresas'] } },
   // ── Consultoria Plus ──
   { chave: 'cons_estudo', label: 'Estudo', sistema: 'Consultoria', descricao: 'cada estudo/parecer', fonte: { modelo: 'consultoriaDaily', campos: ['studies'] } },
   { chave: 'cons_ticket', label: 'Ticket', sistema: 'Consultoria', descricao: 'cada ticket atendido', fonte: { modelo: 'consultoriaDaily', campos: ['tickets'] } },

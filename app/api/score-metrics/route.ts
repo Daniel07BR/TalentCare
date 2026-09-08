@@ -28,7 +28,14 @@ export async function GET(req: NextRequest) {
     }),
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { opened: true, resolved: true } }),
-    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { atividades: true } }),
+    /* ⚠️⚠️ `empresas`, NÃO `atividades` — a unidade do CIDE mudou em 08/09/2026.
+       `cide_daily.atividades` espelha `cg.alteracoes`, a TRILHA DE AUDITORIA:
+       salvar o cadastro de UMA empresa grava uma linha por campo mexido. Agosto
+       da casa: 1.920 das 1.961 linhas (98%) são geradas pelo salvamento, e a
+       inflação NÃO é uniforme (Legal 4,9× · Pessoal 1,0×), então ela mexia no
+       ranking entre pessoas E entre setores. `empresas` = cadastros distintos
+       tocados no dia. Ver o CHANGELOG de 08/09/2026 (fim, 3). */
+    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { empresas: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { ...range, ...porNome(alcance) }, _sum: { finalizados: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
@@ -58,7 +65,7 @@ export async function GET(req: NextRequest) {
 
   const clsM = new Map(cls.map((r) => [r.nexusUserId, (r._sum.videos ?? 0) + (r._sum.courses ?? 0) + (r._sum.created ?? 0)]))
   const hdM = new Map(hd.map((r) => [r.nexusUserId, (r._sum.opened ?? 0) + (r._sum.resolved ?? 0)]))
-  const cideM = new Map(cide.map((r) => [r.nexusUserId, r._sum.atividades ?? 0]))
+  const cideM = new Map(cide.map((r) => [r.nexusUserId, r._sum.empresas ?? 0]))
   const consM = new Map(cons.map((r) => [r.nexusUserId, (r._sum.studies ?? 0) + (r._sum.tickets ?? 0) + (r._sum.messages ?? 0) + (r._sum.comments ?? 0)]))
   // Gerência: só CONTAGEM de ação (serviço entregue/criado, protocolo aberto/
   // aprovado, data alterada). km/viagens/jornada ficam fora — são magnitude.

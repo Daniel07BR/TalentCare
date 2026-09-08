@@ -4,7 +4,9 @@ import { useTalentData } from '@/lib/ui/data'
 import { useCidePeriod } from '@/lib/ui/cide-period'
 import { cideVM } from '@/lib/mock/cide'
 
-// Card do Dashboard: atividades do CIDE (alterações registradas) por departamento
+// Card do Dashboard: atividade do CIDE por departamento.
+// ⚠️ A unidade é EMPRESA TOCADA no dia, não linha do histórico — a trilha de
+// auditoria grava uma linha por campo mexido. Ver o CHANGELOG de 08/09/2026.
 // NO PERÍODO (espelho local cide_daily via /api/cide-metrics). Clica → /cide.
 export default function CideDeptCard() {
   const router = useRouter()
@@ -23,7 +25,7 @@ export default function CideDeptCard() {
             </svg>
             CIDE · atividades registradas por departamento
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.totalAtividades.toLocaleString('pt-BR')} alterações · {vm.ativos} pessoas · {vm.deptCount} setores</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.totalAtividades.toLocaleString('pt-BR')} empresas atendidas · {vm.ativos} pessoas · {vm.deptCount} setores</div>
         </div>
         <span style={{ fontSize: 12, color: 'var(--chart-5)', fontWeight: 600 }}>ver resumo ›</span>
       </div>

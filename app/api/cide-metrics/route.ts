@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
   const rows = await prisma.cideDaily.groupBy({
     by: ['nexusUserId'],
     where: { day: { gte: fromDay, lte: toDay }, ...porNexus(alcance) },
-    _sum: { atividades: true },
+    _sum: { empresas: true },
   })
   const byUser = rows.map((r) => ({
     nexusUserId: r.nexusUserId,
-    atividades: r._sum.atividades ?? 0,
+    atividades: r._sum.empresas ?? 0,
   }))
   return NextResponse.json({ period, fromDay, toDay, byUser })
 }

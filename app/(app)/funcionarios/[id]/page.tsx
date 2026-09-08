@@ -96,7 +96,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     ? [
         { label: 'chamados resolvidos', sys: 'HelpDesk', n: m.helpdesk.resolved },
         { label: 'cursos (concluídos/criados)', sys: 'ClassRoom', n: m.classroom.total },
-        { label: 'alterações', sys: 'CIDE', n: m.cide.atividades },
+        { label: 'empresas', sys: 'CIDE', n: m.cide.atividades },
         { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
         { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
         { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
@@ -315,7 +315,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     </div>
                     {cd.has ? (
                       <div style={{ display: 'flex', gap: 14 }}>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-5)' }}>{cd.atividades.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Atividades registradas <span style={{ color: 'var(--text-mute)' }}>(alterações)</span></div></div>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-5)' }}>{cd.atividades.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Empresas atendidas <span style={{ color: 'var(--text-mute)' }}>(cadastros mexidos)</span></div></div>
                       </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no CIDE neste período.</div>

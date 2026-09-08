@@ -53,7 +53,13 @@ export async function agregarAtividades(
   const [cls, hd, cide, cons, ger, chat, wpp] = await Promise.all([
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { courses: true, videos: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { opened: true, resolved: true } }),
-    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { atividades: true } }),
+    /* ⚠️⚠️ `empresas`, não `atividades` — ver o comentário do tipo
+       `cide_alteracao` em `atividades.ts`. `empresas` é NULO no que foi
+       espelhado antes de 08/09/2026; o `_sum` do Prisma IGNORA nulos, então
+       uma janela não-backfilada soma menos do que deve. Por isso o backfill
+       (`node run-cide-sync.mjs --tudo`) é pré-requisito, e a checagem de
+       pendência está em `cideSemBackfill()`. */
+    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { empresas: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),

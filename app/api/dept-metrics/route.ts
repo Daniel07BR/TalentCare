@@ -164,7 +164,14 @@ export async function GET(req: NextRequest) {
   const [cls, hd, cide, cons, radio, ger, chat, wpp, assid, adv, avals] = await Promise.all([
     prisma.classroomDaily.aggregate({ where: porNexus, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.aggregate({ where: porNexus, _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true } }),
-    prisma.cideDaily.aggregate({ where: porNexus, _sum: { atividades: true } }),
+    /* ⚠️⚠️ `empresas`, NÃO `atividades` — a unidade do CIDE mudou em 08/09/2026.
+       `cide_daily.atividades` espelha `cg.alteracoes`, a TRILHA DE AUDITORIA:
+       salvar o cadastro de UMA empresa grava uma linha por campo mexido. Agosto
+       da casa: 1.920 das 1.961 linhas (98%) são geradas pelo salvamento, e a
+       inflação NÃO é uniforme (Legal 4,9× · Pessoal 1,0×), então ela mexia no
+       ranking entre pessoas E entre setores. `empresas` = cadastros distintos
+       tocados no dia. Ver o CHANGELOG de 08/09/2026 (fim, 3). */
+    prisma.cideDaily.aggregate({ where: porNexus, _sum: { empresas: true } }),
     prisma.consultoriaDaily.aggregate({ where: porNexus, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.radioDaily.aggregate({ where: porNexus, _sum: { seconds: true, sessions: true } }),
     prisma.gerenciaDaily.aggregate({
@@ -297,7 +304,8 @@ export async function GET(req: NextRequest) {
           SELECT substring(day, 1, 7), SUM(opened + resolved + formalized)::bigint
             FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
-          SELECT substring(day, 1, 7), SUM(atividades)::bigint
+          -- empresas, não atividades: ver o comentário do aggregate acima.
+          SELECT substring(day, 1, 7), SUM(empresas)::bigint
             FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
           SELECT substring(day, 1, 7), SUM(studies + tickets + messages + comments)::bigint
@@ -374,7 +382,7 @@ export async function GET(req: NextRequest) {
   const grupos = nx.length ? await Promise.all([
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { opened: true, resolved: true } }),
-    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { atividades: true } }),
+    prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { empresas: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, km: true } }),
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true, msgCanais: true, msgDiretas: true, msgChamados: true } }),
@@ -410,7 +418,7 @@ export async function GET(req: NextRequest) {
 
   const mCls = mapa(gCls, (r) => r.nexusUserId, (r) => n(r._sum.courses) + n(r._sum.created) + n(r._sum.videos))
   const mHd = mapa(gHd, (r) => r.nexusUserId, (r) => n(r._sum.opened) + n(r._sum.resolved))
-  const mCide = mapa(gCide, (r) => r.nexusUserId, (r) => n(r._sum.atividades))
+  const mCide = mapa(gCide, (r) => r.nexusUserId, (r) => n(r._sum.empresas))
   const mCons = mapa(gCons, (r) => r.nexusUserId, (r) => n(r._sum.studies) + n(r._sum.tickets) + n(r._sum.messages) + n(r._sum.comments))
   const mGer = mapa(gGer, (r) => r.nexusUserId, (r) => n(r._sum.servicos) + n(r._sum.protAbertos) + n(r._sum.protAprovados) + n(r._sum.servCriados))
   const mChatCham = mapa(gChat, (r) => r.nexusUserId, (r) => n(r._sum.chamadosAbertos) + n(r._sum.chamadosConcluidos))
@@ -580,7 +588,7 @@ export async function GET(req: NextRequest) {
   const mConsTudo = new Map(gCons.map((r) => [r.nexusUserId, n(r._sum.studies) + n(r._sum.tickets) + n(r._sum.messages) + n(r._sum.comments)]))
   const mGerServ = new Map(gGer.map((r) => [r.nexusUserId, n(r._sum.servicos) + n(r._sum.servCriados) + n(r._sum.protAbertos)]))
   const mChatConcl = new Map(gChat.map((r) => [r.nexusUserId, n(r._sum.chamadosConcluidos)]))
-  const mCideAt = new Map(gCide.map((r) => [r.nexusUserId, n(r._sum.atividades)]))
+  const mCideAt = new Map(gCide.map((r) => [r.nexusUserId, n(r._sum.empresas)]))
 
   /* ⚠️⚠️ Ranking VAZIO é o caso COMUM, não a borda. Quem RESOLVE chamado de
      HelpDesk é o T.I; quem CONCLUI chamado no Chat é o setor que atende. Todo o
@@ -672,7 +680,7 @@ export async function GET(req: NextRequest) {
       segundos: n(hd._sum.resolvedSeconds),
       resolvidosNormais: n(hd._sum.resolved),
     },
-    cide: { atividades: n(cide._sum.atividades) },
+    cide: { atividades: n(cide._sum.empresas) },
     consultoria: {
       estudos: n(cons._sum.studies), chamados: n(cons._sum.tickets),
       mensagens: n(cons._sum.messages), comentarios: n(cons._sum.comments),

@@ -143,7 +143,8 @@ nenhum" e parece defeito.
 | Chat | `nexus_user_id is not null` | autor `legacy` (só existe como autor de mensagem importada) não tem a quem creditar — 5.610 de 216.350 |
 | Gerência | `u.name <> 'Sistema'` | a importação do Access carimbou **27.501** protocolos como entregues por um usuário chamado "Sistema" |
 | Gerência | `completed_at` > 180 d de `scheduled_for` | mutirão de backlog vira "serviço feito naquele dia" por quem nem estava trabalhando |
-| CIDE | exclui eventos automáticos | mesmo padrão do "Sistema" |
+| CIDE | `responsavel <> 'Sistema'` | mesmo padrão do "Sistema" da Gerência |
+| **CIDE** | **conta EMPRESAS tocadas, não linhas do histórico** | ⚠️⚠️ `cg.alteracoes` é a TRILHA DE AUDITORIA: salvar o cadastro de uma empresa grava uma linha por campo mexido. Agosto/2026: **1.920 das 1.961** linhas com responsável humano (98%) têm `origem = 'SISTEMA'`. A 15 min por linha, as 172 de um único dia viravam **43 horas**. E a inflação **não é uniforme** — Legal **4,9×**, Pessoal **1,0×** —, então ela mexia no ranking entre pessoas e entre setores. O endpoint entrega `atividades` (linhas), `empresas` (a unidade de trabalho) e `manuais`; o painel usa `empresas` |
 
 ### O tempo, quando é de chamado
 

@@ -110,7 +110,33 @@ o WhatsApp fosse cortado.
 **anuláveis**: `null` = espelho anterior a hoje, e `null` não é zero —
 `run-cide-sync.mjs --tudo` repuxa a história inteira.
 
-⚠️ **A troca dos consumidores ficou de fora deste deploy, de propósito.** Trocar
+### A troca foi feita — backfill e antes/depois medidos
+
+`run-cide-sync.mjs --tudo`: **268 linhas, zero com `empresas` nulo**, de
+02/04/2026 a 08/09/2026. Casa toda: **5.306 linhas de trilha → 1.214 empresas**.
+
+Agosto/2026, por setor:
+
+| setor | linhas (antes) | empresas (agora) | inflação |
+|---|---|---|---|
+| **Legal** | 1.634 | **332** | **4,9×** |
+| Pessoal | 303 | 291 | **1,0×** |
+| Recepção | 19 | 8 | 2,4× |
+| Contabil · Fiscal · TI | 5 | 4 | — |
+
+⚠️ **O Pessoal não é afetado** (1,0×): lá o padrão de uso é uma linha por
+empresa. Quem a contagem antiga inflava era o Legal — e dentro dele, de forma
+desigual (700 linhas em 73 empresas-dia contra 330 em 112).
+
+Trocaram **juntos**, porque a régra de `atividades.ts` e o `activityOf()` não
+podem divergir: `lib/data/source.ts` (o acumulado, e com ele o score e o
+ranking), `/api/score-metrics`, `/api/dept-metrics` (KPI, série mensal e rank),
+`/api/employee-metrics`, `/api/cide-metrics` e a régua de atividades. Os rótulos
+na tela deixaram de dizer "alterações" e dizem **"empresas atendidas"**.
+
+### O texto anterior desta seção, para registro
+
+⚠️ **A troca dos consumidores ficou de fora do primeiro deploy, de propósito.** Trocar
 antes do backfill leria `null` como zero e apagaria o CIDE de todo mundo — o
 `_sum` do Prisma ignora nulos em silêncio. Ela entra depois, de uma vez (a régua
 e `activityOf()` têm de virar juntas, ou o score e a "atividade" da lista

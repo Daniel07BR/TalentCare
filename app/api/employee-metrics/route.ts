@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       ? prisma.helpdeskDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true } })
       : null,
     user.nexusUserId
-      ? prisma.cideDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { atividades: true } })
+      ? prisma.cideDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { empresas: true } })
       : null,
     // GERÊNCIA no período: execução (saídas) + escritório (demanda) juntas.
     user.nexusUserId
@@ -176,7 +176,7 @@ export async function GET(req: NextRequest) {
     whatsapp: { has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0) },
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
     helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, formalized: hForm, tempoMedio: fmtDur(hResNormal ? Math.round(hSec / hResNormal) : 0) },
-    cide: { has: (cd?._sum.atividades ?? 0) > 0, atividades: cd?._sum.atividades ?? 0 },
+    cide: { has: (cd?._sum.empresas ?? 0) > 0, atividades: cd?._sum.empresas ?? 0 },
     // Duas faces separadas: `hasSaida` só é true p/ quem realmente saiu na rua,
     // senão a ficha de quem só abre protocolo mostraria um card de mensageiro.
     gerencia: {

@@ -498,7 +498,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
     <CardFonte
       titulo="CIDE" cor="var(--chart-5)" Icone={Landmark}
       ranking={r.cide.gente} unidade={r.cide.rotulo || "mais alterou cadastro"}
-      numeros={[{ label: 'Alterações no cadastro', valor: m.cide.atividades, cor: 'var(--chart-5)' }]}
+      numeros={[{ label: 'Empresas atendidas', valor: m.cide.atividades, cor: 'var(--chart-5)' }]}
     />)
 
   /* ⚠️⚠️ A RÁDIO NÃO TEM RANKING, e é uma decisão.

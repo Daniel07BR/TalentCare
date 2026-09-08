@@ -64,9 +64,16 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
       _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true },
     }),
     // CIDE ACUMULADO (todo o histórico) somado do espelho diário.
+    /* ⚠️⚠️ `empresas`, NÃO `atividades` — a unidade do CIDE mudou em 08/09/2026.
+       `cide_daily.atividades` espelha `cg.alteracoes`, a TRILHA DE AUDITORIA:
+       salvar o cadastro de UMA empresa grava uma linha por campo mexido. Agosto
+       da casa: 1.920 das 1.961 linhas (98%) são geradas pelo salvamento, e a
+       inflação NÃO é uniforme (Legal 4,9× · Pessoal 1,0×), então ela mexia no
+       ranking entre pessoas E entre setores. `empresas` = cadastros distintos
+       tocados no dia. Ver o CHANGELOG de 08/09/2026 (fim, 3). */
     prisma.cideDaily.groupBy({
       by: ['nexusUserId'],
-      _sum: { atividades: true },
+      _sum: { empresas: true },
     }),
     // GERÊNCIA ACUMULADA (todo o histórico) somada do espelho diário.
     prisma.gerenciaDaily.groupBy({
@@ -231,7 +238,10 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
         resolvedSeconds: hds?._sum.resolvedSeconds ?? 0,
       },
       cide: {
-        atividades: cds?._sum.atividades ?? 0,
+        // O campo do `Employee` segue chamado `atividades` (é o contrato que
+        // `activityOf()` e as telas leem); o que ele CONTA são empresas
+        // tocadas. Ver o comentário do groupBy acima.
+        atividades: cds?._sum.empresas ?? 0,
       },
       // GERÊNCIA: execução (serviços/km/viagens/jornada) + escritório
       // (protocolos abertos/aprovados/…). Uma pessoa pode ter as duas.

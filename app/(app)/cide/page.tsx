@@ -34,14 +34,14 @@ export default function CidePage() {
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <CideIcon size={24} /> CIDE · Cadastro Geral
           </h1>
-          <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>Atividade = alterações registradas no histórico de empresas (exclui eventos automáticos)</div>
+          <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>Atividade = EMPRESAS cujo cadastro a pessoa mexeu no dia. Não é a contagem de linhas do histórico: salvar uma empresa grava uma linha por campo mexido, e 98% delas são geradas pelo salvamento</div>
         </div>
       </div>
 
       {/* Top 5 */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Top 5 · quem mais registra atividade</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Alterações registradas no CIDE</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Empresas atendidas no CIDE</div>
         {vm.top5.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
         ) : (
@@ -80,7 +80,7 @@ export default function CidePage() {
         {/* Por departamento */}
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividades por departamento</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Total de alterações registradas por setor</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>Total de empresas atendidas por setor</div>
           {vm.deptBars.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
           ) : (
