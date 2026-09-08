@@ -1,5 +1,28 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (madrugada, 3) — O mapa do setor também virou calendário, e a cor mudou de eixo
+
+Mesmo tratamento da ficha: blocos de mês com o dia escrito dentro, obedecendo ao
+filtro de período, ampliado quando o filtro é um mês só e cabendo doze.
+
+### ⚠️⚠️ E a cor deixou de ser a soma de minutos
+
+O mapa do setor somava os minutos de todo mundo no dia e usava os limites da
+PESSOA (5/15/30 min). Medido de junho a setembro de 2026: no **Fiscal, 39% dos
+dias com atraso** batiam no topo da escala; no **Contábil, 25%** — e um dia
+somava **466 minutos**. Todos pintados igual: a escala tinha saturado, e um mapa
+saturado não mostra nada.
+
+A soma é dominada por um atraso enorme de uma pessoa. Num mapa de **equipe** a
+pergunta é outra — *quantos chegaram tarde naquele dia* —, e ela tem escala
+própria: 1, 2, 3, 4 ou mais. Com ela, o Contábil distribui **21 / 14 / 13 / 12**
+nos quatro níveis em vez de amontoar no último; o Fiscal, **18 / 20 / 12 / 6**.
+Os minutos continuam no tooltip, junto com quantas pessoas.
+
+⚠️ O mapa do setor inclui **quem saiu**: o atraso aconteceu, e apagá-lo
+retroativamente é o mesmo defeito da série mensal que "some com quem saiu" e
+rebaixa o passado inteiro.
+
 ## 2026-09-08 (madrugada, 2) — O calendário passou a obedecer ao filtro
 
 ⚠️⚠️ **O mapa era o único número da ficha que ignorava o período.** Ele desenhava

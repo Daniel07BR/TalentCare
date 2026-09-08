@@ -119,6 +119,19 @@ export async function GET(req: NextRequest) {
     },
   })
   const ativos = pessoas.filter((p) => p.active)
+  /* ⚠️⚠️ O MAPA DO SETOR passa a obedecer ao filtro (pedido do dono,
+     08/09/2026), como o da ficha. Antes eram sempre "últimas 18 semanas",
+     vindas do dataset do cliente, ao lado de KPIs que seguiam o período.
+     ⚠️ Aqui entram TODOS do setor, não só os ativos: um atraso de quem saiu
+     aconteceu, e apagá-lo retroativamente é o mesmo defeito da série mensal que
+     "some com quem saiu" e rebaixa o passado inteiro. */
+  const diasDoSetor = await prisma.assiduidadeDaily.groupBy({
+    by: ['day'],
+    where: { personKey: { in: pessoas.map((p) => p.nexusUserId ?? p.id) }, day: { gte: fromDay, lte: toDay } },
+    _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true, atrasosAte5: true, atrasosAte30: true, atrasosMais30: true },
+    _count: { _all: true },
+    orderBy: { day: 'asc' },
+  })
   const nx = ativos.map((p) => p.nexusUserId).filter((v): v is string => !!v)
   // personKey da assiduidade = nexus_user_id ?? id (cobre STAFF sem Nexus).
   const chaves = ativos.map((p) => p.nexusUserId ?? p.id)
@@ -589,6 +602,20 @@ export async function GET(req: NextRequest) {
          É o QUINTO consumidor da mesma régua; ver `lib/ponto-cobertura.ts`. */
       janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
       motivoSemPonto: janelaTemDado(cobPonto, fromDay, toDay) ? null : motivoSemPonto(cobPonto, true, false),
+      /* Os dias do PERÍODO, para o calendário de ocorrências do setor.
+         ⚠️ `pessoas` é a contagem de gente que se atrasou naquele dia — é por
+         ela que a cor do mapa do setor anda, e não pelos minutos somados. */
+      dias: diasDoSetor.map((d) => ({
+        day: d.day,
+        atrasos: d._sum.atrasos ?? 0,
+        abonados: d._sum.atrasosAbon ?? 0,
+        minutos: d._sum.minutosAtraso ?? 0,
+        pessoas: d._count._all,
+        ate5: d._sum.atrasosAte5 ?? 0,
+        ate30: d._sum.atrasosAte30 ?? 0,
+        mais30: d._sum.atrasosMais30 ?? 0,
+      })),
+      pontoAte: cobPonto.ultimoDia,
     },
     /* SERVIÇOS da planilha do setor. ⚠️ `temFonte` distingue "este setor não
        manda planilha" de "o setor não fez nada" — 14 dos 15 setores estão no

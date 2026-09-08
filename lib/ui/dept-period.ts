@@ -63,6 +63,10 @@ export type DeptMetrics = {
   whatsapp: { abertos: number; finalizados: number; handleSum: number }
   assiduidade: {
     atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
+    /** Os dias com ocorrência do setor DENTRO do filtro — alimentam o calendário. */
+    dias?: { day: string; atrasos: number; abonados: number; minutos: number; pessoas: number; ate5: number; ate30: number; mais30: number }[]
+    /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
+    pontoAte?: string | null
     /** A janela pedida foi coberta pelo import do ponto? Ver `lib/ponto-cobertura.ts`.
      *  Opcional porque resposta antiga em cache não traz o campo. */
     janelaComPonto?: boolean

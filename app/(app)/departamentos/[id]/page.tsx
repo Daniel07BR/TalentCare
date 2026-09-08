@@ -1,5 +1,6 @@
 'use client'
 import { use, useState } from 'react'
+import CalendarioOcorrencias from '../../CalendarioOcorrencias'
 import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
@@ -219,16 +220,27 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         lado, que é o que deixa agir.
       */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atrasos do setor · últimas 18 semanas</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atrasos do setor · {label}</div>
+        {/* ⚠️⚠️ A COR ANDA POR PESSOAS, não pela soma de minutos. Somar os minutos
+            de todo mundo e usar os limites da pessoa (5/15/30) satura a escala:
+            medido de junho a setembro de 2026, no Fiscal **39% dos dias com
+            atraso** batiam no topo e um deles somava 466 minutos — todos pintados
+            igual. A soma é dominada por um atraso enorme de uma pessoa; num mapa
+            de equipe a pergunta é "quantos chegaram tarde naquele dia". */}
         <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginBottom: 14 }}>
-          Soma dos atrasos dos membros por dia; mais escuro = mais minutos. São sempre 18 semanas — não acompanha o filtro.
+          Cada quadro é um dia; a cor indica <b>quantas pessoas do setor se atrasaram</b> nele. Passe o mouse para ver
+          os minutos. Inclui quem saiu — o atraso aconteceu.
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 3 }}>
-          {vm.heat.map((c, i) => (
-            <div key={i} className="cpop" style={{ animationDelay: `${Math.min(i, 40) * 8}ms`, aspectRatio: '1', borderRadius: 2, background: c.bg, opacity: c.future ? 0 : 1 }}
-              title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}` : `${c.iso}: sem ocorrência`} />
-          ))}
-        </div>
+        {m?.fromDay && m?.toDay ? (
+          <CalendarioOcorrencias
+            dias={m.assiduidade?.dias ?? []}
+            de={m.fromDay} ate={m.toDay}
+            pontoAte={m.assiduidade?.pontoAte ?? null}
+            escala="pessoas"
+          />
+        ) : (
+          <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
+        )}
       </div>
     </div>
   )

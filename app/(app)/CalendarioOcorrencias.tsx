@@ -40,6 +40,8 @@ export type DiaOcorrencia = {
   atrasos: number
   abonados?: number
   minutos: number
+  /** Quantas PESSOAS se atrasaram no dia — só no mapa de setor. */
+  pessoas?: number
   ate5?: number
   ate30?: number
   mais30?: number
@@ -51,10 +53,25 @@ const DIAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
 const BGS = ['var(--surface-2)', 'rgba(245,166,35,.30)', 'rgba(245,166,35,.55)', 'rgba(245,166,35,.78)', 'var(--accent)']
 
 /** A intensidade da cor sai dos MINUTOS, não da contagem: dois atrasos de 3 min
- *  não são piores que um de 40. */
-function nivel(minutos: number, atrasos: number) {
+ *  não são piores que um de 40. É a leitura da PESSOA. */
+function nivelPorMinuto(minutos: number, atrasos: number) {
   if (atrasos <= 0) return 0
   return minutos > 30 ? 4 : minutos > 15 ? 3 : minutos > 5 ? 2 : 1
+}
+
+/**
+ * No mapa do SETOR a cor anda pelo número de PESSOAS que se atrasaram.
+ *
+ * ⚠️⚠️ Somar os minutos de todo mundo e usar os limites da pessoa (5/15/30)
+ * satura a escala e apaga a informação. Medido em 08/09/2026, de junho a
+ * setembro: no **Fiscal, 39% dos dias com atraso** batiam no topo, e um deles
+ * somava **466 minutos** — todos pintados igual. A soma é dominada por um
+ * atraso enorme de uma pessoa; o que o gestor lê num mapa de equipe é "quantos
+ * chegaram tarde naquele dia", e essa pergunta tem escala própria.
+ */
+function nivelPorPessoas(pessoas: number) {
+  if (pessoas <= 0) return 0
+  return pessoas >= 4 ? 4 : pessoas === 3 ? 3 : pessoas === 2 ? 2 : 1
 }
 
 const somaMes = (m: string) => {
@@ -63,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte,
+  dias, de, ate, pontoAte, escala = 'minutos',
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -71,6 +88,8 @@ export default function CalendarioOcorrencias({
   ate: string
   /** Último dia coberto pelo import de ponto. Depois dele, nada se afirma. */
   pontoAte?: string | null
+  /** `minutos` = a ficha de uma pessoa; `pessoas` = o mapa de um setor. */
+  escala?: 'minutos' | 'pessoas'
 }) {
   if (!de || !ate || ate < de) return null
 
@@ -117,14 +136,18 @@ export default function CalendarioOcorrencias({
                   const futuro = iso > hoje
                   const semMedicao = !foraDoPeriodo && !futuro && !!pontoAte && iso > pontoAte
                   const oc = porIso.get(iso)
-                  const lvl = foraDoPeriodo || futuro || semMedicao ? 0 : nivel(oc?.minutos ?? 0, oc?.atrasos ?? 0)
+                  const lvl = foraDoPeriodo || futuro || semMedicao ? 0
+                    : escala === 'pessoas' ? nivelPorPessoas(oc?.pessoas ?? 0)
+                    : nivelPorMinuto(oc?.minutos ?? 0, oc?.atrasos ?? 0)
 
                   const brDia = `${String(dia).padStart(2, '0')}/${String(m).padStart(2, '0')}`
                   const titulo = foraDoPeriodo ? `${brDia}: fora do período filtrado`
                     : futuro ? ''
                     : semMedicao ? `${brDia}: sem medição — o ponto foi importado até ${pontoAte!.split('-').reverse().join('/')}`
                     : oc && oc.atrasos > 0
-                      ? `${brDia}: ${oc.atrasos} atraso${oc.atrasos > 1 ? 's' : ''}${oc.minutos > 0 ? ` · ${oc.minutos} min` : ' · sem minuto medido'}`
+                      ? `${brDia}: ${oc.atrasos} atraso${oc.atrasos > 1 ? 's' : ''}`
+                        + (escala === 'pessoas' && oc.pessoas ? ` · ${oc.pessoas} pessoa${oc.pessoas > 1 ? 's' : ''}` : '')
+                        + (oc.minutos > 0 ? ` · ${oc.minutos} min` : ' · sem minuto medido')
                         + (oc.abonados ? ` · ${oc.abonados} abonado${oc.abonados > 1 ? 's' : ''}` : '')
                       : oc && oc.abonados
                         ? `${brDia}: ${oc.abonados} atraso${oc.abonados > 1 ? 's' : ''} abonado${oc.abonados > 1 ? 's' : ''}`
@@ -147,10 +170,13 @@ export default function CalendarioOcorrencias({
                         color: cor, fontVariantNumeric: 'tabular-nums',
                       }}>
                       {dia}
-                      {/* No mês ampliado cabe o minuto — o dado que a cor só
-                          insinua, e que é o que decide a conversa. */}
-                      {n === 1 && lvl > 0 && oc && oc.minutos > 0 && (
-                        <span style={{ fontSize: 9, fontWeight: 600, marginTop: -4, opacity: .8 }}>{oc.minutos}m</span>
+                      {/* No mês ampliado cabe o número que a cor só insinua, e
+                          que é o que decide a conversa: os minutos na ficha da
+                          pessoa, quantos chegaram tarde no mapa do setor. */}
+                      {n === 1 && lvl > 0 && oc && (
+                        escala === 'pessoas'
+                          ? (oc.pessoas ? <span style={{ fontSize: 9, fontWeight: 600, marginTop: -4, opacity: .8 }}>{oc.pessoas}p</span> : null)
+                          : (oc.minutos > 0 ? <span style={{ fontSize: 9, fontWeight: 600, marginTop: -4, opacity: .8 }}>{oc.minutos}m</span> : null)
                       )}
                     </div>
                   )
@@ -170,9 +196,9 @@ export default function CalendarioOcorrencias({
             <span style={{ width: 11, height: 11, borderRadius: 3, background: 'repeating-linear-gradient(45deg, var(--border) 0 2px, transparent 2px 5px)' }} /> sem medição
           </span>
         )}
-        Sem atraso
+        {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
         {BGS.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
-        mais minutos
+        {escala === 'pessoas' ? '4 ou mais pessoas' : 'mais minutos'}
       </div>
     </>
   )
