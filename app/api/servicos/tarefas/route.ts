@@ -113,6 +113,18 @@ export type TarefaPontuada = {
   pontosNaRevisao: number | null
   /** O valor de hoje se afastou do que a pessoa conferiu. */
   mudouDesdeRevisao: boolean
+  /**
+   * A causa da mudança foi a RÉGUA, não a planilha.
+   * ⚠️⚠️ As duas causas exigem reações diferentes e a tela precisa separá-las.
+   * A planilha mexer no valor de um tipo é notícia: ninguém anunciou, e é
+   * exatamente para isso que o aviso existe. A régua mudar move **todos** os
+   * tipos ao mesmo tempo, por uma decisão que já tem autor, data e motivo
+   * gravados — 74 alarmes individuais para um único ato deliberado não
+   * informam nada e enterram o sinal que importa. Medido em 08/09/2026: o
+   * Legal ganhou a primeira régua (fator 0,5 → 0,1) e os 74 tipos mudariam de
+   * valor no mesmo instante.
+   */
+  mudouPelaRegua: boolean
   /** As OUTRAS grafias do mesmo tipo, SOMADAS nesta linha (caixa/acento/espaço). */
   grafias: string[]
   /** Havia mais de uma régua para o mesmo serviço; ficou a que dá mais pontos. */
@@ -356,6 +368,8 @@ async function calcularCatalogo(departmentId: string) {
          nulo é "não sei quanto valia" — e "não sei" não pode virar "mudou", que
          é a mesma inversão do null→0 com outra fantasia. */
       mudouDesdeRevisao: !!aj?.revisadoEm && aj.pontosNaRevisao != null && aj.pontosNaRevisao !== pontos,
+      mudouPelaRegua: !!aj?.revisadoEm && aj.pontosNaRevisao != null && aj.pontosNaRevisao !== pontos
+        && regra?.criadoEm != null && regra.criadoEm > aj.revisadoEm,
       grafias: outrasGrafias,
       reguasEmDisputa,
       reguaDaGrafia: aj0 && aj0.tarefa !== tarefa ? aj0.tarefa : null,
@@ -372,7 +386,13 @@ async function calcularCatalogo(departmentId: string) {
   const ultimaMudanca = marcos.length ? new Date(Math.max(...marcos.map((d) => d.getTime()))) : null
   await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimaMudanca)
 
-  return { fatorPorMinuto: fator, fatorDecidido, totalConcluidos: linhas.length, tarefas }
+  return {
+    fatorPorMinuto: fator, fatorDecidido,
+    /** Quando a régua em vigor foi gravada — a data que a tela mostra ao dizer
+     *  "todos mudaram porque a régua mudou". */
+    reguaCriadaEm: regra?.criadoEm?.toISOString() ?? null,
+    totalConcluidos: linhas.length, tarefas,
+  }
 }
 
 /**
@@ -446,7 +466,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     departmentId?: string; tarefa?: string
     /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
-    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar'
+    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'revisar_todos'
     valor?: number | null
     pontosAuto?: number
   } | null
@@ -498,6 +518,27 @@ export async function POST(req: NextRequest) {
       { revisadoPor: quem.id, revisadoEm: agora },
     )
     return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
+  }
+
+  /* ── confirmar TODOS os valores de uma vez ────────────────────────────────
+     ⚠️⚠️ A saída para a mudança de régua. Ela move os 74 tipos no mesmo
+     instante, e pedir 74 cliques para confirmar um único ato deliberado é o
+     jeito mais rápido de ensinar a equipe a ignorar a lista de pendências.
+     ⚠️ Não muda valor nenhum: grava que uma pessoa olhou e aceitou o que a
+     régua nova produziu, com autor e data em cada linha. */
+  if (body?.campo === 'revisar_todos') {
+    const cat = await calcularCatalogo(departmentId)
+    for (const t of cat.tarefas) {
+      const norm = normalizarTarefa(t.tarefa)
+      for (const g of [...new Set([t.tarefa, ...t.grafias])]) {
+        await prisma.pontuacaoTarefaAjuste.upsert({
+          where: { departmentId_tarefa: { departmentId, tarefa: g } },
+          create: { departmentId, tarefa: g, tarefaNorm: norm, revisadoPor: quem.id, revisadoEm: agora, pontosNaRevisao: t.pontos },
+          update: { revisadoPor: quem.id, revisadoEm: agora, pontosNaRevisao: t.pontos },
+        })
+      }
+    }
+    return NextResponse.json({ ok: true, revisados: cat.tarefas.length, recarregar: true })
   }
 
   /* `limpar` VOLTA ao medido — apaga os VALORES em vez de gravar o sugerido.

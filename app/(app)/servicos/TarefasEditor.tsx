@@ -16,7 +16,7 @@ type Tarefa = {
   ajustado: boolean; ajustadoPor: string | null; ajustadoEm: string | null
   pontosAutoNaEpoca: number | null
   revisado: boolean; revisadoPor: string | null; revisadoEm: string | null
-  pontosNaRevisao: number | null; mudouDesdeRevisao: boolean
+  pontosNaRevisao: number | null; mudouDesdeRevisao: boolean; mudouPelaRegua: boolean
   grafias: string[]; reguasEmDisputa: number; reguaDaGrafia: string | null
 }
 
@@ -90,6 +90,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
   const [fatorDecidido, setFatorDecidido] = useState(true)
+  const [reguaCriadaEm, setReguaCriadaEm] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string; maximo?: string }>>({})
@@ -112,7 +113,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
       if (!r.ok) { setMsg(d.error ?? 'Não consegui ler os tipos de serviço.'); setTarefas([]); return }
       const lista: Tarefa[] = d.tarefas ?? []
       setTarefas(lista); setFator(d.fatorPorMinuto ?? 0.5); setTotal(d.totalConcluidos ?? 0)
-      setFatorDecidido(d.fatorDecidido !== false)
+      setFatorDecidido(d.fatorDecidido !== false); setReguaCriadaEm(d.reguaCriadaEm ?? null)
       setRascunho({})
       /* ⚠️ A tela ABRE no que precisa de decisão, quando há. Era o pedido do
          dono: guardar o que já foi decidido e "apresentar para ajuste os novos
@@ -139,7 +140,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
    * ⚠️ Enquanto salva, a linha fica marcada (`salvando`) em vez de a tela
    * inteira parar: o retorno visual continua existindo, sem custar o contexto.
    */
-  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar', valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'revisar_todos', valor: number | null) {
     setSalvando((v) => ({ ...v, [t.tarefa]: true }))
     try {
       const r = await fetch('/api/servicos/tarefas', {
@@ -149,6 +150,9 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
       const d = await r.json()
       if (!r.ok) { setMsg(d.error ?? 'Não consegui salvar.'); return }
       setMsg(null)
+      /* Confirmar todos mexe em 74 linhas — a única operação da tela que faz
+         isso, e a única que justifica recarregar o catálogo inteiro. */
+      if (d.recarregar) { await carregar(); return }
       if (d.tarefa) setTarefas((ts) => ts.map((x) => (x.tarefa === d.tarefa.tarefa ? d.tarefa : x)))
       // O rascunho DESTA linha sai; o das outras fica como estava.
       setRascunho((r2) => { const c = { ...r2 }; delete c[t.tarefa]; return c })
@@ -182,6 +186,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
   const ajustadas = tarefas.filter((t) => t.ajustado).length
   const nPendentes = tarefas.filter(pendente).length
   const nMudaram = tarefas.filter(mudou).length
+  const nPelaRegua = tarefas.filter((t) => t.mudouPelaRegua).length
   const nGrafias = tarefas.filter(duplicada).length
   const nDivergentes = tarefas.filter((t) => t.reguasEmDisputa > 0).length
   /* ⚠️⚠️ O EFEITO DOS LIMITES, SOMADO. Cada linha já avisa quando os limites
@@ -294,6 +299,22 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
           multiplica a coluna de pontos inteira. Quando a régua for criada com outro fator, <b>todos os {tarefas.length} tipos
           mudam de valor de uma vez</b>, e cada um vai aparecer aqui como “mudou desde a revisão”. Vale definir o fator
           antes de afinar tipo por tipo.
+        </div>
+      )}
+
+      {/* ⚠️⚠️ UMA notícia, não 74. A régua mudar move todos os tipos no mesmo
+          instante, por um ato que já tem autor, data e motivo gravados — e 74
+          alarmes individuais para isso enterram o sinal que o aviso existe para
+          dar: a PLANILHA ter mexido no valor de um tipo sem ninguém anunciar. */}
+      {!carregando && nPelaRegua > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.55 }}>
+          <b style={{ color: 'var(--text)' }}>A régua de pontuação mudou{reguaCriadaEm ? ` em ${dataBr(reguaCriadaEm)}` : ''} — e por isso {nPelaRegua === tarefas.length ? 'todos os' : ''} {nPelaRegua} {nPelaRegua === 1 ? 'tipo mudou' : 'tipos mudaram'} de valor de uma vez.</b>
+          {' '}Não foi a planilha: o fator agora é <b>{fator} ponto por minuto</b> e ele multiplica a coluna inteira. O que
+          vocês ajustaram — mínimo, máximo e média de cada tipo — continua valendo; só a escala é outra.
+          <button onClick={() => salvar(tarefas[0], 'revisar_todos', null)} disabled={!!salvando['__todos__']}
+            style={{ marginLeft: 10, height: 26, padding: '0 12px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+            Conferir os {nPelaRegua} valores novos
+          </button>
         </div>
       )}
 
@@ -587,6 +608,12 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
                     {t.mudouDesdeRevisao && (
                       <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
                         valia {t.pontosNaRevisao} quando {t.revisadoPor} conferiu ({dataBr(t.revisadoEm)}) — agora vale {t.pontos}
+                        {/* ⚠️ A CAUSA muda o que a pessoa deve fazer: régua nova
+                            é decisão registrada e move tudo; planilha nova mexeu
+                            neste tipo sozinha, e isso é que é notícia. */}
+                        <span style={{ fontWeight: 400, color: 'var(--text-mute)' }}>
+                          {t.mudouPelaRegua ? ' · a régua mudou' : ' · a planilha mudou este tipo'}
+                        </span>
                       </span>
                     )}
                     {/* ⚠️⚠️ AS GRAFIAS ESTÃO SOMADAS NESTA LINHA, e isso precisa
