@@ -113,12 +113,12 @@ export type TarefaPontuada = {
   pontosNaRevisao: number | null
   /** O valor de hoje se afastou do que a pessoa conferiu. */
   mudouDesdeRevisao: boolean
-  /** As OUTRAS grafias do mesmo tipo neste catálogo (caixa/acento/espaço). */
+  /** As OUTRAS grafias do mesmo tipo, SOMADAS nesta linha (caixa/acento/espaço). */
   grafias: string[]
-  /** As grafias existem e as decisões delas DISCORDAM — o Legal escolhe qual fica. */
-  grafiaDivergente: boolean
-  /** A decisão não é desta grafia: veio de outra, por normalização. */
-  herdouDeGrafia: string | null
+  /** Havia mais de uma régua para o mesmo serviço; ficou a que dá mais pontos. */
+  reguasEmDisputa: number
+  /** De qual grafia veio a régua vencedora, quando não é a que nomeia a linha. */
+  reguaDaGrafia: string | null
 }
 
 /** Os campos de VALOR de um ajuste — o que "voltar ao medido" desfaz. */
@@ -180,7 +180,6 @@ async function calcularCatalogo(departmentId: string) {
   const autores = await prisma.user.findMany({ where: { id: { in: idsDeAutor } }, select: { id: true, name: true } })
   const nomePorId = new Map(autores.map((a) => [a.id, a.name]))
 
-  const ajustePorTarefa = new Map(ajustes.map((a) => [a.tarefa, a]))
   /* ⚠️⚠️ A BUSCA TOLERANTE À GRAFIA. Tenta a grafia exata primeiro; só quando
      não acha é que cai na normalizada. É assim que a decisão sobrevive a uma
      maiúscula trocada no export do mês que vem — e é assim que ela NÃO mescla
@@ -203,19 +202,29 @@ async function calcularCatalogo(departmentId: string) {
      como grande. O que importa é que a conta passa a descrever o que foi
      medido — e no dia em que um tipo vier com metade das linhas zerada, ela não
      vai desabar em silêncio. */
-  const porTarefa = new Map<string, typeof linhas>()
-  for (const l of linhas) {
-    const arr = porTarefa.get(l.tarefa) ?? []
-    arr.push(l)
-    porTarefa.set(l.tarefa, arr)
-  }
+  /* ⚠️⚠️ O AGRUPAMENTO É POR GRAFIA NORMALIZADA — decisão do dono em 08/09/2026:
+     "no TFE, considere o mesmo serviço". Antes o catálogo agrupava pelo texto
+     exato, e o mesmo serviço virava DUAS linhas: "TAXAS PREFEITURA (TFE/TFA)
+     Emitir boletos" e "… emitir boletos", 5 concluídos cada, com réguas
+     configuradas separadamente (máximos 240 e 237) e pontos diferentes (87 e
+     84). Duas linhas plausíveis, nada acusando — e a amostra do serviço partida
+     ao meio, o que importa num catálogo em que 29 tipos já têm menos de 5
+     medições.
 
-  /* As grafias do MESMO tipo que convivem no catálogo de hoje. */
-  const grafiasPorNorm = new Map<string, string[]>()
-  for (const t of porTarefa.keys()) {
-    const k = normalizarTarefa(t)
-    grafiasPorNorm.set(k, [...(grafiasPorNorm.get(k) ?? []), t])
+     Agrupado, o serviço tem UMA linha, UMA amostra (os 10) e UM valor. */
+  const porTarefa = new Map<string, typeof linhas>()
+  const grafiasPorNorm = new Map<string, Map<string, number>>()
+  for (const l of linhas) {
+    const k = normalizarTarefa(l.tarefa)
+    porTarefa.set(k, [...(porTarefa.get(k) ?? []), l])
+    const g = grafiasPorNorm.get(k) ?? new Map<string, number>()
+    g.set(l.tarefa, (g.get(l.tarefa) ?? 0) + 1)
+    grafiasPorNorm.set(k, g)
   }
+  /** A grafia que nomeia o tipo: a mais frequente. Empate, a primeira A→Z. */
+  const canonicaDe = (norm: string) =>
+    [...(grafiasPorNorm.get(norm) ?? new Map<string, number>())]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))[0]?.[0] ?? norm
 
   const nomeDaChave = new Map(usuariosDoSetor.map((u) => [u.nexusUserId ?? u.id, u.name]))
   const brDia = (d: string) => d.split('-').reverse().join('/')
@@ -223,15 +232,40 @@ async function calcularCatalogo(departmentId: string) {
   const quemFez = (l: { personKey: string | null; nomeOrigem: string; dia: string }) =>
     `${(l.personKey && nomeDaChave.get(l.personKey)) || l.nomeOrigem} · ${brDia(l.dia)}`
 
-  const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, todas]) => {
-    const norm = normalizarTarefa(tarefa)
-    const exato = ajustePorTarefa.get(tarefa) ?? null
-    /* Só herda de outra grafia quando não há ambiguidade: uma única decisão
-       gravada com aquele mesmo nome normalizado. Duas, e ninguém herda nada —
-       escolher entre elas é do Legal. */
-    const doNorm = (porNorm.get(norm) ?? []).filter((a) => a.tarefa !== tarefa)
-    const herdado = !exato && doNorm.length === 1 ? doNorm[0] : null
-    const aj0 = exato ?? herdado
+  /** Aplica uma régua à amostra e devolve o que ela produz. Um lugar só: é a
+   *  conta que decide o valor, e ela precisa ser a MESMA na hora de comparar
+   *  duas réguas candidatas e na hora de exibir a vencedora. */
+  const aplicar = (todas: typeof linhas, aj: (typeof ajustes)[number] | null) => {
+    const minimo = aj?.tempoMinimo ?? null
+    const maximo = aj?.tempoMaximo ?? null
+    const comTempo = todas.filter((l) => l.minutos > 0)
+    const dentroDoMinimo = minimo != null ? comTempo.filter((l) => l.minutos >= minimo) : comTempo
+    const cronometradas = maximo != null ? dentroDoMinimo.filter((l) => l.minutos <= maximo) : dentroDoMinimo
+    const mediaMedida = cronometradas.length
+      ? Math.round(cronometradas.reduce((a, l) => a + l.minutos, 0) / cronometradas.length)
+      : 0
+    const mediaEmUso = aj?.mediaMinutos ?? mediaMedida
+    const pontosAuto = Math.max(1, Math.round(mediaEmUso * fator))
+    return { pontos: aj?.pontos ?? pontosAuto, pontosAuto, mediaMedida, mediaEmUso, cronometradas, comTempo, dentroDoMinimo }
+  }
+
+  const tarefas: TarefaPontuada[] = [...porTarefa].map(([norm, todas]) => {
+    const tarefa = canonicaDe(norm)
+    /* ⚠️⚠️ DUAS RÉGUAS PARA O MESMO SERVIÇO: FICA A QUE DÁ MAIS PONTOS (decisão
+       do dono, 08/09/2026). O caso real são as duas grafias do TFE, com máximos
+       240 e 237 — configuradas pela mesma equipe, no mesmo dia, para o mesmo
+       serviço, e a diferença é um teto três minutos mais apertado. Escolher a
+       mais generosa é o que o dono decidiu; o alternativo seria o sistema
+       arbitrar qual das duas pessoas errou.
+       ⚠️ A escolha fica VISÍVEL na linha (`reguasEmDisputa`, `reguaDaGrafia`):
+       uma régua que ganha em silêncio é uma régua que ninguém revisa. */
+    const candidatas = porNorm.get(norm) ?? []
+    const aj0 = candidatas.length <= 1 ? (candidatas[0] ?? null)
+      : [...candidatas].sort((a, b) => {
+          const d = aplicar(todas, b).pontos - aplicar(todas, a).pontos
+          if (d !== 0) return d
+          return (b.ajustadoEm?.getTime() ?? 0) - (a.ajustadoEm?.getTime() ?? 0)
+        })[0]
 
     const minimo = aj0?.tempoMinimo ?? null
     const maximo = aj0?.tempoMaximo ?? null
@@ -268,15 +302,16 @@ async function calcularCatalogo(departmentId: string) {
     const pontosAuto = Math.max(1, Math.round(mediaEmUso * fator))
     const pontos = aj?.pontos ?? pontosAuto
 
-    const outrasGrafias = (grafiasPorNorm.get(norm) ?? []).filter((g) => g !== tarefa)
-    /* ⚠️ Divergem quando as DECISÕES gravadas nas duas grafias não são a mesma —
-       inclusive quando uma tem decisão e a outra não. É o caso medido em
-       08/09/2026 (máximo 240 numa grafia e 237 na outra). */
-    const valoresDe = (a: typeof exato): ValoresDoAjuste => ({
+    const outrasGrafias = [...(grafiasPorNorm.get(norm) ?? new Map<string, number>()).keys()].filter((g) => g !== tarefa)
+    const valoresDe = (a: (typeof ajustes)[number] | null): ValoresDoAjuste => ({
       mediaMinutos: a?.mediaMinutos ?? null, tempoMinimo: a?.tempoMinimo ?? null,
       tempoMaximo: a?.tempoMaximo ?? null, pontos: a?.pontos ?? null,
     })
-    const grafiaDivergente = outrasGrafias.some((g) => !mesmoValor(valoresDe(exato), valoresDe(ajustePorTarefa.get(g) ?? null)))
+    /* Quantas réguas DIFERENTES existiam para este mesmo serviço. Uma só (ou
+       nenhuma) não é disputa; duas iguais também não. */
+    const distintas = candidatas.filter((c, i) =>
+      candidatas.findIndex((o) => mesmoValor(valoresDe(o), valoresDe(c))) === i)
+    const reguasEmDisputa = distintas.length > 1 ? distintas.length : 0
 
     return {
       tarefa,
@@ -322,8 +357,8 @@ async function calcularCatalogo(departmentId: string) {
          é a mesma inversão do null→0 com outra fantasia. */
       mudouDesdeRevisao: !!aj?.revisadoEm && aj.pontosNaRevisao != null && aj.pontosNaRevisao !== pontos,
       grafias: outrasGrafias,
-      grafiaDivergente: outrasGrafias.length > 0 && grafiaDivergente,
-      herdouDeGrafia: herdado ? herdado.tarefa : null,
+      reguasEmDisputa,
+      reguaDaGrafia: aj0 && aj0.tarefa !== tarefa ? aj0.tarefa : null,
     }
   }).sort((a, b) => b.amostras - a.amostras)
 
@@ -368,18 +403,22 @@ async function ancorarOQueDaParaSaber(
   tarefas: TarefaPontuada[],
   ultimaMudanca: Date | null,
 ) {
-  const pontosDe = new Map(tarefas.map((t) => [t.tarefa, t.pontos]))
+  /* ⚠️ Por grafia NORMALIZADA: o catálogo agrupa as grafias numa linha só, mas
+     o banco guarda uma por grafia — casar pelo texto exato deixaria as irmãs
+     sem âncora para sempre, mudas justamente onde o aviso importa. */
+  const pontosDe = new Map(tarefas.map((t) => [normalizarTarefa(t.tarefa), t.pontos]))
   const alvo = ajustes.filter((a) =>
-    a.revisadoEm != null && a.pontosNaRevisao == null && pontosDe.has(a.tarefa)
+    a.revisadoEm != null && a.pontosNaRevisao == null && pontosDe.has(normalizarTarefa(a.tarefa))
     && (ultimaMudanca == null || a.revisadoEm > ultimaMudanca))
   if (!alvo.length) return
   await Promise.all(alvo.map((a) => prisma.pontuacaoTarefaAjuste.update({
     where: { departmentId_tarefa: { departmentId, tarefa: a.tarefa } },
-    data: { pontosNaRevisao: pontosDe.get(a.tarefa)! },
+    data: { pontosNaRevisao: pontosDe.get(normalizarTarefa(a.tarefa))! },
   })))
+  const ancorados = new Set(alvo.map((a) => normalizarTarefa(a.tarefa)))
   for (const t of tarefas) {
-    if (alvo.some((a) => a.tarefa === t.tarefa)) {
-      t.pontosNaRevisao = pontosDe.get(t.tarefa)!
+    if (ancorados.has(normalizarTarefa(t.tarefa))) {
+      t.pontosNaRevisao = pontosDe.get(normalizarTarefa(t.tarefa))!
       t.mudouDesdeRevisao = false
     }
   }
@@ -407,7 +446,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     departmentId?: string; tarefa?: string
     /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
-    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'unificar_grafia'
+    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar'
     valor?: number | null
     pontosAuto?: number
   } | null
@@ -419,6 +458,32 @@ export async function POST(req: NextRequest) {
   }
   const tarefaNorm = normalizarTarefa(tarefa)
   const agora = new Date()
+
+  /* ⚠️⚠️ A GRAVAÇÃO ALCANÇA TODAS AS GRAFIAS DO MESMO SERVIÇO. O catálogo agrupa
+     por grafia normalizada (decisão do dono: "no TFE, considere o mesmo
+     serviço"), então a tela mostra UMA linha — mas o banco continua tendo uma
+     chave por grafia, e é do banco que os outros consumidores vão ler. Gravar
+     só na canônica deixaria a outra grafia com a régua velha, viva e invisível:
+     bastaria a planilha do mês que vem mudar qual grafia é a mais frequente
+     para o valor do serviço saltar sozinho, sem ninguém ter mexido em nada.
+     ⚠️ São as grafias que EXISTEM na planilha deste setor — nunca um `where`
+     por `tarefaNorm` solto, que atravessaria setor. */
+  const grafiasDoServico = [...new Set([
+    tarefa,
+    ...(await prisma.servicoDepto.findMany({
+      where: { departmentId, status: 'concluida' }, select: { tarefa: true }, distinct: ['tarefa'],
+    })).map((r) => r.tarefa).filter((t) => normalizarTarefa(t) === tarefaNorm),
+  ])]
+  /** Grava o mesmo em todas as grafias — a canônica e as irmãs. */
+  const gravarEmTodas = async (create: Record<string, unknown>, update: Record<string, unknown>) => {
+    for (const t of grafiasDoServico) {
+      await prisma.pontuacaoTarefaAjuste.upsert({
+        where: { departmentId_tarefa: { departmentId, tarefa: t } },
+        create: { departmentId, tarefa: t, tarefaNorm, ...create },
+        update,
+      })
+    }
+  }
   /** Toda mudança de valor TAMBÉM revisa: quem digita o número olhou para ele. */
   const carimboDeAjuste = { ajustadoPor: quem.id, ajustadoEm: agora, revisadoPor: quem.id, revisadoEm: agora }
 
@@ -428,41 +493,11 @@ export async function POST(req: NextRequest) {
      no banco eram a MESMA ausência de linha. Sem esta porta, a lista de
      pendências nunca esvazia, e lista que nunca esvazia para de ser lida. */
   if (body?.campo === 'revisar') {
-    await prisma.pontuacaoTarefaAjuste.upsert({
-      where: { departmentId_tarefa: { departmentId, tarefa } },
-      create: { departmentId, tarefa, tarefaNorm, revisadoPor: quem.id, revisadoEm: agora },
-      update: { revisadoPor: quem.id, revisadoEm: agora },
-    })
+    await gravarEmTodas(
+      { revisadoPor: quem.id, revisadoEm: agora },
+      { revisadoPor: quem.id, revisadoEm: agora },
+    )
     return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
-  }
-
-  /* ── "use este valor nas duas grafias" ───────────────────────────────────
-     A saída para o caso medido em 08/09/2026: o mesmo serviço em duas grafias,
-     configurado duas vezes, com máximos diferentes. O sistema não escolhe entre
-     240 e 237 — copia para as outras grafias o valor que a PESSOA apontou. */
-  if (body?.campo === 'unificar_grafia') {
-    const fonte = await prisma.pontuacaoTarefaAjuste.findUnique({
-      where: { departmentId_tarefa: { departmentId, tarefa } },
-    })
-    if (!fonte) return NextResponse.json({ error: 'Esta grafia não tem valor gravado para copiar.' }, { status: 400 })
-    const irmas = (await prisma.servicoDepto.findMany({
-      where: { departmentId, status: 'concluida' },
-      select: { tarefa: true }, distinct: ['tarefa'],
-    })).map((r) => r.tarefa).filter((t) => t !== tarefa && normalizarTarefa(t) === tarefaNorm)
-
-    const valores = {
-      mediaMinutos: fonte.mediaMinutos, tempoMinimo: fonte.tempoMinimo,
-      tempoMaximo: fonte.tempoMaximo, pontos: fonte.pontos,
-      pontosAutoNaEpoca: fonte.pontosAutoNaEpoca,
-    }
-    for (const irma of irmas) {
-      await prisma.pontuacaoTarefaAjuste.upsert({
-        where: { departmentId_tarefa: { departmentId, tarefa: irma } },
-        create: { departmentId, tarefa: irma, tarefaNorm, ...valores, ...carimboDeAjuste },
-        update: { ...valores, ...carimboDeAjuste },
-      })
-    }
-    return NextResponse.json({ ok: true, unificadas: irmas.length, recarregar: true })
   }
 
   /* `limpar` VOLTA ao medido — apaga os VALORES em vez de gravar o sugerido.
@@ -472,27 +507,24 @@ export async function POST(req: NextRequest) {
      ("olhei e quero o que a planilha mede"), e apagar a linha inteira a
      transformaria de novo em "ninguém nunca olhou". */
   if (body?.campo === 'limpar') {
-    await prisma.pontuacaoTarefaAjuste.upsert({
-      where: { departmentId_tarefa: { departmentId, tarefa } },
-      create: { departmentId, tarefa, tarefaNorm, revisadoPor: quem.id, revisadoEm: agora },
-      update: {
+    await gravarEmTodas(
+      { revisadoPor: quem.id, revisadoEm: agora },
+      {
         mediaMinutos: null, tempoMinimo: null, tempoMaximo: null, pontos: null,
         pontosAutoNaEpoca: null, ajustadoPor: null, ajustadoEm: null,
         revisadoPor: quem.id, revisadoEm: agora,
       },
-    })
+    )
     return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa, true)) })
   }
   /* Esvaziar UM limite tira só aquele limite — apagar o ajuste inteiro levaria
      junto o outro limite e a média, que a pessoa não pediu para mexer. */
   if (body?.valor == null && (body?.campo === 'minimo' || body?.campo === 'maximo')) {
     const campo = body.campo === 'minimo' ? { tempoMinimo: null } : { tempoMaximo: null }
-    const atual = await prisma.pontuacaoTarefaAjuste.findUnique({ where: { departmentId_tarefa: { departmentId, tarefa } } })
-    if (!atual) return NextResponse.json({ ok: true })
-    await prisma.pontuacaoTarefaAjuste.update({
-      where: { departmentId_tarefa: { departmentId, tarefa } },
-      data: { ...campo, mediaMinutos: null, pontos: null, ...carimboDeAjuste },
-    })
+    await gravarEmTodas(
+      { ...campo, ...carimboDeAjuste },
+      { ...campo, mediaMinutos: null, pontos: null, ...carimboDeAjuste },
+    )
     return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
   }
   if (body?.valor == null) {
@@ -519,11 +551,7 @@ export async function POST(req: NextRequest) {
     : body.campo === 'maximo' ? { tempoMaximo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ...carimboDeAjuste }
     : { pontos: valor, pontosAutoNaEpoca, ...carimboDeAjuste }
 
-  await prisma.pontuacaoTarefaAjuste.upsert({
-    where: { departmentId_tarefa: { departmentId, tarefa } },
-    create: { departmentId, tarefa, tarefaNorm, ...dados },
-    update: dados,
-  })
+  await gravarEmTodas(dados, dados)
   return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
 }
 
@@ -540,8 +568,9 @@ async function umaTarefa(departmentId: string, tarefa: string, ancorar = false) 
   const cat = await calcularCatalogo(departmentId)
   const linha = cat.tarefas.find((t) => t.tarefa === tarefa) ?? null
   if (ancorar && linha) {
+    /* Todas as grafias do serviço, pelo mesmo motivo de `gravarEmTodas`. */
     await prisma.pontuacaoTarefaAjuste.updateMany({
-      where: { departmentId, tarefa },
+      where: { departmentId, tarefaNorm: normalizarTarefa(tarefa) },
       data: { pontosNaRevisao: linha.pontos },
     })
     linha.pontosNaRevisao = linha.pontos

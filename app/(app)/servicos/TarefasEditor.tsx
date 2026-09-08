@@ -17,7 +17,7 @@ type Tarefa = {
   pontosAutoNaEpoca: number | null
   revisado: boolean; revisadoPor: string | null; revisadoEm: string | null
   pontosNaRevisao: number | null; mudouDesdeRevisao: boolean
-  grafias: string[]; grafiaDivergente: boolean; herdouDeGrafia: string | null
+  grafias: string[]; reguasEmDisputa: number; reguaDaGrafia: string | null
 }
 
 /* ── O QUE PRECISA DE OLHO ────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
    * ⚠️ Enquanto salva, a linha fica marcada (`salvando`) em vez de a tela
    * inteira parar: o retorno visual continua existindo, sem custar o contexto.
    */
-  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'unificar_grafia', valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar', valor: number | null) {
     setSalvando((v) => ({ ...v, [t.tarefa]: true }))
     try {
       const r = await fetch('/api/servicos/tarefas', {
@@ -149,9 +149,6 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
       const d = await r.json()
       if (!r.ok) { setMsg(d.error ?? 'Não consegui salvar.'); return }
       setMsg(null)
-      /* Unificar grafia mexe em OUTRAS linhas além desta — a única operação da
-         tela que faz isso, e a única que justifica recarregar tudo. */
-      if (d.recarregar) { await carregar(); return }
       if (d.tarefa) setTarefas((ts) => ts.map((x) => (x.tarefa === d.tarefa.tarefa ? d.tarefa : x)))
       // O rascunho DESTA linha sai; o das outras fica como estava.
       setRascunho((r2) => { const c = { ...r2 }; delete c[t.tarefa]; return c })
@@ -186,7 +183,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
   const nPendentes = tarefas.filter(pendente).length
   const nMudaram = tarefas.filter(mudou).length
   const nGrafias = tarefas.filter(duplicada).length
-  const nDivergentes = tarefas.filter((t) => t.grafiaDivergente).length
+  const nDivergentes = tarefas.filter((t) => t.reguasEmDisputa > 0).length
   /* ⚠️⚠️ O EFEITO DOS LIMITES, SOMADO. Cada linha já avisa quando os limites
      dela cortaram fundo, mas ninguém lê 74 linhas — e o agregado conta outra
      história: medido em 08/09/2026, **44 dos 74** tipos perdem mais da metade
@@ -267,14 +264,12 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
           com máximos DIFERENTES, 240 e 237. Nada acusava, porque são duas linhas
           plausíveis. O sistema não escolhe entre 240 e 237: mostra e pergunta. */}
       {nDivergentes > 0 && (
-        <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(229,72,77,.08)', border: '1px solid rgba(229,72,77,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.55 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.55 }}>
           <GitCompareArrows size={13} style={{ verticalAlign: -2 }} />{' '}
-          <b>{nDivergentes === 1 ? 'Um tipo aparece' : `${nDivergentes} tipos aparecem`} na planilha com mais de uma grafia</b>
-          {' '}(muda só a caixa ou o acento), e as réguas gravadas em cada grafia <b>não são iguais</b>. São o mesmo
-          serviço partido em duas linhas, cada uma com sua média — e assim continuam: o botão de cada linha copia a
-          régua dela (mínimo, máximo, média e pontos) para as outras grafias, mas <b>não junta as duas</b>. Cada
-          grafia segue com a amostra dela, então os pontos podem continuar diferentes. Juntar de verdade é acertar o
-          nome no sistema de origem.
+          <b style={{ color: 'var(--text)' }}>{nDivergentes === 1 ? 'Um serviço estava' : `${nDivergentes} serviços estavam`} partido em mais de uma grafia</b>
+          {' '}(muda só a caixa, o acento ou um espaço), com uma régua configurada em cada uma. Agora {nDivergentes === 1 ? 'ele conta' : 'eles contam'} como
+          um serviço só — a amostra é a soma das grafias — e <b>vale a régua que dá mais pontos</b>. A linha diz qual
+          grafia ganhou. Para acabar com a duplicidade de vez, o nome tem de ser acertado no sistema de origem.
         </div>
       )}
 
@@ -594,28 +589,20 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
                         valia {t.pontosNaRevisao} quando {t.revisadoPor} conferiu ({dataBr(t.revisadoEm)}) — agora vale {t.pontos}
                       </span>
                     )}
-                    {t.herdouDeGrafia && (
-                      <span style={{ color: 'var(--text-dim)' }}>
-                        régua herdada da grafia “{t.herdouDeGrafia}”
-                      </span>
-                    )}
+                    {/* ⚠️⚠️ AS GRAFIAS ESTÃO SOMADAS NESTA LINHA, e isso precisa
+                        aparecer: os "{t.amostras} feitos" não vêm todos do nome que
+                        está escrito à esquerda. Quando havia mais de uma régua,
+                        venceu a que dá mais pontos (decisão do dono) — e uma régua
+                        que vence em silêncio é uma régua que ninguém revisa. */}
                     {t.grafias.length > 0 && (
-                      <span style={{ color: t.grafiaDivergente ? 'var(--danger)' : 'var(--text-dim)' }}>
-                        <b style={{ fontWeight: 600 }}>
-                          mesma tarefa, outra grafia:
-                        </b>{' '}
+                      <span style={{ color: 'var(--text-dim)' }}>
+                        <b style={{ fontWeight: 600 }}>somado com {t.grafias.length === 1 ? 'a grafia' : 'as grafias'}</b>{' '}
                         “{t.grafias[0]}”{t.grafias.length > 1 ? ` e mais ${t.grafias.length - 1}` : ''}
-                        {t.grafiaDivergente && ' — as réguas divergem'}
-                        {/* ⚠️ Só onde há régua PRÓPRIA para copiar. Numa linha que
-                            HERDOU a régua de outra grafia não há registro, e o POST
-                            devolveria 400 na cara de quem clicou num botão que a
-                            própria tela ofereceu. */}
-                        {t.ajustado && !t.herdouDeGrafia && (
-                          <button onClick={() => salvar(t, 'unificar_grafia', null)}
-                            title="Copia a régua desta linha (mínimo, máximo, média e pontos) para as outras grafias do mesmo serviço."
-                            style={{ marginLeft: 8, background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 7px', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700 }}>
-                            usar esta régua nas outras
-                          </button>
+                        {t.reguasEmDisputa > 0 && (
+                          <span style={{ color: 'var(--accent)' }}>
+                            {' '}— havia {t.reguasEmDisputa} réguas; ficou a que dá mais pontos
+                            {t.reguaDaGrafia ? `, a de “${t.reguaDaGrafia}”` : ''}
+                          </span>
                         )}
                       </span>
                     )}
