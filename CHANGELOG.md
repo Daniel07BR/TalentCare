@@ -1,5 +1,121 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 — A régua de cada tipo de serviço atravessa os meses
+
+O pedido do dono: *"o pessoal do Legal já ajustou quanto vale cada serviço;
+precisamos que o sistema guarde essa decisão para os próximos meses em que
+subirmos a tabela, já saiba quanto vale cada um, e apresente para ajuste os
+novos lançamentos."*
+
+### O que eu medi antes de construir
+
+A boa notícia primeiro: **a decisão já era durável.** `pontuacao_tarefa_ajuste`
+tem chave `setor + tipo`, sem nada do lote — reimportar não a toca. Mas o que o
+Legal ajustou foi quase todo **limite de tempo**: de 72 linhas, **71 têm mínimo,
+71 têm máximo, 10 têm média lançada e apenas 1 tem override direto de pontos**.
+Os outros 61 tiram os pontos da média medida, que é recalculada a cada arquivo.
+
+Simulando a chegada de mais um mês (tudo × tudo-menos-agosto/2026): **6 dos 72
+tipos mudaram, todos em ±1 ponto**. O valor não é instável — o que escapa é
+outra coisa.
+
+### ⚠️⚠️ O que escapava: o tipo NOVO entrava valendo o que a média medisse
+
+**Quatro tipos estrearam em agosto/2026 valendo 108, 86, 46 e 18 pontos.** O
+`SINDICATO (PROCESSOS) SINDRESBAR` vale **108 com UMA ocorrência de 215
+minutos** — mais que qualquer tipo estabelecido do catálogo, onde o maior é 92.
+Nada na importação nem na tela dizia que ele era novo: descobrir dependia de
+reparar numa linha nova no meio de 74.
+
+### ⚠️⚠️ E "ninguém olhou" era igual a "olharam e mantiveram"
+
+Os dois eram a **mesma ausência de linha** no banco. É a regra da casa em mais
+uma roupa: *ausência de decisão não é decisão de manter*. Sem essa distinção, o
+tipo que a liderança conferiu e aprovou volta como pendente todo mês — e uma
+lista de pendências que nunca esvazia deixa de ser lida.
+
+Entram `revisadoPor`/`revisadoEm` e um ✓ que grava "conferi, e está certo" sem
+mudar número nenhum. "Voltar ao medido" deixou de apagar a linha: também é uma
+decisão, e vira revisão.
+
+### ⚠️⚠️ A decisão se perdia por UMA LETRA
+
+A chave é o texto do tipo, e o texto vem do export de outro sistema. O arquivo
+do Legal **já traz o mesmo serviço em duas grafias** — `TAXAS PREFEITURA
+(TFE/TFA) Emitir boletos` e `… emitir boletos` —, 5 concluídos cada, e alguém
+configurou as duas separadamente, **com máximos diferentes (240 e 237)**. Nada
+acusava: são duas linhas plausíveis.
+
+`tarefaNorm` faz a busca tolerar caixa, acento e espaço duplo. Ela **não mescla
+nada sozinha** (decisão do dono): escolher entre 240 e 237 é de quem decidiu.
+
+### As duas decisões do dono
+
+1. **O valor continua acompanhando a planilha**, não congela. Os limites são uma
+   regra, e regra se aplica a dado novo — congelar tiraria o efeito dos 142
+   limites recém-configurados sobre tudo que entrar daqui para a frente. Mas
+   acompanhar em silêncio seria mudar a nota de alguém sem ninguém saber: daí
+   `pontosNaRevisao` e o aviso *"valia X quando você conferiu, agora vale Y"*.
+2. **Grafias divergentes não se mesclam sozinhas** — a tela mostra as duas e
+   oferece "usar esta régua nas outras".
+
+⚠️ A âncora das 72 revisões antigas só é gravada **onde dá para saber**: quando a
+revisão é posterior a tudo que pode ter mexido no valor (a última importação e a
+última versão da régua). Conferido: lote único em 04/09 11:07, nenhuma régua
+gravada, decisões entre 04/09 19:41 e 08/09. Revisão anterior a uma dessas
+mudanças fica sem âncora, e a tela não afirma variação nenhuma — que é a
+resposta certa para "não sei".
+
+### O que o agente crítico achou (com conferência no banco)
+
+Três defeitos anteriores a esta frente, na tela desta frente:
+
+- **A coluna "Pontos" nunca mostrava o override.** Em repouso exibia sempre
+  média×fator: o espelho de digitação tinha virado o valor permanente.
+  `SERVIÇOS INTERNOS - VERIFICAR CALCULADORA` tem override de **0** — o setor
+  decidiu que não vale ponto — e o campo mostrava **8**, com borda de "ajustado
+  à mão". A única decisão de pontos do catálogo era a única coisa invisível
+  nele, e a ordenação (que usa o valor real) mandava a linha para o fim
+  exibindo 8.
+- **Esvaziar o mínimo apagava tudo.** O campo mandava `limpar` — que zera
+  máximo, média lançada e override — enquanto o campo do máximo, seu espelho,
+  sempre fez certo. Apagar a caixinha do mínimo no `CANCELAMENTO` (78 serviços,
+  média lançada 200, 2º tipo mais caro) derrubava o tipo de **100 para 17
+  pontos**, sem confirmação, sem aviso e sem desfazer.
+- **"Voltar ao medido" prometia um número e entregava outro.** `mediaMedida` é a
+  média DEPOIS dos limites, e limpar apaga os limites: em `ALTERAÇÃO SIMPLES
+  NACIONAL` o tooltip anunciava *149 min → 75 pontos* e entregava *33 min → 17*,
+  **cinco vezes menos**.
+
+E o zero que não foi medido: com os limites tirando todos os serviços,
+`mediaMedida` saía 0 e a tela dizia *"o medido na planilha é 0 min"* — o
+`CANCELAMENTO` tem **33 min medidos em 78 serviços**, todos fora da faixa
+120–240. São **10 dos 74 tipos**.
+
+**O agregado, porque ninguém lê 74 linhas: 44 dos 74 tipos perdem mais da
+metade dos serviços para o mínimo e o máximo, e 10 perdem todos.** Quando o
+corte é a regra e não a exceção, a média deixou de descrever o trabalho da
+equipe e passou a descrever a faixa que os limites escolheram. Está na tela.
+
+### ⚠️ O fator ainda não é decisão de ninguém
+
+`pontuacao_regra` está **vazia**: o `0,5 ponto por minuto` é o padrão do código,
+e a tela o anunciava como fato. Ele multiplica a coluna inteira — os 72 ajustes
+do Legal foram feitos olhando números derivados dele. Quando a régua for criada
+com outro fator, **os 74 tipos mudam de valor de uma vez** e cada um vai
+aparecer como "mudou desde a revisão". A tela agora diz isso.
+
+### Onde ficou
+
+- prévia da importação: quantos tipos já foram decididos, quais são novos (com a
+  amostra de cada um), quais ainda não dá para pontuar (sem nenhum concluído) e
+  quais decididos **não** vêm no arquivo — a decisão não é apagada, só some da
+  lista junto com os serviços
+- tela de tipos: abre no que precisa de decisão, com filtros por pendente,
+  mudou-desde-a-revisão e grafia repetida, dizendo quantas linhas está escondendo
+- migração aplicada à mão no `.78` (`prisma db push` confirmou "already in
+  sync"); backup da tabela tirado antes
+
 ## 2026-09-03 (noite) — O dashboard e o `/ranking`: a ausência que lia como nota máxima
 
 As duas telas que ainda não tinham passado pela revisão. O agente crítico rodou de

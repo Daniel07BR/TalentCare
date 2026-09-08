@@ -169,6 +169,15 @@ serviços cada um tirou da conta**: o mínimo só sobe a média (e os pontos), o
 máximo só desce, e um filtro que mexe na nota da própria equipe sem rastro seria
 a porta mais fácil do sistema.
 
+✅ **A decisão do setor sobre cada tipo atravessa os meses (08/09/2026).** Ela já
+era durável — a chave é `setor + tipo`, fora do lote —, mas o sistema não sabia
+dizer o que ninguém tinha olhado. Ver o `CHANGELOG` de 08/09. Em resumo: entrou
+`revisadoPor/revisadoEm` (o ✓ de "conferi, e está certo", que era indistinguível
+de "ninguém olhou"), `pontosNaRevisao` (o valor **acompanha** a planilha, por
+decisão do dono, e a tela avisa quando se afasta do conferido), `tarefaNorm` (a
+decisão se perdia por uma maiúscula trocada no export) e a prévia da importação
+passou a mostrar os tipos novos antes de confirmar.
+
 **O que falta nesta frente:**
 
 - ⚠️⚠️ **A pontuação mensal AINDA NÃO É CALCULADA pela régua.** Os 15 meses do
@@ -179,6 +188,24 @@ a porta mais fácil do sistema.
   2026 daria **4.639 pontos à Marcia Borges e 3.787 ao Ezequiel**, contra uma base
   mensal de 100 e uma advertência de −15 — a metade disciplinar da régua ficaria
   invisível. O campo é editável; o número não foi decidido.
+
+  ⚠️⚠️ **E `pontuacao_regra` está VAZIA**: o 0,5 é o padrão do código, não uma
+  decisão gravada, e os 72 ajustes do Legal foram feitos olhando pontos derivados
+  dele. Criar a régua com outro fator muda **os 74 tipos de uma vez**, e cada um
+  vai aparecer como "mudou desde a revisão" — comportamento correto, e é bom
+  saber antes. **Decida o fator antes de afinar tipo por tipo.**
+- ⚠️⚠️ **Os limites cortam mais do que parece.** Medido em 08/09/2026: **44 dos 74
+  tipos perdem mais da metade** dos serviços para o mínimo e o máximo, e **10
+  perdem todos** (o `CANCELAMENTO` tem 33 min medidos em 78 serviços e limites de
+  120–240 — nenhum sobrevive). Os 10 só não valem 1 ponto porque têm média
+  lançada à mão. Está tudo na tela agora, mas ninguém decidiu se essa é a
+  intenção: quando o corte é a regra, a média descreve a faixa que os limites
+  escolheram, não o trabalho da equipe.
+- **Duas grafias do mesmo serviço convivem** no catálogo (`TAXAS PREFEITURA
+  (TFE/TFA) Emitir/emitir boletos`), com réguas divergentes (máx 240 e 237). A
+  tela mostra e oferece copiar a régua de uma para a outra, mas **não funde** os
+  dois tipos — cada um segue com a amostra dele. Fundir de verdade é acertar o
+  nome no sistema de origem.
 - O cálculo automático **depende do ponto**, que está 70 dias atrás do controle
   manual do Legal (aquele é de agosto; o import parou em 25/06). Provavelmente
   esse controle também precisa virar upload.
