@@ -35,6 +35,10 @@ export type EmployeeMetrics = {
     assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number
     /** A gravidade do atraso, em contagem por faixa (a tela faz o percentual). */
     faixas?: { ate5: number; ate30: number; mais30: number; semMedida: number }
+    /** Os dias com ocorrência DENTRO do filtro — alimentam o calendário. */
+    dias?: { day: string; atrasos: number; abonados: number; minutos: number; ate5: number; ate30: number; mais30: number }[]
+    /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
+    pontoAte?: string | null
     faltas: number | null; suspensoes: number | null
     /* A cobertura do ponto vem NESTA rota, que a ficha já chama — ela evita
        fetch extra de propósito. `pessoaMedida` = está no roster do ponto;

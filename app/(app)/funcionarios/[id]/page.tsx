@@ -546,9 +546,19 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     12 de agosto era preciso passar o mouse e esperar o `title`,
                     e numa captura de tela ou num papel, nunca. É a pergunta que
                     se faz na frente da pessoa. */}
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mapa de ocorrências · últimas 18 semanas</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mapa de ocorrências · {periodo}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12 }}>Cada quadro é um dia; a cor indica atraso (mais escuro = mais minutos). Dia limpo = sem ocorrência.</div>
-                <CalendarioOcorrencias cells={vm.heat} pontoAte={vm.pontoAte} />
+                {/* ⚠️⚠️ ELE OBEDECE AO FILTRO agora. Antes eram sempre "últimas 18
+                    semanas", vindas do dataset do cliente, enquanto todos os
+                    números ao lado seguiam o período: filtrar "01 a 31 de agosto"
+                    trocava os KPIs e deixava o mapa em maio–setembro, com o
+                    rótulo do filtro em cima. Num calendário isso pesa mais que
+                    numa grade, porque a data está escrita dentro do quadro. */}
+                {m?.fromDay && m?.toDay ? (
+                  <CalendarioOcorrencias dias={ass?.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={ass?.pontoAte ?? vm.pontoAte} />
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

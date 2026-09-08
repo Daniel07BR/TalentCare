@@ -1,5 +1,31 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (madrugada, 2) — O calendário passou a obedecer ao filtro
+
+⚠️⚠️ **O mapa era o único número da ficha que ignorava o período.** Ele desenhava
+sempre "últimas 18 semanas", vindas do dataset do cliente, enquanto os KPIs ao
+lado seguiam o filtro: escolher **01 a 31 de agosto** trocava "6 atrasos · 43
+min" por "6 atrasos · 32 min" e deixava o calendário em **maio–setembro**, com o
+rótulo do filtro em cima. É a regra (b) da casa, e num calendário ela pesa mais
+que numa grade — a data está escrita dentro do quadro.
+
+Agora os dias vêm de `/api/employee-metrics`, no intervalo do filtro. Só existem
+linhas para dias COM ocorrência, então um ano inteiro da pessoa mais atrasada são
+~57 linhas: não pesa no payload.
+
+### A densidade sai do tamanho do período
+
+- **1 mês** → célula de 46px, e o **minuto escrito dentro do dia** (o dado que a
+  cor só insinua, e que é o que decide a conversa)
+- **até 3** → 30px · **até 6** → 25px · **até 12** → 21px
+
+Doze meses cabem apertando a célula, nunca cortando mês: um calendário que
+esconde meses do próprio filtro é pior que a grade que ele substituiu.
+
+⚠️ O terceiro estado mudou de nome junto: era "fora das 18 semanas", virou **fora
+do período**. Continua vazado, e continua não sendo "dia limpo" — ninguém
+perguntou por aquele dia.
+
 ## 2026-09-08 (madrugada) — A gravidade do atraso
 
 Pedido do dono: mostrar que percentual dos atrasos da pessoa fica abaixo de 5

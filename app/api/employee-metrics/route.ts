@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, advert, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, assidDias, advert, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -96,6 +96,18 @@ export async function GET(req: NextRequest) {
     prisma.assiduidadeDaily.aggregate({
       where: { personKey, ...range },
       _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true, atrasosAte5: true, atrasosAte30: true, atrasosMais30: true },
+    }),
+    /* ⚠️⚠️ OS DIAS DO PERÍODO, para o calendário de ocorrências.
+       Ele desenhava sempre as últimas 18 semanas, vindas do dataset do cliente,
+       enquanto TODOS os números ao lado dele obedeciam ao filtro — filtrar
+       "01 a 31 de agosto" trocava os KPIs e deixava o mapa em maio–setembro. É a
+       regra (b) da casa: número ao lado do filtro obedece ao filtro.
+       ⚠️ Só vêm os dias COM ocorrência (é o que a tabela guarda), então um ano
+       inteiro da pessoa mais atrasada são ~57 linhas — não pesa no payload. */
+    prisma.assiduidadeDaily.findMany({
+      where: { personKey, ...range },
+      select: { day: true, atrasos: true, atrasosAbon: true, minutosAtraso: true, atrasosAte5: true, atrasosAte30: true, atrasosMais30: true },
+      orderBy: { day: 'asc' },
     }),
     prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
     /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
@@ -234,6 +246,13 @@ export async function GET(req: NextRequest) {
            ponto", apagando da ficha justamente a boa notícia — e faz esta tela
            discordar do `/ranking`, que a mostraria com 100 e "sem ocorrência no
            período". Uma régua (`lib/ponto-cobertura.ts`), quatro telas. */
+        /** Os dias com ocorrência DENTRO do filtro — alimentam o calendário. */
+        dias: assidDias.map((d) => ({
+          day: d.day, atrasos: d.atrasos, abonados: d.atrasosAbon, minutos: d.minutosAtraso,
+          ate5: d.atrasosAte5, ate30: d.atrasosAte30, mais30: d.atrasosMais30,
+        })),
+        /** Até quando o ponto mediu — o calendário para de afirmar depois disso. */
+        pontoAte: cobPonto.ultimoDia,
         pessoaMedida: cobPonto.roster.has(personKey),
         janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
         motivoSemPonto: motivoSemPonto(cobPonto, cobPonto.roster.has(personKey), janelaTemDado(cobPonto, fromDay, toDay)),
