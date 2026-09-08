@@ -298,26 +298,24 @@ julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido a
   olha `total <= 0` e `MIN_PARES`, nunca o volume.
 - **Sem piso de tempo de casa**: Laryssa Oliveira, admitida em **31/08/2026**,
   entra no ranking do mês com 0 atividade.
-- **⚠️⚠️ A conta `Sistema` — e a marca que NÃO PEGA.** Ela é gente no painel (setor
-  Pessoal, ativa, cargo `Colaborador`, "admitida" em 17/06/2026), e é artefato do
-  import do Access: o mesmo nome que a Gerência já filtra com `u.name <> 'Sistema'`
-  porque carimbou 27.501 protocolos.
+- ✅ **A conta `Sistema` saiu — RESOLVIDA em 08/09/2026, e do jeito previsto aqui.**
+  Ela era gente no painel (setor Pessoal, ativa, "admitida" em 17/06/2026) e é
+  artefato do import do Access: o mesmo nome que a Gerência filtra com
+  `u.name <> 'Sistema'` porque carimbou 27.501 protocolos.
 
-  `getTalentData` já respeita `foraDoDiretorio`, mas **marcar o campo aqui não
-  resolve**: o Nexus devolve `Sistema` no `/api/integrations/employees` (conferido —
-  128 registros, ela entre eles), e `lib/nexus.ts:271` grava `foraDoDiretorio: false`
-  em quem aparece no diretório. A marca sobreviveria até o próximo cron e sumiria
-  **sem erro nenhum**, com a conta de volta ao ranking.
+  O que forçou a mão foi a tela nova de pendências: ela aparecia nas DUAS listas
+  (sem sexo e sem escolaridade) como uma pendência que ninguém podia fechar — e
+  lista que nunca esvazia deixa de ser lida.
 
-  O conserto durável é no NEXUS: mover a conta para o setor **`Sistemas`**, que o
-  `notSystemDepartment` já exclui de todo diretório entregue a qualquer sistema da
-  casa (é a mesma porta pela qual o `Axis Certificados` saiu). Aí ela some das dez
-  integrações de uma vez, e o bloco de órfãos do TalentCare marca
-  `foraDoDiretorio = true` sozinho, com a VOLTA intacta.
+  O conserto foi no NEXUS, como este documento já previa: a conta foi para o setor
+  **`Sistemas`**, que o `notSystemDepartment` exclui de todo diretório entregue a
+  qualquer sistema da casa. O diretório caiu de **128 para 127** registros e o
+  bloco de órfãos do `lib/nexus.ts` marcou `foraDoDiretorio = true` sozinho no
+  sync seguinte (`deactivated: 1`), com a VOLTA intacta.
 
-  > **A lição é a regra do estado com um caminho só:** escrever à mão um campo que
-  > um sync reescreve é combinar com o cron quem ganha — e o cron sempre roda por
-  > último.
+  > **A lição continua valendo:** escrever à mão um campo que um sync reescreve é
+  > combinar com o cron quem ganha — e o cron sempre roda por último. Marcar
+  > `foraDoDiretorio` aqui teria durado até o próximo cron, sem erro nenhum.
 
 > ⚠️ Mantenha esta lista em dia. Um mapa de dívida que aponta dívida já quitada faz
 > desconfiar do resto dele — e o resto é o que ainda mente.

@@ -1,5 +1,50 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (fim) — O sexo passou a ter dono, e a conta `Sistema` saiu
+
+⚠️⚠️ **O campo não existia em sistema nenhum da casa.** O TalentCare tem um
+comparativo por gênero e um "não informado" no resumo de cada setor, e o valor
+vinha de **uma planilha de DP importada uma única vez**, que não será
+reimportada. Onze das 87 pessoas ativas ficaram sem sexo e não havia onde
+apontá-lo.
+
+Agora tem dono: `employees.gender` no **Nexus** (migration 0041), com campo no
+cadastro de avulso e na edição de qualquer funcionário, entregue em
+`/api/integrations/employees`. Os dez sistemas que leem o diretório recebem.
+
+⚠️ No sync do TalentCare, `undefined` quando o Nexus não sabe — **nunca `null`**.
+A planilha do DP preencheu 92 pessoas e não vai rodar de novo: um `null` no
+update apagaria essas 92 no primeiro sync, trocando um buraco de 11 por um de
+103. Conferido depois de rodar: Feminino 68 → **75**, Masculino 24 → **27**, sem
+informação 37 → **27**. As 92 continuaram lá.
+
+⚠️ `mapSexo` traduz 'M'/'F' para 'Masculino'/'Feminino', o texto que este banco
+já usa: o normalizador do painel lê por prefixo `masc`/`fem`, e um 'M' cru cairia
+em "não informado" logo depois de alguém ter informado o sexo da pessoa.
+
+**Os 10 valores foram inferidos do primeiro nome**, a pedido do dono, e isso está
+dito no SQL que os aplicou. É leitura, não registro — o campo agora tem um lugar
+para ser informado de verdade.
+
+### E a conta `Sistema`
+
+Ela aparecia nas duas listas de pendência como algo que ninguém podia fechar.
+Foi para o setor `Sistemas` no Nexus, como o `FONTES.md` já previa: o diretório
+caiu de **128 para 127** e o bloco de órfãos marcou `foraDoDiretorio` sozinho no
+sync seguinte, com a volta intacta. A dívida saiu da lista do `FONTES.md`.
+
+**Resultado**: "sem sexo informado" foi de 11 para **zero**; "sem escolaridade"
+de 9 para **6** (a `Sistema` saiu, e o Gilberto e a Alice receberam formação do
+próprio Nexus no mesmo sync).
+
+### ⚠️ E um defeito que eu mesmo introduzi horas antes
+
+As fotos quebravam na lista nova. `/api/avatar/[id]` e `/funcionarios/[id]` são
+os **dois** indexados pelo `users.id` (cuid), e eu passei o `nexusUserId`: 404
+nos dois — retrato quebrado em toda linha com foto e ficha inexistente no
+clique. As duas chaves convivem no mesmo objeto e nenhuma falha em tipo, então o
+erro só aparece na tela.
+
 ## 2026-09-08 (madrugada, 4) — Cada advertência diz de qual atraso ela veio
 
 A lista da ficha repetia, em **todas** as sete linhas, a mesma frase: *"Atraso
