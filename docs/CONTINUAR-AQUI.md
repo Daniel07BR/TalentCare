@@ -249,3 +249,82 @@ Este sistema mostra **advertência com motivo, atraso e nota de avaliação** de
 reais. Antes de acrescentar qualquer coisa que viaje até o navegador, pergunte:
 **quem pode ver isto?** — e confira, porque a resposta já esteve errada duas vezes, e
 nas duas o código parecia certo.
+
+## 8. A PONTUAÇÃO UNIFICADA (sessão de 08/09/2026) — leia se for mexer em nota
+
+A pontuação mensal de uma pessoa (`pontuacao_mes`) passou a somar **três
+metades**, e é o número que decide aumento. Cada setor tem a sua régua, editada
+pelo gestor na tela `/servicos?setor=<id>` (decisão do dono):
+
+1. **Disciplina** — base + atraso + advertência + bônus de mês sem ocorrência
+   (`pontuacao_regra` + `pontuacao_regra_item`). O Legal: base **0**, atraso
+   −50, advertência −75, mês limpo +100, fator **0,1**.
+2. **Serviços da planilha** — catálogo por tipo, `média × fator`
+   (`lib/servicos/catalogo.ts`, `pontuacao_tarefa_ajuste`).
+3. **Atividades dos sistemas do Nexus** — catálogo por tipo, `média × fator`
+   (`lib/servicos/catalogo-atividades.ts`, `pontuacao_atividade`). Espelha
+   `activityOf()` MENOS os serviços (que já são a 2ª metade).
+
+⚠️⚠️ **A CONTA MORA EM UM LUGAR: `lib/servicos/calcular-mes.ts`** (`montar` +
+`gravarMes`). A rota `/api/servicos/pontuacao` (tela) e o script
+`scripts/rodar-mes.ts` (CLI) chamam essa lib — NÃO reimplemente a régua.
+
+### Rodar/regravar um mês pela linha de comando (na produção .78)
+
+```
+npx --yes tsx@4 --tsconfig scripts/tsconfig.json scripts/rodar-mes.ts <departmentId> <AAAA-MM>            # ENSAIO, não grava
+npx --yes tsx@4 --tsconfig scripts/tsconfig.json scripts/rodar-mes.ts <departmentId> <AAAA-MM> --gravar   # grava
+```
+Não há `tsx` instalado; `npx` baixa. O `scripts/tsconfig.json` aponta
+`server-only` para um stub (ele não resolve fora do Next). Legal =
+`cmq6vajf5000nnw4i1tko93pz`. **Agosto/2026 do Legal já foi gravado** com os pesos
+que o Daniel calibrou.
+
+### As quatro recusas do cálculo (todas em `calcular-mes.ts`)
+
+Mês sem cobertura de ponto (o bônus iria para quem ninguém mediu), mês aberto,
+o que o setor **informou** à mão (não se recalcula), e competência sem régua
+vigente. Quem o ponto NÃO mede pontua por serviço+atividade, SEM a metade
+disciplinar (nem base nem bônus) — a face invertida do `null`.
+
+⚠️ Os pesos de atividade contam a **1** (piso) enquanto o gestor não define a
+média; a tela avisa. Onde o sistema mede o tempo (WhatsApp 48 min, HelpDesk 183,
+Chat 177, Gerência 46 — MEDIANA, não média, que o tempo decorrido infla), a
+média vem pré-preenchida. As 13 do Legal sem tempo receberam estimativa
+provisória e o Daniel calibrou.
+
+## 9. Frentes ABERTAS (08/09/2026)
+
+- ⚠️⚠️ **SUSPENSÃO — esperando dados REAIS.** Existe um briefing da regra de
+  produção (2º–5º atraso = advertência; 6º+ = suspensão; + gatilho de 4 atrasos
+  "pesados" ≥10 min). **NÃO derivar**: o encarregado pode liberar entrada e
+  PERDOAR suspensão/advertência, então a regra derivada não é a realidade. A
+  advertência que hoje está derivada dos atrasos (`run-ponto-import.mjs`,
+  "2º atraso em diante") tem o MESMO problema — quando os dados reais de
+  disciplina chegarem, decidir com o dono se SUBSTITUI a advertência derivada
+  ou só ACRESCENTA a suspensão. Suspensão desconta mais que advertência (−75);
+  o evento `suspensao` ainda não existe na régua.
+- **A pontuação só foi rodada para o LEGAL.** Os outros setores têm a régua
+  disponível mas ninguém rodou/calibrou. A lista do setor mostra "sem pontuação
+  no mês" para eles.
+- **O ponto é import à MÃO, sem cron** (dump MySQL do Axis). Ver
+  `talentcare-ponto-import-armadilhas` na memória.
+- Herdadas: `/relatorios` nunca saiu do "Em breve"; as dívidas do fim de
+  `FONTES.md` (coorte sem volume, piso de tempo de casa, fonte parada por
+  pessoa).
+
+## 10. O que mudou de cara nesta sessão (para não estranhar)
+
+- **Sexo** nasce no cadastro do **Nexus** e chega pelo diretório (era planilha
+  de DP importada uma vez). Ver `nexus-sexo-no-cadastro` na memória.
+- **Mapa de ocorrências virou CALENDÁRIO** (`app/(app)/CalendarioOcorrencias.tsx`),
+  na ficha e no relatório do setor, obedecendo ao filtro; a cor do setor anda
+  por nº de PESSOAS, a da ficha por minutos.
+- **Card de meses** na barra de cima (3 fechados + Atual, dinâmico).
+- **Relatório do setor**: head obedece ao filtro, botão da planilha na linha do
+  nome, "precisa de atenção" removido, lista mostra **Pontuação do mês** (não
+  atividade crua).
+- **Ficha**: gráfico de pontuação com linha de base (aceita negativo);
+  gravidade do atraso em faixas (≤5 / 6–30 / >30 min); advertência diz o ordinal
+  ("2º atraso do mês").
+
