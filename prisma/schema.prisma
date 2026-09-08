@@ -888,7 +888,16 @@ model PontuacaoRegraItem {
 model PontuacaoAtividade {
   departmentId String   @map("department_id")
   atividade    String
-  /** Pontos por ocorrência. NULL = padrão (1). */
+  /**
+   * A média de minutos que a liderança considera para esta atividade. `null` =
+   * usa a mediana MEDIDA pelo sistema (quando há) ou fica sem tempo.
+   * ⚠️⚠️ É o espelho do `mediaMinutos` do catálogo de serviços: os pontos saem
+   * de `média × fator`, a MESMA moeda dos serviços (decisão do dono,
+   * 08/09/2026), para um chamado de 48 min e um serviço de 3h pesarem
+   * proporcionais ao tempo, e não igual.
+   */
+  mediaMinutos Int?     @map("media_minutos")
+  /** Override DIRETO dos pontos (raro). NULL = calcula de média × fator. */
   pontos       Int?
   /** Quanto valia quando a pessoa mudou — a prova de "ele mudou ou o padrão mudou". */
   pontosNaEpoca Int?    @map("pontos_na_epoca")

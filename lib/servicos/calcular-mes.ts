@@ -4,7 +4,8 @@ import { calcularCatalogo } from '@/lib/servicos/catalogo'
 import { calcular, competenciaAtual, regraDaCompetencia, normalizarTarefa } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto } from '@/lib/ponto-cobertura'
 import { agregarAtividades } from '@/lib/servicos/atividade-agg'
-import { TIPO_ATIVIDADE_POR_CHAVE, VALOR_ATIVIDADE_PADRAO } from '@/lib/servicos/atividades'
+import { TIPO_ATIVIDADE_POR_CHAVE } from '@/lib/servicos/atividades'
+import { catalogoAtividades } from '@/lib/servicos/catalogo-atividades'
 
 /* ============================================================
    RODAR A RÉGUA NUM MÊS — a conta e a gravação, num lugar só.
@@ -96,17 +97,19 @@ export async function montar(departmentId: string, competencia: string) {
   /* A régua de atividades do setor + a conta das atividades no mês. `?? PADRÃO`
      porque a linha só existe quando o gestor mexeu — sem ela, a atividade vale
      o padrão (1), o que ela já vale na contagem crua de hoje. */
-  const [regraAtiv, aggAtiv] = await Promise.all([
-    prisma.pontuacaoAtividade.findMany({ where: { departmentId }, select: { atividade: true, pontos: true } }),
+  const [catAtiv, aggAtiv] = await Promise.all([
+    /* ⚠️ A MESMA conta da tela da régua: pontos = média×fator, mediana medida
+       onde há. `catalogoAtividades` é a fonte única. */
+    catalogoAtividades(departmentId),
     agregarAtividades(
       pessoas.map((p) => ({ personKey: p.nexusUserId ?? p.id, nexusUserId: p.nexusUserId, nome: p.name })),
       de, ate,
     ),
   ])
-  const valorAtiv = (chave: string) => {
-    const r = regraAtiv.find((x) => x.atividade === chave)
-    return r?.pontos ?? VALOR_ATIVIDADE_PADRAO
-  }
+  const valorAtiv = (chave: string) => catAtiv.valorDe.get(chave) ?? 1
+  /* "No padrão" = nenhuma média foi lançada à mão E não há mediana medida —
+     tudo caindo no piso de 1. É quando o aviso da tela vale. */
+  const algumaMediaDefinida = catAtiv.atividades.some((a) => a.mediaEmUso != null)
 
   const atr = new Map<string, { a: number; ab: number }>()
   for (const d of dias) {
@@ -177,7 +180,7 @@ export async function montar(departmentId: string, competencia: string) {
     /** ⚠️ Nenhum tipo de atividade teve o peso definido: todas contam pelo
      *  padrão (1). A nota está saindo com o peso que ninguém escolheu — a tela
      *  avisa antes de gravar. */
-    atividadesNoPadrao: regraAtiv.every((r) => r.pontos == null)
+    atividadesNoPadrao: !algumaMediaDefinida
       && [...aggAtiv.values()].some((m) => [...m.values()].some((v) => v > 0)),
     /**
      * Quem não teve NENHUM serviço na planilha do mês.

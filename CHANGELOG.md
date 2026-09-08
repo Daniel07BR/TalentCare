@@ -1,5 +1,32 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (fim, 2) — Atividade vira MINUTOS × FATOR, como os serviços
+
+Pedido do dono: classificar as atividades por duração, "a mesma multiplicação de
+pontos que fez nas tarefas". A régua de atividades ganhou o campo **média de
+minutos**, e os pontos passam a ser `média × fator` — a mesma moeda dos
+serviços. Um chamado de 48 min e um serviço de 3h deixam de pesar igual.
+
+⚠️⚠️ O SISTEMA MEDE O TEMPO DE 3 DAS 18 ATIVIDADES, e a média nasce da MEDIANA,
+não da média — o tempo decorrido infla a média (WhatsApp: mediana 48 min, média
+913, por atendimentos deixados abertos por dias; HelpDesk 183 vs 1.454; Chat 177
+vs 617). É a lição do catálogo de serviços. As 15 sem tempo o gestor informa, e
+até lá valem o piso de 1 (o que já valiam na contagem crua).
+
+A conta mora em `lib/servicos/catalogo-atividades.ts` — fonte única da tela e do
+cálculo, como o catálogo de serviços. `pontuacao_atividade` ganhou `media_minutos`.
+
+⚠️ E UM BUG QUE EU MESMO INTRODUZI: o WhatsApp casa por nome, e eu passei os
+nomes NORMALIZADOS (minúsculo) no `WHERE` da query — o banco guarda a caixa
+original, então não casava nada e a atividade de WhatsApp entrava ZERADA no
+cálculo. Corrigido: puxa os atendentes da janela e casa por `normNome` em JS,
+como o `dept-metrics` faz. Agosto do Legal com o conserto: Lucas (209
+atendimentos) 1728, Joice 1214, Ezequiel 1212.
+
+O agosto GRAVADO ainda é o da rodada anterior (atividade crua a 1). Regravar com
+os pesos novos é re-executar o script/tela quando o gestor definir as médias das
+atividades sem tempo (CIDE, ClassRoom, Consultoria, protocolos da Gerência…).
+
 ## 2026-09-08 (madrugada, 5) — A 3ª metade: as atividades dos sistemas entram na nota
 
 Pedido do dono: a pontuação do mês passa a somar TRÊS metades — disciplina +

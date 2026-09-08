@@ -32,7 +32,6 @@ export async function agregarAtividades(
   ate: string,
 ): Promise<Map<string, Map<string, number>>> {
   const nxIds = pessoas.map((p) => p.nexusUserId).filter((v): v is string => !!v)
-  const nomes = [...new Set(pessoas.map((p) => normNome(p.nome)))]
   // personKey por nexusUserId e por nome — para reatribuir o que cada fonte soma.
   const keyPorNx = new Map(pessoas.filter((p) => p.nexusUserId).map((p) => [p.nexusUserId as string, p.personKey]))
   /* ⚠️⚠️ O WHATSAPP CASA POR NOME, e nome não é identidade. Se dois do setor
@@ -58,7 +57,12 @@ export async function agregarAtividades(
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
-    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { name: { in: nomes }, ...range }, _sum: { finalizados: true } }),
+    /* ⚠️⚠️ O WHATSAPP CASA POR NOME NORMALIZADO EM JS, não no WHERE. O banco
+       guarda o nome com a caixa original ("Joice Rocha"); filtrar por
+       `name IN [<minúsculo>]` não casa NADA — foi o bug que zerou a atividade de
+       WhatsApp no cálculo (08/09/2026). Puxa todos os atendentes da janela
+       (agrupados por nome, dezenas de linhas) e casa por `normNome` aqui. */
+    prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { ...range }, _sum: { finalizados: true } }),
   ])
 
   // fonte-modelo → linhas agregadas, indexadas pela identidade certa
