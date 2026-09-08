@@ -61,6 +61,35 @@ const NAV_ADMIN = [
 // botão "custom" que não abre nada seria um botão que não faz nada.
 const PERIODS: Period[] = ['7d', '30d', 'Trimestre', 'Ano']
 
+/* ⚠️⚠️ O CARD DE MESES (pedido do dono, 08/09/2026): atalho para os 3 meses
+   FECHADOS anteriores + o mês em curso. Cada botão vira um intervalo `custom`
+   (1º dia ao último), e "Atual" vai até HOJE. É dinâmico: em setembro mostra
+   jun/jul/ago/Atual; em outubro, jul/ago/set/Atual, sem tocar em nada.
+   ⚠️ O último dia sai de `new Date(ano, mes, 0)` — dia 0 do mês seguinte é o
+   último do mês pedido, e cobre fevereiro e anos bissextos sem tabela. */
+const MES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+function mesesDoCard(hoje = new Date()): { chave: string; label: string; from: string; to: string; atual: boolean }[] {
+  const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+  const item = (ano: number, mes0: number, atual: boolean) => {
+    const mm = String(mes0 + 1).padStart(2, '0')
+    const ult = new Date(ano, mes0 + 1, 0).getDate()
+    return {
+      chave: `${ano}-${mm}`,
+      label: atual ? 'Atual' : MES_CURTO[mes0][0].toUpperCase() + MES_CURTO[mes0].slice(1),
+      from: `${ano}-${mm}-01`,
+      to: atual ? hojeISO : `${ano}-${mm}-${String(ult).padStart(2, '0')}`,
+      atual,
+    }
+  }
+  const out = []
+  for (let i = 3; i >= 1; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
+    out.push(item(d.getFullYear(), d.getMonth(), false))
+  }
+  out.push(item(hoje.getFullYear(), hoje.getMonth(), true))
+  return out
+}
+
 /**
  * Quantas pessoas AINDA não têm avaliação publicada na competência corrente,
  * no alcance de quem está logado.
@@ -197,6 +226,25 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
         />
       </div>
       <div style={{ flex: 1 }} />
+
+      {/* ⚠️ CARD DE MESES — atalho para os 3 meses fechados + o atual. Ele SETA
+          o mesmo intervalo `custom` do calendário (setRange), então o resto da
+          tela não precisa saber que ele existe: obedece ao mesmo contrato de
+          período. Aceso quando o intervalo custom bate com o mês. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3, marginRight: 8 }}>
+        {mesesDoCard().map((m) => {
+          const aceso = period === 'custom' && from === m.from && to === m.to
+          return (
+            <button key={m.chave} className={'seg' + (aceso ? ' on' : '')}
+              onClick={() => setRange(m.from, m.to)}
+              title={m.atual ? `Mês atual (até hoje)` : `${m.label} de ${m.chave.slice(0, 4)}`}
+              style={{ fontSize: 12, padding: '6px 11px', fontWeight: m.atual ? 700 : 500 }}>
+              {m.label}
+            </button>
+          )
+        })}
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
         {PERIODS.map((p) => (
           <button key={p} className={'seg' + (period === p ? ' on' : '')} onClick={() => setPeriod(p)} style={{ fontSize: 12, padding: '6px 11px' }}>{p}</button>
