@@ -10,8 +10,22 @@
 // `users`) e o DEPARTAMENTO como desempatador. Atrasos ABONADOS (nexo_abonos) não
 // punem a assiduidade — entram separados.
 //
-// Uso: node --env-file=.env run-ponto-import.mjs [<dir-com-os-.sql>]
+// Uso: node --env-file=.env run-ponto-import.mjs [<dir-com-os-.sql> | <arquivo.sql>]
 //   default: /home/suporte/ponto-dump/extracted
+//
+// ⚠️ ACEITA OS DOIS FORMATOS (08/09/2026). O primeiro dump veio como quatro
+// arquivos, um por tabela, e com `axis_db_users.sql` junto — o roster do Nexo,
+// de onde saíam nome e DEPARTAMENTO de cada `user_id`. O segundo veio como um
+// mysqldump único, com as quatro tabelas dentro e SEM o `users`. Exigir o
+// formato antigo faria a atualização depender de alguém lembrar de exportar uma
+// tabela a mais; aceitar os dois custa o `if` abaixo.
+//
+// ⚠️⚠️ SEM O `users`, O DESEMPATADOR DE DEPARTAMENTO SOME, e o casamento por
+// nome fica mais fraco justamente onde ele já erra (o `docs/` da casa registra
+// "Wendel Ribeiro da Silva" casando com "Edileuza da Silva" pelos tokens "da" e
+// "silva"). Por isso, quando não há roster, os vínculos que o import ANTERIOR
+// já resolveu são reaproveitados como ponto de partida em vez de recalculados
+// no escuro — ver `previos`, abaixo.
 import { PrismaClient } from '@prisma/client'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -94,19 +108,28 @@ function classify(rt, et) {
 }
 
 async function main() {
-  const read = (f) => fs.readFileSync(path.join(DIR, f), 'utf8')
-  const sqlAtraso = read('axis_db_nexo_atraso.sql')
-  const sqlAdv = read('axis_db_nexo_advertencia.sql')
-  const sqlAbono = read('axis_db_nexo_abonos.sql')
-  const sqlUsers = read('axis_db_users.sql')
+  // Um arquivo com tudo dentro, ou o diretório com um arquivo por tabela.
+  const arquivoUnico = fs.existsSync(DIR) && fs.statSync(DIR).isFile()
+  let sqlAtraso, sqlAdv, sqlAbono, sqlUsers
+  if (arquivoUnico) {
+    sqlAtraso = sqlAdv = sqlAbono = fs.readFileSync(DIR, 'utf8')
+    sqlUsers = null
+  } else {
+    const read = (f) => fs.readFileSync(path.join(DIR, f), 'utf8')
+    sqlAtraso = read('axis_db_nexo_atraso.sql')
+    sqlAdv = read('axis_db_nexo_advertencia.sql')
+    sqlAbono = read('axis_db_nexo_abonos.sql')
+    sqlUsers = fs.existsSync(path.join(DIR, 'axis_db_users.sql')) ? read('axis_db_users.sql') : null
+  }
 
   // Roster do Nexo: id -> { nome, email, depto }
-  const usersRows = parseInserts(sqlUsers, 'users')
   const roster = new Map()
-  for (const r of usersRows) {
-    const id = r[0]?.trim()
-    if (!id) continue
-    roster.set(id, { nome: r[1] ?? '', email: r[2] ?? '', depto: r[4] ?? '' })
+  if (sqlUsers) {
+    for (const r of parseInserts(sqlUsers, 'users')) {
+      const id = r[0]?.trim()
+      if (!id) continue
+      roster.set(id, { nome: r[1] ?? '', email: r[2] ?? '', depto: r[4] ?? '' })
+    }
   }
 
   // Ocorrências
@@ -120,6 +143,15 @@ async function main() {
   })).filter((a) => a.day && a.userId)
   // Atrasos abonados: conjunto de atraso_id
   const abonadoIds = new Set(parseInserts(sqlAbono, 'nexo_abonos').map((r) => r[1]?.trim()).filter(Boolean))
+
+  /* Sem o `users`, o nome vem do `user_nome` que viaja em cada ocorrência — é a
+     única identificação que sobra. O departamento fica vazio, e é por isso que
+     os vínculos anteriores passam a valer como ponto de partida. */
+  if (!roster.size) {
+    for (const a of [...atrasos, ...adverts]) {
+      if (!roster.has(a.userId) && a.nome) roster.set(a.userId, { nome: a.nome, email: '', depto: '' })
+    }
+  }
 
   // Pessoas do TalentCare (Nexus + STAFF). personKey = nexus_user_id ?? id.
   const people = (await prisma.user.findMany({
@@ -152,6 +184,19 @@ async function main() {
   // Vínculos MANUAIS (tela /ponto) têm prioridade — sobrevivem a re-cargas.
   const overrides = new Map((await prisma.pontoMatch.findMany()).map((m) => [m.nexoUserId, m.personKey]))
 
+  /* ⚠️⚠️ O QUE O IMPORT ANTERIOR JÁ RESOLVEU. Lido ANTES do wipe, que apaga o
+     `ponto_staging`. Não é o mesmo que vínculo manual: é o palpite forte de uma
+     carga passada, quando o roster do Nexo ainda trazia o departamento. Sem
+     isto, um dump sem `users` recalcularia 86 vínculos com um critério mais
+     fraco do que o que os produziu — e um vínculo de ponto trocado credita o
+     atraso de uma pessoa a outra, em silêncio, num painel que decide aumento.
+     ⚠️ Fica marcado como `previo`, e não como `manual`: quem olhar a tela
+     `/ponto` precisa saber que ninguém conferiu isto à mão. */
+  const previos = new Map(
+    (await prisma.pontoStaging.findMany({ where: { matchedPersonKey: { not: null } }, select: { nexoUserId: true, matchedPersonKey: true } }))
+      .map((r) => [r.nexoUserId, r.matchedPersonKey]),
+  )
+
   const matchOf = new Map() // nexoId -> { personKey, confidence }
   const stagingRows = []
   for (const [nexoId, counts] of occByNexo) {
@@ -164,6 +209,18 @@ async function main() {
         atrasos: counts.atrasos, advertencias: counts.advert,
         suggestionPersonKey: overrides.get(nexoId), confidence: 'manual',
         matchedPersonKey: overrides.get(nexoId), status: 'applied', occ: null,
+      })
+      continue
+    }
+    // Vínculo já resolvido numa carga anterior — vale antes da heurística.
+    if (previos.has(nexoId)) {
+      const i1 = roster.get(nexoId) || { nome: '', depto: '', email: '' }
+      matchOf.set(nexoId, { personKey: previos.get(nexoId), confidence: 'previo' })
+      stagingRows.push({
+        nexoUserId: nexoId, nome: i1.nome || '', norm: norm(i1.nome || ''), depto: i1.depto || null, email: i1.email || null,
+        atrasos: counts.atrasos, advertencias: counts.advert,
+        suggestionPersonKey: previos.get(nexoId), confidence: 'previo',
+        matchedPersonKey: previos.get(nexoId), status: 'applied', occ: null,
       })
       continue
     }
@@ -209,13 +266,60 @@ async function main() {
     daily.set(k, d)
   }
 
-  // Eventos de disciplina (advertências) das pessoas casadas.
-  const eventos = []
-  for (const a of adverts) {
+  /* ── A ADVERTÊNCIA SAI DA REGRA DA CASA, NÃO DA TABELA ────────────────────
+     Regra do dono, 08/09/2026: **a partir do 2º atraso no mês a empresa aplica
+     advertência**.
+
+     ⚠️⚠️ A TABELA `nexo_advertencia` NÃO IMPLEMENTA ESSA REGRA, e a prova é
+     direta: dos **129 pessoa-mês com exatamente UM atraso, 127 geraram
+     advertência**. No geral, só 7,3% dos 492 pessoa-mês batem com
+     `advertências = atrasos − 1`; 92,1% têm uma advertência POR atraso,
+     inclusive o primeiro. A mediana do atraso é a mesma (6 min) com e sem
+     advertência, então também não há critério de gravidade separando os dois —
+     a tabela é um espelho automático do atraso, não o registro de um ato.
+
+     Importá-la como está punia o mesmo atraso duas vezes: na assiduidade
+     (`100 − atrasos·2 − advertências·5`) cada atraso valia −7 em vez de −2, e
+     dez pessoas ficavam empatadas em ZERO — a Yasmin sairia de 0 para 68.
+
+     ⚠️ O que se grava aqui é uma CONTAGEM DERIVADA para a régua de pontuação,
+     não um registro de advertência assinada. O `motivo` diz isso em cada linha,
+     porque um painel que decide aumento inventando ato disciplinar seria pior
+     que o defeito que ele conserta.
+
+     ⚠️ Atraso ABONADO não conta para chegar ao 2º: a régua já o perdoa (0
+     pontos), e deixá-lo empurrar o colega seguinte para a advertência
+     desfaria o perdão pela porta dos fundos. */
+  const porPessoaMes = new Map() // `${pk} ${AAAA-MM}` -> [dias]
+  for (const a of atrasos) {
     const mt = matchOf.get(a.userId)
-    if (!mt) continue
-    eventos.push({ personKey: mt.personKey, source: 'nexo', sourceId: a.id, data: a.day, tipo: 'advertencia', motivo: a.motivo, dias: null })
+    if (!mt || abonadoIds.has(a.id)) continue
+    const k = mt.personKey + '\0' + a.day.slice(0, 7)
+    const arr = porPessoaMes.get(k) || []
+    /* ⚠️ Guarda o ID do atraso, não só o dia: a MESMA pessoa pode se atrasar
+       duas vezes no mesmo dia (11 casos no dump), e uma chave `pessoa:dia`
+       colide — o `createMany` morre no meio, depois do wipe, deixando a base
+       pela metade. O id do atraso é único e vem do dump, então re-rodar o
+       import dá exatamente o mesmo resultado. */
+    arr.push({ id: a.id, dia: a.day })
+    porPessoaMes.set(k, arr)
   }
+  const eventos = []
+  for (const [k, ocorrencias] of porPessoaMes) {
+    const personKey = k.split('\0')[0]
+    // O 1º atraso do mês não gera advertência; do 2º em diante, um por atraso.
+    const ordenadas = [...ocorrencias].sort((x, y) => x.dia.localeCompare(y.dia) || x.id.localeCompare(y.id))
+    for (const o of ordenadas.slice(1)) {
+      const dia = o.dia
+      eventos.push({
+        personKey, source: 'nexo', sourceId: `regra2:${o.id}`,
+        data: dia, tipo: 'advertencia',
+        motivo: 'Atraso (2º ou seguinte no mês) — contagem derivada da regra da casa, não é advertência assinada',
+        dias: null,
+      })
+    }
+  }
+  const advertNaTabela = adverts.filter((a) => matchOf.has(a.userId)).length
 
   /* ---------- TRAVA ANTI-PERDA (antes de qualquer delete) ----------
      Este import é wipe+rebuild: ele APAGA assiduidade_daily e as advertências
@@ -235,6 +339,52 @@ async function main() {
       dica: 'O dump em ' + DIR + ' cobre menos que o banco. Confira se o dump está completo e no lugar certo. Para sobrescrever mesmo assim: --forcar',
     }, null, 1))
     process.exit(1)
+  }
+
+  /* ---------- ensaio a seco ----------
+     ⚠️⚠️ Este import é wipe+rebuild sobre atraso e advertência de gente real, e
+     o `docs/PERIODO-E-DEPLOY.md` é explícito: em outro sistema da casa um bloco
+     de órfãos desativou 8 pessoas ativas e o log disse "sucesso". A prévia da
+     planilha de serviços já nasceu em duas fases pelo mesmo motivo; esta não
+     tinha nenhuma. `--ensaio` calcula tudo e não escreve nada. */
+  if (process.argv.includes('--ensaio')) {
+    const porMes = {}
+    /* ⚠️ O separador da chave é NUL, não espaço — convenção deste arquivo, e é
+       o que faz o `file` chamá-lo de binário. Usar ' ' aqui devolve a chave
+       inteira e o "por mês" vira uma lista por pessoa, plausível e errada. */
+    for (const [k, v] of daily) {
+      const m = k.split('\0')[1].slice(0, 7)
+      porMes[m] = (porMes[m] ?? 0) + v.atrasos
+    }
+    console.log(JSON.stringify({
+      ENSAIO: 'nada foi gravado',
+      atrasosLidos: atrasos.length, abonados: abonadoIds.size,
+      usuariosNoDump: occByNexo.size,
+      pessoasCasadas: new Set([...matchOf.values()].map((m) => m.personKey)).size,
+      linhasDeAssiduidade: { vaiGravar: daily.size, jaExistem: await prisma.assiduidadeDaily.count() },
+      advertencias: {
+        naTabelaDoAxis: adverts.filter((a) => matchOf.has(a.userId)).length,
+        pelaRegraDo2oAtraso: eventos.length,
+        jaExistem: await prisma.disciplinaEvento.count({ where: { source: 'nexo' } }),
+      },
+      vinculos: {
+        manuais: stagingRows.filter((r) => r.confidence === 'manual').length,
+        previos: stagingRows.filter((r) => r.confidence === 'previo').length,
+        fortes: stagingRows.filter((r) => r.confidence === 'strong').length,
+        revisar: stagingRows.filter((r) => r.confidence === 'review').length,
+        semPalpite: stagingRows.filter((r) => r.confidence === 'none').length,
+      },
+      linhasPorMes: porMes,
+    }, null, 2))
+    const novos = stagingRows.filter((r) => r.confidence === 'strong' || r.confidence === 'review' || r.confidence === 'none')
+    if (novos.length) {
+      console.log('\nCASAMENTOS NOVOS (nao vieram de carga anterior nem de vinculo manual):')
+      for (const r of novos) {
+        const alvo = people.find((p) => p.personKey === (r.matchedPersonKey ?? r.suggestionPersonKey))
+        console.log(`  [${r.confidence.padEnd(6)}] ${r.nome} -> ${alvo ? alvo.name : '(ninguem)'}  (${r.atrasos} atrasos)`)
+      }
+    }
+    return
   }
 
   /* ---------- grava (wipe + rebuild = idempotente) ---------- */
@@ -261,8 +411,11 @@ async function main() {
   console.log(JSON.stringify({
     atrasosLidos: atrasos.length, advertLidas: adverts.length, abonados: abonadoIds.size,
     rosterNexo: roster.size, usuariosComOcorrencia: occByNexo.size,
-    pessoasCasadas: matchedPeople, dailyLinhas: dailyN, eventos: eventos.length,
+    pessoasCasadas: matchedPeople, dailyLinhas: dailyN,
+    advertenciasNaTabelaDoAxis: advertNaTabela,
+    advertenciasPelaRegraDo2o: eventos.length,
     revisar: review.length, semPalpite: none.length,
+    previos: stagingRows.filter((s) => s.confidence === 'previo').length,
   }, null, 2))
   if (review.length) console.log('REVISAR:', review.map((r) => `${r.nome} [${r.depto}]`).join(' | '))
   if (none.length) console.log('SEM PALPITE:', none.map((r) => `${r.nome} [${r.depto}]`).join(' | '))
