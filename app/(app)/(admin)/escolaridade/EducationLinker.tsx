@@ -108,9 +108,19 @@ export default function EducationLinker({ rows, options, nameById, endpoint = '/
         </>
       )}
 
+      {/* ⚠️⚠️ A LISTA DOS 77 JÁ VINCULADOS SAIU DA ABERTURA (pedido do dono,
+          08/09/2026): ela empurrava para baixo da dobra as DUAS pendências que
+          esta tela existe para mostrar — quem falta vincular e quem falta
+          preencher. Vínculo aplicado é trabalho terminado, e trabalho terminado
+          não disputa espaço com o que ainda precisa de gente.
+          ⚠️ Continua acessível: o "Desfazer" é a única forma de corrigir um
+          vínculo errado, e esconder o desfazer seria trocar um defeito por
+          outro. */}
       {applied.length > 0 && (
-        <>
-          <div style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>Vinculados <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {applied.length} aplicados</span></div>
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--text-dim)', marginBottom: 12 }}>
+            {applied.length} vínculos já aplicados <span style={{ fontWeight: 400, color: 'var(--text-mute)' }}>· abrir para conferir ou desfazer</span>
+          </summary>
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             {applied.map((r) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: '1px solid var(--border-soft)' }}>
@@ -124,7 +134,7 @@ export default function EducationLinker({ rows, options, nameById, endpoint = '/
               </div>
             ))}
           </div>
-        </>
+        </details>
       )}
     </div>
   )

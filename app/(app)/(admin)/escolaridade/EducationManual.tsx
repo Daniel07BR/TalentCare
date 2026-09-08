@@ -13,6 +13,12 @@ export type ManualPerson = {
 export default function EducationManual({ people }: { people: ManualPerson[] }) {
   const router = useRouter()
   const [q, setQ] = useState('')
+  /* ⚠️⚠️ A TELA ABRE NO QUE FALTA (pedido do dono, 08/09/2026). Ela listava as
+     87 pessoas ativas, e as 9 sem escolaridade ficavam diluídas no meio — a
+     pergunta que traz alguém aqui é "quem ainda não tem", e uma lista completa
+     não a responde. O `ver todos` continua ali: a ferramenta de editar quem JÁ
+     tem formação não se perde, só deixa de ser o padrão. */
+  const [soFaltando, setSoFaltando] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
   const [draft, setDraft] = useState<EduItem[]>([])
   const [busy, setBusy] = useState<string | null>(null)
@@ -48,10 +54,11 @@ export default function EducationManual({ people }: { people: ManualPerson[] }) 
   }
 
   const ql = q.trim().toLowerCase()
+  const semInfo = people.filter((p) => !p.level).length
   const list = people
+    .filter((p) => (!soFaltando || !p.level))
     .filter((p) => !ql || p.name.toLowerCase().includes(ql) || (p.username ?? '').toLowerCase().includes(ql) || p.dept.toLowerCase().includes(ql))
     .sort((a, b) => (a.level ? 1 : 0) - (b.level ? 1 : 0) || a.name.localeCompare(b.name))
-  const semInfo = people.filter((p) => !p.level).length
   const preview = openId ? deriveLevelAndDetail(draft) : null
 
   const inputStyle: React.CSSProperties = {
@@ -63,8 +70,19 @@ export default function EducationManual({ people }: { people: ManualPerson[] }) 
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '32px auto 0' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Editar formação</h2>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Marque os níveis e digite os cursos de cada funcionário ({semInfo} sem informação)</div>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            {soFaltando ? 'Sem escolaridade informada' : 'Editar formação'}
+          </h2>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+            {soFaltando
+              ? <><b>{semInfo}</b> de {people.length} pessoas ativas não têm formação registrada. Clique para marcar os níveis e os cursos.</>
+              : <>Todas as {people.length} pessoas ativas · marque os níveis e digite os cursos</>}
+            {' · '}
+            <button onClick={() => setSoFaltando((v) => !v)}
+              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }}>
+              {soFaltando ? `ver todos os ${people.length}` : 'ver só quem falta'}
+            </button>
+          </div>
         </div>
         <div style={{ position: 'relative', minWidth: 260 }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)', display: 'flex' }}><Search size={16} /></span>
