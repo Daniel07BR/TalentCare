@@ -145,7 +145,13 @@ export async function GET(req: NextRequest) {
      Antes esta rota usava `ativos.length` ("ativo hoje") e as duas divergiam:
      medido em 03/09/2026, Fiscal 22 aqui × 21 na fila, Financeiro 5 × 4. O selo
      do menu diria 4 e a faixa vermelha do setor diria 5, sobre a mesma coisa. */
-  const compAtual = competenciaAnterior()
+  /* ⚠️⚠️ A COMPETÊNCIA SEGUE O FILTRO quando ele é um mês só (o card de meses, ou
+     um intervalo do calendário dentro de um mês): a nota, a pontuação e a
+     avaliação passam a ser daquele mês. Antes era SEMPRE o mês anterior, e
+     filtrar "Julho" mostrava agosto — o número não obedecia ao filtro ao lado
+     dele (regra (b) da casa). Para os presets que cruzam meses (7d, 30d, Ano),
+     fica o último mês FECHADO, que é o padrão útil. */
+  const compAtual = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
   const avaliaveisRows = await prisma.user.findMany({
     where: { departmentId: dept.id, ...filtroDeAvaliaveis(compAtual) },
     select: { id: true },

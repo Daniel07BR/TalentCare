@@ -87,7 +87,13 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
      trocasse o id na URL via nome, score, distribuição de formação e o mapa de
      atrasos do setor alheio ATÉ o 403 chegar. Os dois estados de falha estavam
      cobertos; a janela entre o clique e a resposta, não. */
-  if (estado === 'carregando') {
+  /* ⚠️⚠️ O ESQUELETO SÓ NA PRIMEIRA CARGA (`!m`). Antes ele aparecia em TODO
+     refetch — trocar o filtro do mês esvaziava a página inteira por meio
+     segundo, o que PISCA e joga a rolagem para o topo. Quem troca o filtro
+     parado num ponto quer comparar ali, não subir. O hook mantém `m` do mês
+     anterior; renderizamos ele até o novo chegar (stale-while-revalidate), e a
+     página não muda de altura. Pedido do dono, 08/09/2026. */
+  if (estado === 'carregando' && !m) {
     return (
       <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
         <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
