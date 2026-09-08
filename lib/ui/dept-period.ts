@@ -17,6 +17,10 @@ export type PessoaDoSetor = {
   /** A conta aberta do que foi calculado na hora (parcial/prévia). O mês
    *  gravado guarda o dela no banco e a ficha a mostra. */
   detalhe: string | null
+  /** ⚠️ Por que esta pessoa não recebe nota: 'chefia' (a pontuação mede
+   *  execução) ou 'sem-credito' (nenhuma atividade nem serviço no mês).
+   *  `null` = recebe. Nunca zero — zero acusaria. */
+  semNota: string | null
 }
 
 export type PessoaRank = {

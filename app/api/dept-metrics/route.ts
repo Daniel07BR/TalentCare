@@ -460,6 +460,8 @@ export async function GET(req: NextRequest) {
      sumia exatamente no dia em que a competência fecha e a decisão é tomada. */
   const mesCorrente = compAtual === competenciaAtual()
   const detalheDe = new Map<string, string>()
+  /** Por que ESTA pessoa não tem nota: 'chefia' | 'sem-credito'. */
+  const semNotaDe = new Map<string, string>()
   let pontuacaoDoMes: {
     competencia: string
     /** Mês em curso: falta o que ainda não aconteceu. */
@@ -487,6 +489,9 @@ export async function GET(req: NextRequest) {
         : r.erro ?? null
     } else {
       for (const l of r.linhas) {
+        /* ⚠️ Quem não recebe nota NÃO entra com número — nem com zero. O motivo
+           vai para a linha dela, curto, e o texto inteiro no `title`. */
+        if (l.semNota) { semNotaDe.set(l.personKey, l.semNota); continue }
         pontosMesDe.set(l.personKey, l.pontos)
         detalheDe.set(l.personKey, l.detalhe)
       }
@@ -541,6 +546,7 @@ export async function GET(req: NextRequest) {
          ficha o mostra; o calculado na hora só existe aqui — jogá-lo fora
          deixava o único número do painel sem como conferir. */
       detalhe: detalheDe.get(p.nexusUserId ?? p.id) ?? null,
+      semNota: semNotaDe.get(p.nexusUserId ?? p.id) ?? null,
     }
   })
 

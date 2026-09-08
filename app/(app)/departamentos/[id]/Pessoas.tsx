@@ -244,8 +244,20 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                      rodou a competência, ou o mês está aberto — e quem lia
                      concluía a única que a frase não diz: que a pessoa não fez
                      nada. */
-                  <span style={{ fontSize: 11, color: 'var(--text-mute)' }} title={pontuacaoDoMes.motivo ?? undefined}>
-                    — <span style={{ fontSize: 10 }}>sem pontuação no mês</span>
+                  /* ⚠️ O "—" diz POR QUÊ, em duas palavras, com a frase inteira
+                     no title. Zero aqui acusaria a pessoa; "—" mudo faria o
+                     leitor concluir a única coisa que a tela não disse. */
+                  <span style={{ fontSize: 11, color: 'var(--text-mute)' }}
+                    title={p.semNota === 'chefia'
+                      ? 'Função de chefia: a pontuação mede execução, e a chefia não é avaliada por volume de execução nem ranqueada contra a própria equipe.'
+                      : p.semNota === 'sem-credito'
+                        ? 'Nenhuma atividade nos sistemas nem serviço na planilha neste mês — não há de onde sair pontuação. O que sobraria seria assiduidade com outro nome.'
+                        : pontuacaoDoMes.motivo ?? undefined}>
+                    — <span style={{ fontSize: 10 }}>{
+                      p.semNota === 'chefia' ? 'chefia'
+                        : p.semNota === 'sem-credito' ? 'sem fonte no mês'
+                        : 'sem pontuação no mês'
+                    }</span>
                   </span>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }} title={p.detalhe ?? undefined}>

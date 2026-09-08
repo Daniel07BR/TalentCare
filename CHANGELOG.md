@@ -32,6 +32,54 @@ Nexus é apontada ao vivo; a planilha de serviços do Legal sobe no fim do mês.
 Setembro do Legal até 08/09: Lucas 258, Joice 194, Yago 137, Gabriel 80,
 Marcia 35, Evandro 20, Ezequiel 20, Marcos 2.
 
+## 2026-09-08 (fim, 4) — Rodar os outros setores mostrou que o peso do Legal não é da casa
+
+Pedido do dono: *"rode a pontuação nos outros setores."* Nenhum dos 15 tinha
+régua — e sem régua o `montar` recusa a competência inteira, que é por que a
+lista deles dizia "sem pontuação no mês". Entrou
+`scripts/replicar-regua.ts`, que copia do Legal a metade disciplinar e os pesos
+de atividade (não o catálogo de serviços, que nasce da planilha de cada setor).
+
+### ⚠️⚠️ E o ENSAIO desmentiu a premissa da replicação
+
+Rodando agosto nos 16 setores, **sem gravar**:
+
+| | |
+|---|---|
+| Pessoas com nota **negativa** | **32 de 95 (34%)** |
+| Pessoas com nota **zero** | **12**, incluindo **8 dos 9 da Diretoria** |
+| Pessoas sem nenhum lado de crédito | 13 |
+
+Bárbara Rocha **−550**, Douglas Soares −547, Kaique −542. No **Contábil, 9 das
+18**; no **Fiscal, 7 de 21**.
+
+Eu tinha copiado os pesos chamando-os de "regra da casa". A **regra** é da casa
+(advertência a partir do 2º atraso, em qualquer setor). O **peso** não é: −50
+por atraso é **7% da nota** de quem soma 700 pontos de crédito e é a **nota
+inteira** de quem soma 150. Eles foram calibrados contra o volume do Legal, e
+fora dele a assiduidade vira a única coisa que o número mede — com o sinal
+trocado.
+
+### A metade simétrica do `null`, que faltava
+
+A régua já se recusava a dar o bônus de mês limpo a quem o PONTO não mede (a
+ausência que elogia). Faltava o outro lado: **quem sistema nenhum mede não
+recebe nota**, e sim "—" com o motivo. Entra `LinhaCalculo.semNota`:
+
+- `sem-credito` — nenhuma atividade e nenhum serviço no mês. Não há de onde sair
+  nota; o que sobraria seria assiduidade com outro nome.
+- `chefia` — gestor, sub-encarregado, diretor, administrador (decisão do dono).
+  A pontuação mede EXECUÇÃO, e chefia não é avaliada por volume de execução nem
+  ranqueada contra a própria equipe.
+
+⚠️ O motivo da chefia é a **função**, não a falta de fonte: a Joice (sub do
+Legal) tem 242 atividades e 8 serviços em agosto. Dizer "não passa por sistema
+espelhado" sobre ela seria falso na tela.
+
+⚠️⚠️ `gravarMes` **apaga** o que já estiver gravado de quem passou a não receber
+nota. Sem isso a regra nova só valeria para o futuro e os zeros e negativos da
+rodada anterior ficariam no banco — invisíveis e citáveis.
+
 ### ClassRoom: consumir e PRODUZIR conteúdo viraram duas listas
 
 Pedido do dono: *"no ClassRoom, preciso dar pontos diferentes para quem assiste e

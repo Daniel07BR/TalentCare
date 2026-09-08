@@ -38,7 +38,31 @@ type LinhaCalculo = {
   detalhe: string
   /** Já existe valor gravado neste mês, e de que origem. */
   jaTem: { pontos: number; origem: string } | null
+  /**
+   * ⚠️⚠️ POR QUE ESTA PESSOA NÃO RECEBE NOTA (`null` = recebe).
+   *
+   * A régua já se recusava a dar o bônus de mês limpo a quem o PONTO não mede
+   * (a ausência que elogia). Faltava a metade simétrica, e ela apareceu ao
+   * rodar os outros setores em 08/09/2026: **32 de 95 pessoas sairiam com nota
+   * NEGATIVA e 12 com zero**, porque a metade disciplinar pune todo mundo e a
+   * de crédito só premia quem passa por sistema espelhado. Um zero gravado ali
+   * não é "não produziu", é "não medimos" — e num painel que decide aumento o
+   * zero acusa.
+   *
+   * - `sem-credito`: nenhuma atividade e nenhum serviço no mês. Não há de onde
+   *   sair nota; o que sobraria seria assiduidade com outro nome.
+   * - `chefia`: gestor, sub-encarregado, diretor. A pontuação mede EXECUÇÃO, e
+   *   chefia não é avaliada por volume de execução — muito menos ranqueada
+   *   contra a própria equipe. Decisão do dono, 08/09/2026.
+   *   ⚠️ O motivo é a FUNÇÃO, não a falta de fonte: a Joice (sub do Legal) tem
+   *   242 atividades e 8 serviços em agosto. Dizer "não passa por sistema
+   *   espelhado" sobre ela seria falso na tela.
+   */
+  semNota: null | 'sem-credito' | 'chefia'
 }
+
+/** Cargos que não são pontuados por execução. */
+const CARGOS_DE_CHEFIA = new Set(['Gestor', 'Sub-encarregado', 'Diretor', 'Administrador'])
 
 /**
  * ⚠️⚠️ O MÊS PARCIAL (pedido do dono, 08/09/2026).
@@ -126,7 +150,7 @@ export async function montar(
   const [pessoas, dias, discip, servicos, jaGravado] = await Promise.all([
     prisma.user.findMany({
       where: { departmentId, origin: { in: ['nexus', 'staff'] }, active: true },
-      select: { id: true, nexusUserId: true, name: true },
+      select: { id: true, nexusUserId: true, name: true, jobTitle: true },
     }),
     /* ⚠️ Disciplina até onde o PONTO mediu (ver `disciplinaAte`), não até hoje. */
     semDisciplinaNaJanela ? Promise.resolve([]) : prisma.assiduidadeDaily.findMany({
@@ -208,7 +232,14 @@ export async function montar(
       },
       { semDisciplina: semPonto, parcial },
     )
+    /* ⚠️ A ordem importa: chefia primeiro. Um gestor SEM crédito sai por ser
+       chefia, não por falta de fonte — e a tela diz o motivo certo. */
+    const semNota: LinhaCalculo['semNota'] =
+      CARGOS_DE_CHEFIA.has(p.jobTitle ?? '') ? 'chefia'
+        : (totalAtiv === 0 && s.n === 0) ? 'sem-credito'
+        : null
     linhas.push({
+      semNota,
       personKey: pk, nome: p.name,
       atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
       servicosConcluidos: s.n, pontosDeServico: s.pts,
@@ -219,7 +250,12 @@ export async function montar(
     })
   }
 
-  linhas.sort((a, b) => b.pontos - a.pontos)
+  /* Quem não recebe nota vai para o FIM, não para o fundo do ranking: não é o
+     último colocado, é quem não está na corrida. Mesma regra da lista do setor. */
+  linhas.sort((a, b) => {
+    if (!!a.semNota !== !!b.semNota) return a.semNota ? 1 : -1
+    return b.pontos - a.pontos
+  })
   return {
     competencia, regraId: regra.id, vigenteDesde: regra.vigenteDesde, base: regra.base,
     fatorPorMinuto: regra.fatorPorMinuto,
@@ -251,6 +287,8 @@ export async function montar(
      * de ranking que decide promoção pelo eixo errado.
      */
     semServico: linhas.filter((l) => l.servicosConcluidos === 0).map((l) => l.nome),
+    /** Quem NÃO recebe nota, e por quê — ver `LinhaCalculo.semNota`. */
+    semNota: linhas.filter((l) => l.semNota).map((l) => ({ nome: l.nome, motivo: l.semNota as string })),
     linhas,
   }
 }
@@ -263,7 +301,16 @@ export async function montar(
 export async function gravarMes(departmentId: string, competencia: string) {
   const r = await montar(departmentId, competencia)
   if ('erro' in r) return r
-  const gravar = r.linhas.filter((l) => l.jaTem?.origem !== 'informado')
+  /* ⚠️⚠️ Quem não recebe nota NÃO é gravado — e o que já estiver gravado dele é
+     APAGADO. Sem o apagamento, a regra nova só valeria para o futuro e os zeros
+     e negativos da rodada anterior ficariam no banco, invisíveis e citáveis. */
+  const apagar = r.linhas.filter((l) => l.semNota && l.jaTem && l.jaTem.origem !== 'informado')
+  for (const l of apagar) {
+    await prisma.pontuacaoMes.delete({
+      where: { personKey_competencia: { personKey: l.personKey, competencia } },
+    }).catch(() => {})
+  }
+  const gravar = r.linhas.filter((l) => !l.semNota && l.jaTem?.origem !== 'informado')
   for (const l of gravar) {
     await prisma.pontuacaoMes.upsert({
       where: { personKey_competencia: { personKey: l.personKey, competencia } },
@@ -271,5 +318,5 @@ export async function gravarMes(departmentId: string, competencia: string) {
       update: { pontos: l.pontos, origem: 'calculado', regraId: r.regraId, detalhe: l.detalhe },
     })
   }
-  return { ok: true as const, gravadas: gravar.length, preservadas: r.informados.length, ...r }
+  return { ok: true as const, gravadas: gravar.length, apagadas: apagar.length, preservadas: r.informados.length, ...r }
 }

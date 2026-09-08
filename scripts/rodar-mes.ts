@@ -45,13 +45,17 @@ async function main() {
   if (r.informados.length) console.log(`Preservados (informados à mão): ${r.informados.join(', ')}`)
   console.log('')
   for (const l of r.linhas) {
+    if (l.semNota) {
+      console.log(`       —  ${l.nome}  [sem nota: ${l.semNota === 'chefia' ? 'função de chefia' : 'nenhuma fonte de crédito no mês'}]`)
+      continue
+    }
     const flag = l.jaTem?.origem === 'informado' ? ' [informado — não recalculado]' : l.semPonto ? ' [sem ponto]' : ''
     console.log(`  ${String(l.pontos).padStart(6)}  ${l.nome}${flag}`)
     console.log(`          ${l.detalhe}`)
   }
   if (gravar) {
-    const g = r as unknown as { gravadas: number; preservadas: number }
-    console.log(`\n${g.gravadas} gravadas · ${g.preservadas} preservadas`)
+    const g = r as unknown as { gravadas: number; apagadas: number; preservadas: number }
+    console.log(`\n${g.gravadas} gravadas · ${g.apagadas} apagadas (sem nota) · ${g.preservadas} preservadas`)
   }
 }
 
