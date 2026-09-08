@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap, FileSpreadsheet, Upload } from 'lucide-react'
+import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import Avatar from '../../Avatar'
 
@@ -18,7 +18,7 @@ import Avatar from '../../Avatar'
 
 const CIN = { display: 'flex', filter: 'grayscale(1)', opacity: 0.9 } as React.CSSProperties
 
-export function Hero({ m, podeEnviar }: { m: DeptMetrics; podeEnviar?: boolean }) {
+export function Hero({ m }: { m: DeptMetrics }) {
   const router = useRouter()
   const gestores = m.chefia.filter((c) => c.nivel === 'gestor')
   const subs = m.chefia.filter((c) => c.nivel !== 'gestor')
@@ -89,12 +89,19 @@ export function Hero({ m, podeEnviar }: { m: DeptMetrics; podeEnviar?: boolean }
         {/* ── O QUE ESTÁ ACESO + a equipe ─────────────────────────────────── */}
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, marginBottom: 14 }}>
+            {/* ⚠️⚠️ A HEAD RESPONDE AO FILTRO (pedido do dono, 08/09/2026), e por
+                isso o número grande é a CONTAGEM de saídas do período, não a
+                taxa. A taxa é de 12 meses por necessidade: em "7 dias" ela daria
+                **0% para quase todo setor**, e esse zero se lê como "ninguém sai
+                daqui" — o oposto do que o cartão existe para mostrar. Contagem é
+                honesta em qualquer janela; percentual não é. A taxa continua
+                logo abaixo, com a janela dela escrita. */}
             <Sinal
-              Icone={LogOut} rotulo="Rotatividade"
-              valor={m.turnover.saidas12m > 0 ? `${m.turnover.taxa12m}%` : '0%'}
-              nota="últimos 12 meses"
-              dica={contaTurnover}
-              cor={m.turnover.taxa12m >= 20 ? 'var(--danger)' : m.turnover.taxa12m > 0 ? 'var(--warning)' : 'var(--text-mute)'}
+              Icone={LogOut} rotulo="Saídas no período"
+              valor={String(m.turnover.saidasNoPeriodo)}
+              nota={`${m.turnover.taxa12m}% de rotatividade em 12 meses`}
+              dica={`${m.turnover.saidasNoPeriodo} ${m.turnover.saidasNoPeriodo === 1 ? 'pessoa saiu' : 'pessoas saíram'} no intervalo selecionado.\nA TAXA ao lado é de 12 meses e não acompanha o filtro: ${contaTurnover}`}
+              cor={m.turnover.saidasNoPeriodo > 0 ? 'var(--danger)' : m.turnover.taxa12m >= 20 ? 'var(--warning)' : 'var(--text-mute)'}
             />
             {/* ⚠️⚠️ "—" e não 0 quando a janela não foi medida. O ponto é a única
                 fonte sem cron (entra por import à mão) e parava em 25/06/2026:
@@ -141,38 +148,22 @@ export function Hero({ m, podeEnviar }: { m: DeptMetrics; podeEnviar?: boolean }
             />
           </div>
 
-          {/* A equipe — retrato de hoje, o contexto para ler os três acima. */}
-          <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', paddingTop: 13, borderTop: '1px solid var(--border-soft)' }}>
-            <Dado rotulo="Pessoas ativas" valor={String(m.equipe.ativos)} />
-            <Dado rotulo="Idade média" valor={d.idadeMedia != null ? `${d.idadeMedia} anos` : '—'}
+          {/* A equipe — retrato de hoje, o contexto para ler os três acima.
+              ⚠️ Alinhada NO MESMO grid dos sinais (pedido do dono): eram quatro
+              blocos soltos num `flex`, encostados à esquerda, e a fileira de
+              cima já era uma grade — as duas linhas não se olhavam. O ícone é o
+              que faz o número ser encontrado antes de ser lido. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 10, paddingTop: 13, borderTop: '1px solid var(--border-soft)' }}>
+            <Dado Icone={Users2} rotulo="Pessoas ativas" valor={String(m.equipe.ativos)} />
+            <Dado Icone={Cake} rotulo="Idade média" valor={d.idadeMedia != null ? `${d.idadeMedia} anos` : '—'}
               nota={d.idadesInformadas < m.equipe.ativos ? `${d.idadesInformadas} de ${m.equipe.ativos}` : undefined} />
-            <Dado rotulo="Tempo de casa" valor={anos != null ? (anos > 0 ? `${anos}a ${meses}m` : `${meses}m`) : '—'} />
-            <Dado rotulo="Mulheres / homens" valor={`${d.generos.F ?? 0} / ${d.generos.M ?? 0}`}
+            <Dado Icone={CalendarClock} rotulo="Tempo de casa" valor={anos != null ? (anos > 0 ? `${anos}a ${meses}m` : `${meses}m`) : '—'} />
+            <Dado Icone={UsersRound} rotulo="Mulheres / homens" valor={`${d.generos.F ?? 0} / ${d.generos.M ?? 0}`}
               nota={d.generos['?'] ? `${d.generos['?']} não informado` : undefined} />
             {m.equipe.comNexus < m.equipe.ativos && (
-              <Dado rotulo="Sem conta no Nexus" valor={String(m.equipe.ativos - m.equipe.comNexus)} nota="fora das 8 fontes" />
+              <Dado Icone={UserMinus} rotulo="Sem conta no Nexus" valor={String(m.equipe.ativos - m.equipe.comNexus)} nota="fora das 8 fontes" />
             )}
 
-            {/* ⚠️⚠️ O CAMINHO PARA A PLANILHA MORA AQUI (pedido do dono,
-                04/09/2026), e não num item de menu lá em cima. O gestor abre o
-                relatório do PRÓPRIO setor — é aqui que ele está quando lembra da
-                planilha, e é aqui que ele vê o que ela produziu. Um botão de
-                menu obriga a lembrar que a tela existe; um botão no resumo
-                aparece na hora em que faz sentido.
-
-                ⚠️ Ele também LEVA O SETOR na URL: era um dropdown no alto da
-                outra tela, e em 04/09 uma planilha do Legal foi importada para
-                Entregas justamente porque ninguém olhou aquele campo. */}
-            {podeEnviar && (
-              <button
-                onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
-                style={{ marginLeft: 'auto', alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
-                title="Enviar a planilha de serviços e definir a régua de pontuação deste setor"
-              >
-                <Upload size={14} />
-                {m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -195,12 +186,19 @@ function Sinal({ Icone, rotulo, valor, nota, dica, cor }: {
   )
 }
 
-function Dado({ rotulo, valor, nota }: { rotulo: string; valor: string; nota?: string }) {
+/** Um dado da equipe. Mesma caixa dos `Sinal` acima, sem a barra colorida — é
+ *  contexto, não alerta, e a cor é o que separa os dois. */
+function Dado({ Icone, rotulo, valor, nota }: {
+  Icone: typeof Users2; rotulo: string; valor: string; nota?: string
+}) {
   return (
-    <div>
-      <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{rotulo}</div>
-      <div className="cnum" style={{ fontSize: 16, fontWeight: 700 }}>{valor}</div>
-      {nota && <div style={{ fontSize: 10, color: 'var(--text-mute)' }}>{nota}</div>}
+    <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+        <Icone size={13} color="var(--text-mute)" />
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{rotulo}</span>
+      </div>
+      <div className="cnum" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.5px' }}>{valor}</div>
+      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 1 }}>{nota ?? '\u00A0'}</div>
     </div>
   )
 }

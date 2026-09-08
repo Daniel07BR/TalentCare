@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
   MessageSquareText, MessageCircle, Search,
-  FileSpreadsheet,
+  FileSpreadsheet, Upload,
 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptDetailVM } from '@/lib/mock/departments'
 import { educationByDept } from '@/lib/mock/education'
 import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
-import { Atencao } from './Atencao'
 import { Pessoas } from './Pessoas'
 import { Tendencia, Turnover } from './Tendencia'
 import { CardFonte } from './CardFonte'
@@ -138,12 +137,32 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         ser um número que ninguém validou. A AVALIAÇÃO também saiu da hero — ela
         tem o bloco dela mais abaixo.
       */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Relatório do setor</div>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
+      {/* ⚠️ O BOTÃO DA PLANILHA SUBIU PARA A LINHA DO NOME (pedido do dono,
+          08/09/2026). Ele estava no rodapé do bloco da equipe, encostado à
+          direita depois de quatro números — o gestor precisava atravessar o
+          resumo inteiro para achar a única AÇÃO da tela. Ação fica onde o olho
+          entra, junto do nome do setor a que ela se aplica.
+          ⚠️ Ele leva o setor na URL: era um dropdown no alto da outra tela, e em
+          04/09 uma planilha do Legal foi importada para Entregas porque ninguém
+          olhou aquele campo. */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Relatório do setor</div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
+        </div>
+        {m?.setor.podeGerir && (
+          <button
+            onClick={() => irPara(`/servicos?setor=${m.setor.id}`)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+            title="Enviar a planilha de serviços e definir a régua de pontuação deste setor"
+          >
+            <Upload size={15} />
+            {m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
+          </button>
+        )}
       </div>
 
-      {m && <Hero m={m} podeEnviar={!!m.setor.podeGerir} />}
+      {m && <Hero m={m} />}
       {edu && <Escolaridade segs={edu.segs} informed={edu.informed} total={edu.total} />}
 
       {/* ── A PARTIR DAQUI, TUDO OBEDECE AOS FILTROS ──────────────────────
@@ -174,10 +193,11 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         )}
       </div>
 
-      {/* O que exige ação continua vindo antes das pessoas — mas depois dos
-          filtros, porque ele obedece a eles. */}
-      {m && <Atencao m={m} abaixoDoEsperado={abaixoDoEsperado} atendeEmParte={atendeEmParte} ehAdmin={ehAdmin} onIr={irPara} />}
-      <div style={{ height: 16 }} />
+      {/* ⚠️ O bloco "PRECISA DE ATENÇÃO" saiu (pedido do dono, 08/09/2026): ele
+          repetia, em cartões maiores, os mesmos três números que a head já
+          mostra — rotatividade, advertências e atrasos —, e repetir um número
+          em duas alturas da mesma tela ensina a não confiar em nenhuma das
+          duas quando elas divergirem por um filtro. */}
       <Tarja>As pessoas</Tarja>
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
         {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} avaliaveis={m.avaliacao.avaliaveis} busca={busca} />}
