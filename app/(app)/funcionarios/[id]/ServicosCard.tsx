@@ -35,7 +35,19 @@ export default function ServicosCard({ servicos, pontuacao, periodo }: {
   const maxMes = Math.max(1, ...(servicos?.porMes ?? []).map((m) => m.concluidos))
   const maxTarefa = Math.max(1, ...(servicos?.porTarefa ?? []).map((t) => t.n))
   const serie = (pontuacao ?? []).slice(-15)
-  const maxPts = Math.max(1, ...serie.map((p) => p.pontos))
+  /* ⚠️⚠️ A PONTUAÇÃO PODE SER NEGATIVA desde 08/09/2026, quando a base mensal
+     foi zerada (decisão do dono: os 500 existiam enquanto o mês não era
+     calculado e serviam de piso). Antes disso a barra era `Math.max(2, pontos /
+     max * 56)` — e um valor NEGATIVO virava a mesma barrinha de 2px de quem tem
+     1 ponto. Medido em agosto/2026: o Yago fecha em −231 e desenharia igual a
+     um mês quase zerado, com o número certo escrito em cima de um gráfico que
+     diz outra coisa. Agora há linha de base, e o que está abaixo dela desce. */
+  const maxPos = Math.max(0, ...serie.map((p) => p.pontos))
+  const maxNeg = Math.max(0, ...serie.map((p) => -p.pontos))
+  const total = Math.max(1, maxPos + maxNeg)
+  const ALTURA = 56
+  const hCima = Math.round(ALTURA * (maxPos / total))
+  const hBaixo = ALTURA - hCima
   const informados = serie.filter((p) => p.origem === 'informado').length
 
   return (
@@ -118,24 +130,36 @@ export default function ServicosCard({ servicos, pontuacao, periodo }: {
               </>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 96 }}>
-            {serie.map((p) => (
-              <div key={p.competencia} title={`${rotuloMes(p.competencia)}: ${p.pontos} pontos · ${p.origem === 'informado' ? 'informado pelo setor' : p.detalhe ?? 'calculado pela régua'}`}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                <span style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--text-dim)' }}>{p.pontos}</span>
-                <div style={{
-                  width: '100%', height: `${Math.max(2, (p.pontos / maxPts) * 56)}px`, minHeight: 2,
-                  borderRadius: '3px 3px 0 0',
-                  /* Informado vem listrado: dá para ler o número e dá para ver,
-                     sem legenda, que a procedência é outra. */
-                  background: p.origem === 'informado'
-                    ? 'repeating-linear-gradient(45deg, var(--text-mute) 0 3px, transparent 3px 6px)'
-                    : 'var(--accent)',
-                  border: p.origem === 'informado' ? '1px solid var(--border)' : 'none',
-                }} />
-                <span style={{ fontSize: 9.5, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>{rotuloMes(p.competencia)}</span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+            {serie.map((p) => {
+              /* Informado vem listrado: dá para ler o número e dá para ver, sem
+                 legenda, que a procedência é outra. */
+              const pintura = p.origem === 'informado'
+                ? { background: 'repeating-linear-gradient(45deg, var(--text-mute) 0 3px, transparent 3px 6px)', border: '1px solid var(--border)' }
+                : { background: p.pontos < 0 ? 'var(--danger)' : 'var(--accent)', border: 'none' }
+              const alt = (v: number) => (total ? Math.max(v ? 2 : 0, (v / total) * ALTURA) : 0)
+              return (
+                <div key={p.competencia} title={`${rotuloMes(p.competencia)}: ${p.pontos} pontos · ${p.origem === 'informado' ? 'informado pelo setor' : p.detalhe ?? 'calculado pela régua'}`}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 0 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 600, color: p.pontos < 0 ? 'var(--danger)' : 'var(--text-dim)' }}>{p.pontos}</span>
+                  {/* acima da linha */}
+                  <div style={{ width: '100%', height: hCima, display: 'flex', alignItems: 'flex-end' }}>
+                    {p.pontos > 0 && <div style={{ width: '100%', height: alt(p.pontos), borderRadius: '3px 3px 0 0', ...pintura }} />}
+                  </div>
+                  {/* ⚠️ A LINHA DE BASE existe mesmo quando ninguém está negativo:
+                      é ela que diz de onde as barras saem, e sem ela um mês de
+                      poucos pontos parece um mês vazio. */}
+                  <div style={{ width: '100%', height: 1, background: 'var(--border)' }} />
+                  {/* abaixo da linha */}
+                  {hBaixo > 0 && (
+                    <div style={{ width: '100%', height: hBaixo, display: 'flex', alignItems: 'flex-start' }}>
+                      {p.pontos < 0 && <div style={{ width: '100%', height: alt(-p.pontos), borderRadius: '0 0 3px 3px', ...pintura }} />}
+                    </div>
+                  )}
+                  <span style={{ fontSize: 9.5, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>{rotuloMes(p.competencia)}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

@@ -1,5 +1,50 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (fim da noite) — A base do mês saiu, e com ela apareceu uma inversão
+
+Decisão do dono: **a base mensal de 500 não deve existir**. Ela nasceu quando a
+pontuação ainda não era calculada e servia de piso; com o catálogo de tipos
+parametrizado, o mês passa a valer o que foi feito, sem ponto de partida.
+Nenhum mês tinha sido calculado ainda, então a régua de hoje foi corrigida no
+lugar — não havia passado para reescrever, que é a única coisa que a trava de
+vigência protege.
+
+### ⚠️⚠️ O que os 500 escondiam
+
+Agosto/2026 no Legal, antes → depois:
+
+| pessoa | atrasos | advert. | serviços | com base 500 | sem base |
+|---|---|---|---|---|---|
+| Ezequiel Castro | 0 | 0 | 105 | 1328 | **828** |
+| Marcia Borges | 0 | 0 | 65 | 1190 | 690 |
+| Marcos Gabriel | 3 | 2 | 21 | 518 | **18** |
+| Evandro Padilha | 1 | 0 | 0 | 450 | **−50** |
+| Yago Santos | 3 | 2 | 19 | 269 | **−231** |
+
+**O Yago fez 19 serviços e fecha em −231; o Evandro não fez nenhum e fecha em
+−50.** Quem trabalhou e se atrasou fica ABAIXO de quem a planilha não cobre,
+porque a metade disciplinar pune todo mundo e a de serviço só premia quem
+aparece. A base de 500 não corrigia isso — só empurrava os dois para cima do
+zero, onde a inversão não incomodava a vista.
+
+### E o gráfico da ficha quebrava com negativo
+
+`height: Math.max(2, (pontos / max) * 56)` — um valor **negativo** virava a
+mesma barrinha de 2px de quem tem 1 ponto. O número certo escrito em cima de um
+gráfico dizendo outra coisa. Agora há **linha de base**: o que é positivo sobe,
+o que é negativo desce (em vermelho), e a escala é repartida entre os dois lados
+pelo maior de cada um.
+
+### O dump não tem falta nem suspensão
+
+Conferido: o arquivo traz **quatro** tabelas — `nexo_atraso`,
+`nexo_advertencia`, `nexo_abonos` e `nexo_jornada`. Não há falta nem suspensão,
+e o dump anterior também não tinha (está escrito no cabeçalho do
+`run-ponto-import.mjs` desde a primeira carga). A lista de eventos da régua
+(`EVENTOS`, em `lib/servicos/pontuacao.ts`) é **fechada** e também não os
+conhece: acrescentá-los exige fonte primeiro, senão vira uma linha na tela que
+nunca soma nada.
+
 ## 2026-09-08 (noite) — O dump novo, a advertência que era o mesmo atraso, e a régua rodando
 
 ### O dump
