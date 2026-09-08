@@ -39,6 +39,18 @@ export type Ocorrencias = {
   atrasosAbonados: number
   advertencias: number
   servicosConcluidos: number
+  /**
+   * A soma dos pontos dos serviços do mês, JÁ pelo catálogo de tipos.
+   * ⚠️⚠️ Sem isto o catálogo inteiro não chegava à nota de ninguém. A conta só
+   * conhecia `servico_concluido` — um valor FIXO por serviço —, então os 74
+   * tipos que o Legal passou dias afinando (mínimo, máximo, média por tarefa)
+   * valiam todos o mesmo na pontuação mensal: uma ABERTURA NORMAL de 3 horas
+   * pesava igual a um SERVIÇO INTERNO de 30 minutos. A tela de tipos mostrava
+   * a diferença; o número que decide aumento não a via.
+   * ⚠️ `servico_concluido` continua existindo e vale por CIMA: é o bônus por
+   * serviço feito, independente do tipo. Hoje o Legal o deixou em 0.
+   */
+  pontosDeServico?: number
 }
 
 export type Regra = {
@@ -80,6 +92,15 @@ export function calcular(regra: Regra, oc: Ocorrencias): Calculo {
   linha('atraso_abonado', 'Atrasos abonados', oc.atrasosAbonados)
   linha('advertencia', 'Advertências', oc.advertencias)
   linha('servico_concluido', 'Serviços concluídos', oc.servicosConcluidos)
+  /* ⚠️ Entra como UMA parcela, com o total e a contagem — e não 105 linhas.
+     A conta aberta existe para a pessoa conferir; uma lista com um item por
+     serviço deixaria de ser conferível exatamente onde ela mais importa. */
+  if (oc.pontosDeServico) {
+    parcelas.push({
+      label: `Serviços por tipo (${oc.servicosConcluidos})`,
+      quantidade: 1, unitario: oc.pontosDeServico, total: oc.pontosDeServico,
+    })
+  }
 
   const limpo = oc.atrasos === 0 && oc.atrasosAbonados === 0 && oc.advertencias === 0
   const bonus = ponto('mes_sem_ocorrencia')
