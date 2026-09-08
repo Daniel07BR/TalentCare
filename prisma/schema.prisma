@@ -317,6 +317,20 @@ model AssiduidadeDaily {
   atrasos       Int      @default(0)
   atrasosAbon   Int      @default(0) @map("atrasos_abonados")
   minutosAtraso Int      @default(0) @map("minutos_atraso")
+  /**
+   * A GRAVIDADE do atraso, em três faixas, contada POR OCORRÊNCIA.
+   * ⚠️⚠️ Não dá para derivar isso de `minutosAtraso`: ele é a SOMA do dia. Um
+   * dia com um atraso de 6 min e outro de 40 soma 46 e cairia inteiro na faixa
+   * "acima de 30", quando são um pequeno e um grande. Acontece em 11 dos 1.766
+   * atrasos do dump — 0,6%, e mesmo assim é a diferença entre descrever e
+   * inventar. Quem sabe separar é o importador, que ainda vê cada ocorrência;
+   * depois dele a informação não existe mais.
+   * ⚠️ As faixas: `até 5`, `de 6 a 30` e `acima de 30` minutos. Só contam
+   * atraso NÃO abonado — o abonado não pune e não entra na conta de gravidade.
+   */
+  atrasosAte5   Int      @default(0) @map("atrasos_ate5")
+  atrasosAte30  Int      @default(0) @map("atrasos_ate30")
+  atrasosMais30 Int      @default(0) @map("atrasos_mais30")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@id([personKey, day])

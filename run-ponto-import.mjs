@@ -255,14 +255,28 @@ async function main() {
   }
 
   // Agrega atrasos por (personKey, day): conta abonados à parte e soma minutos.
-  const daily = new Map() // `${pk} ${day}` -> { atrasos, abon, minutos }
+  const daily = new Map() // `${pk}\0${day}` -> { atrasos, abon, minutos, faixas }
   for (const a of atrasos) {
     const mt = matchOf.get(a.userId)
     if (!mt) continue
     const k = mt.personKey + ' ' + a.day
-    const d = daily.get(k) || { atrasos: 0, abon: 0, minutos: 0 }
+    const d = daily.get(k) || { atrasos: 0, abon: 0, minutos: 0, ate5: 0, ate30: 0, mais30: 0 }
     if (abonadoIds.has(a.id)) d.abon++
-    else { d.atrasos++; d.minutos += atrasoMin(a.horario, a.prev) }
+    else {
+      const m = atrasoMin(a.horario, a.prev)
+      d.atrasos++; d.minutos += m
+      /* ⚠️⚠️ A GRAVIDADE É CONTADA AQUI, por ocorrência, porque depois daqui a
+         informação some: `minutosAtraso` é a SOMA do dia, e um dia com um atraso
+         de 6 min e outro de 40 soma 46 — cairia inteiro na faixa "acima de 30"
+         sendo um pequeno e um grande. São 11 dias assim em 1.766 atrasos: pouco,
+         e ainda assim é a diferença entre descrever e inventar.
+         ⚠️ Atraso sem `entrada_prevista` dá 0 minuto em `atrasoMin` — "não deu
+         para medir", e não "chegou na hora". Ele conta como atraso e fica FORA
+         das faixas, senão viraria um "até 5 min" que ninguém mediu. */
+      if (m > 30) d.mais30++
+      else if (m > 5) d.ate30++
+      else if (m > 0) d.ate5++
+    }
     daily.set(k, d)
   }
 
@@ -398,7 +412,10 @@ async function main() {
   for (const [k, d] of daily) {
     const [personKey, day] = k.split(' ')
     await prisma.assiduidadeDaily.create({
-      data: { personKey, day, atrasos: d.atrasos, atrasosAbon: d.abon, minutosAtraso: d.minutos },
+      data: {
+        personKey, day, atrasos: d.atrasos, atrasosAbon: d.abon, minutosAtraso: d.minutos,
+        atrasosAte5: d.ate5, atrasosAte30: d.ate30, atrasosMais30: d.mais30,
+      },
     })
     dailyN++
   }

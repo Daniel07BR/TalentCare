@@ -33,6 +33,8 @@ export type EmployeeMetrics = {
   disciplina: { data: string; motivo: string | null; tipo: string; dias: number | null }[]
   assiduidade: {
     assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number
+    /** A gravidade do atraso, em contagem por faixa (a tela faz o percentual). */
+    faixas?: { ate5: number; ate30: number; mais30: number; semMedida: number }
     faltas: number | null; suspensoes: number | null
     /* A cobertura do ponto vem NESTA rota, que a ficha já chama — ela evita
        fetch extra de propósito. `pessoaMedida` = está no roster do ponto;

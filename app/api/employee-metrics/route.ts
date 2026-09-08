@@ -93,7 +93,10 @@ export async function GET(req: NextRequest) {
         })
       : null,
     // ASSIDUIDADE (ponto) no período: soma atrasos/minutos + advertências no range.
-    prisma.assiduidadeDaily.aggregate({ where: { personKey, ...range }, _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true } }),
+    prisma.assiduidadeDaily.aggregate({
+      where: { personKey, ...range },
+      _sum: { atrasos: true, atrasosAbon: true, minutosAtraso: true, atrasosAte5: true, atrasosAte30: true, atrasosMais30: true },
+    }),
     prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
     /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
        confere `podeVer`; aquele dataset viaja inteiro no payload de toda página.
@@ -201,10 +204,27 @@ export async function GET(req: NextRequest) {
       const atr = assid._sum.atrasos ?? 0
       const abon = assid._sum.atrasosAbon ?? 0
       const min = assid._sum.minutosAtraso ?? 0
+      const fx5 = assid._sum.atrasosAte5 ?? 0
+      const fx30 = assid._sum.atrasosAte30 ?? 0
+      const fxM = assid._sum.atrasosMais30 ?? 0
       return {
         // mesma fórmula do VM: 100 − atrasos·2 − advertências·5 (abonados fora).
         assid: Math.max(0, 100 - atr * 2 - advert * 5),
         atrasos: atr, atrasosAbon: abon, minutos: min, advertencias: advert,
+        /* ⚠️⚠️ A GRAVIDADE DO ATRASO, em faixas (pedido do dono, 08/09/2026).
+           "6 atrasos · 43 min" não distingue seis vezes chegando 7 minutos
+           depois de duas chegando meia hora — e as duas conversas com a pessoa
+           são completamente diferentes.
+           ⚠️ Vem em CONTAGEM, não em percentual: quem calcula a porcentagem é a
+           tela, que sabe se tem denominador para isso. Um "33%" sobre três
+           atrasos diz menos que "1 de 3", e mandar só o percentual apagaria a
+           amostra de quem lê. */
+        faixas: {
+          ate5: fx5, ate30: fx30, mais30: fxM,
+          /* Atraso contado sem `entrada_prevista`: não deu para medir a
+             gravidade. Fica fora das três faixas em vez de virar "até 5 min". */
+          semMedida: Math.max(0, atr - fx5 - fx30 - fxM),
+        },
         // faltas/suspensões: sem fonte na origem (null → ficha mostra "—").
         faltas: null as number | null, suspensoes: null as number | null,
         /* ⚠️⚠️ A COBERTURA vem junto, na rota que a ficha JÁ chama — de propósito.

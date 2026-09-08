@@ -488,6 +488,58 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>histórico total</div></div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
                 </div>
+
+                {/* ⚠️⚠️ A GRAVIDADE DO ATRASO (pedido do dono, 08/09/2026).
+                    "6 atrasos · 43 min" não distingue seis vezes chegando 7
+                    minutos depois de duas chegando meia hora — e as duas
+                    conversas com a pessoa são completamente diferentes. A
+                    barra mostra a proporção; os números embaixo mostram a
+                    amostra, porque "33%" sobre três atrasos diz menos que
+                    "1 de 3". */}
+                {ass.atrasos > 0 && ass.faixas && (ass.faixas.ate5 + ass.faixas.ate30 + ass.faixas.mais30) > 0 && (() => {
+                  const f = ass.faixas
+                  const medidos = f.ate5 + f.ate30 + f.mais30
+                  const pct = (n: number) => Math.round((n / medidos) * 100)
+                  const cores = ['rgba(245,166,35,.35)', 'var(--warning)', 'var(--danger)']
+                  const faixas = [
+                    { n: f.ate5, rot: 'até 5 min', cor: cores[0] },
+                    { n: f.ate30, rot: 'de 6 a 30 min', cor: cores[1] },
+                    { n: f.mais30, rot: 'acima de 30 min', cor: cores[2] },
+                  ]
+                  return (
+                    <div style={{ marginTop: 16, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 2 }}>Gravidade dos atrasos</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 10 }}>
+                        Proporção sobre {medidos} {medidos === 1 ? 'atraso cronometrado' : 'atrasos cronometrados'} no período
+                        {/* ⚠️⚠️ Atraso sem gravidade medida NÃO entra como "pequeno"
+                            só por não ter número — seria o zero acusando de novo, com
+                            o sinal trocado. São dois motivos: chegada sem horário
+                            previsto, e dia com mais de um atraso importado antes de
+                            08/09/2026, quando só o total do dia era guardado. */}
+                        {f.semMedida > 0 && <> · <b>{f.semMedida}</b> sem gravidade medida, fora da conta</>}
+                      </div>
+                      <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', gap: 2, marginBottom: 10 }}>
+                        {faixas.filter((x) => x.n > 0).map((x) => (
+                          <div key={x.rot} title={`${x.rot}: ${x.n} de ${medidos} (${pct(x.n)}%)`}
+                            style={{ width: `${(x.n / medidos) * 100}%`, background: x.cor }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                        {faixas.map((x) => (
+                          <div key={x.rot}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: 2, background: x.cor, flex: 'none' }} />
+                              <span className="cnum" style={{ fontSize: 17, fontWeight: 700 }}>{pct(x.n)}%</span>
+                              <span style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{x.n} de {medidos}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 13 }}>{x.rot}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* ⚠️⚠️ VIROU CALENDÁRIO (pedido do dono, 08/09/2026). A grade
                     estilo GitHub respondia "houve muitos atrasos?" e não
                     respondia **quando** — para saber que o quadrado escuro era

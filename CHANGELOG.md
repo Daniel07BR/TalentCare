@@ -1,5 +1,48 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (madrugada) — A gravidade do atraso
+
+Pedido do dono: mostrar que percentual dos atrasos da pessoa fica abaixo de 5
+min, até 30 e acima de 30. **"6 atrasos · 43 min" não distingue seis vezes
+chegando 7 minutos depois de duas chegando meia hora** — e as duas conversas com
+a pessoa são completamente diferentes.
+
+### ⚠️⚠️ O dado não existia, e não dava para derivar
+
+`assiduidade_daily.minutos_atraso` é a **soma do dia**. Um dia com um atraso de 6
+min e outro de 40 soma 46 e cairia inteiro em "acima de 30", sendo um pequeno e
+um grande. Quem ainda vê cada ocorrência é o **importador** — depois dele a
+informação não existe mais. Entram três colunas contadas lá:
+`atrasos_ate5`, `atrasos_ate30`, `atrasos_mais30`.
+
+⚠️ Só conta atraso **não abonado**, e atraso sem `entrada_prevista` fica **fora
+das faixas**: `atrasoMin` devolve 0 para ele, e 0 ali é "não deu para medir", não
+"chegou na hora". Vira um "até 5 min" que ninguém mediu — o zero acusando com o
+sinal trocado.
+
+### O preenchimento do que já estava gravado
+
+O dump foi apagado depois da carga (tem PII), então o histórico foi preenchido
+pelo que dá para saber com certeza: num dia com **um único** atraso o
+`minutos_atraso` **é** o minuto daquela ocorrência — **1.558 dos 1.566 dias**.
+Ficaram sem faixa os 8 dias com mais de um atraso (16 atrasos) e 8 sem minuto
+medido: **24 de 1.574, 1,5%**. A tela os mostra como "sem gravidade medida, fora
+da conta" em vez de empurrá-los para a faixa pequena. A próxima carga preenche
+todos com exatidão.
+
+### A distribuição da casa, medida
+
+**46,7% até 5 min · 44,7% de 6 a 30 · 7,1% acima de 30.**
+
+E o que a fileira de KPIs escondia, nos últimos 30 dias: a **Bárbara Rocha** tem
+7 atrasos, mas **5 deles abaixo de 5 minutos** (50 min no total); a **Gabriela
+Fargnolli** tem 9, com **2 acima de meia hora** (218 min). O número de atrasos
+era quase o mesmo e o problema não é o mesmo.
+
+⚠️ A rota devolve **contagem**, não percentual: quem calcula a porcentagem é a
+tela, que sabe se há denominador para isso. "33%" sobre três atrasos diz menos
+que "1 de 3", e mandar só o percentual apagaria a amostra de quem lê.
+
 ## 2026-09-08 (fim da noite) — A base do mês saiu, e com ela apareceu uma inversão
 
 Decisão do dono: **a base mensal de 500 não deve existir**. Ela nasceu quando a
