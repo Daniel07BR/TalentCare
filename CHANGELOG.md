@@ -32,6 +32,29 @@ Nexus é apontada ao vivo; a planilha de serviços do Legal sobe no fim do mês.
 Setembro do Legal até 08/09: Lucas 258, Joice 194, Yago 137, Gabriel 80,
 Marcia 35, Evandro 20, Ezequiel 20, Marcos 2.
 
+### ClassRoom: consumir e PRODUZIR conteúdo viraram duas listas
+
+Pedido do dono: *"no ClassRoom, preciso dar pontos diferentes para quem assiste e
+para quem criar conteúdo."*
+
+⚠️ Na **régua** isso já existia — `cls_video` (assistir) **1 ponto**,
+`cls_curso` (concluir) **2**, `cls_criado` (criar) **6**, pelas durações
+12/20/60 min. Quem somava os dois era o **cartão**: a lista se chamava *"quem
+mais concluiu E CRIOU curso"* e usava `courses + created`.
+
+E isso apaga justamente o produtor: **quem cria, cria pouco** — o setor da
+imagem tinha **1 curso criado contra 5 concluídos**, então o criador entra na
+mesma barra que quem consome e some no fim da lista. São trabalhos de natureza
+diferente, e a régua já dizia isso; a tela é que não.
+
+`CardFonte` ganhou `ranking2`/`unidade2`: um segundo bloco, com barra própria
+(⚠️ o `max` é por lista — dividir a barra de quem cria pelo topo de quem assiste
+faria o criador parecer irrelevante justamente por criar menos). O ClassRoom
+passa a mostrar **"quem mais concluiu curso e assistiu vídeo"** e **"quem mais
+criou curso"**. A segunda lista só aparece onde alguém cria: setor sem criação
+não ganha bloco vazio dizendo que ninguém criou — isso já está no zero de "No
+setor".
+
 ### A régua calibrada e AGOSTO REGRAVADO
 
 O dono ajustou na tela (com autor e data gravados): **WhatsApp 48 → 30 min**

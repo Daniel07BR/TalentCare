@@ -26,12 +26,24 @@ export type Numero = { label: string; valor: number | string | null; cor?: strin
 const fmt = (v: number | string | null) =>
   v === null ? '—' : typeof v === 'number' ? v.toLocaleString('pt-BR') : v
 
-export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNinguem, numeros, rodape, todos }: {
+export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, ranking2, unidade2, semNinguem, numeros, rodape, todos }: {
   titulo: string
   sub?: string
   cor: string
   Icone: React.ComponentType<{ size?: number; color?: string }>
   ranking: Pessoa[]
+  /**
+   * ⚠️⚠️ UMA SEGUNDA LISTA, quando a fonte mede DUAS COISAS DIFERENTES na mesma
+   * pessoa. Nasceu do ClassRoom (08/09/2026): a lista era "quem mais concluiu E
+   * CRIOU curso", somando quem ASSISTE com quem PRODUZ. São trabalhos de
+   * natureza distinta — a régua de pontuação já os separa (assistir vídeo 1,
+   * concluir curso 2, criar curso 6) e o cartão os somava, o que fazia o
+   * criador de conteúdo desaparecer dentro do volume de quem consome.
+   * Só use quando os dois eixos existirem de verdade; duas listas onde uma
+   * basta é ruído.
+   */
+  ranking2?: Pessoa[]
+  unidade2?: string
   /** Por qual grandeza está ranqueado ("mais resolveu", "mais abriu chamado"). */
   unidade: string
   /** O que dizer quando NÃO há ninguém — a frase é do cartão, não genérica. */
@@ -55,47 +67,28 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
   todos?: boolean
 }) {
   const router = useRouter()
-  const max = Math.max(1, ...ranking.map((p) => p.valor))
-  // Corta em 6 nas fontes espelhadas: o cartão não pode crescer com o setor, ou
-  // o Fiscal (22 pessoas) empurra todo o resto da página para fora da tela. Na
-  // planilha do setor mostra todo mundo — o time inteiro cabe, e faltar alguém
-  // é o dado.
-  const visiveis = todos ? ranking : ranking.slice(0, 6)
-  const resto = ranking.length - visiveis.length
 
-  return (
-    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: sub ? 2 : 16 }}>
-        <Icone size={15} color={cor} />
-        <span style={{ fontSize: 14, fontWeight: 600 }}>{titulo}</span>
-      </div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>}
-
-      {/*
-        ⚠️⚠️ Ranking vazio é o caso COMUM, não a borda: quem RESOLVE chamado de
-        HelpDesk é o T.I, e todo o resto da empresa só ABRE. Antes o grid virava
-        uma coluna, a tarja "Quem mais resolveu" sumia junto, e sobrava um cartão
-        de totais sem metade da própria estrutura — sem uma linha dizendo por
-        quê. Um cartão sem "quem" tem de dizer que não tem.
-      */}
-      <div className="card-fonte" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr)', gap: 22, alignItems: 'start' }}>
-        {/* ── ESQUERDA: quem fez ────────────────────────────────────────── */}
-        {ranking.length === 0 ? (
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
-              Quem {unidade}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-              {semNinguem ?? 'Ninguém deste setor, no período — os números ao lado vêm de outra ponta da mesma fonte.'}
-            </div>
+  /* A LISTA — extraída para caber duas vezes no mesmo cartão (ver `ranking2`).
+     ⚠️ O `max` é POR LISTA: a barra compara dentro do próprio eixo. Dividir a
+     barra de quem cria pelo topo de quem assiste faria o criador parecer
+     irrelevante justamente por criar menos, que é a natureza do trabalho. */
+  const Lista = ({ gente, rotulo, vazioTexto }: { gente: Pessoa[]; rotulo: string; vazioTexto?: string }) => {
+    const mx = Math.max(1, ...gente.map((p) => p.valor))
+    const vis = todos ? gente : gente.slice(0, 6)
+    const sobra = gente.length - vis.length
+    return (
+      <div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
+          Quem {rotulo}
+        </div>
+        {gente.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+            {vazioTexto ?? 'Ninguém deste setor, no período — os números ao lado vêm de outra ponta da mesma fonte.'}
           </div>
         ) : (
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
-              Quem {unidade}
-            </div>
+          <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {visiveis.map((p, i) => (
+              {vis.map((p, i) => (
                 <button
                   key={p.id}
                   onClick={() => router.push(`/funcionarios/${p.id}`)}
@@ -123,7 +116,7 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
                     {/* A barra fica SOB o nome: ela compara dentro desta fonte e
                         deste setor, e não é uma nota sobre a pessoa. */}
                     <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 4, marginTop: 3, overflow: 'hidden' }}>
-                      <div className="cbar" style={{ height: '100%', width: `${Math.round((p.valor / max) * 100)}%`, background: cor, borderRadius: 4, opacity: i === 0 ? 1 : 0.62 }} />
+                      <div className="cbar" style={{ height: '100%', width: `${Math.round((p.valor / mx) * 100)}%`, background: cor, borderRadius: 4, opacity: i === 0 ? 1 : 0.62 }} />
                     </div>
                   </div>
                   <span className="cnum" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 800, color: p.valor === 0 ? 'var(--text-mute)' : (i === 0 ? cor : 'var(--text)'), letterSpacing: '-.3px' }}>
@@ -132,16 +125,49 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, semNingue
                 </button>
               ))}
             </div>
-            {resto > 0 && (
+            {sobra > 0 && (
               // ⚠️ Diz onde ver o resto: a comparação completa existe no cartão
               // "As pessoas", então não é perda de dado — era perda de caminho.
               <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 8, paddingLeft: 7 }}>
-                e mais {resto} {resto === 1 ? 'pessoa' : 'pessoas'} com registro · a lista completa está em <b>As pessoas</b>
+                e mais {sobra} {sobra === 1 ? 'pessoa' : 'pessoas'} com registro · a lista completa está em <b>As pessoas</b>
               </div>
             )}
-          </div>
+          </>
         )}
+      </div>
+    )
+  }
 
+  return (
+    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: sub ? 2 : 16 }}>
+        <Icone size={15} color={cor} />
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{titulo}</span>
+      </div>
+      {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>}
+
+      {/*
+        ⚠️⚠️ Ranking vazio é o caso COMUM, não a borda: quem RESOLVE chamado de
+        HelpDesk é o T.I, e todo o resto da empresa só ABRE. Antes o grid virava
+        uma coluna, a tarja "Quem mais resolveu" sumia junto, e sobrava um cartão
+        de totais sem metade da própria estrutura — sem uma linha dizendo por
+        quê. Um cartão sem "quem" tem de dizer que não tem.
+      */}
+      <div className="card-fonte" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr)', gap: 22, alignItems: 'start' }}>
+        {/* ── ESQUERDA: quem fez ────────────────────────────────────────── */}
+<div>
+          <Lista gente={ranking} rotulo={unidade} vazioTexto={semNinguem} />
+          {/* ⚠️ A segunda lista só aparece quando o eixo EXISTE naquele setor:
+              um setor onde ninguém cria conteúdo não ganha um bloco vazio a
+              dizer que ninguém criou — isso já está no zero do "No setor". */}
+          {unidade2 && ranking2 && ranking2.length > 0 && (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
+              <Lista gente={ranking2} rotulo={unidade2} />
+            </div>
+          )}
+        </div>
+
+        
         {/* ── DIREITA: o total do setor ─────────────────────────────────── */}
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>

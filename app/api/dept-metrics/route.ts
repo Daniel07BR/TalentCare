@@ -572,7 +572,15 @@ export async function GET(req: NextRequest) {
   void nomeDe
 
   const mHdResolvidos = new Map(gHd.map((r) => [r.nexusUserId, n(r._sum.resolved)]))
-  const mClsConcl = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.courses) + n(r._sum.created)]))
+  /* ⚠️⚠️ CONSUMIR E PRODUZIR CONTEÚDO SÃO EIXOS DIFERENTES (08/09/2026).
+     Isto somava `courses + created` numa lista só, "quem mais concluiu E CRIOU
+     curso" — e quem CRIA sempre cria pouco (o setor inteiro tinha 1 curso
+     criado contra 5 concluídos), então o produtor de conteúdo desaparecia
+     dentro do volume de quem consome. A régua de pontuação já os separa
+     (assistir vídeo 1 · concluir curso 2 · criar curso 6); o cartão não. Agora
+     são duas listas, cada uma com a sua barra. */
+  const mClsConsumo = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.courses) + n(r._sum.videos)]))
+  const mClsCriado = new Map(gCls.map((r) => [r.nexusUserId, n(r._sum.created)]))
   const mConsTudo = new Map(gCons.map((r) => [r.nexusUserId, n(r._sum.studies) + n(r._sum.tickets) + n(r._sum.messages) + n(r._sum.comments)]))
   const mGerServ = new Map(gGer.map((r) => [r.nexusUserId, n(r._sum.servicos) + n(r._sum.servCriados) + n(r._sum.protAbertos)]))
   const mChatConcl = new Map(gChat.map((r) => [r.nexusUserId, n(r._sum.chamadosConcluidos)]))
@@ -616,7 +624,9 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome))
 
-  type Rk = { rotulo: string; gente: ReturnType<typeof rank> }
+  /** `rotulo2`/`gente2` = uma SEGUNDA lista, quando a fonte mede dois eixos
+   *  diferentes na mesma pessoa (hoje só o ClassRoom: consumir × produzir). */
+  type Rk = { rotulo: string; gente: ReturnType<typeof rank>; rotulo2?: string; gente2?: ReturnType<typeof rank> }
   const comAlternativa = (
     a: [string, Map<string | null, number>], b: [string, Map<string | null, number>], porNome = false,
   ): Rk => {
@@ -628,7 +638,14 @@ export async function GET(req: NextRequest) {
   const rankings: Record<string, Rk> = {
     whatsapp: comAlternativa(['mais finalizou atendimento', mWppFin], ['mais abriu atendimento', mWppAb], true),
     helpdesk: comAlternativa(['mais resolveu', mHdResolvidos], ['mais abriu chamado', mHdAbertos]),
-    classroom: comAlternativa(['mais concluiu e criou curso', mClsConcl], ['mais assistiu vídeo', mClsVideos]),
+    /* Primeira lista: quem consome (curso concluído + vídeo). Segunda: quem
+       PRODUZ. `criou curso` só entra quando existe alguém — setor onde ninguém
+       cria não ganha um bloco vazio. */
+    classroom: {
+      ...comAlternativa(['mais concluiu curso e assistiu vídeo', mClsConsumo], ['mais assistiu vídeo', mClsVideos]),
+      rotulo2: 'mais criou curso',
+      gente2: rank(mClsCriado),
+    },
     consultoria: { rotulo: 'mais registrou atividade', gente: rank(mConsTudo) },
     cide: { rotulo: 'mais alterou cadastro', gente: rank(mCideAt) },
     gerencia: comAlternativa(['mais entregou e pediu', mGerServ], ['mais rodou (km)', mGerKm]),

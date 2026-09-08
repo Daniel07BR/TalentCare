@@ -460,7 +460,8 @@ function Atividade({ m }: { m: DeptMetrics }) {
   add('ClassRoom', tem(m.classroom.criados, m.classroom.assistidos, m.classroom.videos),
     <CardFonte
       titulo="ClassRoom" cor="var(--chart-2)" Icone={GraduationCap}
-      ranking={r.classroom.gente} unidade={r.classroom.rotulo || "mais concluiu e criou curso"}
+      ranking={r.classroom.gente} unidade={r.classroom.rotulo || "mais concluiu curso e assistiu vídeo"}
+      ranking2={r.classroom.gente2} unidade2={r.classroom.rotulo2}
       numeros={[
         { label: 'Cursos criados', valor: m.classroom.criados, cor: 'var(--accent)' },
         { label: 'Cursos concluídos', valor: m.classroom.assistidos, cor: 'var(--chart-2)' },

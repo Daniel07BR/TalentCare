@@ -31,7 +31,9 @@ export type DeptMetrics = {
   /** Por fonte: por QUAL grandeza está ranqueado, e quem. `gente` vazia é o
    *  caso comum (o setor abre chamado e não resolve) — o cartão diz isso. */
   rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio' | 'servicos',
-    { rotulo: string; gente: PessoaRank[] }>
+    /** `rotulo2`/`gente2`: a segunda lista, quando a fonte mede dois eixos
+     *  diferentes na mesma pessoa (o ClassRoom: quem consome × quem produz). */
+    { rotulo: string; gente: PessoaRank[]; rotulo2?: string; gente2?: PessoaRank[] }>
   setor: { id: string; nome: string; pelaDiretoria: boolean; podeGerir?: boolean }
   /** Quem está lendo alcança a empresa toda (Diretoria/admin). */
   ehAdmin: boolean
