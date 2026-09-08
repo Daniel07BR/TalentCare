@@ -1,5 +1,83 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (tarde) — A régua virou decisão gravada, e o TFE virou um serviço só
+
+### O TFE: duas grafias, um serviço
+
+Decisão do dono: *"no TFE, considere o mesmo serviço, e dê o que dá mais
+pontos."* O catálogo agrupava pelo TEXTO exato, então `TAXAS PREFEITURA
+(TFE/TFA) Emitir boletos` e `… emitir boletos` eram duas linhas, 5 concluídos
+cada, com réguas configuradas separadamente (máximos 240 e 237) e valores
+diferentes. Agora agrupa pela grafia normalizada: uma linha, amostra somada,
+um valor — e vence a régua mais generosa. Importa num catálogo em que **29
+tipos já têm menos de 5 medições**: partir a amostra ao meio piora quem já
+estava no limite.
+
+⚠️ A escolha fica visível na linha (quais grafias foram somadas, quantas réguas
+havia, qual ganhou). Régua que vence em silêncio é régua que ninguém revisa.
+
+⚠️⚠️ E a gravação alcança TODAS as grafias. A tela mostra uma linha, mas o banco
+tem uma chave por grafia e é dele que os outros consumidores leem — gravar só
+na canônica deixaria a irmã com a régua velha, viva e invisível: bastaria a
+planilha do mês que vem mudar qual grafia é mais frequente para o valor do
+serviço saltar sozinho.
+
+### A primeira régua do Legal
+
+`pontuacao_regra` estava **vazia**: o `0,5 ponto por minuto` era o padrão do
+código, não uma decisão, e a tela o anunciava como fato.
+
+Medido para decidir. Agosto/2026 a 0,5 daria **3.674 ao Ezequiel** e 2.931 à
+Marcia, contra base 100 e advertência −15 — a metade disciplinar era 0,4% do
+topo. Mas baixar o fator tem um custo que só aparece medindo: **o piso de 1
+ponto achata o catálogo.**
+
+| fator | tipos no piso | valores distintos | maior tipo |
+|---|---|---|---|
+| 0,5 | 0 | 45 | 108 |
+| 0,1 | 4 | 19 | 22 |
+| 0,05 | 9 | 11 | 11 |
+| 0,03 | 28 | 6 | 6 |
+
+A 0,03 o mês calculado cairia na faixa dos **98 meses históricos (0–230, média
+151)**, mas 28 tipos no piso apagariam o ajuste que o Legal acabou de fazer.
+Ficou **0,1**, com **base 500, atraso −50, advertência −75, mês limpo +100** — a
+mesma proporção que eles já usavam, na escala nova. Agosto passa a dar 728 ao
+Ezequiel e 69 ao Yago.
+
+### ⚠️⚠️ Uma notícia, não 74
+
+A régua nova move todos os tipos no mesmo instante, e o aviso de "mudou desde a
+revisão" dispararia em cada um. **São causas diferentes e exigem reações
+diferentes:** régua mudar é ato deliberado, com autor, data e motivo gravados;
+a PLANILHA mexer no valor de um tipo é o que ninguém anunciou — e é para isso
+que o aviso existe. 74 alarmes para um ato só enterram esse sinal. Entra
+`mudouPelaRegua`, uma faixa única que explica a causa, e um "conferir os N
+valores novos" que grava a revisão de todos, com autor e data, sem mexer em
+valor nenhum.
+
+### ⚠️⚠️ O catálogo não chegava à nota de ninguém
+
+A conta mensal só conhecia `servico_concluido`, um valor **fixo por serviço** —
+então os 74 tipos afinados um a um valiam todos o mesmo na pontuação: uma
+`ABERTURA NORMAL` de 3 horas pesava igual a um `SERVIÇO INTERNO` de 30 minutos.
+A tela mostrava a diferença; o número que decide aumento não a via. Entra
+`pontosDeServico`, como UMA parcela na conta aberta (total e contagem, não 105
+linhas — senão a conta deixa de ser conferível justamente onde mais importa).
+
+### O que ainda falta, e por quê
+
+Rodar a régua por competência e gravar como `'calculado'`. **Espera o dump de
+atrasos e advertências**, e a razão é medida: `assiduidade_daily` termina em
+**25/06/2026** e `disciplina_evento` em **11/06/2026**, enquanto os serviços vão
+até **31/08**. Calcular hoje daria a julho e agosto **0 atraso e 0 advertência
+para todo mundo**, e com eles o bônus de "mês sem ocorrência" (+100) — a
+ausência elogiando, no primeiro número `calculado` que alguém veria.
+
+⚠️ Os 98 meses `informado` **não são sobrescritos**: foram feitos por um
+critério anterior e a pessoa já os leu. O primeiro mês calculável é **agosto de
+2026**, o primeiro com serviço e sem valor informado.
+
 ## 2026-09-08 — A régua de cada tipo de serviço atravessa os meses
 
 O pedido do dono: *"o pessoal do Legal já ajustou quanto vale cada serviço;
