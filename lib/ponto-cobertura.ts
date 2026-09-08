@@ -74,10 +74,22 @@ export async function coberturaDoPonto(): Promise<CoberturaPonto> {
   const mins = [faixaAtraso._min.day, faixaDisc._min.data].filter((v): v is string => !!v)
   const maxs = [faixaAtraso._max.day, faixaDisc._max.data].filter((v): v is string => !!v)
 
+  /* ⚠️⚠️ A COBERTURA NUNCA PASSA DE HOJE. Uma ÚNICA linha com data futura
+     empurra o "medido até" para a frente e faz o sistema afirmar que mediu dias
+     que ninguém importou — e o lado por onde essa mentira cai é o pior: dia sem
+     linha numa janela "medida" é ZERO OCORRÊNCIA, então a ausência vira elogio.
+     Medido em 08/09/2026: uma linha de `assiduidade_daily` datada de 20/09
+     (1 atraso de 2 min, de uma pessoa que não tem outra linha em todo o
+     período) sozinha estendia a cobertura 12 dias para o futuro.
+     O dado futuro continua no banco — o que ele não pode é servir de prova de
+     medição. Ver `FONTES.md`: "watermark recente NÃO prova frescor". */
+  const hoje = new Date().toISOString().slice(0, 10)
+  const ultimo = maxs.length ? maxs.sort().slice(-1)[0] : null
+
   return {
     roster,
     primeiroDia: mins.length ? mins.sort()[0] : null,
-    ultimoDia: maxs.length ? maxs.sort().slice(-1)[0] : null,
+    ultimoDia: ultimo && ultimo > hoje ? hoje : ultimo,
   }
 }
 

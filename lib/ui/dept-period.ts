@@ -14,6 +14,11 @@ export type PessoaDoSetor = {
   /** A pontuação do mês (disciplina + serviços + atividades). null = não
    *  calculada nesta competência. É mensal, não acompanha o filtro. */
   pontuacao: number | null
+  /** A conta aberta do que foi calculado na hora (parcial/prévia). O mês
+   *  gravado guarda o dela no banco e a ficha a mostra. */
+  detalhe: string | null
+  /** Executa serviço da planilha — enquanto ela não sobe, falta uma metade. */
+  fazServico: boolean
 }
 
 export type PessoaRank = {
@@ -91,6 +96,18 @@ export type DeptMetrics = {
   demografia: {
     idadeMedia: number | null; idadesInformadas: number
     tempoCasaMeses: number | null; generos: Record<string, number>
+  }
+  /** ⚠️ A pontuação do mês: se é PARCIAL (mês correndo), até quando somou, e
+   *  por que não há nada, quando não há. O "—" precisa dizer o motivo. */
+  pontuacaoDoMes: {
+    competencia: string
+    /** Mês em curso: falta o que ainda não aconteceu. */
+    parcial: boolean
+    /** Mês fechado, calculado e NÃO gravado. */
+    previa: boolean
+    ateDia: string | null; disciplinaAteDia: string | null
+    semPlanilhaDoMes: boolean
+    motivo: string | null
   }
   avaliacao: {
     competencia: string; publicadas: number; avaliaveis: number; media: number | null

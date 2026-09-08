@@ -206,7 +206,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           duas quando elas divergirem por um filtro. */}
       <Tarja>As pessoas</Tarja>
       <div id="sec-pessoas" style={{ marginBottom: 16 }}>
-        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} avaliaveis={m.avaliacao.avaliaveis} busca={busca} />}
+        {m && <Pessoas pessoas={m.pessoas} periodo={m.label} competencia={competenciaLabel(m.avaliacao.competencia)} pontuacaoDoMes={m.pontuacaoDoMes} avaliaveis={m.avaliacao.avaliaveis} busca={busca} />}
       </div>
 
       {/* 4 · TENDÊNCIA e ROTATIVIDADE, as duas reais.

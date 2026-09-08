@@ -226,7 +226,25 @@ model WhatsappDaily {
 model CideDaily {
   nexusUserId String   @map("nexus_user_id")
   day         String   @db.VarChar(10) // YYYY-MM-DD
+  /**
+   * Linhas da trilha de auditoria (`cg.alteracoes`) do dia.
+   * ⚠️⚠️ NÃO É UNIDADE DE TRABALHO. Salvar o cadastro de UMA empresa grava uma
+   * linha por campo mexido. Medido em agosto/2026: 1.920 das 1.961 linhas com
+   * responsável humano (98%) são `origem = 'SISTEMA'`, geradas pelo salvamento.
+   * A 15 min por linha, as 172 de um único dia viravam 43 HORAS.
+   */
   atividades  Int      @default(0)
+  /**
+   * Empresas DISTINTAS que a pessoa tocou no dia — a unidade de trabalho.
+   * ⚠️⚠️ NULO = o espelho é anterior a 08/09/2026, quando o CIDE passou a
+   * entregar este número. `null` não é zero: quem tem null trabalhou, só não
+   * foi medido assim. Quem consome tem de cair para `atividades` (ou recusar),
+   * NUNCA tratar como 0 — seria apagar o histórico inteiro de todo mundo.
+   * Depois do backfill completo, não deve sobrar nenhum null.
+   */
+  empresas    Int?
+  /** Alterações registradas deliberadamente (`origem = 'MANUAL'`). NULO idem. */
+  manuais     Int?
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])

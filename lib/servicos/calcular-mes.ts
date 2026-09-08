@@ -40,9 +40,41 @@ type LinhaCalculo = {
   jaTem: { pontos: number; origem: string } | null
 }
 
-export async function montar(departmentId: string, competencia: string) {
+/**
+ * ⚠️⚠️ O MÊS PARCIAL (pedido do dono, 08/09/2026).
+ *
+ * As atividades dos sistemas do Nexus são apontadas AO VIVO; a planilha de
+ * serviços do Legal sobe no FIM do mês. Enquanto o mês corre, a competência não
+ * tinha linha em `pontuacao_mes` e a coluna do setor lia "— sem pontuação no
+ * mês" para as oito pessoas — o trabalho já registrado não aparecia em lugar
+ * nenhum até o mês fechar.
+ *
+ * O parcial mostra o que JÁ ACONTECEU, e por isso ele tem três travas:
+ *
+ * 1. **Não grava.** `gravarMes` nunca o pede. Um parcial gravado viraria, no
+ *    mês seguinte, um mês fechado baixo — e ninguém saberia que faltava metade.
+ * 2. **Sem o bônus de mês limpo** (em `calcular`): no dia 8 não se afirma que o
+ *    mês foi impecável.
+ * 3. **Diz até quando mediu**, e em DUAS pontas: a atividade é fresca (sync
+ *    diário) e o ponto é import à MÃO, sem cron. As duas janelas não coincidem,
+ *    e fingir uma só faria o atraso ainda não importado ler como "não houve".
+ *
+ * ⚠️ E ele NÃO é comparável com um mês fechado: faltam os dias que não
+ * aconteceram e falta a planilha de serviços inteira. Quem exibe tem de dizer
+ * isso — é a regra (b) da casa num calendário.
+ */
+export async function montar(
+  departmentId: string,
+  competencia: string,
+  opts?: { parcial?: boolean; hoje?: string },
+) {
   const de = `${competencia}-01`
-  const ate = `${competencia}-31`
+  const fimDoMes = `${competencia}-31`
+  const hoje = opts?.hoje ?? new Date().toISOString().slice(0, 10)
+  /* Parcial só faz sentido no mês CORRENTE: num mês passado a janela inteira já
+     aconteceu, e "parcial" ali seria só um mês fechado com nome errado. */
+  const parcial = opts?.parcial === true && competencia === competenciaAtual()
+  const ate = parcial ? (hoje < fimDoMes ? hoje : fimDoMes) : fimDoMes
 
   const [regras, cobertura, cat] = await Promise.all([
     prisma.pontuacaoRegra.findMany({
@@ -58,18 +90,36 @@ export async function montar(departmentId: string, competencia: string) {
     return { erro: `Não há régua de pontuação vigente em ${competencia}. Crie a régua antes de calcular — sem ela não existe conta.` }
   }
 
-  /* ⚠️⚠️ A JANELA FOI MEDIDA? Ver a recusa nº 1. */
+  /* ⚠️⚠️ A JANELA FOI MEDIDA? Ver a recusa nº 1.
+     No PARCIAL a exigência muda de forma, não de rigor: o mês fechado precisa
+     estar medido INTEIRO (senão o bônus de mês limpo vai para dias que ninguém
+     olhou); o parcial não dá bônus nenhum, então o que ele precisa é saber ATÉ
+     ONDE o ponto chegou — e dizer. */
   const { roster, primeiroDia, ultimoDia } = cobertura
-  if (!primeiroDia || !ultimoDia || de < primeiroDia || ate > ultimoDia) {
+  if (!primeiroDia || !ultimoDia) {
+    return { erro: 'O ponto ainda não foi importado — não há janela medida.' }
+  }
+  if (!parcial && (de < primeiroDia || ate > ultimoDia)) {
     return {
-      erro: `O ponto não cobre ${competencia} inteiro (medido de ${primeiroDia ?? '—'} a ${ultimoDia ?? '—'}). `
+      erro: `O ponto não cobre ${competencia} inteiro (medido de ${primeiroDia} a ${ultimoDia}). `
         + 'Calcular assim daria o bônus de "mês sem ocorrência" a quem simplesmente não foi medido.',
     }
   }
-  /* ⚠️⚠️ Mês aberto — ver a recusa nº 2. */
-  if (competencia >= competenciaAtual()) {
+  /* ⚠️⚠️ Mês aberto — ver a recusa nº 2. Continua valendo para o que se GRAVA;
+     o parcial existe justamente para mostrar o mês aberto sem gravá-lo. */
+  if (!parcial && competencia >= competenciaAtual()) {
     return { erro: `${competencia} ainda não fechou. Um mês pela metade tem menos serviço do que terá, e a nota sairia baixa por isso.` }
   }
+
+  /* ⚠️⚠️ AS DUAS JANELAS DO PARCIAL. A atividade vem de sync diário (fresca até
+     hoje); o ponto é import à mão, SEM CRON, e pode estar dias atrás. Usar a
+     janela da atividade para a disciplina faria o atraso ainda não importado
+     ler como "não houve atraso" — a ausência virando elogio pela porta do
+     calendário. Então a disciplina para onde o ponto parou. */
+  const disciplinaAte = parcial ? (ate < ultimoDia ? ate : ultimoDia) : ate
+  /* O ponto não alcançou nem o começo do mês: não há disciplina medida para
+     ninguém nesta janela. Todos pontuam só por serviço e atividade. */
+  const semDisciplinaNaJanela = parcial && disciplinaAte < de
 
   const pontosPorTarefa = new Map(cat.tarefas.map((t) => [normalizarTarefa(t.tarefa), t.pontos]))
 
@@ -78,12 +128,13 @@ export async function montar(departmentId: string, competencia: string) {
       where: { departmentId, origin: { in: ['nexus', 'staff'] }, active: true },
       select: { id: true, nexusUserId: true, name: true },
     }),
-    prisma.assiduidadeDaily.findMany({
-      where: { day: { gte: de, lte: ate } },
+    /* ⚠️ Disciplina até onde o PONTO mediu (ver `disciplinaAte`), não até hoje. */
+    semDisciplinaNaJanela ? Promise.resolve([]) : prisma.assiduidadeDaily.findMany({
+      where: { day: { gte: de, lte: disciplinaAte } },
       select: { personKey: true, atrasos: true, atrasosAbon: true },
     }),
-    prisma.disciplinaEvento.groupBy({
-      by: ['personKey'], where: { tipo: 'advertencia', data: { gte: de, lte: ate } }, _count: { _all: true },
+    semDisciplinaNaJanela ? Promise.resolve([]) : prisma.disciplinaEvento.groupBy({
+      by: ['personKey'], where: { tipo: 'advertencia', data: { gte: de, lte: disciplinaAte } }, _count: { _all: true },
     }),
     prisma.servicoDepto.findMany({
       where: { departmentId, status: 'concluida', dia: { gte: de, lte: ate }, personKey: { not: null } },
@@ -146,7 +197,7 @@ export async function montar(departmentId: string, competencia: string) {
        O que ele NÃO leva é base nem bônus de mês limpo, que exigiriam afirmar
        que o mês dele foi impecável quando ninguém o mediu (a ausência-que-
        elogia). A tela diz "sem ponto" nessas linhas. */
-    const semPonto = !roster.has(pk)
+    const semPonto = !roster.has(pk) || semDisciplinaNaJanela
     if (semPonto) semPontoNomes.push(p.name)
     const c = calcular(
       { base: regra.base, itens: regra.itens },
@@ -155,7 +206,7 @@ export async function montar(departmentId: string, competencia: string) {
         servicosConcluidos: s.n, pontosDeServico: s.pts,
         totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
       },
-      { semDisciplina: semPonto },
+      { semDisciplina: semPonto, parcial },
     )
     linhas.push({
       personKey: pk, nome: p.name,
@@ -172,6 +223,12 @@ export async function montar(departmentId: string, competencia: string) {
   return {
     competencia, regraId: regra.id, vigenteDesde: regra.vigenteDesde, base: regra.base,
     fatorPorMinuto: regra.fatorPorMinuto,
+    /** O mês ainda não fechou: este número NÃO é comparável com um mês cheio. */
+    parcial,
+    /** Até que dia a atividade e os serviços foram somados. */
+    ateDia: ate,
+    /** Até que dia o PONTO mediu — pode ser antes, e a tela diz as duas. */
+    disciplinaAteDia: semDisciplinaNaJanela ? null : disciplinaAte,
     /** ⚠️ Recusa nº 3: quem já tem valor informado não é recalculado. */
     informados: linhas.filter((l) => l.jaTem?.origem === 'informado').map((l) => l.nome),
     /** Quem o ponto não mede — NÃO fica de fora; pontua por serviço+atividade,

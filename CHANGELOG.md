@@ -1,5 +1,124 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (fim, 3) — O mês corrente pontua ao vivo, e o CIDE contava trilha de auditoria
+
+### A pergunta do dono
+
+*"Verifique no Legal, porque nenhuma pontuação está sendo aplicada, uma vez que
+todos os sistemas do Nexus já têm serviços realizados."* — e ele tinha razão: a
+coluna "Pontuação do mês" lia **"— sem pontuação no mês"** para as 8 pessoas do
+Legal enquanto elas já tinham atividade registrada naquele mesmo dia.
+
+Não era defeito da régua: `pontuacao_mes` só ganha linha quando o mês FECHA e
+alguém roda a competência. `montar` recusava setembro com *"2026-09 ainda não
+fechou"*. O que faltava é o que o dono apontou: **a atividade dos sistemas do
+Nexus é apontada ao vivo; a planilha de serviços do Legal sobe no fim do mês.**
+
+### O mês PARCIAL, com três travas
+
+`montar(dept, comp, { parcial: true })` — a MESMA lib, nunca uma segunda régua.
+
+1. **Não grava.** `gravarMes` nunca pede parcial. Um parcial gravado viraria, no
+   mês seguinte, um mês fechado baixo, e ninguém saberia que faltava metade.
+2. **Sem o bônus de mês limpo.** No dia 8 não se afirma que o mês foi impecável.
+   O tamanho disso, medido: 4 das 8 linhas de agosto carregam `+100`, e esses
+   100 sozinhos são **maiores que a pontuação parcial inteira de 5 das 8
+   pessoas** (80, 35, 20, 20, 2).
+3. **Duas janelas, porque elas não coincidem.** Atividade e serviço somam até
+   hoje; a disciplina para onde o **ponto** foi importado (import à mão, sem
+   cron). Usar a janela da atividade faria o atraso ainda não importado ler como
+   "não houve atraso".
+
+Setembro do Legal até 08/09: Lucas 258, Joice 194, Yago 137, Gabriel 80,
+Marcia 35, Evandro 20, Ezequiel 20, Marcos 2.
+
+### ⚠️⚠️ O que o agente crítico pegou: a distorção era entre PESSOAS, não entre meses
+
+Meu aviso dizia "não comparável com um mês fechado". Mas a tela **não compara
+meses** — ela diz "8 pessoas comparadas entre si", ordena por pontuação e desenha
+barra relativa a quem mais pontuou. O parcial retira **uma metade inteira** (os
+serviços), e essa metade **não é distribuída por igual**:
+
+| | quanto do agosto veio de serviço | agosto | setembro parcial |
+|---|---|---|---|
+| Marcos Gabriel | **70%** | 7º | 8º |
+| Marcia Borges | **66%** | 5º | 5º |
+| **Ezequiel Castro** | **58%** | **3º (1251)** | **7º de 8 (20)** |
+| Lucas Souza | 12% | 1º | 1º |
+
+O Ezequiel, dos **105 serviços em agosto**, aparecia em 7º com barra de 8% da do
+primeiro — por falta de fonte, não por produção. **A barra caiu** enquanto a
+metade de serviço não existe para ninguém (o número fica; o desenho que afirma
+"este vale um oitavo daquele" sai), quem executa serviço ganhou um marcador na
+linha, e o aviso diz isso com todas as letras.
+
+E mais quatro, todas consertadas:
+
+- **O parcial não tinha conta aberta em lugar nenhum.** `montar` calcula
+  `detalhe` por pessoa e a rota jogava fora — o único número do painel que
+  decide aumento sem como conferir. Agora vai no `title` da linha, e
+  `/api/servicos/pontuacao` aceita `?parcial=1` (sem ele, uma tela mostrava o
+  número e a outra respondia 422 *"o mês ainda não fechou"* sobre ele).
+- **Ele sumia sozinho no dia 1º.** Em 30/09 o gestor via o ranking de setembro;
+  em 01/10 as 8 voltavam a "—" até alguém rodar a régua à mão. Mês fechado sem
+  valor gravado passa a mostrar **prévia** (calculada, não gravada).
+- **Um único registro desligava tudo em silêncio.** A trava era
+  `pontosMesRows.length === 0`, e um upload no meio do mês grava `informado`
+  para toda competência do arquivo. Agora **falha em voz alta**: "N de M pessoas
+  têm valor gravado — a prévia das demais fica desligada".
+- **A cobertura do ponto podia ser empurrada para o futuro por UMA linha.**
+  `ultimoDia` era o `max` das ocorrências, e havia uma linha de
+  `assiduidade_daily` datada de **20/09/2026** (1 atraso de 2 min, de quem não
+  tem outra linha no período). Ela sozinha fazia o sistema afirmar cobertura 12
+  dias adiante — e dia sem linha numa janela "medida" é **zero ocorrência**, ou
+  seja, a ausência-que-elogia. `coberturaDoPonto` agora **trava em hoje**.
+
+### ⚠️⚠️ E o levantamento que a pergunta seguinte abriu: o CIDE não conta trabalho
+
+*"O Lucas tem no máximo 3 meses de empresa, o resultado está certo?"* — Lucas
+Souza entrou em **14/07/2026** e era o 1º do Legal em agosto, com 2.061.
+
+O volume é real (**209 atendimentos de WhatsApp finalizados**, o maior do setor;
+só existe um "Lucas Souza" na base, então não é o casamento por nome). Mas a
+conta aberta mostrou outra coisa: somando `quantidade × a média de minutos que a
+régua usa`, a régua afirma que o **Lucas trabalhou 251 h** e a **Joice 236 h**
+num mês de ~176 h — **antes** dos serviços da planilha.
+
+A causa está na fonte. `cide_daily.atividades` espelha `cg.alteracoes`, que é a
+**trilha de auditoria** do CIDE: salvar o cadastro de UMA empresa grava uma linha
+por campo mexido. Agosto/2026, casa toda:
+
+| origem | linhas |
+|---|---|
+| `MANUAL` (registrada por alguém) | **41** |
+| `SISTEMA` (gerada ao salvar) | **1.920 (98%)** |
+
+Conferido no relógio: as 172 linhas da Joice em 20/08 saem em rajadas de 7–9 por
+minuto, **sempre na mesma empresa** — é uma pessoa editando um cadastro, não uma
+importação. O trabalho é real; a **unidade** é que está errada. A 15 min por
+linha, aquele dia virava **43 horas**.
+
+⚠️⚠️ **E a inflação NÃO é uniforme**, que é o que torna isso injusto e não só
+grande: 700 linhas em **73** empresas-dia (9,6×) contra 330 em **112** (2,9×).
+Quem mais ganha com a contagem de hoje é justamente quem assumiria o 1º lugar se
+o WhatsApp fosse cortado.
+
+**Decisão do dono: trocar a unidade.** O CIDE
+(`/api/integrations/atividade-daily`) passa a entregar também `empresas`
+(distintas tocadas no dia — a unidade de trabalho) e `manuais`, mantendo
+`atividades` para não quebrar quem lê. `cide_daily` ganhou as duas colunas,
+**anuláveis**: `null` = espelho anterior a hoje, e `null` não é zero —
+`run-cide-sync.mjs --tudo` repuxa a história inteira.
+
+⚠️ **A troca dos consumidores ficou de fora deste deploy, de propósito.** Trocar
+antes do backfill leria `null` como zero e apagaria o CIDE de todo mundo — o
+`_sum` do Prisma ignora nulos em silêncio. Ela entra depois, de uma vez (a régua
+e `activityOf()` têm de virar juntas, ou o score e a "atividade" da lista
+divergem), com o antes/depois medido.
+
+⚠️ **A média de 15 min terá de ser redecidida**: era o tempo de uma linha da
+trilha, e a unidade agora é a empresa atendida.
+
 ## 2026-09-08 (fim, 2) — Atividade vira MINUTOS × FATOR, como os serviços
 
 Pedido do dono: classificar as atividades por duração, "a mesma multiplicação de

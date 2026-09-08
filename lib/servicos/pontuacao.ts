@@ -85,7 +85,11 @@ export type Calculo = {
  * nem advertência: um atraso justificado não pune, mas também não é "mês sem
  * ocorrência" — senão o bônus premiaria quem se atrasou com justificativa.
  */
-export function calcular(regra: Regra, oc: Ocorrencias, opcoes?: { semDisciplina?: boolean }): Calculo {
+export function calcular(
+  regra: Regra,
+  oc: Ocorrencias,
+  opcoes?: { semDisciplina?: boolean; parcial?: boolean },
+): Calculo {
   const ponto = (chave: string) => regra.itens.find((i) => i.evento === chave)?.pontos ?? 0
   /* ⚠️⚠️ `semDisciplina` = a pessoa NÃO é medida pelo ponto. Ela ainda pontua
      pelo que fez (serviços e atividades), mas SEM a metade disciplinar: sem
@@ -126,9 +130,15 @@ export function calcular(regra: Regra, oc: Ocorrencias, opcoes?: { semDisciplina
     })
   }
 
+  /* ⚠️⚠️ `parcial` = o mês AINDA NÃO FECHOU. O bônus de mês limpo não entra:
+     no dia 8 ninguém sabe se o mês vai terminar sem ocorrência, e adiantá-lo é
+     afirmar sobre 22 dias que não aconteceram. É a ausência-que-elogia com
+     roupa de calendário — e ela premiaria justamente quem ainda vai se atrasar.
+     O que já aconteceu (atraso, advertência, serviço, atividade) conta; o que
+     depende do mês inteiro, espera o mês inteiro. */
   const limpo = oc.atrasos === 0 && oc.atrasosAbonados === 0 && oc.advertencias === 0
   const bonus = ponto('mes_sem_ocorrencia')
-  if (!semDisc && limpo && bonus) {
+  if (!semDisc && !opcoes?.parcial && limpo && bonus) {
     parcelas.push({ label: 'Mês sem ocorrência', quantidade: 1, unitario: bonus, total: bonus })
   }
 

@@ -5,6 +5,8 @@ import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/per
 import { quemEh, filtroDeAvaliaveis, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
+import { montar } from '@/lib/servicos/calcular-mes'
+import { competenciaAtual } from '@/lib/servicos/pontuacao'
 
 /* ============================================================
    O RELATÓRIO DE UM DEPARTAMENTO, no período pedido.
@@ -432,6 +434,86 @@ export async function GET(req: NextRequest) {
     select: { personKey: true, pontos: true },
   })
   const pontosMesDe = new Map(pontosMesRows.map((r) => [r.personKey, r.pontos]))
+
+  /* ⚠️⚠️ O MÊS CORRENTE PONTUA AO VIVO (pedido do dono, 08/09/2026).
+     `pontuacao_mes` só ganha linha quando alguém roda a régua — então, durante
+     o mês inteiro, a coluna lia "— sem pontuação no mês" para o setor todo,
+     enquanto as oito pessoas do Legal já tinham atividade registrada nos
+     sistemas do Nexus naquele mesmo dia. O trabalho existia e a tela não o
+     mostrava em lugar nenhum até o mês virar.
+
+     A conta é a MESMA (`montar`, a lib única): em modo PARCIAL no mês corrente
+     (sem bônus de mês limpo), e em modo cheio num mês já fechado que ninguém
+     gravou — ali é uma PRÉVIA, calculada e não gravada.
+
+     ⚠️ Sem a prévia do mês fechado, a coluna esvaziava sozinha no dia 1º: em
+     30/09 o gestor via o ranking de setembro e em 01/10 as oito pessoas
+     voltavam a "—" até alguém rodar a régua à mão (não há cron). O número
+     sumia exatamente no dia em que a competência fecha e a decisão é tomada. */
+  const mesCorrente = compAtual === competenciaAtual()
+  const detalheDe = new Map<string, string>()
+  /* Quem executa serviço da planilha — ver `semPlanilhaDoMes`. É "alguma vez",
+     não "no mês": a pergunta é se ESTA pessoa depende da metade que falta. */
+  const gComServico = await prisma.servicoDepto.groupBy({
+    by: ['personKey'],
+    where: { departmentId: dept.id, status: 'concluida', personKey: { not: null } },
+    _count: { _all: true },
+  })
+  const fazServicoSet = new Set(gComServico.map((r) => r.personKey).filter((v): v is string => !!v))
+
+  let pontuacaoDoMes: {
+    competencia: string
+    /** Mês em curso: falta o que ainda não aconteceu. */
+    parcial: boolean
+    /** Mês fechado, calculado e NÃO gravado. */
+    previa: boolean
+    ateDia: string | null; disciplinaAteDia: string | null
+    /** A planilha de serviços do setor ainda não cobre este mês. */
+    semPlanilhaDoMes: boolean
+    /** Por que não há pontuação a mostrar — o "—" tem de dizer o motivo. */
+    motivo: string | null
+  } = {
+    competencia: compAtual, parcial: false, previa: false,
+    ateDia: null, disciplinaAteDia: null, semPlanilhaDoMes: false,
+    motivo: pontosMesRows.length ? null : 'a régua ainda não foi rodada nesta competência',
+  }
+  if (pontosMesRows.length === 0) {
+    const r = await montar(dept.id, compAtual, { parcial: mesCorrente })
+    if ('erro' in r) {
+      /* ⚠️ A recusa da lib é escrita para quem PODE criar a régua (o gestor do
+         setor). Quem lê o relatório pode ser a Diretoria, para quem "Crie a
+         régua antes de calcular" é uma instrução que ela não executa. */
+      pontuacaoDoMes.motivo = (r.erro ?? '').includes('régua')
+        ? 'este setor ainda não tem régua de pontuação'
+        : r.erro ?? null
+    } else {
+      for (const l of r.linhas) {
+        pontosMesDe.set(l.personKey, l.pontos)
+        detalheDe.set(l.personKey, l.detalhe)
+      }
+      pontuacaoDoMes = {
+        competencia: compAtual, parcial: r.parcial, previa: !r.parcial,
+        ateDia: r.ateDia, disciplinaAteDia: r.disciplinaAteDia,
+        /* ⚠️ "0 serviços" aqui NÃO é "não fez serviço": a planilha do setor sobe
+           no fim do mês. Sem esta distinção o parcial rebaixa justamente quem
+           mais executa — em agosto/2026 a metade de serviço era 58% a 70% da
+           pontuação de três pessoas do Legal, e no parcial de setembro o
+           Ezequiel (105 serviços em agosto) caía de 3º para 7º de 8, por falta
+           de fonte e não por produção. */
+        semPlanilhaDoMes: r.linhas.every((l) => l.servicosConcluidos === 0),
+        motivo: null,
+      }
+    }
+  } else if (pontosMesRows.length < ativos.length) {
+    /* ⚠️ FALHA EM VOZ ALTA. A prévia se desliga quando já existe valor gravado
+       — e bastava UMA linha (um upload de planilha no meio do mês grava
+       `informado` para toda competência do arquivo) para as outras pessoas
+       voltarem a "—" sem nenhuma mensagem. Misturar mês gravado e prévia na
+       mesma coluna comparativa seria pior; dizer que está desligada, não. */
+    pontuacaoDoMes.motivo = `${pontosMesRows.length} de ${ativos.length} pessoas têm valor gravado nesta competência — `
+      + 'enquanto houver valor gravado, a prévia ao vivo das demais fica desligada'
+  }
+
   const equipePessoas = ativos.map((p) => {
     const k = p.nexusUserId
     const pk = p.nexusUserId ?? p.id
@@ -455,6 +537,14 @@ export async function GET(req: NextRequest) {
       // null = ainda não avaliada nesta competência (≠ nota zero).
       nota: notaDe.get(p.id) ?? null,
       pontuacao: pontosMesDe.get(p.nexusUserId ?? p.id) ?? null,
+      /* ⚠️ A CONTA ABERTA. Uma pontuação que decide aumento e chega como um
+         inteiro solto não se discute. O mês gravado tem `detalhe` no banco e a
+         ficha o mostra; o calculado na hora só existe aqui — jogá-lo fora
+         deixava o único número do painel sem como conferir. */
+      detalhe: detalheDe.get(p.nexusUserId ?? p.id) ?? null,
+      /* Executa serviço da planilha: enquanto a planilha do mês não subir, a
+         pontuação desta pessoa está sem uma das metades. */
+      fazServico: fazServicoSet.has(p.nexusUserId ?? p.id),
     }
   })
 
@@ -672,6 +762,7 @@ export async function GET(req: NextRequest) {
       tempoCasaMeses: meses.length ? Math.round(meses.reduce((a, b) => a + b, 0) / meses.length) : null,
       generos,
     },
+    pontuacaoDoMes,
     avaliacao: {
       competencia: compAtual,
       publicadas: avals.length,

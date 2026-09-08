@@ -63,6 +63,7 @@ parado conclui que a tela travou.
 | O quê | Por quê |
 |---|---|
 | Avaliação mensal | é mensal por natureza; não se recorta em "últimos 7 dias" |
+| **Pontuação do mês** | mensal, como a avaliação. ⚠️⚠️ Mas ela troca de **competência** com o filtro (quando ele cabe num mês só) **e de definição**: no mês corrente é **parcial** (sem o bônus de mês limpo, e sem os serviços da planilha, que sobem no fim do mês); num mês fechado sem valor gravado é **prévia**. Em 07/09 o preset "7 dias" cai em agosto **fechado** e em 08/09 cai em setembro **parcial** — o mesmo filtro, um dia depois, com outro ranking. A tela diz qual é, no sub-rótulo e na faixa; o caminho deliberado é o card de meses |
 | Idade média, tempo de casa, gênero | retrato de hoje |
 | Snapshot de backlog do WhatsApp | é "agora", não um período |
 | Advertências (KPI da home) | é registro cumulativo, e o código diz isso de propósito (`lib/mock/dashboard.ts`) — ⚠️ mas **o cartão não avisa**, e ele fica debaixo de "Período: Últimos 30 dias". Dívida aberta: falta o rótulo, não a decisão |
