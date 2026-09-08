@@ -62,7 +62,14 @@ export default async function EscolaridadePage() {
   const semSexo = ativos
     .filter((e) => !e.gender || !e.gender.trim())
     .map((e) => ({
-      id: e.nexusUserId ?? e.id, nome: e.name,
+      /* ⚠️⚠️ O ID LOCAL, não o `nexusUserId`. `/api/avatar/[id]` e
+         `/funcionarios/[id]` são os DOIS indexados pelo `users.id` (cuid) — o
+         `nexusUserId` é a chave de casamento com o diretório e serve para
+         formação e espelhos, não para navegar nem para buscar a foto. Passar o
+         errado dá 404 nos dois: retrato quebrado na lista e ficha inexistente
+         no clique. Foi o que aconteceu em 08/09/2026, na primeira versão desta
+         tela. */
+      id: e.id, nome: e.name,
       dept: e.department?.name ?? '—',
       cargo: e.jobTitle ?? 'Colaborador',
       hasAvatar: !!e.avatarUrl,
