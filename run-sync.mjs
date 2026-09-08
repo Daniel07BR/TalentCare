@@ -4,6 +4,16 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
 const prisma = new PrismaClient()
+
+/** 'M'|'F' do Nexus → o texto deste banco. Espelho de `mapSexo` em lib/nexus.ts:
+ *  o normalizador do painel lê por prefixo `masc`/`fem`, então um 'M' cru seria
+ *  lido como "não informado" logo depois de alguém informar o sexo. */
+const mapSexo = (v) => {
+  const t = String(v ?? '').trim().toUpperCase()
+  if (t === 'M' || t.startsWith('MASC')) return 'Masculino'
+  if (t === 'F' || t.startsWith('FEM')) return 'Feminino'
+  return null
+}
 const NEXUS_BASE_URL = process.env.NEXUS_BASE_URL
 const NEXUS_API_KEY = process.env.NEXUS_API_KEY
 const ADMIN_EMAILS = (process.env.TALENTCARE_ADMIN_EMAILS ?? '')
@@ -106,6 +116,11 @@ async function main() {
         departmentId: dept?.id ?? undefined,
         // Admissão não sobrescreve correção local (planilha RH > hireDate do Nexus).
         entryDate: local.entryDate ?? (nu.hireDate ? new Date(nu.hireDate) : undefined),
+        /* ⚠️⚠️ Cópia INEVITÁVEL da régua de `lib/nexus.ts` (este script roda em
+           node puro e não importa do `lib/`) — mexeu numa, mexa na outra. E
+           `undefined` quando o Nexus não sabe: `null` apagaria as 92 pessoas que
+           a planilha do DP preencheu e que ela não vai preencher de novo. */
+        gender: mapSexo(nu.gender) ?? undefined,
         passwordHash: nu.passwordHash ?? undefined,
       } })
       updated++
@@ -114,7 +129,7 @@ async function main() {
       await prisma.user.create({ data: {
         name: nu.name, email: nu.email, passwordHash: pw, role: computed, active: isActive,
         leftAt: isActive ? null : (nu.terminationDate ? new Date(nu.terminationDate) : (nu.updatedAt ? new Date(nu.updatedAt) : new Date())),
-        jobTitle: nu.role ?? null, avatarUrl: nu.avatar ?? null,
+        jobTitle: nu.role ?? null, avatarUrl: nu.avatar ?? null, gender: mapSexo(nu.gender),
         nexusUserId: nu.id, origin: 'nexus', domainAccount: nu.username ?? null,
         windowsUser: nu.username ?? null, phone: nu.phone ?? null, departmentId: dept?.id ?? null,
         entryDate: nu.hireDate ? new Date(nu.hireDate) : null,

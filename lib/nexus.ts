@@ -153,6 +153,13 @@ interface NexusEmployee {
   // Data de saída/desligamento definida no Nexus (fonte real de turnover). null se
   // ainda ativo ou se foi inativado sem data. Espelhada em User.leftAt.
   terminationDate: string | null
+  /**
+   * Sexo: 'M' | 'F' | null. O Nexus passou a ser a fonte em 08/09/2026.
+   * ⚠️⚠️ Antes o campo vinha de UMA planilha do DP importada uma única vez, que
+   * não será reimportada — 11 das 87 pessoas ativas ficaram sem sexo e não havia
+   * onde apontá-lo. `null` é "não informado" e continua sendo uma resposta.
+   */
+  gender?: string | null
   educationItems?: { tipo: string; curso: string; cursando: boolean }[] | null
   educationLevel?: string | null
   educationDetail?: string | null
@@ -190,6 +197,23 @@ async function resolveDepartment(name: string | null, nexusId: string | null) {
     }
     return prisma.department.create({ data: { name, nexusDepartmentId: nexusId } })
   }
+  return null
+}
+
+/**
+ * 'M' | 'F' do Nexus → o texto que este banco já usa ('Masculino'|'Feminino').
+ *
+ * ⚠️⚠️ A TRADUÇÃO EXISTE PARA NÃO CRIAR UMA SEGUNDA CATEGORIA. As 92 pessoas
+ * que a planilha do DP preencheu estão como "Feminino"/"Masculino", e o
+ * normalizador do painel (`gNorm`, em `lib/mock/demographics.ts`) lê pelo
+ * prefixo `masc`/`fem` — um 'M' cru cairia em "não informado" e a pessoa
+ * apareceria como sem sexo logo depois de alguém ter informado o sexo dela.
+ * ⚠️ Qualquer outra coisa devolve `null`: valor desconhecido não vira chute.
+ */
+function mapSexo(v: string | null | undefined): string | null {
+  const t = (v ?? '').trim().toUpperCase()
+  if (t === 'M' || t.startsWith('MASC')) return 'Masculino'
+  if (t === 'F' || t.startsWith('FEM')) return 'Feminino'
   return null
 }
 
@@ -276,6 +300,13 @@ export async function syncFromNexus(): Promise<SyncResult> {
             // Admissão: NÃO sobrescreve valor já existente (correção manual / planilha RH
             // prevalece; o hireDate do Nexus é pouco confiável). Só preenche se vazio.
             entryDate: local.entryDate ?? (nu.hireDate ? new Date(nu.hireDate) : undefined),
+            /* SEXO: o Nexus é a fonte desde 08/09/2026.
+               ⚠️⚠️ `undefined` quando o Nexus não informa — e não `null`. A
+               planilha do DP preencheu 92 pessoas e não vai rodar de novo; um
+               `null` aqui apagaria essas 92 no primeiro sync, trocando um buraco
+               de 11 por um de 103. O Nexus só ESCREVE o que ele sabe; o que ele
+               não sabe, não desfaz. */
+            gender: mapSexo(nu.gender) ?? undefined,
             // Espelha a senha do Nexus quando definida (só atualiza se veio hash).
             passwordHash: nu.passwordHash ?? undefined,
           },
@@ -290,6 +321,7 @@ export async function syncFromNexus(): Promise<SyncResult> {
             email: nu.email,
             passwordHash: randomPw,
             role: computed,
+            gender: mapSexo(nu.gender),
             jobTitle: nu.role ?? null,
             avatarUrl: nu.avatar ?? null,
             active: isActive,
