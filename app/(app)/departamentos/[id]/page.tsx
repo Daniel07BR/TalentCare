@@ -152,7 +152,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
         </div>
         {m?.setor.podeGerir && (
           <button
-            onClick={() => irPara(`/servicos?setor=${m.setor.id}`)}
+            onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
             title="Enviar a planilha de serviços e definir a régua de pontuação deste setor"
           >
