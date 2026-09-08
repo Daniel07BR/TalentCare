@@ -40,6 +40,14 @@ export type Ocorrencias = {
   advertencias: number
   servicosConcluidos: number
   /**
+   * A soma dos pontos das ATIVIDADES do mês, já pela régua de atividades do
+   * setor (a terceira metade — pedido do dono, 08/09/2026). Entra como UMA
+   * parcela, igual aos serviços; a conta aberta não vira 18 linhas.
+   */
+  pontosDeAtividade?: number
+  /** Quantas ATIVIDADES a pessoa fez no mês — o rótulo da parcela. */
+  totalAtividades?: number
+  /**
    * A soma dos pontos dos serviços do mês, JÁ pelo catálogo de tipos.
    * ⚠️⚠️ Sem isto o catálogo inteiro não chegava à nota de ninguém. A conta só
    * conhecia `servico_concluido` — um valor FIXO por serviço —, então os 74
@@ -77,20 +85,29 @@ export type Calculo = {
  * nem advertência: um atraso justificado não pune, mas também não é "mês sem
  * ocorrência" — senão o bônus premiaria quem se atrasou com justificativa.
  */
-export function calcular(regra: Regra, oc: Ocorrencias): Calculo {
+export function calcular(regra: Regra, oc: Ocorrencias, opcoes?: { semDisciplina?: boolean }): Calculo {
   const ponto = (chave: string) => regra.itens.find((i) => i.evento === chave)?.pontos ?? 0
-  const parcelas: Calculo['parcelas'] = [
-    { label: 'Base do mês', quantidade: 1, unitario: regra.base, total: regra.base },
-  ]
+  /* ⚠️⚠️ `semDisciplina` = a pessoa NÃO é medida pelo ponto. Ela ainda pontua
+     pelo que fez (serviços e atividades), mas SEM a metade disciplinar: sem
+     base, sem atraso/advertência (que ela não tem porque ninguém mediu) e sem
+     o bônus de mês limpo. Dar o bônus a quem o ponto não cobre é a
+     ausência-que-elogia — a face invertida do `null`, que premia quem o sistema
+     nem olha. Ver `docs/CONTINUAR-AQUI.md` §2(a). */
+  const semDisc = opcoes?.semDisciplina === true
+  const parcelas: Calculo['parcelas'] = semDisc
+    ? []
+    : [{ label: 'Base do mês', quantidade: 1, unitario: regra.base, total: regra.base }]
 
   const linha = (chave: string, label: string, qtd: number) => {
     const u = ponto(chave)
     if (!qtd || !u) return
     parcelas.push({ label, quantidade: qtd, unitario: u, total: u * qtd })
   }
-  linha('atraso', 'Atrasos', oc.atrasos)
-  linha('atraso_abonado', 'Atrasos abonados', oc.atrasosAbonados)
-  linha('advertencia', 'Advertências', oc.advertencias)
+  if (!semDisc) {
+    linha('atraso', 'Atrasos', oc.atrasos)
+    linha('atraso_abonado', 'Atrasos abonados', oc.atrasosAbonados)
+    linha('advertencia', 'Advertências', oc.advertencias)
+  }
   linha('servico_concluido', 'Serviços concluídos', oc.servicosConcluidos)
   /* ⚠️ Entra como UMA parcela, com o total e a contagem — e não 105 linhas.
      A conta aberta existe para a pessoa conferir; uma lista com um item por
@@ -101,10 +118,17 @@ export function calcular(regra: Regra, oc: Ocorrencias): Calculo {
       quantidade: 1, unitario: oc.pontosDeServico, total: oc.pontosDeServico,
     })
   }
+  /* A terceira metade: atividades dos sistemas do Nexus, pela régua do setor. */
+  if (oc.pontosDeAtividade) {
+    parcelas.push({
+      label: `Atividades dos sistemas (${oc.totalAtividades ?? 0})`,
+      quantidade: 1, unitario: oc.pontosDeAtividade, total: oc.pontosDeAtividade,
+    })
+  }
 
   const limpo = oc.atrasos === 0 && oc.atrasosAbonados === 0 && oc.advertencias === 0
   const bonus = ponto('mes_sem_ocorrencia')
-  if (limpo && bonus) {
+  if (!semDisc && limpo && bonus) {
     parcelas.push({ label: 'Mês sem ocorrência', quantidade: 1, unitario: bonus, total: bonus })
   }
 

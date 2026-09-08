@@ -20,12 +20,13 @@ type Linha = {
   personKey: string; nome: string
   atrasos: number; atrasosAbonados: number; advertencias: number
   servicosConcluidos: number; pontosDeServico: number
+  totalAtividades: number; pontosDeAtividade: number; semPonto: boolean
   pontos: number; detalhe: string
   jaTem: { pontos: number; origem: string } | null
 }
 type Resultado = {
   competencia: string; base: number; fatorPorMinuto: number; vigenteDesde: string
-  informados: string[]; foraDoPonto: string[]; semServico: string[]; linhas: Linha[]
+  informados: string[]; foraDoPonto: string[]; semServico: string[]; atividadesNoPadrao?: boolean; linhas: Linha[]
   gravadas?: number; preservadas?: number
 }
 
@@ -111,14 +112,29 @@ export default function PontuacaoMes({ departmentId, setorNome }: { departmentId
           <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginBottom: 8 }}>
             Régua vigente desde {r.vigenteDesde} · base {r.base} · {r.fatorPorMinuto} ponto por minuto
           </div>
+          {/* ⚠️⚠️ Os pesos de atividade ainda são o padrão (1). Medido em
+              08/09/2026: no Legal isso põe a Joice (8 serviços, 842 atividades)
+              à frente do Ezequiel (105 serviços) — um chamado de chat pesando
+              igual a um serviço jurídico de 3h. O gestor ajusta em "Pontos por
+              atividade", acima. Não trava a gravação (decisão do dono), mas
+              avisa. */}
+          {r.atividadesNoPadrao && (
+            <div style={{ fontSize: 12, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 10, lineHeight: 1.55 }}>
+              <TriangleAlert size={13} style={{ verticalAlign: -2 }} />{' '}
+              <b>As atividades estão contando pelo peso padrão (1).</b> A nota está somando cada ação dos sistemas com o
+              mesmo valor — um chamado de chat pesa igual a um serviço longo. Defina os pesos em <b>“Pontos por
+              atividade”</b>, acima, antes de gravar, ou a nota sai dominada por quem tem mais volume.
+            </div>
+          )}
           {/* ⚠️⚠️ QUEM FICOU DE FORA, e por quê. Sem esta linha a lista parece a
               equipe inteira, e quem o ponto não mede simplesmente não aparece —
               a ausência silenciosa que a casa já pagou caro para aprender. */}
           {r.foraDoPonto.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10, lineHeight: 1.55 }}>
-              <b>{r.foraDoPonto.length}</b> {r.foraDoPonto.length === 1 ? 'pessoa do setor ficou de fora' : 'pessoas do setor ficaram de fora'} por não
-              {' '}{r.foraDoPonto.length === 1 ? 'ser medida' : 'serem medidas'} pelo ponto ({r.foraDoPonto.join(', ')}).
-              {' '}Elas entrariam sem atraso nenhum e com o bônus de mês limpo — ganhando de quem é medido e chegou no horário.
+              <b>{r.foraDoPonto.length}</b> {r.foraDoPonto.length === 1 ? 'pessoa não é medida' : 'pessoas não são medidas'} pelo ponto
+              ({r.foraDoPonto.join(', ')}). {r.foraDoPonto.length === 1 ? 'Ela pontua' : 'Elas pontuam'} por <b>serviço e atividade</b>,
+              mas <b>sem a metade disciplinar</b> — sem base e sem o bônus de mês limpo, que exigiriam afirmar um mês impecável
+              que ninguém mediu.
             </div>
           )}
           {/* ⚠️⚠️ Dois eixos diferentes na mesma lista. A metade de serviço só
@@ -146,13 +162,16 @@ export default function PontuacaoMes({ departmentId, setorNome }: { departmentId
             {r.linhas.map((l) => (
               <div key={l.personKey} style={{ padding: '8px 10px', borderRadius: 6, background: 'var(--surface-2)' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 12.5 }}>
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{l.nome}</span>
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                    {l.nome}
+                    {l.semPonto && <span style={{ marginLeft: 7, fontSize: 10, color: 'var(--text-mute)', fontWeight: 600 }} title="Não é medida pelo ponto — pontua por serviço e atividade, sem a metade disciplinar.">sem ponto</span>}
+                  </span>
                   {l.jaTem && (
                     <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
                       hoje {l.jaTem.pontos} ({l.jaTem.origem})
                     </span>
                   )}
-                  <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: l.jaTem?.origem === 'informado' ? 'var(--text-mute)' : 'var(--text)' }}>
+                  <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: l.jaTem?.origem === 'informado' ? 'var(--text-mute)' : l.pontos < 0 ? 'var(--danger)' : 'var(--text)' }}>
                     {l.jaTem?.origem === 'informado' ? '—' : l.pontos}
                   </span>
                 </div>

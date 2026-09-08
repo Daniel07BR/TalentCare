@@ -5,6 +5,8 @@ import { quemEh, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { calcularCatalogo } from '@/lib/servicos/catalogo'
 import { calcular, competenciaAtual, competenciaValida, regraDaCompetencia, normalizarTarefa } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto } from '@/lib/ponto-cobertura'
+import { agregarAtividades } from '@/lib/servicos/atividade-agg'
+import { TIPO_ATIVIDADE_POR_CHAVE, VALOR_ATIVIDADE_PADRAO } from '@/lib/servicos/atividades'
 
 /* ============================================================
    RODAR A RÉGUA NUM MÊS, e gravar a pontuação como `calculado`.
@@ -48,6 +50,11 @@ type LinhaCalculo = {
   advertencias: number
   servicosConcluidos: number
   pontosDeServico: number
+  totalAtividades: number
+  pontosDeAtividade: number
+  /** A pessoa não é medida pelo ponto: pontuou por serviço+atividade, sem a
+   *  metade disciplinar (nem base, nem bônus). */
+  semPonto: boolean
   pontos: number
   detalhe: string
   /** Já existe valor gravado neste mês, e de que origem. */
@@ -108,6 +115,21 @@ async function montar(departmentId: string, competencia: string) {
     }),
   ])
 
+  /* A régua de atividades do setor + a conta das atividades no mês. `?? PADRÃO`
+     porque a linha só existe quando o gestor mexeu — sem ela, a atividade vale
+     o padrão (1), o que ela já vale na contagem crua de hoje. */
+  const [regraAtiv, aggAtiv] = await Promise.all([
+    prisma.pontuacaoAtividade.findMany({ where: { departmentId }, select: { atividade: true, pontos: true } }),
+    agregarAtividades(
+      pessoas.map((p) => ({ personKey: p.nexusUserId ?? p.id, nexusUserId: p.nexusUserId, nome: p.name })),
+      de, ate,
+    ),
+  ])
+  const valorAtiv = (chave: string) => {
+    const r = regraAtiv.find((x) => x.atividade === chave)
+    return r?.pontos ?? VALOR_ATIVIDADE_PADRAO
+  }
+
   const atr = new Map<string, { a: number; ab: number }>()
   for (const d of dias) {
     const v = atr.get(d.personKey) ?? { a: 0, ab: 0 }
@@ -125,23 +147,41 @@ async function montar(departmentId: string, competencia: string) {
   const gravado = new Map(jaGravado.map((p) => [p.personKey, p]))
 
   const linhas: LinhaCalculo[] = []
-  const foraDoPonto: string[] = []
+  const semPontoNomes: string[] = []
   for (const p of pessoas) {
     const pk = p.nexusUserId ?? p.id
-    /* ⚠️⚠️ A PESSOA é medida? A outra metade da cobertura. Quem o ponto não
-       alcança entraria com 0 atraso, 0 advertência e o bônus de mês limpo —
-       ganhando da colega que é medida e chegou no horário. */
-    if (!roster.has(pk)) { foraDoPonto.push(p.name); continue }
     const o = atr.get(pk) ?? { a: 0, ab: 0 }
     const s = serv.get(pk) ?? { n: 0, pts: 0 }
+    /* A terceira metade: soma cada atividade × o valor da régua do setor. */
+    const mAtiv = aggAtiv.get(pk)
+    let totalAtiv = 0, pontosAtiv = 0
+    if (mAtiv) for (const [chave, qtd] of mAtiv) {
+      if (!TIPO_ATIVIDADE_POR_CHAVE.has(chave)) continue
+      totalAtiv += qtd; pontosAtiv += qtd * valorAtiv(chave)
+    }
+
+    /* ⚠️⚠️ QUEM O PONTO NÃO MEDE AINDA PONTUA — só sem a metade disciplinar. Ele
+       fez serviço e atividade de verdade; zerá-lo seria apagar trabalho medido.
+       O que ele NÃO leva é base nem bônus de mês limpo, que exigiriam afirmar
+       que o mês dele foi impecável quando ninguém o mediu (a ausência-que-
+       elogia). A tela diz "sem ponto" nessas linhas. */
+    const semPonto = !roster.has(pk)
+    if (semPonto) semPontoNomes.push(p.name)
     const c = calcular(
       { base: regra.base, itens: regra.itens },
-      { atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0, servicosConcluidos: s.n, pontosDeServico: s.pts },
+      {
+        atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
+        servicosConcluidos: s.n, pontosDeServico: s.pts,
+        totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
+      },
+      { semDisciplina: semPonto },
     )
     linhas.push({
       personKey: pk, nome: p.name,
       atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
       servicosConcluidos: s.n, pontosDeServico: s.pts,
+      totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
+      semPonto,
       pontos: c.pontos, detalhe: c.detalhe,
       jaTem: gravado.get(pk) ? { pontos: gravado.get(pk)!.pontos, origem: gravado.get(pk)!.origem } : null,
     })
@@ -153,8 +193,14 @@ async function montar(departmentId: string, competencia: string) {
     fatorPorMinuto: regra.fatorPorMinuto,
     /** ⚠️ Recusa nº 3: quem já tem valor informado não é recalculado. */
     informados: linhas.filter((l) => l.jaTem?.origem === 'informado').map((l) => l.nome),
-    /** Quem o ponto não mede — fica de fora, e a tela diz quem. */
-    foraDoPonto,
+    /** Quem o ponto não mede — NÃO fica de fora; pontua por serviço+atividade,
+     *  sem a metade disciplinar. A tela diz quem. */
+    foraDoPonto: semPontoNomes,
+    /** ⚠️ Nenhum tipo de atividade teve o peso definido: todas contam pelo
+     *  padrão (1). A nota está saindo com o peso que ninguém escolheu — a tela
+     *  avisa antes de gravar. */
+    atividadesNoPadrao: regraAtiv.every((r) => r.pontos == null)
+      && [...aggAtiv.values()].some((m) => [...m.values()].some((v) => v > 0)),
     /**
      * Quem não teve NENHUM serviço na planilha do mês.
      * ⚠️⚠️ A pergunta da casa outra vez: o que este número mostra para quem a

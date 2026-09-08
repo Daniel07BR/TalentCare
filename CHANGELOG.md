@@ -1,5 +1,50 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (madrugada, 5) — A 3ª metade: as atividades dos sistemas entram na nota
+
+Pedido do dono: a pontuação do mês passa a somar TRÊS metades — disciplina +
+serviços da planilha + **atividades dos sistemas do Nexus**. Cada setor tem sua
+régua, editada pelo gestor (como o catálogo de serviços).
+
+Hoje a "Atividade no período" da lista do setor (a Joice com 781) é a soma crua:
+cada ação vale 1, um chamado de chat igual a um serviço de 3h. A **régua de
+atividades** (`/servicos`, bloco "Pontos por atividade") torna isso editável:
+cada tipo — chamado resolvido, curso, alteração no CIDE, chamado do chat… — com
+o valor que o gestor decidir.
+
+- `lib/servicos/atividades.ts`: o catálogo de tipos, espelhando `activityOf()`
+  MENOS os serviços (que têm catálogo próprio — contá-los de novo seria pagar o
+  mesmo serviço duas vezes na nota)
+- `lib/servicos/atividade-agg.ts`: a conta das fontes num lugar só
+- `pontuacao_atividade`: a régua por setor (valor por tipo, `null`=padrão 1)
+- `calcular()` ganhou `pontosDeAtividade` e a opção `semDisciplina`
+
+⚠️⚠️ QUEM O PONTO NÃO MEDE DEIXOU DE FICAR DE FORA. Antes o cálculo pulava quem
+não estava no roster do ponto; agora ele pontua por serviço e atividade, **sem**
+a metade disciplinar (sem base, sem bônus de mês limpo — que seriam a
+ausência-que-elogia). O trabalho medido conta; o que não se afirma é o mês
+impecável de quem ninguém mediu.
+
+### O que o agente crítico pegou (conferido no banco)
+
+- ⚠️⚠️ **A atividade a peso 1 INVERTE o ranking do Legal.** Agosto: a Joice (8
+  serviços, ~842 atividades) passa o Ezequiel (105 serviços) — um chamado de
+  chat pesando igual a uma ALTERAÇÃO NORMAL que a régua de serviço avalia em 18.
+  É o defeito de volume que o catálogo de serviços existe para evitar. **Decisão
+  do dono: conta 1 desde já, o gestor ajusta** — mas a tela de cálculo agora
+  **avisa** quando os pesos ainda são o padrão, antes de gravar.
+- ⚠️ **`formalized` fora.** `hd_resolvido` somava `resolved+formalized`, mas
+  `activityOf()`/`score-metrics` (o número visível) somam só `opened+resolved`.
+  O gestor ponderaria o peso por um volume maior que o que vê. Corrigido: só
+  `resolved`.
+- ⚠️ **WhatsApp casa por NOME.** Nome que casa com mais de uma pessoa do setor
+  agora **não credita ninguém** — melhor não contar que contar na nota errada.
+  Não há colisão hoje no Legal, mas o mecanismo era cego a ela.
+- ⚠️ **A régua contava inativos.** Passou a usar só ativos, o mesmo recorte do
+  cálculo — senão o volume ponderado não bate com quem pontua.
+- ✅ **Sem dupla contagem de serviço** (o maior medo): a régua de atividades não
+  tem `servico_depto`; o serviço entra só pela 2ª metade. Confirmado.
+
 ## 2026-09-08 (fim) — O sexo passou a ter dono, e a conta `Sistema` saiu
 
 ⚠️⚠️ **O campo não existia em sistema nenhum da casa.** O TalentCare tem um

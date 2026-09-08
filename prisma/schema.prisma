@@ -874,6 +874,34 @@ model PontuacaoRegraItem {
  * ⚠️ `regraId` diz QUAL versão da régua produziu o número calculado. Sem isso,
  * refazer a conta seis meses depois daria outro resultado e ninguém saberia por quê.
  */
+/**
+ * O VALOR de um tipo de ATIVIDADE num setor — a terceira metade da régua, ao
+ * lado do catálogo de serviços e da régua disciplinar (pedido do dono,
+ * 08/09/2026). Cada setor define o seu, como já faz com os serviços.
+ * ⚠️⚠️ `pontos` NULO = "usa o padrão" (1, o que a atividade já vale na contagem
+ * crua de hoje). Guardar a linha só quando o gestor mexe é o que separa "ele
+ * decidiu que vale 1" de "ninguém olhou" — a mesma distinção do catálogo de
+ * serviços. A tela mostra o padrão como provisório até alguém confirmar.
+ * ⚠️ A chave `atividade` é uma das de `lib/servicos/atividades.ts` (lista
+ * FECHADA): um valor para uma atividade que a conta não conhece nunca somaria.
+ */
+model PontuacaoAtividade {
+  departmentId String   @map("department_id")
+  atividade    String
+  /** Pontos por ocorrência. NULL = padrão (1). */
+  pontos       Int?
+  /** Quanto valia quando a pessoa mudou — a prova de "ele mudou ou o padrão mudou". */
+  pontosNaEpoca Int?    @map("pontos_na_epoca")
+  ajustadoPor  String?  @map("ajustado_por")
+  ajustadoEm   DateTime? @map("ajustado_em")
+  /** "Conferi, e está certo" — separa "ninguém olhou" de "olhou e manteve". */
+  revisadoPor  String?  @map("revisado_por")
+  revisadoEm   DateTime? @map("revisado_em")
+
+  @@id([departmentId, atividade])
+  @@map("pontuacao_atividade")
+}
+
 model PontuacaoMes {
   id           String   @id @default(cuid())
   departmentId String   @map("department_id")
