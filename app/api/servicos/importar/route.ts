@@ -233,7 +233,7 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
      apareceram pela primeira vez em agosto e entraram valendo 108, 86, 46 e 18
      pontos — o `SINDICATO (PROCESSOS) SINDRESBAR` vale **108 com uma única
      ocorrência de 215 minutos**, mais do que qualquer tipo estabelecido do
-     catálogo (o maior é 88). O arquivo chega, o serviço passa a pesar mais que
+     catálogo (o maior é 92, e ele sai de 3 serviços em 61). O arquivo chega, o serviço passa a pesar mais que
      todos os outros, e o único jeito de descobrir era reparar numa linha nova
      no meio de 74.
 
@@ -258,10 +258,16 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
     if (s.status === 'concluida') at.concluidas++
     linhasPorTipo.set(k, at)
   }
-  const tiposNovos = [...linhasPorTipo]
-    .filter(([k]) => !decididos.has(k))
-    .map(([, v]) => v)
-    .sort((a, b) => b.linhas - a.linhas)
+  /* ⚠️⚠️ SÓ ENTRA NA LISTA DE PENDÊNCIA O QUE DÁ PARA REVISAR. O catálogo da
+     tela é feito de serviços CONCLUÍDOS (um serviço aberto tem tempo parcial),
+     e a prévia lia o arquivo inteiro: no Legal são 77 tipos no arquivo contra
+     74 no catálogo. Os 3 sem nenhum concluído apareciam em "N tipos nunca foram
+     avaliados", não existiam no editor, e voltariam em toda prévia futura — a
+     lista de pendências que nunca esvazia, que é justamente o defeito que esta
+     entrega existe para não criar. Eles vão num aviso à parte, que explica. */
+  const naoDecididos = [...linhasPorTipo].filter(([k]) => !decididos.has(k)).map(([, v]) => v)
+  const tiposNovos = naoDecididos.filter((t) => t.concluidas > 0).sort((a, b) => b.linhas - a.linhas)
+  const tiposSemConcluido = naoDecididos.filter((t) => t.concluidas === 0).sort((a, b) => b.linhas - a.linhas)
   const noArquivo = new Set(linhasPorTipo.keys())
   const decididosForaDoArquivo = [...new Set(
     decisoes.filter((d) => d.revisadoEm && !noArquivo.has(d.tarefaNorm || normalizarTarefa(d.tarefa))).map((d) => d.tarefa),
@@ -285,6 +291,8 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
       total: linhasPorTipo.size,
       jaDecididos: linhasPorTipo.size - tiposNovos.length,
       novos: tiposNovos,
+      /** Tipos novos que ainda NÃO dá para pontuar: nenhum serviço concluído. */
+      semConcluido: tiposSemConcluido,
       decididosForaDoArquivo,
     },
     avisos: lida.avisos,

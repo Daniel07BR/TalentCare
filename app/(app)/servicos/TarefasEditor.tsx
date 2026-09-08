@@ -4,7 +4,8 @@ import { ListChecks, RotateCcw, TriangleAlert, ChevronUp, ChevronDown, Check, Sp
 
 type Tarefa = {
   tarefa: string; amostras: number
-  mediaMedida: number; mediaEmUso: number; mediaAjustada: number | null
+  mediaMedida: number; mediaSemLimites: number; semAmostraNaMedia: boolean
+  mediaEmUso: number; mediaAjustada: number | null
   cronometradas: number; zerados: number
   abaixoDoMinimo: number; acimaDoMaximo: number
   tempoMinimo: number | null; tempoMaximo: number | null
@@ -85,9 +86,10 @@ const ORDENAVEIS: { chave: Coluna; label: string; dica?: string; numerica: boole
   { chave: 'pontos', label: 'Pontos', numerica: true },
 ]
 
-export default function TarefasEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
+export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: { departmentId: string; setorNome: string; versao?: number }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
+  const [fatorDecidido, setFatorDecidido] = useState(true)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [rascunho, setRascunho] = useState<Record<string, { media?: string; pontos?: string; minimo?: string; maximo?: string }>>({})
@@ -110,6 +112,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
       if (!r.ok) { setMsg(d.error ?? 'Não consegui ler os tipos de serviço.'); setTarefas([]); return }
       const lista: Tarefa[] = d.tarefas ?? []
       setTarefas(lista); setFator(d.fatorPorMinuto ?? 0.5); setTotal(d.totalConcluidos ?? 0)
+      setFatorDecidido(d.fatorDecidido !== false)
       setRascunho({})
       /* ⚠️ A tela ABRE no que precisa de decisão, quando há. Era o pedido do
          dono: guardar o que já foi decidido e "apresentar para ajuste os novos
@@ -120,7 +123,10 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
       setOrdemNomes(ordenar(d.tarefas ?? [], ordem))
     } finally { setCarregando(false) }
   }
-  useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId])
+  /* ⚠️ `versao` sobe quando uma planilha é importada: sem ela a tabela ficava
+     no catálogo de antes do envio — sem os tipos novos, com os pontos velhos —
+     logo abaixo do cartão que promete o contrário. */
+  useEffect(() => { carregar() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId, versao])
 
   /**
    * ⚠️⚠️ SALVAR NÃO RECARREGA A TELA.
@@ -181,6 +187,18 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
   const nMudaram = tarefas.filter(mudou).length
   const nGrafias = tarefas.filter(duplicada).length
   const nDivergentes = tarefas.filter((t) => t.grafiaDivergente).length
+  /* ⚠️⚠️ O EFEITO DOS LIMITES, SOMADO. Cada linha já avisa quando os limites
+     dela cortaram fundo, mas ninguém lê 74 linhas — e o agregado conta outra
+     história: medido em 08/09/2026, **44 dos 74** tipos perdem mais da metade
+     dos serviços para o mínimo e o máximo, e **10 perdem todos**. Quando o
+     corte é a regra e não a exceção, o que a média descreve deixou de ser o
+     trabalho da equipe, e quem define o peso precisa saber disso antes de
+     olhar linha por linha. */
+  const nCortouMuito = tarefas.filter((t) => {
+    const total = t.cronometradas + t.abaixoDoMinimo + t.acimaDoMaximo
+    return total > 0 && t.cronometradas < total / 2
+  }).length
+  const nSemAmostra = tarefas.filter((t) => t.semAmostraNaMedia).length
 
   const passaNoFiltro = (t: Tarefa) =>
     filtro === 'todos' ? true : filtro === 'pendentes' ? pendente(t) : filtro === 'mudaram' ? mudou(t) : duplicada(t)
@@ -200,7 +218,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         <div style={{ fontSize: 14, fontWeight: 600 }}>Pontos por tipo de serviço — {setorNome}</div>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
-        Cada tipo vale <b>{fator} ponto por minuto</b> do tempo médio, medido em{' '}
+        Cada tipo vale <b>{fator} ponto por minuto</b>{!fatorDecidido && <span style={{ color: 'var(--warning)' }}> (valor provisório — este setor ainda não tem régua de pontuação gravada)</span>} do tempo médio, medido em{' '}
         <b>{total.toLocaleString('pt-BR')} serviços concluídos</b> da planilha inteira — não do período selecionado,
         porque quanto um serviço leva é característica dele, não da janela que você está olhando.
         {' '}<b>A média e os pontos são editáveis</b>: mudar a média recalcula os pontos na hora.
@@ -253,8 +271,10 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
           <GitCompareArrows size={13} style={{ verticalAlign: -2 }} />{' '}
           <b>{nDivergentes === 1 ? 'Um tipo aparece' : `${nDivergentes} tipos aparecem`} na planilha com mais de uma grafia</b>
           {' '}(muda só a caixa ou o acento), e as réguas gravadas em cada grafia <b>não são iguais</b>. São o mesmo
-          serviço partido em duas linhas, cada uma com sua média. Escolha qual valor fica — o botão em cada linha copia
-          a régua dela para as outras grafias.
+          serviço partido em duas linhas, cada uma com sua média — e assim continuam: o botão de cada linha copia a
+          régua dela (mínimo, máximo, média e pontos) para as outras grafias, mas <b>não junta as duas</b>. Cada
+          grafia segue com a amostra dela, então os pontos podem continuar diferentes. Juntar de verdade é acertar o
+          nome no sistema de origem.
         </div>
       )}
 
@@ -265,6 +285,30 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         <div style={{ fontSize: 12, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
           <TriangleAlert size={13} style={{ verticalAlign: -2 }} /> <b>{poucas} {poucas === 1 ? 'tipo tem' : 'tipos têm'} menos de {POUCAS_AMOSTRAS} ocorrências.</b>
           {' '}A média deles é o próprio caso, não uma média — vale conferir o número à mão antes de deixá-lo valendo.
+        </div>
+      )}
+
+      {/* ⚠️⚠️ O FATOR AINDA NÃO É DECISÃO DE NINGUÉM. Sem régua gravada, o 0,5 é
+          o padrão do código, e ele multiplica TODA a coluna de pontos — os
+          ajustes já feitos foram decididos olhando números derivados dele. A
+          tela dizia "cada tipo vale 0,5 ponto por minuto" como fato. */}
+      {!carregando && !fatorDecidido && tarefas.length > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          <TriangleAlert size={13} style={{ verticalAlign: -2 }} /> <b>Este setor ainda não tem régua de pontuação gravada.</b>
+          {' '}O <b>{fator} ponto por minuto</b> é o valor provisório do sistema, não uma decisão registrada — e ele
+          multiplica a coluna de pontos inteira. Quando a régua for criada com outro fator, <b>todos os {tarefas.length} tipos
+          mudam de valor de uma vez</b>, e cada um vai aparecer aqui como “mudou desde a revisão”. Vale definir o fator
+          antes de afinar tipo por tipo.
+        </div>
+      )}
+
+      {nCortouMuito > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--warning)', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          <TriangleAlert size={13} style={{ verticalAlign: -2 }} />{' '}
+          <b>{nCortouMuito} de {tarefas.length} tipos perdem mais da metade dos serviços para o mínimo e o máximo</b>
+          {nSemAmostra > 0 && <>, e <b>{nSemAmostra} {nSemAmostra === 1 ? 'perde' : 'perdem'} todos</b></>}.
+          {' '}Quando o corte é a regra e não a exceção, a média deixa de descrever o trabalho da equipe e passa a
+          descrever a faixa que os limites escolheram. Cada linha diz quantos ela tirou.
         </div>
       )}
 
@@ -309,6 +353,16 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
             </div>
           )}
 
+          {/* ⚠️ O filtro ABRE nos pendentes, que é o que o dono pediu ver — mas
+              esconder 72 de 74 linhas sem dizer faz a tela parecer o catálogo
+              inteiro. A contagem fica visível, e a saída também. */}
+          {filtro !== 'todos' && visiveis.length > 0 && (
+            <div style={{ fontSize: 11.5, color: 'var(--text-mute)', padding: '8px 6px 0' }}>
+              Mostrando {visiveis.length} de {tarefas.length} tipos.{' '}
+              <button onClick={() => setFiltro('todos')} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600 }}>Ver todos</button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {visiveis.map((t) => {
               const poucasAmostras = t.amostras < POUCAS_AMOSTRAS
@@ -326,7 +380,19 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                  já mostram o resultado, com a MESMA conta do servidor. Esperar o
                  salvamento para ver o efeito faria a régua ser ajustada às cegas. */
               const pontosPrevistos = Math.max(1, Math.round((parseInt(rMedia || '0', 10) || 0) * fator))
-              const mostrarPontos = rascunho[t.tarefa]?.pontos != null ? rPontos : String(pontosPrevistos)
+              /* ⚠️⚠️ EM REPOUSO, O CAMPO MOSTRA O QUE VALE — não o que a conta daria.
+                 O espelho valia enquanto a pessoa digita; fora disso, ele apagava a
+                 decisão da tela. Medido em 08/09/2026: SERVIÇOS INTERNOS - VERIFICAR
+                 CALCULADORA tem override de **0** (o setor decidiu que não vale
+                 ponto) e o campo exibia **8**, com a borda de "ajustado à mão" e um
+                 tooltip dizendo que o cálculo dá 8. A única decisão de pontos do
+                 catálogo inteiro era a única coisa invisível nele — e a ordenação
+                 por Pontos, que usa o valor de verdade, mandava a linha para o fim
+                 mostrando 8. */
+              const editando = rascunho[t.tarefa]?.media != null
+                || rascunho[t.tarefa]?.minimo != null || rascunho[t.tarefa]?.maximo != null
+              const mostrarPontos = rascunho[t.tarefa]?.pontos != null ? rPontos
+                : editando ? String(pontosPrevistos) : String(t.pontos)
 
               return (
                 <div key={t.tarefa} style={{ padding: '9px 6px', borderBottom: '1px solid var(--border)', opacity: salvando[t.tarefa] ? 0.55 : 1, transition: 'opacity .12s' }}>
@@ -351,7 +417,15 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                         onChange={(e) => setRascunho((r) => ({ ...r, [t.tarefa]: { ...r[t.tarefa], minimo: e.target.value, media: undefined, pontos: undefined } }))}
                         onBlur={() => {
                           const v = rMinimo === '' ? null : parseInt(rMinimo, 10)
-                          if (v !== (t.tempoMinimo ?? null)) salvar(t, v == null ? 'limpar' : 'minimo', v)
+                          /* ⚠️⚠️ ESVAZIAR O MÍNIMO TIRA SÓ O MÍNIMO. Antes mandava
+                             `limpar`, que apaga o máximo, a média lançada e o
+                             override junto — o espelho deste campo, o do máximo,
+                             sempre fez certo. Medido em 08/09/2026: apagar a
+                             caixinha do mínimo no CANCELAMENTO (78 serviços, média
+                             lançada 200, o 2º tipo mais caro do catálogo) derrubava
+                             o tipo de 100 para 17 pontos, sem confirmação, sem
+                             aviso e sem desfazer. */
+                          if (v !== (t.tempoMinimo ?? null)) salvar(t, 'minimo', v)
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         title={t.tempoMinimo != null
@@ -409,7 +483,14 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                            diz de onde a medição saiu — quantos serviços e quantos
                            ficaram de fora por virem sem tempo. */
                         title={t.mediaAjustada != null
-                          ? `Lançado por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\nO medido na planilha é ${t.mediaMedida} min, em ${t.cronometradas} serviços cronometrados.`
+                          ? `Lançado por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\n` + (t.semAmostraNaMedia
+                              /* ⚠️⚠️ Sem esta ramificação a tela dizia "o medido na
+                                 planilha é 0 min" para os 10 tipos cujos limites
+                                 tiraram TODOS os serviços — o CANCELAMENTO entre
+                                 eles, com 33 min medidos em 78 serviços. Zero não
+                                 foi medido: foi filtrado. */
+                              ? `Os limites de ${t.tempoMinimo ?? '—'}–${t.tempoMaximo ?? '—'} min tiraram TODOS os ${t.abaixoDoMinimo + t.acimaDoMaximo} serviços cronometrados da média. Sem eles, o medido são ${t.mediaSemLimites} min.`
+                              : `O medido na planilha é ${t.mediaMedida} min, em ${t.cronometradas} serviços cronometrados.`)
                           : `Medido em ${t.cronometradas} ${t.cronometradas === 1 ? 'serviço cronometrado' : 'serviços cronometrados'}${t.zerados ? `, com ${t.zerados} fora da conta por virem sem tempo` : ''}.\nPode mudar — o valor que você digitar passa a valer no lugar deste.`}
                         style={{
                           height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 8px',
@@ -454,12 +535,18 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                         afastar do que foi conferido. */}
                     <button
                       onClick={() => salvar(t, 'revisar', null)}
-                      disabled={t.revisado && !t.mudouDesdeRevisao}
+                      /* ⚠️ Revisão SEM âncora ainda aceita clique: ela é uma
+                         revisão de antes deste campo existir, e o sistema não sabe
+                         quanto o tipo valia naquele dia. Travar o botão faria a
+                         linha ler "confirmado" onde o certo é "não sei", sem saída. */
+                      disabled={t.revisado && !t.mudouDesdeRevisao && t.pontosNaRevisao != null}
                       title={!t.revisado
                         ? 'Conferi, e este valor está certo — grava sua confirmação sem mudar o número.'
                         : t.mudouDesdeRevisao
                           ? `Valia ${t.pontosNaRevisao} quando ${t.revisadoPor} conferiu, em ${dataBr(t.revisadoEm)}. Confirmar o valor de agora (${t.pontos}).`
-                          : `Conferido por ${t.revisadoPor} em ${dataBr(t.revisadoEm)}.`}
+                          : t.pontosNaRevisao == null
+                            ? `Conferido por ${t.revisadoPor} em ${dataBr(t.revisadoEm)}, antes de o sistema guardar quanto o tipo valia. Confirmar de novo grava a referência (${t.pontos}) e liga o aviso de mudança.`
+                            : `Conferido por ${t.revisadoPor} em ${dataBr(t.revisadoEm)}, valendo ${t.pontosNaRevisao}.`}
                       style={{ height: 28, width: 28, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: !t.revisado ? 'var(--warning)' : t.mudouDesdeRevisao ? 'var(--accent)' : 'var(--success)', cursor: t.revisado && !t.mudouDesdeRevisao ? 'default' : 'pointer' }}
                     >
                       <Check size={14} />
@@ -467,7 +554,15 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
 
                     <button
                       onClick={() => salvar(t, 'limpar', null)} disabled={!t.ajustado}
-                      title={t.ajustado ? `Voltar ao medido (${t.mediaMedida} min → ${Math.max(1, Math.round(t.mediaMedida * fator))} pontos)` : 'Está no valor medido'}
+                      /* ⚠️⚠️ O NÚMERO PROMETIDO É O QUE ELE ENTREGA. `mediaMedida`
+                         é a média DEPOIS dos limites, e limpar apaga os limites —
+                         então o botão anunciava 149 min → 75 pontos e entregava
+                         33 min → 17 pontos na ALTERAÇÃO SIMPLES NACIONAL, onde os
+                         limites deixavam 7 de 270 serviços. Cinco vezes menos, na
+                         tela que define quanto o trabalho vale. */
+                      title={t.ajustado
+                        ? `Voltar ao medido: apaga o mínimo, o máximo, a média lançada e os pontos desta linha.\nSem os limites, a média são ${t.mediaSemLimites} min em ${t.cronometradas + t.abaixoDoMinimo + t.acimaDoMaximo} serviços cronometrados → ${Math.max(1, Math.round(t.mediaSemLimites * fator))} pontos.`
+                        : 'Está no valor medido'}
                       style={{ height: 28, width: 28, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: t.ajustado ? 'var(--text-dim)' : 'var(--border)', cursor: t.ajustado ? 'pointer' : 'default' }}
                     >
                       <RotateCcw size={13} />
@@ -511,7 +606,11 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                         </b>{' '}
                         “{t.grafias[0]}”{t.grafias.length > 1 ? ` e mais ${t.grafias.length - 1}` : ''}
                         {t.grafiaDivergente && ' — as réguas divergem'}
-                        {t.ajustado && (
+                        {/* ⚠️ Só onde há régua PRÓPRIA para copiar. Numa linha que
+                            HERDOU a régua de outra grafia não há registro, e o POST
+                            devolveria 400 na cara de quem clicou num botão que a
+                            própria tela ofereceu. */}
+                        {t.ajustado && !t.herdouDeGrafia && (
                           <button onClick={() => salvar(t, 'unificar_grafia', null)}
                             title="Copia a régua desta linha (mínimo, máximo, média e pontos) para as outras grafias do mesmo serviço."
                             style={{ marginLeft: 8, background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 7px', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700 }}>
@@ -575,6 +674,17 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                     {t.acimaDoMaximo > 0 && (
                       <span style={{ color: 'var(--accent)' }}>
                         <b style={{ fontWeight: 600 }}>{t.acimaDoMaximo} acima do máximo</b> de {t.tempoMaximo} min — fora da média
+                      </span>
+                    )}
+                    {/* ⚠️⚠️ Os limites tiraram TODOS os serviços. Sem média medida,
+                        o tipo cairia para 1 ponto se a média lançada sair — e a
+                        linha continuaria plausível. São 10 dos 74 tipos hoje. */}
+                    {t.semAmostraNaMedia && (
+                      <span style={{ color: 'var(--danger)' }}>
+                        os limites tiraram <b style={{ fontWeight: 600 }}>todos</b> os {t.abaixoDoMinimo + t.acimaDoMaximo} serviços cronometrados —
+                        {t.mediaAjustada != null
+                          ? ` a média em uso é a lançada à mão; sem os limites, o medido são ${dur(t.mediaSemLimites)}`
+                          : ` não há média a medir, e o tipo cai para 1 ponto`}
                       </span>
                     )}
                     {limitesInvertidos && (

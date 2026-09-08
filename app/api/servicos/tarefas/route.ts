@@ -51,8 +51,30 @@ import { normalizarTarefa } from '@/lib/servicos/pontuacao'
 export type TarefaPontuada = {
   tarefa: string
   amostras: number
-  /** A média MEDIDA na planilha — nunca muda com o ajuste. */
+  /**
+   * A média das durações que SOBRARAM depois dos limites do gestor.
+   * ⚠️ O nome engana e a documentação antiga mentia ("nunca muda com o
+   * ajuste"): ela muda, sim — é a média do que o mínimo e o máximo deixaram
+   * passar. Quem quer a medição crua é `mediaSemLimites`.
+   */
   mediaMedida: number
+  /**
+   * A média de TODOS os serviços cronometrados, ignorando mínimo e máximo.
+   * ⚠️⚠️ Existe porque "voltar ao medido" apaga os limites, e o botão prometia
+   * o número COM eles. Medido em 08/09/2026: ALTERAÇÃO SIMPLES NACIONAL
+   * anunciava "149 min → 75 pontos" e entregava 33 min → 17 pontos, porque os
+   * limites tinham deixado 7 de 270 serviços. O botão dizia um número e fazia
+   * outro, cinco vezes menor, na tela que define quanto o trabalho vale.
+   */
+  mediaSemLimites: number
+  /**
+   * Os limites não deixaram NENHUM serviço na média.
+   * ⚠️⚠️ São 10 dos 74 tipos do Legal hoje. Sem esta marca, `mediaMedida` sai 0
+   * e a tela afirma "o medido na planilha é 0 min" — quando o CANCELAMENTO tem
+   * 33 min medidos em 78 serviços, todos fora dos limites de 120–240. É o
+   * `null` virando 0 no lugar exato onde ele decide peso de trabalho.
+   */
+  semAmostraNaMedia: boolean
   /** A média EM USO: a que a liderança escolheu, ou a medida. */
   mediaEmUso: number
   mediaAjustada: number | null
@@ -133,7 +155,8 @@ async function calcularCatalogo(departmentId: string) {
     }),
     prisma.pontuacaoTarefaAjuste.findMany({ where: { departmentId } }),
     prisma.pontuacaoRegra.findFirst({
-      where: { departmentId }, orderBy: { vigenteDesde: 'desc' }, select: { fatorPorMinuto: true },
+      where: { departmentId }, orderBy: { vigenteDesde: 'desc' },
+      select: { fatorPorMinuto: true, criadoEm: true },
     }),
     prisma.user.findMany({
       where: { origin: { in: ['nexus', 'staff'] } },
@@ -146,7 +169,13 @@ async function calcularCatalogo(departmentId: string) {
     where: { departmentId }, orderBy: { enviadoEm: 'desc' }, select: { enviadoEm: true },
   })
 
+  /* ⚠️⚠️ O FATOR PODE SER O PADRÃO DO CÓDIGO, NÃO UMA DECISÃO. O Legal não tem
+     nenhuma versão de régua gravada, e a tela anunciava "cada tipo vale 0,5
+     ponto por minuto" como fato — os 72 ajustes foram feitos olhando pontos
+     derivados de um número que ninguém escolheu, e que é justamente a decisão
+     ainda aberta com o dono. A tela passa a dizer de onde ele veio. */
   const fator = regra?.fatorPorMinuto ?? 0.5
+  const fatorDecidido = regra != null
   const idsDeAutor = [...new Set(ajustes.flatMap((a) => [a.ajustadoPor, a.revisadoPor]).filter((x): x is string => !!x))]
   const autores = await prisma.user.findMany({ where: { id: { in: idsDeAutor } }, select: { id: true, name: true } })
   const nomePorId = new Map(autores.map((a) => [a.id, a.name]))
@@ -225,6 +254,11 @@ async function calcularCatalogo(departmentId: string) {
     const mediaMedida = base.length
       ? Math.round(base.reduce((a, l) => a + l.minutos, 0) / base.length)
       : 0
+    /* A medição crua: todo mundo que teve cronômetro, sem os limites. É o que
+       "voltar ao medido" realmente entrega, e por isso é o que o botão promete. */
+    const mediaSemLimites = comTempo.length
+      ? Math.round(comTempo.reduce((a, l) => a + l.minutos, 0) / comTempo.length)
+      : 0
     const mediana = ordenado.length ? ordenado[Math.floor(ordenado.length / 2)].minutos : 0
     const aj = aj0
     /* A média EM USO é a que a liderança escolheu, quando escolheu. A medida
@@ -256,6 +290,8 @@ async function calcularCatalogo(departmentId: string) {
       tempoMinimo: minimo,
       tempoMaximo: maximo,
       mediaMedida,
+      mediaSemLimites,
+      semAmostraNaMedia: comTempo.length > 0 && cronometradas.length === 0,
       mediaEmUso,
       mediaAjustada: aj?.mediaMinutos ?? null,
       medianaMinutos: mediana,
@@ -291,9 +327,17 @@ async function calcularCatalogo(departmentId: string) {
     }
   }).sort((a, b) => b.amostras - a.amostras)
 
-  await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimoLote?.enviadoEm ?? null)
+  /* ⚠️⚠️ O QUE PODE TER MUDADO O VALOR: uma planilha nova OU uma régua nova.
+     A primeira versão olhava só a importação — e o fator multiplica TODOS os
+     pontos, então criar a régua muda o catálogo inteiro sem que arquivo nenhum
+     entre. Ancorar por "revisou depois do último lote" gravaria, nesse caso, o
+     valor JÁ mudado como se fosse o que a pessoa tinha conferido, apagando em
+     silêncio exatamente a mudança que o aviso existe para mostrar. */
+  const marcos = [ultimoLote?.enviadoEm, regra?.criadoEm].filter((d): d is Date => !!d)
+  const ultimaMudanca = marcos.length ? new Date(Math.max(...marcos.map((d) => d.getTime()))) : null
+  await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimaMudanca)
 
-  return { fatorPorMinuto: fator, totalConcluidos: linhas.length, tarefas }
+  return { fatorPorMinuto: fator, fatorDecidido, totalConcluidos: linhas.length, tarefas }
 }
 
 /**
@@ -307,11 +351,12 @@ async function calcularCatalogo(departmentId: string) {
  * ter medido nada. Inventar procedência para número de gente de verdade é o
  * que a regra (d) da casa proíbe.
  *
- * ⚠️⚠️ A condição que torna a afirmação verdadeira: a revisão ser POSTERIOR à
- * última importação. O valor de um tipo só muda quando chega planilha nova —
- * então, se nada entrou depois da revisão, o valor de hoje **é** o valor
- * daquele dia. Foi o caso conferido em 08/09/2026: um único lote em 04/09
- * 11:07 e as 72 decisões entre 04/09 19:41 e 08/09.
+ * ⚠️⚠️ A condição que torna a afirmação verdadeira: a revisão ser POSTERIOR a
+ * tudo que pode ter mexido no valor — a última importação **e** a última
+ * versão da régua (o fator multiplica o catálogo inteiro). Se nada disso veio
+ * depois da revisão, o valor de hoje **é** o valor daquele dia. Foi o caso
+ * conferido em 08/09/2026: um único lote em 04/09 11:07, nenhuma régua gravada
+ * e as 72 decisões entre 04/09 19:41 e 08/09.
  *
  * Revisão anterior a uma importação fica sem âncora — e a tela então diz
  * "conferido em tal dia" sem afirmar variação nenhuma, que é a resposta certa
@@ -321,12 +366,12 @@ async function ancorarOQueDaParaSaber(
   departmentId: string,
   ajustes: { tarefa: string; revisadoEm: Date | null; pontosNaRevisao: number | null }[],
   tarefas: TarefaPontuada[],
-  ultimaImportacao: Date | null,
+  ultimaMudanca: Date | null,
 ) {
   const pontosDe = new Map(tarefas.map((t) => [t.tarefa, t.pontos]))
   const alvo = ajustes.filter((a) =>
     a.revisadoEm != null && a.pontosNaRevisao == null && pontosDe.has(a.tarefa)
-    && (ultimaImportacao == null || a.revisadoEm > ultimaImportacao))
+    && (ultimaMudanca == null || a.revisadoEm > ultimaMudanca))
   if (!alvo.length) return
   await Promise.all(alvo.map((a) => prisma.pontuacaoTarefaAjuste.update({
     where: { departmentId_tarefa: { departmentId, tarefa: a.tarefa } },

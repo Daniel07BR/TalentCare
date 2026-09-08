@@ -33,6 +33,7 @@ type Previa = {
   tipos?: {
     total: number; jaDecididos: number
     novos: { tarefa: string; linhas: number; concluidas: number }[]
+    semConcluido: { tarefa: string; linhas: number; concluidas: number }[]
     decididosForaDoArquivo: string[]
   }
   avisos: string[]; nomes: NomeLido[]
@@ -58,6 +59,13 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [gravado, setGravado] = useState(false)
+  /* ⚠️⚠️ A TABELA DE TIPOS PRECISA RECARREGAR DEPOIS DO ENVIO. Ela monta com
+     `useEffect([departmentId])` e o import não mexe no setor — então, no único
+     momento em que o pedido do dono se cumpre ("apresentar para ajuste os novos
+     lançamentos"), ela continuava mostrando o catálogo de ANTES do arquivo:
+     sem os tipos novos e com os pontos velhos, embaixo de um cartão que acabara
+     de prometer o contrário. Este contador entra nas dependências dela. */
+  const [versaoCatalogo, setVersaoCatalogo] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const setor = setores.find((s) => s.id === setorId)!
   /* De qual relatório a pessoa veio. ⚠️ É o setor da URL, não o selecionado: se
@@ -73,7 +81,10 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
       const r = await fetch('/api/servicos/importar', { method: 'POST', body: fd })
       const d = await r.json()
       if (!r.ok) { setErro(d.error ?? 'Não consegui ler o arquivo.'); setPrevia(null) }
-      else { setPrevia(d); setGravado(!!d.ok) }
+      else {
+        setPrevia(d); setGravado(!!d.ok)
+        if (d.ok) setVersaoCatalogo((v) => v + 1)
+      }
     } catch {
       setErro('A rede falhou no meio do envio. Nada foi gravado — tente de novo.')
     } finally { setOcupado(false) }
@@ -278,6 +289,19 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
                 </div>
               )}
 
+              {/* ⚠️⚠️ Tipo novo SEM nenhum serviço concluído não dá para pontuar —
+                  e não pode entrar na lista de pendências, porque o editor não o
+                  mostra e ele voltaria em toda prévia futura, para sempre. */}
+              {previa.tipos.semConcluido && previa.tipos.semConcluido.length > 0 && (
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.55 }}>
+                  Outros <b>{previa.tipos.semConcluido.length}</b>{' '}
+                  {previa.tipos.semConcluido.length === 1 ? 'tipo aparece' : 'tipos aparecem'} no arquivo sem nenhum
+                  serviço concluído ({previa.tipos.semConcluido.slice(0, 3).map((t) => t.tarefa).join(', ')}
+                  {previa.tipos.semConcluido.length > 3 ? '…' : ''}). Serviço aberto tem tempo parcial, então não há
+                  duração para medir — eles ficam de fora da lista de pontos até alguém concluir um.
+                </div>
+              )}
+
               {/* ⚠️⚠️ A pergunta da casa, do outro lado: e o que foi decidido e NÃO
                   vem neste arquivo? O tipo some do catálogo (que é feito das linhas
                   que existem) e a decisão fica no banco, invisível, pronta para
@@ -350,7 +374,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
       )}
 
       <RegraEditor departmentId={setorId} setorNome={setor.name} />
-      <TarefasEditor departmentId={setorId} setorNome={setor.name} />
+      <TarefasEditor departmentId={setorId} setorNome={setor.name} versao={versaoCatalogo} />
 
       {/* ── histórico de envios ───────────────────────────────────────────── */}
       {lotesDoSetor.length > 0 && (
