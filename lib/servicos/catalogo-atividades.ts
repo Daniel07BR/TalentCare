@@ -11,7 +11,8 @@ import { agregarAtividades } from './atividade-agg'
    serviços). É a fonte ÚNICA usada pela tela da régua E pelo cálculo do mês;
    duplicá-la faria o número que o gestor pondera divergir do que entra na nota.
 
-   ⚠️⚠️ TRÊS ATIVIDADES TÊM TEMPO MEDIDO pelo sistema; as outras não. Onde há,
+   ⚠️⚠️ QUATRO ATIVIDADES TÊM TEMPO MEDIDO pelo sistema; as outras não.
+   (A Gerência mede jornada/serviço, incluindo o deslocamento.) Onde há,
    a média nasce da MEDIANA real — não da média, que o tempo decorrido infla
    (WhatsApp: mediana 48 min, média 913, por atendimentos deixados abertos por
    dias). É a mesma lição do catálogo de serviços. Onde não há, a média fica
@@ -34,6 +35,10 @@ const MEDIDAS_SQL = `
   select 'chat_cham_concluido',
     percentile_cont(0.5) within group (order by segundos_resolucao::numeric/chamados_concluidos/60)
     from chat_daily where chamados_concluidos>0 and segundos_resolucao>0
+  union all
+  select 'ger_servico',
+    percentile_cont(0.5) within group (order by jornada_min::numeric/servicos)
+    from gerencia_daily where servicos>0 and jornada_min>0
 `
 
 export async function medianasMedidas(): Promise<Map<string, number>> {
