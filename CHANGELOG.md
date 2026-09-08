@@ -1,5 +1,69 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-08 (noite) — O dump novo, a advertência que era o mesmo atraso, e a régua rodando
+
+### O dump
+
+MySQL do `axis_db` (192.168.0.63), um arquivo só, sem a tabela `users`. Cobre
+**01/10/2025 → 20/09/2026** e fecha o buraco: atraso parava em 25/06 e
+advertência em 11/06, com os serviços indo até 31/08. Ficaram **1.621 linhas de
+assiduidade e 90 pessoas casadas**.
+
+### ⚠️⚠️ A advertência era o mesmo atraso, contado de novo
+
+**731 das 732** advertências que já estavam no banco tinham um atraso da mesma
+pessoa **no mesmo dia**, e 731 tinham motivo literalmente `'Atraso'`. Como a
+assiduidade é `100 − atrasos·2 − advertências·5`, cada atraso valia **−7 em vez
+de −2** — e dez pessoas ficavam empatadas em ZERO. A Yasmin (16 e 16) sairia de
+0 para 68; a Joice Rocha, de 0 para 62.
+
+A regra da casa, dita pelo dono: **a partir do 2º atraso no mês** a empresa
+aplica advertência. **A tabela do Axis não implementa isso** — dos 129
+pessoa-mês com exatamente UM atraso, **127 geraram advertência**; no geral só
+7,3% dos 492 pessoa-mês batem com `atrasos − 1`. E a mediana do atraso é **6
+minutos com e sem advertência**, então também não há critério de gravidade
+separando os dois. Passou a ser derivada: **1.004** no lugar de 1.385.
+
+Conferido depois de gravar: 1 atraso no mês → 0 advertências (157 casos); 2 → 1;
+3 → 2; 4 → 3. Nos últimos 30 dias o fundo do ranking virou **47**, com
+diferenciação, em vez da pilha empatada em zero.
+
+⚠️ O que se grava é uma **contagem derivada** para a régua, não advertência
+assinada — o `motivo` de cada linha diz isso.
+
+### Três armadilhas do import, todas pagas nesta sessão
+
+- **`--ensaio`**: a importação era wipe+rebuild sobre atraso e advertência de
+  gente real e **não tinha prévia nenhuma**. Agora tem.
+- **O `sourceId` colidia**: a mesma pessoa se atrasa duas vezes no mesmo dia (11
+  casos), e `pessoa:dia` não é único — o `createMany` morreu **depois do wipe** e
+  deixou a base pela metade. Passou a usar o id do atraso.
+- **⚠️⚠️ E o wipe levou o `ponto_staging` junto.** Sem ele, a carga seguinte
+  perdeu os 85 vínculos que a carga anterior tinha resolvido e o casamento caiu
+  de **90 para 87 pessoas** — com um critério mais fraco, porque sem o
+  `axis_db_users.sql` não há departamento para desempatar nome. Restaurado do
+  backup; o importador agora lê os vínculos anteriores ANTES do wipe e os
+  reaproveita como `previo`.
+
+### A régua rodando no mês
+
+Rota + bloco na tela: escolhe a competência, **ensaia sem gravar**, mostra a
+conta aberta de cada pessoa, grava como `calculado`. O catálogo saiu para
+`lib/servicos/catalogo.ts` — o cálculo mensal precisa do mesmo número que a tela
+mostra, e a régua mora em um lugar só.
+
+**As quatro recusas:** mês que o ponto não cobre (o bônus de mês limpo iria para
+quem ninguém mediu — vale para a janela E para a pessoa); mês aberto; o que o
+setor informou à mão; competência sem régua vigente.
+
+**⚠️⚠️ E os dois eixos que não se comparam.** A metade de serviço só premia quem
+a planilha cobre; a disciplinar pune todo mundo. Agosto/2026: o **Evandro**
+(gestor, 0 serviços, 1 atraso) dá **450** e o **Yago**, com 19 serviços feitos,
+dá **269**. Os dois estão certos e medem coisas diferentes — a tela avisa.
+
+Agosto no Legal, conferido no banco: Ezequiel 1328, Marcia 1190, Lucas 847,
+Joice 737, Marcos Gabriel 518, Yago 269.
+
 ## 2026-09-08 (tarde) — A régua virou decisão gravada, e o TFE virou um serviço só
 
 ### O TFE: duas grafias, um serviço

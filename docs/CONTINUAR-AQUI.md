@@ -133,8 +133,13 @@ O Daniel estava seguindo por **telas e relatórios**. Pendências conhecidas:
   `Sistema`, e a divergência do que é "advertência numa janela" entre o `/ranking`
   (do período) e a `/assiduidade` (acumulada) — a mesma pessoa lê 100 numa tela e
   25 na outra.
-- ⚠️ **O ponto está parado.** É a única das dez fontes **sem cron** (import à mão) e
-  terminava em **25/06/2026** com os oito espelhos de atividade todos em 03/09. Em
+- ✅ **O ponto foi atualizado em 08/09/2026** — vai de 01/10/2025 a 20/09/2026. E
+  descobriu-se ali que a **advertência era o mesmo atraso contado de novo** (731
+  de 732 no mesmo dia da mesma pessoa): ela passou a ser DERIVADA pela regra da
+  casa (a partir do 2º atraso do mês). Ver o `CHANGELOG` de 08/09 (noite).
+  ⚠️ Segue **sem cron**: é import à mão, por dump, com `--ensaio` antes.
+- ⚠️ **(histórico) O ponto esteve parado.** É a única das dez fontes **sem cron**
+  (import à mão) e terminava em **25/06/2026** com os oito espelhos de atividade todos em 03/09. Em
   "7 dias", "30 dias" e "Trimestre atual" não há uma linha — as telas hoje dizem
   isso em vez de mostrar zero, mas o dado continua faltando.
 
