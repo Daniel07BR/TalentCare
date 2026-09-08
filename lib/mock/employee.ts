@@ -192,6 +192,9 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     atrasos: emp.atrasos, atrasosAbon: emp.atrasosAbon, minutosAtraso: emp.minutosAtraso,
     faltas: null as number | null, advert: emp.advertencias, susp: null as number | null,
     heat: heatmapFor(emp.assidDays),
+    /* ⚠️ Até quando o ponto mediu — o calendário de ocorrências precisa saber
+       onde parar de afirmar "dia limpo". O import é à mão, sem cron. */
+    pontoAte: emp.pontoAte ?? null,
     radioHoras: emp.radioHoras, radioSessoes: emp.radioSessoes, radioUltima, whatsapp,
     grau: fm.grau, grauLevels: personLevels(emp.eduCursos, emp.escolaridade).map((l) => ({ label: l, color: ESC_COLOR[l] ?? '#9aa1ac' })), cursos: fm.cursos, certs: fm.certs,
     nexusUserId: emp.nexusUserId, eduDetail: emp.eduDetail,

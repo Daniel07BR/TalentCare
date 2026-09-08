@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import { geomLine } from '@/lib/mock/data'
 import Avatar from '../../Avatar'
@@ -121,6 +122,9 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
 export function Turnover({ m }: { m: DeptMetrics }) {
   const t = m.turnover
   const alto = t.taxa12m >= 20
+  /* ⚠️ A janela com a lista completa (pedido do dono, 08/09/2026). O cartão
+     mostra 6 e dizia "e mais 3 pessoas" — e as 3 não tinham para onde ir. */
+  const [aberto, setAberto] = useState(false)
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Rotatividade</div>
@@ -167,8 +171,135 @@ export function Turnover({ m }: { m: DeptMetrics }) {
       {t.em12m.length === 0 && t.noPeriodo.length > 0 && (
         <ListaSaiu titulo={`${t.noPeriodo.length} ${t.noPeriodo.length === 1 ? 'saída' : 'saídas'} no período, antes dos 12 meses`} gente={t.noPeriodo} noPeriodo={new Set(t.noPeriodo.map((p) => p.id))} />
       )}
-      {t.saidas12m === 0 && (
+      {t.saidas12m === 0 && t.noPeriodo.length === 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 14 }}>Ninguém saiu deste setor em 12 meses.</div>
+      )}
+
+      {(t.em12m.length > 0 || t.noPeriodo.length > 0) && (
+        <button onClick={() => setAberto(true)}
+          style={{ marginTop: 12, width: '100%', height: 32, background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }}>
+          Ver todas as saídas
+        </button>
+      )}
+      {aberto && <JanelaSaidas t={t} label={m.label} onFechar={() => setAberto(false)} />}
+    </div>
+  )
+}
+
+/* ============================================================
+   A JANELA COM TODAS AS SAÍDAS.
+
+   ⚠️⚠️ AS SAÍDAS DO PERÍODO VÊM SEMPRE, E PRIMEIRO (pedido do dono). Inclusive
+   quando são ZERO — e principalmente quando são zero. O cartão mostra uma taxa
+   de 12 meses que não acompanha o filtro; sem esta seção, quem abre a janela com
+   o filtro em 7 dias lê a lista dos 12 meses e conclui que aquilo aconteceu na
+   semana. Uma lista sem janela declarada é uma lista que o leitor data sozinho.
+
+   ⚠️ E as duas listas não são uma dentro da outra: um intervalo escolhido no
+   calendário pode alcançar saídas ANTERIORES aos 12 meses, que existem no
+   período e não na taxa.
+   ============================================================ */
+function JanelaSaidas({ t, label, onFechar }: {
+  t: DeptMetrics['turnover']
+  label: string
+  onFechar: () => void
+}) {
+  // Esc fecha — numa janela que cobre a tela, o teclado é a saída esperada.
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onFechar])
+
+  const noPeriodo = new Set(t.noPeriodo.map((p) => p.id))
+  /* Quem saiu no período mas está fora dos 12 meses — some da lista de baixo. */
+  const em12 = new Set(t.em12m.map((p) => p.id))
+  const foraDos12 = t.noPeriodo.filter((p) => !em12.has(p.id))
+
+  return (
+    <div onClick={onFechar}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'grid', placeItems: 'center', padding: 20, zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} className="tc-card"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 22, width: 'min(560px, 100%)', maxHeight: '82vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Quem saiu</div>
+          <button onClick={onFechar} aria-label="Fechar"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-mute)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
+        </div>
+
+        {/* ── SEMPRE o período do filtro, primeiro ── */}
+        <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 16 }}>
+          Período do filtro: <b style={{ color: 'var(--text)' }}>{label}</b>
+        </div>
+
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
+          {t.noPeriodo.length} {t.noPeriodo.length === 1 ? 'saída no período' : 'saídas no período'}
+        </div>
+        {t.noPeriodo.length === 0 ? (
+          /* ⚠️ Zero saídas no período é uma RESPOSTA, e precisa ser dita: sem
+             esta linha o leitor emenda direto na lista de 12 meses e a data ela. */
+          <div style={{ fontSize: 12.5, color: 'var(--text-mute)', marginBottom: 18 }}>
+            Ninguém saiu deste setor em {label.toLowerCase()}.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+            {t.noPeriodo.map((p) => <LinhaSaiu key={p.id} p={p} destaque />)}
+          </div>
+        )}
+
+        <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: 14 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 4 }}>
+            {t.em12m.length} {t.em12m.length === 1 ? 'saída nos últimos 12 meses' : 'saídas nos últimos 12 meses'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 10, lineHeight: 1.5 }}>
+            É a janela da taxa de {t.taxa12m}% — ela <b>não</b> acompanha o filtro. Quem também caiu no período está em destaque.
+          </div>
+          {t.em12m.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>Ninguém saiu nos últimos 12 meses.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {t.em12m.map((p) => <LinhaSaiu key={p.id} p={p} destaque={noPeriodo.has(p.id)} />)}
+            </div>
+          )}
+        </div>
+
+        {foraDos12.length > 0 && (
+          <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: 14, marginTop: 16 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 10 }}>
+              {foraDos12.length} {foraDos12.length === 1 ? 'saída do período anterior' : 'saídas do período anteriores'} aos 12 meses
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 10, lineHeight: 1.5 }}>
+              O intervalo escolhido alcança mais que 12 meses, então {foraDos12.length === 1 ? 'esta saída conta' : 'estas saídas contam'} no
+              período e <b>não</b> na taxa.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {foraDos12.map((p) => <LinhaSaiu key={p.id} p={p} destaque />)}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LinhaSaiu({ p, destaque }: {
+  p: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }
+  destaque: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: destaque ? 1 : 0.72 }}>
+      {/* Em escala de cinza: é um retrato de quem não está mais aqui. */}
+      <span style={{ filter: 'grayscale(1)', opacity: 0.85, display: 'flex' }}>
+        <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--text-mute)" size={28} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{p.cargo}</div>
+      </div>
+      {p.quando && (
+        <span style={{ fontSize: 11.5, color: destaque ? 'var(--text-dim)' : 'var(--text-mute)', fontWeight: destaque ? 600 : 400, whiteSpace: 'nowrap' }}>
+          {new Date(`${p.quando}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
+        </span>
       )}
     </div>
   )

@@ -46,6 +46,8 @@ export type Employee = {
    *  medido e nunca se atrasou merece os 100 dela; quem não é medido não tem
    *  nota nenhuma. Ver `lib/ponto-cobertura.ts`. */
   temPonto: boolean
+  /** Último dia que o import de ponto cobriu (`null` = base vazia). */
+  pontoAte?: string | null
   suspensoes: number      // SEM FONTE (dump não traz suspensão) → 0; ficha mostra "—"
   assidDays: AssidDay[]   // dias com ocorrência (últimas ~18 semanas) p/ heatmap
   discEventos: DiscEvento[] // eventos de disciplina reais (advertências), desc

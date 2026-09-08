@@ -1,5 +1,6 @@
 'use client'
 import { useState, use } from 'react'
+import CalendarioOcorrencias from '../../CalendarioOcorrencias'
 import { useRouter } from 'next/navigation'
 import { PenLine, GraduationCap, PlayCircle, BookOpen } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
@@ -487,18 +488,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>histórico total</div></div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
                 </div>
+                {/* ⚠️⚠️ VIROU CALENDÁRIO (pedido do dono, 08/09/2026). A grade
+                    estilo GitHub respondia "houve muitos atrasos?" e não
+                    respondia **quando** — para saber que o quadrado escuro era
+                    12 de agosto era preciso passar o mouse e esperar o `title`,
+                    e numa captura de tela ou num papel, nunca. É a pergunta que
+                    se faz na frente da pessoa. */}
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mapa de ocorrências · últimas 18 semanas</div>
                 <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 12 }}>Cada quadro é um dia; a cor indica atraso (mais escuro = mais minutos). Dia limpo = sem ocorrência.</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(18,1fr)', gap: 4 }}>
-                  {vm.heat.map((c, i) => <div key={i} title={c.future ? '' : c.atrasos > 0 ? `${c.iso}: ${c.atrasos} atraso${c.atrasos > 1 ? 's' : ''}${c.minutos > 0 ? ` · ${c.minutos} min` : ''}` : `${c.iso}: sem ocorrência`} style={{ aspectRatio: '1', borderRadius: 3, background: c.bg, opacity: c.future ? 0 : 1 }} />)}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', marginTop: 12, fontSize: 11, color: 'var(--text-mute)' }}>
-                  Sem atraso
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--surface-2)' }} />
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'rgba(245,166,35,.3)' }} />
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'rgba(245,166,35,.55)' }} />
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: 'var(--accent)' }} /> Mais minutos
-                </div>
+                <CalendarioOcorrencias cells={vm.heat} pontoAte={vm.pontoAte} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

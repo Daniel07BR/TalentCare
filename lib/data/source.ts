@@ -278,6 +278,13 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
          pessoa NÃO É MEDIDA para quem está lendo. */
       servicosConcluidos: servTotByKey.get(personKey) ?? 0,
       temPonto: alcanca(u.departmentId, u.id) && cobPonto.roster.has(personKey),
+      /* ⚠️⚠️ ATÉ QUANDO O PONTO MEDIU. O calendário de ocorrências pinta de
+         "dia limpo" tudo que não tem atraso — e o ponto é import à MÃO, sem
+         cron. No dia em que a carga atrasar, o calendário mostrará a semana
+         inteira sem ocorrência para gente que ninguém mediu: a ausência
+         elogiando, de novo, agora em forma de quadradinho verde. Com esta data
+         o calendário sabe onde parar de afirmar. */
+      pontoAte: cobPonto.ultimoDia,
       assidDays: alcanca(u.departmentId, u.id) ? (assidDaysByKey.get(personKey) ?? []) : [],
       discEventos: alcanca(u.departmentId, u.id) ? disc : [],
     }
