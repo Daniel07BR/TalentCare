@@ -418,6 +418,14 @@ export async function GET(req: NextRequest) {
   const temWppAlgumDia = new Set(gWppSempre.map((r) => normNome(r.name)))
 
   const notaDe = new Map(avals.map((a) => [a.avaliadoId, a.media]))
+  /* ⚠️ A PONTUAÇÃO do mês (pontuacao_mes) — o número que soma disciplina +
+     serviços + atividades. É mensal (competência), não do filtro, como a nota.
+     Por personKey (= nexus_user_id ?? id), como a assiduidade. */
+  const pontosMesRows = await prisma.pontuacaoMes.findMany({
+    where: { departmentId: dept.id, competencia: compAtual },
+    select: { personKey: true, pontos: true },
+  })
+  const pontosMesDe = new Map(pontosMesRows.map((r) => [r.personKey, r.pontos]))
   const equipePessoas = ativos.map((p) => {
     const k = p.nexusUserId
     const pk = p.nexusUserId ?? p.id
@@ -440,6 +448,7 @@ export async function GET(req: NextRequest) {
       advertencias: mAdv.get(pk) ?? 0,
       // null = ainda não avaliada nesta competência (≠ nota zero).
       nota: notaDe.get(p.id) ?? null,
+      pontuacao: pontosMesDe.get(p.nexusUserId ?? p.id) ?? null,
     }
   })
 

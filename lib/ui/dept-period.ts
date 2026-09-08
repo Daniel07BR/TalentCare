@@ -11,6 +11,9 @@ export type PessoaDoSetor = {
   atrasos: number; minutosAtraso: number; advertencias: number
   /** null = ainda não avaliada nesta competência (≠ nota zero). */
   nota: number | null
+  /** A pontuação do mês (disciplina + serviços + atividades). null = não
+   *  calculada nesta competência. É mensal, não acompanha o filtro. */
+  pontuacao: number | null
 }
 
 export type PessoaRank = {

@@ -18,14 +18,14 @@ import Avatar from '../../Avatar'
    são coisas diferentes, e num quadro comparativo o zero acusa a pessoa.
    ============================================================ */
 
-type Coluna = 'nota' | 'atividade' | 'atrasos'
+type Coluna = 'nota' | 'pontuacao' | 'atrasos'
 
 const COLUNAS: { key: Coluna; label: string; dica: string }[] = [
   // ⚠️ A nota é da COMPETÊNCIA (mês fechado) e não do filtro. Sem dizer isso na
   // própria coluna, quem troca para "7 dias" acha que vê a nota daquela semana —
   // e a nota é o maior número da linha.
   { key: 'nota', label: 'Nota', dica: 'Avaliação do gestor (0–10) da competência mensal — não acompanha o filtro' },
-  { key: 'atividade', label: 'Atividade', dica: 'Ações registradas nos sistemas, no período' },
+  { key: 'pontuacao', label: 'Pontuação', dica: 'Pontuação do mês: disciplina + serviços + atividades da competência — não acompanha o filtro' },
   { key: 'atrasos', label: 'Atrasos', dica: 'Atrasos não abonados, no período' },
 ]
 
@@ -43,7 +43,10 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
   const [ordemPedida, setOrdem] = useState<Coluna>('nota')
 
   const medidas = pessoas.filter((p) => !p.semFonte)
-  const maxAtiv = Math.max(1, ...medidas.map((p) => p.atividade))
+  /* ⚠️ A barra compara a PONTUAÇÃO do mês dentro do setor. Só as positivas
+     definem o teto; a negativa (quem levou mais desconto que ponto) aparece em
+     vermelho, sem barra — ela não é "pouca atividade", é saldo negativo. */
+  const maxPont = Math.max(1, ...pessoas.map((p) => p.pontuacao ?? 0))
   const comNota = pessoas.filter((p) => p.nota != null)
   const mediaNota = comNota.length
     ? Math.round((comNota.reduce((a, p) => a + (p.nota ?? 0), 0) / comNota.length) * 10) / 10
@@ -53,7 +56,7 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
      atividade — a lista ficava ordenada por atividade com o botão "Nota" aceso,
      e o selo do topo ia para quem mais registrou, parecendo o melhor avaliado. */
   const semNotas = comNota.length === 0
-  const ordem: Coluna = semNotas && ordemPedida === 'nota' ? 'atividade' : ordemPedida
+  const ordem: Coluna = semNotas && ordemPedida === 'nota' ? 'pontuacao' : ordemPedida
 
   /* ⚠️ A busca filtra a EXIBIÇÃO, não a conta: a média do setor e o "N de M
      avaliadas" no rodapé continuam sendo do setor inteiro. Recalcular sobre o
@@ -70,15 +73,19 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
     /* ⚠️ "Não está na corrida" vale só para a coluna de ATIVIDADE. Atraso,
        advertência e nota EXISTEM para quem não tem conta no Nexus — empurrar
        essa pessoa para o fim escondia, na última linha, quem tinha 12 atrasos. */
-    if (ordem === 'atividade' && a.semFonte !== b.semFonte) return a.semFonte ? 1 : -1
     if (ordem === 'nota') {
-      if (a.nota == null && b.nota == null) return b.atividade - a.atividade
+      if (a.nota == null && b.nota == null) return (b.pontuacao ?? -Infinity) - (a.pontuacao ?? -Infinity)
       if (a.nota == null) return 1
       if (b.nota == null) return -1
       return b.nota - a.nota
     }
     if (ordem === 'atrasos') return b.atrasos - a.atrasos || b.advertencias - a.advertencias
-    return b.atividade - a.atividade
+    /* Pontuação: quem não tem (não calculada) vai por último, não ao fundo do
+       ranking — é ausência de conta, não saldo baixo. */
+    if (a.pontuacao == null && b.pontuacao == null) return 0
+    if (a.pontuacao == null) return 1
+    if (b.pontuacao == null) return -1
+    return b.pontuacao - a.pontuacao
   })
 
   return (
@@ -92,7 +99,7 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
               : pessoas.length === 1
                 ? 'a única pessoa do setor'
                 : `${pessoas.length} pessoas comparadas entre si`}
-            {' · '}atividade e atrasos no período ({periodo}) · nota de {competencia}
+            {' · '}pontuação e nota de {competencia} · atrasos no período ({periodo})
           </div>
         </div>
         {/* ⚠️ Com uma pessoa não há o que ordenar, e o segmentado só ocupa
@@ -103,7 +110,7 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
             return (
               <button key={c.key} disabled={inerte} onClick={() => setOrdem(c.key)}
                 title={inerte ? 'Nenhuma avaliação publicada nesta competência' : c.dica}
-                className={'seg' + (ordem === c.key ? ' on' : '') + (c.key === 'atividade' ? ' ord-atividade' : '')}
+                className={'seg' + (ordem === c.key ? ' on' : '') + (c.key === 'pontuacao' ? ' ord-atividade' : '')}
                 style={{ fontSize: 11.5, padding: '5px 10px', opacity: inerte ? 0.45 : 1, cursor: inerte ? 'not-allowed' : 'pointer' }}>
                 {c.label}
               </button>
@@ -119,7 +126,7 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
       <div className="cab-pessoas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 70px minmax(0,1fr) 104px 14px', gap: 14, padding: '0 10px 8px', borderBottom: '1px solid var(--border-soft)', marginTop: 16 }}>
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>Pessoa</span>
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'center' }}>Nota</span>
-        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>Atividade no período</span>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>Pontuação do mês</span>
         <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)', textAlign: 'right' }}>Ocorrências</span>
         <span />
       </div>
@@ -139,7 +146,7 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
           const selo = pessoas.length < 2 || p.semFonte ? null
             : i !== 0 ? null
             : ordem === 'nota' ? (p.nota != null ? { texto: 'MAIOR NOTA', cor: 'var(--accent)' } : null)
-            : ordem === 'atividade' ? (p.atividade > 0 ? { texto: 'MAIS ATIVO', cor: 'var(--accent)' } : null)
+            : ordem === 'pontuacao' ? (p.pontuacao != null && p.pontuacao > 0 ? { texto: 'MAIS PONTOS', cor: 'var(--accent)' } : null)
             : (p.atrasos > 0 ? { texto: 'MAIS ATRASOS', cor: 'var(--warning)' } : null)
           return (
             /* ⚠️ Era `<div onClick>` com a classe `crise` — que é `scaleY` a
@@ -190,19 +197,22 @@ export function Pessoas({ pessoas, periodo, competencia, avaliaveis, busca }: {
                 )}
               </div>
 
-              {/* ATIVIDADE — barra relativa a quem mais fez NO SETOR */}
+              {/* PONTUAÇÃO — o número do mês, barra relativa a quem mais pontuou
+                  NO SETOR. ⚠️ `null` = não calculada nesta competência (o setor
+                  ainda não rodou a pontuação) — é "—", não zero. Negativa vai em
+                  vermelho, sem barra: é saldo negativo, não pouca atividade. */}
               <div>
-                {p.semFonte ? (
+                {p.pontuacao == null ? (
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>
-                    — <span style={{ fontSize: 10 }}>não medido nos sistemas</span>
+                    — <span style={{ fontSize: 10 }}>sem pontuação no mês</span>
                   </span>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                     <div style={{ flex: 1, height: 7, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div className="cbar" style={{ height: '100%', width: `${Math.round((p.atividade / maxAtiv) * 100)}%`, background: 'var(--chart-2)', borderRadius: 4 }} />
+                      <div className="cbar" style={{ height: '100%', width: `${p.pontuacao > 0 ? Math.round((p.pontuacao / maxPont) * 100) : 0}%`, background: 'var(--chart-2)', borderRadius: 4 }} />
                     </div>
-                    <span className="cnum" style={{ width: 42, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: p.atividade > 0 ? 'var(--text)' : 'var(--text-mute)' }}>
-                      {p.atividade.toLocaleString('pt-BR')}
+                    <span className="cnum" style={{ width: 46, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: p.pontuacao < 0 ? 'var(--danger)' : p.pontuacao > 0 ? 'var(--text)' : 'var(--text-mute)' }}>
+                      {p.pontuacao.toLocaleString('pt-BR')}
                     </span>
                   </div>
                 )}
