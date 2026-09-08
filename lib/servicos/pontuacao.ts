@@ -113,3 +113,26 @@ export function regraDaCompetencia<T extends { vigenteDesde: string }>(versoes: 
     .filter((v) => v.vigenteDesde <= competencia)
     .sort((a, b) => b.vigenteDesde.localeCompare(a.vigenteDesde))[0] ?? null
 }
+
+/* ============================================================
+   A GRAFIA DO TIPO DE SERVIÇO.
+
+   ⚠️⚠️ A decisão do setor sobre um tipo é gravada com o TEXTO do tipo como
+   chave, e o texto vem do export de outro sistema — onde ninguém prometeu que
+   ele é estável. Medido em 08/09/2026 na planilha do Legal: o mesmo serviço
+   aparece como "TAXAS PREFEITURA (TFE/TFA) Emitir boletos" e "… emitir
+   boletos". Viraram dois tipos no catálogo, com 5 serviços cada, e o pessoal do
+   Legal configurou os dois separadamente — com máximos diferentes, 240 e 237.
+   Ninguém percebeu, porque nada acusa: são duas linhas plausíveis.
+
+   Sem esta normalização, uma maiúscula trocada no arquivo do mês que vem faz o
+   tipo reaparecer como NOVO, valendo o que a média medir, e a decisão de quem
+   conhece o trabalho fica órfã no banco.
+
+   ⚠️ Ela é a chave de BUSCA, não de gravação: a linha continua guardando a
+   grafia exata que veio. Mesclar sozinho duas decisões divergentes seria
+   escolher entre 240 e 237 no lugar de quem decidiu — a tela mostra as duas e
+   pergunta.
+   ============================================================ */
+export const normalizarTarefa = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ')

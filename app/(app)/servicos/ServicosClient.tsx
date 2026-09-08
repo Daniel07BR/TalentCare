@@ -30,6 +30,11 @@ type Previa = {
   minutosConcluidos: number
   linhasSemVinculo: number; substituir: number
   alertaSetor: { setorProvavel: string; quantas: number; de: number } | null
+  tipos?: {
+    total: number; jaDecididos: number
+    novos: { tarefa: string; linhas: number; concluidas: number }[]
+    decididosForaDoArquivo: string[]
+  }
   avisos: string[]; nomes: NomeLido[]
   jaImportado?: { em: string; arquivo: string; linhas: number; ativo: boolean }
   ok?: boolean
@@ -219,6 +224,75 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
               <div key={i} style={{ marginTop: 10, fontSize: 12, color: 'var(--warning)' }}>⚠ {a}</div>
             ))}
           </div>
+
+          {/* ── quanto vale cada tipo de serviço ──────────────────────────────
+              ⚠️⚠️ A pergunta que faltava na conferência. O arquivo traz tipos de
+              serviço, cada tipo vale pontos, e um tipo NOVO entrava valendo o que
+              a média dele medisse — sem passar por ninguém. Medido em 08/09/2026:
+              quatro tipos estrearam em agosto valendo 108, 86, 46 e 18 pontos, e o
+              de 108 tem UMA ocorrência de 215 minutos, mais que qualquer tipo
+              estabelecido do catálogo. */}
+          {previa.tipos && (
+            <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Quanto vale cada tipo de serviço</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
+                O que o setor já decidiu <b>fica valendo</b> — a régua de cada tipo é guardada por setor e por tipo, fora
+                do arquivo, e subir uma planilha nova não a apaga. Dos <b>{previa.tipos.total}</b> tipos deste arquivo,{' '}
+                <b style={{ color: 'var(--success)' }}>{previa.tipos.jaDecididos}</b> já passaram por alguém.
+              </div>
+
+              {previa.tipos.novos.length > 0 ? (
+                <>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--warning)', marginBottom: 8 }}>
+                    <TriangleAlert size={13} style={{ verticalAlign: -2 }} />{' '}
+                    {previa.tipos.novos.length === 1
+                      ? '1 tipo nunca foi avaliado'
+                      : `${previa.tipos.novos.length} tipos nunca foram avaliados`}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10, lineHeight: 1.55 }}>
+                    Eles entram valendo o que a duração média deles medir. Isso é razoável quando há volume e
+                    arriscado quando não há: um tipo com uma única ocorrência longa vira o mais caro do catálogo.
+                    Depois de importar, a lista <b>Pontos por tipo de serviço</b>, aqui embaixo, abre com eles em cima.
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+                    {previa.tipos.novos.slice(0, 12).map((t) => (
+                      <div key={t.tarefa} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, padding: '6px 8px', borderRadius: 6, background: 'var(--surface-2)' }}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.tarefa}>{t.tarefa}</span>
+                        <span style={{ color: t.concluidas < 5 ? 'var(--warning)' : 'var(--text-mute)', fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                          {t.concluidas === 0
+                            ? 'nenhum concluído — sem duração para medir'
+                            : `${t.concluidas} ${t.concluidas === 1 ? 'concluído' : 'concluídos'}${t.concluidas < 5 ? ' — amostra pequena' : ''}`}
+                        </span>
+                      </div>
+                    ))}
+                    {previa.tipos.novos.length > 12 && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text-mute)', padding: '2px 8px' }}>
+                        e mais {previa.tipos.novos.length - 12} — a lista inteira fica aqui embaixo depois de importar.
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 12.5, color: 'var(--success)' }}>
+                  <Check size={13} style={{ verticalAlign: -2 }} /> Nenhum tipo novo — todos os deste arquivo já têm valor decidido.
+                </div>
+              )}
+
+              {/* ⚠️⚠️ A pergunta da casa, do outro lado: e o que foi decidido e NÃO
+                  vem neste arquivo? O tipo some do catálogo (que é feito das linhas
+                  que existem) e a decisão fica no banco, invisível, pronta para
+                  voltar a valer quando ele reaparecer. */}
+              {previa.tipos.decididosForaDoArquivo.length > 0 && (
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.55, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                  <b>{previa.tipos.decididosForaDoArquivo.length}</b>{' '}
+                  {previa.tipos.decididosForaDoArquivo.length === 1 ? 'tipo já decidido não vem' : 'tipos já decididos não vêm'} neste arquivo
+                  {' '}({previa.tipos.decididosForaDoArquivo.slice(0, 3).join(', ')}
+                  {previa.tipos.decididosForaDoArquivo.length > 3 ? '…' : ''}).
+                  {' '}A decisão não é apagada — some da lista junto com os serviços e volta a valer se o tipo reaparecer.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── de quem é cada nome ───────────────────────────────────────── */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>

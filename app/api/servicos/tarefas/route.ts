@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh, podeGerirServicos } from '@/lib/avaliacoes/regua'
+import { normalizarTarefa } from '@/lib/servicos/pontuacao'
 
 /* ============================================================
    OS TIPOS DE SERVIÇO DO SETOR, e quantos pontos cada um vale.
@@ -22,6 +23,29 @@ import { quemEh, podeGerirServicos } from '@/lib/avaliacoes/regua'
    duas e quatro. A "média" de um tipo com uma ocorrência não é média: é aquele
    caso. A tela marca isso; sem a marca, um serviço que aconteceu uma vez e
    demorou 8 horas viraria o mais valioso do catálogo para sempre.
+
+   ── A DECISÃO QUE ATRAVESSA OS MESES (08/09/2026) ─────────────────────────
+
+   O pedido do dono: "o pessoal do Legal já ajustou quanto vale cada serviço; o
+   sistema tem de guardar isso para os próximos meses e apresentar para ajuste
+   só os lançamentos novos".
+
+   ⚠️⚠️ O VALOR CONTINUA ACOMPANHANDO A PLANILHA, e isso foi decidido, não
+   herdado. Os limites de mínimo e máximo que o gestor pôs são uma REGRA, e
+   regra se aplica a dado novo — congelar o número faria os 71 mínimos e 71
+   máximos que o Legal acabou de configurar perderem efeito sobre tudo que
+   entrar daqui para a frente. Medido antes de decidir: um mês a mais de
+   planilha moveu **6 dos 72 tipos, todos em ±1 ponto**.
+
+   ⚠️⚠️ MAS ACOMPANHAR SEM AVISAR SERIA MUDAR A NOTA DE ALGUÉM EM SILÊNCIO. Por
+   isso a linha guarda `revisadoEm` e `pontosNaRevisao`: o catálogo sabe dizer
+   o que **nunca foi olhado** e o que **mudou desde que foi olhado**.
+
+   ⚠️⚠️ E "NUNCA OLHARAM" DEIXOU DE SER IGUAL A "OLHARAM E MANTIVERAM". Os dois
+   eram a mesma ausência de linha no banco — a regra da casa na sua roupa desta
+   semana: ausência de decisão não é decisão de manter. Sem o `revisar`, o tipo
+   que a liderança conferiu e aprovou volta todo mês para a lista de
+   pendências; e uma lista de pendências que nunca esvazia para de ser lida.
    ============================================================ */
 
 export type TarefaPontuada = {
@@ -57,7 +81,36 @@ export type TarefaPontuada = {
   ajustadoEm: string | null
   /** Quanto o sistema sugeria quando a pessoa mudou — a prova de quem mudou o quê. */
   pontosAutoNaEpoca: number | null
+
+  /* ── a decisão que atravessa os meses ─────────────────────────────────── */
+  /** Alguém já olhou este tipo e disse que o valor está certo? */
+  revisado: boolean
+  revisadoPor: string | null
+  revisadoEm: string | null
+  /** Quanto valia quando foi revisado — a âncora do "mudou desde então". */
+  pontosNaRevisao: number | null
+  /** O valor de hoje se afastou do que a pessoa conferiu. */
+  mudouDesdeRevisao: boolean
+  /** As OUTRAS grafias do mesmo tipo neste catálogo (caixa/acento/espaço). */
+  grafias: string[]
+  /** As grafias existem e as decisões delas DISCORDAM — o Legal escolhe qual fica. */
+  grafiaDivergente: boolean
+  /** A decisão não é desta grafia: veio de outra, por normalização. */
+  herdouDeGrafia: string | null
 }
+
+/** Os campos de VALOR de um ajuste — o que "voltar ao medido" desfaz. */
+type ValoresDoAjuste = {
+  mediaMinutos: number | null
+  tempoMinimo: number | null
+  tempoMaximo: number | null
+  pontos: number | null
+}
+const mesmoValor = (a: ValoresDoAjuste, b: ValoresDoAjuste) =>
+  a.mediaMinutos === b.mediaMinutos && a.tempoMinimo === b.tempoMinimo
+  && a.tempoMaximo === b.tempoMaximo && a.pontos === b.pontos
+const temValor = (a: ValoresDoAjuste) =>
+  a.mediaMinutos != null || a.tempoMinimo != null || a.tempoMaximo != null || a.pontos != null
 
 /**
  * Calcula o catálogo inteiro de um setor.
@@ -87,14 +140,28 @@ async function calcularCatalogo(departmentId: string) {
       select: { id: true, nexusUserId: true, name: true },
     }),
   ])
+  /* Quando entrou a última planilha — é o que decide se dá para saber quanto um
+     tipo valia numa revisão antiga. Ver `ancorarOQueDaParaSaber`. */
+  const ultimoLote = await prisma.importLote.findFirst({
+    where: { departmentId }, orderBy: { enviadoEm: 'desc' }, select: { enviadoEm: true },
+  })
 
   const fator = regra?.fatorPorMinuto ?? 0.5
-  const autores = await prisma.user.findMany({
-    where: { id: { in: [...new Set(ajustes.map((a) => a.ajustadoPor))] } },
-    select: { id: true, name: true },
-  })
+  const idsDeAutor = [...new Set(ajustes.flatMap((a) => [a.ajustadoPor, a.revisadoPor]).filter((x): x is string => !!x))]
+  const autores = await prisma.user.findMany({ where: { id: { in: idsDeAutor } }, select: { id: true, name: true } })
   const nomePorId = new Map(autores.map((a) => [a.id, a.name]))
+
   const ajustePorTarefa = new Map(ajustes.map((a) => [a.tarefa, a]))
+  /* ⚠️⚠️ A BUSCA TOLERANTE À GRAFIA. Tenta a grafia exata primeiro; só quando
+     não acha é que cai na normalizada. É assim que a decisão sobrevive a uma
+     maiúscula trocada no export do mês que vem — e é assim que ela NÃO mescla
+     sozinha duas decisões que já existem e divergem (o caso das "Emitir/emitir
+     boletos", com máximos 240 e 237): a tela mostra as duas e o Legal escolhe. */
+  const porNorm = new Map<string, typeof ajustes>()
+  for (const a of ajustes) {
+    const k = a.tarefaNorm || normalizarTarefa(a.tarefa)
+    porNorm.set(k, [...(porNorm.get(k) ?? []), a])
+  }
 
   /* ⚠️⚠️ TEMPO ZERO É "NÃO CRONOMETRADO", NÃO "INSTANTÂNEO" (confirmado pelo dono
      em 04/09/2026). São 138 dos 5.227 concluídos — 2,6% —, e eles estavam
@@ -114,6 +181,13 @@ async function calcularCatalogo(departmentId: string) {
     porTarefa.set(l.tarefa, arr)
   }
 
+  /* As grafias do MESMO tipo que convivem no catálogo de hoje. */
+  const grafiasPorNorm = new Map<string, string[]>()
+  for (const t of porTarefa.keys()) {
+    const k = normalizarTarefa(t)
+    grafiasPorNorm.set(k, [...(grafiasPorNorm.get(k) ?? []), t])
+  }
+
   const nomeDaChave = new Map(usuariosDoSetor.map((u) => [u.nexusUserId ?? u.id, u.name]))
   const brDia = (d: string) => d.split('-').reverse().join('/')
   /** Quem fez e quando — é o que explica um extremo. */
@@ -121,7 +195,15 @@ async function calcularCatalogo(departmentId: string) {
     `${(l.personKey && nomeDaChave.get(l.personKey)) || l.nomeOrigem} · ${brDia(l.dia)}`
 
   const tarefas: TarefaPontuada[] = [...porTarefa].map(([tarefa, todas]) => {
-    const aj0 = ajustePorTarefa.get(tarefa)
+    const norm = normalizarTarefa(tarefa)
+    const exato = ajustePorTarefa.get(tarefa) ?? null
+    /* Só herda de outra grafia quando não há ambiguidade: uma única decisão
+       gravada com aquele mesmo nome normalizado. Duas, e ninguém herda nada —
+       escolher entre elas é do Legal. */
+    const doNorm = (porNorm.get(norm) ?? []).filter((a) => a.tarefa !== tarefa)
+    const herdado = !exato && doNorm.length === 1 ? doNorm[0] : null
+    const aj0 = exato ?? herdado
+
     const minimo = aj0?.tempoMinimo ?? null
     const maximo = aj0?.tempoMaximo ?? null
     const comTempo = todas.filter((l) => l.minutos > 0)
@@ -150,6 +232,18 @@ async function calcularCatalogo(departmentId: string) {
        que mediu o que alguém decidiu. */
     const mediaEmUso = aj?.mediaMinutos ?? mediaMedida
     const pontosAuto = Math.max(1, Math.round(mediaEmUso * fator))
+    const pontos = aj?.pontos ?? pontosAuto
+
+    const outrasGrafias = (grafiasPorNorm.get(norm) ?? []).filter((g) => g !== tarefa)
+    /* ⚠️ Divergem quando as DECISÕES gravadas nas duas grafias não são a mesma —
+       inclusive quando uma tem decisão e a outra não. É o caso medido em
+       08/09/2026 (máximo 240 numa grafia e 237 na outra). */
+    const valoresDe = (a: typeof exato): ValoresDoAjuste => ({
+      mediaMinutos: a?.mediaMinutos ?? null, tempoMinimo: a?.tempoMinimo ?? null,
+      tempoMaximo: a?.tempoMaximo ?? null, pontos: a?.pontos ?? null,
+    })
+    const grafiaDivergente = outrasGrafias.some((g) => !mesmoValor(valoresDe(exato), valoresDe(ajustePorTarefa.get(g) ?? null)))
+
     return {
       tarefa,
       amostras: todas.length,
@@ -173,16 +267,77 @@ async function calcularCatalogo(departmentId: string) {
       maiores: [...ordenado].reverse().slice(0, 2).map((l) => ({ minutos: l.minutos, quem: quemFez(l) })),
       menores: ordenado.slice(0, 2).map((l) => ({ minutos: l.minutos, quem: quemFez(l) })),
       pontosAuto,
-      pontos: aj?.pontos ?? pontosAuto,
+      pontos,
       pontosAjustados: aj?.pontos != null,
-      ajustado: !!aj,
-      ajustadoPor: aj ? (nomePorId.get(aj.ajustadoPor) ?? '—') : null,
-      ajustadoEm: aj ? aj.ajustadoEm.toISOString() : null,
+      /* ⚠️ "Ajustado" é ter VALOR gravado, não ter linha. Uma linha que só
+         registra "conferi e mantive" não tem o que desfazer — e o botão de
+         voltar ao medido ficaria aceso sem nada para apagar. */
+      ajustado: !!aj && temValor(valoresDe(aj)),
+      ajustadoPor: aj?.ajustadoPor ? (nomePorId.get(aj.ajustadoPor) ?? '—') : null,
+      ajustadoEm: aj?.ajustadoEm ? aj.ajustadoEm.toISOString() : null,
       pontosAutoNaEpoca: aj?.pontosAutoNaEpoca ?? null,
+
+      revisado: !!aj?.revisadoEm,
+      revisadoPor: aj?.revisadoPor ? (nomePorId.get(aj.revisadoPor) ?? '—') : null,
+      revisadoEm: aj?.revisadoEm ? aj.revisadoEm.toISOString() : null,
+      pontosNaRevisao: aj?.pontosNaRevisao ?? null,
+      /* ⚠️⚠️ Só afirma que MUDOU quando há com o que comparar. `pontosNaRevisao`
+         nulo é "não sei quanto valia" — e "não sei" não pode virar "mudou", que
+         é a mesma inversão do null→0 com outra fantasia. */
+      mudouDesdeRevisao: !!aj?.revisadoEm && aj.pontosNaRevisao != null && aj.pontosNaRevisao !== pontos,
+      grafias: outrasGrafias,
+      grafiaDivergente: outrasGrafias.length > 0 && grafiaDivergente,
+      herdouDeGrafia: herdado ? herdado.tarefa : null,
     }
   }).sort((a, b) => b.amostras - a.amostras)
 
+  await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimoLote?.enviadoEm ?? null)
+
   return { fatorPorMinuto: fator, totalConcluidos: linhas.length, tarefas }
+}
+
+/**
+ * Grava a âncora `pontosNaRevisao` das revisões antigas — mas SÓ das que dá
+ * para saber.
+ *
+ * ⚠️⚠️ AS 72 DECISÕES DO LEGAL SÃO ANTERIORES A ESTE CAMPO, e sem âncora o
+ * aviso de "mudou desde que você conferiu" nasceria mudo justamente para as
+ * únicas linhas que já existem. A tentação é gravar o valor de hoje em todas —
+ * e isso seria AFIRMAR que o tipo valia isto quando a pessoa o conferiu, sem
+ * ter medido nada. Inventar procedência para número de gente de verdade é o
+ * que a regra (d) da casa proíbe.
+ *
+ * ⚠️⚠️ A condição que torna a afirmação verdadeira: a revisão ser POSTERIOR à
+ * última importação. O valor de um tipo só muda quando chega planilha nova —
+ * então, se nada entrou depois da revisão, o valor de hoje **é** o valor
+ * daquele dia. Foi o caso conferido em 08/09/2026: um único lote em 04/09
+ * 11:07 e as 72 decisões entre 04/09 19:41 e 08/09.
+ *
+ * Revisão anterior a uma importação fica sem âncora — e a tela então diz
+ * "conferido em tal dia" sem afirmar variação nenhuma, que é a resposta certa
+ * para "não sei".
+ */
+async function ancorarOQueDaParaSaber(
+  departmentId: string,
+  ajustes: { tarefa: string; revisadoEm: Date | null; pontosNaRevisao: number | null }[],
+  tarefas: TarefaPontuada[],
+  ultimaImportacao: Date | null,
+) {
+  const pontosDe = new Map(tarefas.map((t) => [t.tarefa, t.pontos]))
+  const alvo = ajustes.filter((a) =>
+    a.revisadoEm != null && a.pontosNaRevisao == null && pontosDe.has(a.tarefa)
+    && (ultimaImportacao == null || a.revisadoEm > ultimaImportacao))
+  if (!alvo.length) return
+  await Promise.all(alvo.map((a) => prisma.pontuacaoTarefaAjuste.update({
+    where: { departmentId_tarefa: { departmentId, tarefa: a.tarefa } },
+    data: { pontosNaRevisao: pontosDe.get(a.tarefa)! },
+  })))
+  for (const t of tarefas) {
+    if (alvo.some((a) => a.tarefa === t.tarefa)) {
+      t.pontosNaRevisao = pontosDe.get(t.tarefa)!
+      t.mudouDesdeRevisao = false
+    }
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -207,7 +362,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     departmentId?: string; tarefa?: string
     /** Qual campo a pessoa mexeu: muda o que salvar e o que limpar. */
-    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar'
+    campo?: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'unificar_grafia'
     valor?: number | null
     pontosAuto?: number
   } | null
@@ -217,13 +372,71 @@ export async function POST(req: NextRequest) {
   if (!podeGerirServicos(quem, departmentId)) {
     return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
   }
+  const tarefaNorm = normalizarTarefa(tarefa)
+  const agora = new Date()
+  /** Toda mudança de valor TAMBÉM revisa: quem digita o número olhou para ele. */
+  const carimboDeAjuste = { ajustadoPor: quem.id, ajustadoEm: agora, revisadoPor: quem.id, revisadoEm: agora }
 
-  /* `limpar` VOLTA ao medido — apaga o ajuste em vez de gravar o valor sugerido.
+  /* ── "conferi, e está certo" ──────────────────────────────────────────────
+     ⚠️⚠️ Não muda valor nenhum: grava que uma pessoa olhou. É o que separa
+     "ninguém nunca viu este tipo" de "viram e decidiram manter o medido" — que
+     no banco eram a MESMA ausência de linha. Sem esta porta, a lista de
+     pendências nunca esvazia, e lista que nunca esvazia para de ser lida. */
+  if (body?.campo === 'revisar') {
+    await prisma.pontuacaoTarefaAjuste.upsert({
+      where: { departmentId_tarefa: { departmentId, tarefa } },
+      create: { departmentId, tarefa, tarefaNorm, revisadoPor: quem.id, revisadoEm: agora },
+      update: { revisadoPor: quem.id, revisadoEm: agora },
+    })
+    return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
+  }
+
+  /* ── "use este valor nas duas grafias" ───────────────────────────────────
+     A saída para o caso medido em 08/09/2026: o mesmo serviço em duas grafias,
+     configurado duas vezes, com máximos diferentes. O sistema não escolhe entre
+     240 e 237 — copia para as outras grafias o valor que a PESSOA apontou. */
+  if (body?.campo === 'unificar_grafia') {
+    const fonte = await prisma.pontuacaoTarefaAjuste.findUnique({
+      where: { departmentId_tarefa: { departmentId, tarefa } },
+    })
+    if (!fonte) return NextResponse.json({ error: 'Esta grafia não tem valor gravado para copiar.' }, { status: 400 })
+    const irmas = (await prisma.servicoDepto.findMany({
+      where: { departmentId, status: 'concluida' },
+      select: { tarefa: true }, distinct: ['tarefa'],
+    })).map((r) => r.tarefa).filter((t) => t !== tarefa && normalizarTarefa(t) === tarefaNorm)
+
+    const valores = {
+      mediaMinutos: fonte.mediaMinutos, tempoMinimo: fonte.tempoMinimo,
+      tempoMaximo: fonte.tempoMaximo, pontos: fonte.pontos,
+      pontosAutoNaEpoca: fonte.pontosAutoNaEpoca,
+    }
+    for (const irma of irmas) {
+      await prisma.pontuacaoTarefaAjuste.upsert({
+        where: { departmentId_tarefa: { departmentId, tarefa: irma } },
+        create: { departmentId, tarefa: irma, tarefaNorm, ...valores, ...carimboDeAjuste },
+        update: { ...valores, ...carimboDeAjuste },
+      })
+    }
+    return NextResponse.json({ ok: true, unificadas: irmas.length, recarregar: true })
+  }
+
+  /* `limpar` VOLTA ao medido — apaga os VALORES em vez de gravar o sugerido.
      Gravar o sugerido faria o ajuste "vazio" congelar aquele número, e ele
-     deixaria de acompanhar a planilha na próxima importação. */
+     deixaria de acompanhar a planilha na próxima importação.
+     ⚠️⚠️ A linha SOBREVIVE, como revisão: voltar ao medido é uma decisão
+     ("olhei e quero o que a planilha mede"), e apagar a linha inteira a
+     transformaria de novo em "ninguém nunca olhou". */
   if (body?.campo === 'limpar') {
-    await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
-    return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa)) })
+    await prisma.pontuacaoTarefaAjuste.upsert({
+      where: { departmentId_tarefa: { departmentId, tarefa } },
+      create: { departmentId, tarefa, tarefaNorm, revisadoPor: quem.id, revisadoEm: agora },
+      update: {
+        mediaMinutos: null, tempoMinimo: null, tempoMaximo: null, pontos: null,
+        pontosAutoNaEpoca: null, ajustadoPor: null, ajustadoEm: null,
+        revisadoPor: quem.id, revisadoEm: agora,
+      },
+    })
+    return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa, true)) })
   }
   /* Esvaziar UM limite tira só aquele limite — apagar o ajuste inteiro levaria
      junto o outro limite e a média, que a pessoa não pediu para mexer. */
@@ -231,29 +444,21 @@ export async function POST(req: NextRequest) {
     const campo = body.campo === 'minimo' ? { tempoMinimo: null } : { tempoMaximo: null }
     const atual = await prisma.pontuacaoTarefaAjuste.findUnique({ where: { departmentId_tarefa: { departmentId, tarefa } } })
     if (!atual) return NextResponse.json({ ok: true })
-    const restou = { ...atual, ...campo }
-    // Nada mais ajustado nesta tarefa → some com a linha em vez de deixar um
-    // registro vazio dizendo que alguém mexeu.
-    if (restou.tempoMinimo == null && restou.tempoMaximo == null && restou.mediaMinutos == null && restou.pontos == null) {
-      await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
-    } else {
-      await prisma.pontuacaoTarefaAjuste.update({
-        where: { departmentId_tarefa: { departmentId, tarefa } },
-        data: { ...campo, mediaMinutos: null, pontos: null, ajustadoPor: quem.id },
-      })
-    }
-    return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa)) })
+    await prisma.pontuacaoTarefaAjuste.update({
+      where: { departmentId_tarefa: { departmentId, tarefa } },
+      data: { ...campo, mediaMinutos: null, pontos: null, ...carimboDeAjuste },
+    })
+    return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
   }
   if (body?.valor == null) {
-    await prisma.pontuacaoTarefaAjuste.deleteMany({ where: { departmentId, tarefa } })
-    return NextResponse.json({ ok: true, voltouAoCalculado: true, ...(await umaTarefa(departmentId, tarefa)) })
+    return NextResponse.json({ error: 'Falta o valor.' }, { status: 400 })
   }
 
   const valor = Math.round(Number(body.valor))
   if (!Number.isFinite(valor) || valor < 0 || valor > 100000) {
     return NextResponse.json({ error: 'O valor tem de ser um número entre 0 e 100.000.' }, { status: 422 })
   }
-  const pontosAutoNaEpoca = Math.round(Number(body.pontosAuto ?? 0)) || 0
+  const pontosAutoNaEpoca = Math.round(Number(body.pontosAuto ?? 0)) || null
   /* ⚠️⚠️ MEXER NA MÉDIA OU NO MÍNIMO LIMPA O OVERRIDE DE PONTOS. Foi o pedido —
      "o campo pontos atualiza automaticamente" — e é o que faz a tela se
      comportar como a pessoa espera: se o número digitado antes continuasse
@@ -264,21 +469,38 @@ export async function POST(req: NextRequest) {
      ficasse por cima, definir o mínimo não mudaria nada — e a pessoa
      concluiria, com razão, que o campo não faz nada. */
   const dados =
-    body.campo === 'media' ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
-    : body.campo === 'minimo' ? { tempoMinimo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
-    : body.campo === 'maximo' ? { tempoMaximo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ajustadoPor: quem.id }
-    : { pontos: valor, pontosAutoNaEpoca, ajustadoPor: quem.id }
+    body.campo === 'media' ? { mediaMinutos: valor, pontos: null, pontosAutoNaEpoca, ...carimboDeAjuste }
+    : body.campo === 'minimo' ? { tempoMinimo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ...carimboDeAjuste }
+    : body.campo === 'maximo' ? { tempoMaximo: valor, mediaMinutos: null, pontos: null, pontosAutoNaEpoca, ...carimboDeAjuste }
+    : { pontos: valor, pontosAutoNaEpoca, ...carimboDeAjuste }
 
   await prisma.pontuacaoTarefaAjuste.upsert({
     where: { departmentId_tarefa: { departmentId, tarefa } },
-    create: { departmentId, tarefa, ...dados },
+    create: { departmentId, tarefa, tarefaNorm, ...dados },
     update: dados,
   })
-  return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa)) })
+  return NextResponse.json({ ok: true, ...(await umaTarefa(departmentId, tarefa, true)) })
 }
 
-/** A linha recalculada, para a tela trocar só ela. */
-async function umaTarefa(departmentId: string, tarefa: string) {
+/**
+ * A linha recalculada, para a tela trocar só ela.
+ *
+ * ⚠️⚠️ `ancorar` grava, DEPOIS de recalcular, quanto o tipo passou a valer — é
+ * o `pontosNaRevisao`. Precisa ser depois: o valor de um tipo é derivado da
+ * média com os limites aplicados, e só existe quando a conta roda. Sem esta
+ * âncora, "mudou desde que você conferiu" não teria com o que comparar e a
+ * tela ficaria muda exatamente na hora em que o número se mexesse sozinho.
+ */
+async function umaTarefa(departmentId: string, tarefa: string, ancorar = false) {
   const cat = await calcularCatalogo(departmentId)
-  return { tarefa: cat.tarefas.find((t) => t.tarefa === tarefa) ?? null }
+  const linha = cat.tarefas.find((t) => t.tarefa === tarefa) ?? null
+  if (ancorar && linha) {
+    await prisma.pontuacaoTarefaAjuste.updateMany({
+      where: { departmentId, tarefa },
+      data: { pontosNaRevisao: linha.pontos },
+    })
+    linha.pontosNaRevisao = linha.pontos
+    linha.mudouDesdeRevisao = false
+  }
+  return { tarefa: linha }
 }

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { quemEh, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { lerPlanilha, normalizarNome } from '@/lib/servicos/planilha'
 import { sugerirTodos, type Pessoa } from '@/lib/servicos/vinculo'
+import { normalizarTarefa } from '@/lib/servicos/pontuacao'
 
 /* ============================================================
    IMPORTAÇÃO DA PLANILHA DE SERVIÇOS DE UM SETOR.
@@ -226,6 +227,46 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
     if (s.status === 'concluida') minutosConcluidos += s.minutos
   }
 
+  /* ── OS TIPOS DE SERVIÇO DESTE ARQUIVO ────────────────────────────────────
+     ⚠️⚠️ Um tipo NOVO entra valendo o que a média dele medir, e ninguém é
+     avisado. Medido em 08/09/2026 na planilha do Legal: quatro tipos
+     apareceram pela primeira vez em agosto e entraram valendo 108, 86, 46 e 18
+     pontos — o `SINDICATO (PROCESSOS) SINDRESBAR` vale **108 com uma única
+     ocorrência de 215 minutos**, mais do que qualquer tipo estabelecido do
+     catálogo (o maior é 88). O arquivo chega, o serviço passa a pesar mais que
+     todos os outros, e o único jeito de descobrir era reparar numa linha nova
+     no meio de 74.
+
+     É o pedido do dono, de 08/09/2026, na sua forma exata: o sistema já sabe
+     quanto vale cada um — e apresenta para ajuste **os lançamentos novos**.
+
+     ⚠️ E a pergunta da casa, de volta: o que isto mostra para quem a fonte não
+     cobre? `decididosForaDoArquivo` responde. Um tipo decidido que não vem
+     neste arquivo some do catálogo (o catálogo é feito das linhas que existem),
+     e a decisão fica no banco, invisível, pronta para voltar a valer quando o
+     tipo reaparecer. Dizer isso é mais barato que descobrir depois. */
+  const decisoes = await prisma.pontuacaoTarefaAjuste.findMany({
+    where: { departmentId }, select: { tarefa: true, tarefaNorm: true, revisadoEm: true },
+  })
+  const decididos = new Set(decisoes.filter((d) => d.revisadoEm).map((d) => d.tarefaNorm || normalizarTarefa(d.tarefa)))
+
+  const linhasPorTipo = new Map<string, { tarefa: string; linhas: number; concluidas: number }>()
+  for (const s of lida.servicos) {
+    const k = normalizarTarefa(s.tarefa)
+    const at = linhasPorTipo.get(k) ?? { tarefa: s.tarefa, linhas: 0, concluidas: 0 }
+    at.linhas++
+    if (s.status === 'concluida') at.concluidas++
+    linhasPorTipo.set(k, at)
+  }
+  const tiposNovos = [...linhasPorTipo]
+    .filter(([k]) => !decididos.has(k))
+    .map(([, v]) => v)
+    .sort((a, b) => b.linhas - a.linhas)
+  const noArquivo = new Set(linhasPorTipo.keys())
+  const decididosForaDoArquivo = [...new Set(
+    decisoes.filter((d) => d.revisadoEm && !noArquivo.has(d.tarefaNorm || normalizarTarefa(d.tarefa))).map((d) => d.tarefa),
+  )].sort()
+
   return {
     setor: setorNome,
     hash: lida.hash,
@@ -239,6 +280,13 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
     alertaSetor,
     /** Quantas linhas já existentes seriam apagadas e regravadas por este envio. */
     substituir,
+    /** Os tipos de serviço deste arquivo que ninguém decidiu ainda. */
+    tipos: {
+      total: linhasPorTipo.size,
+      jaDecididos: linhasPorTipo.size - tiposNovos.length,
+      novos: tiposNovos,
+      decididosForaDoArquivo,
+    },
     avisos: lida.avisos,
     nomes: nomes.map((n) => ({
       nomeOrigem: n.nomeOrigem, nomeNorm: n.nomeNorm, linhas: n.linhas,

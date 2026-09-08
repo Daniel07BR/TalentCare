@@ -895,10 +895,29 @@ model PontuacaoMes {
  * ⚠️ `pontosAutoNaEpoca` guarda quanto o sistema sugeria QUANDO a pessoa mudou.
  * Sem isso não há como responder "ele aumentou ou o dado mudou?" seis meses
  * depois — e essa é exatamente a pergunta que aparece numa conversa de aumento.
+ *
+ * ⚠️⚠️ ESTA LINHA É A DECISÃO DO SETOR, E ELA SOBREVIVE ÀS IMPORTAÇÕES. A chave
+ * é `setor + tarefa` e não tem nada do lote: subir a planilha do mês que vem
+ * não a toca. É o que responde ao pedido de 08/09/2026 — "o sistema já sabe
+ * quanto vale cada um e só apresenta os novos para ajuste".
  */
 model PontuacaoTarefaAjuste {
   departmentId      String   @map("department_id")
   tarefa            String
+  /**
+   * O nome do tipo sem acento, sem caixa e sem espaço duplo.
+   * ⚠️⚠️ A DECISÃO SE PERDIA POR UMA LETRA. A chave é o texto que veio da
+   * planilha, e o export do Legal já traz o MESMO serviço em duas grafias:
+   * "TAXAS PREFEITURA (TFE/TFA) Emitir boletos" e "… emitir boletos" — duas
+   * linhas no catálogo, 5 serviços cada, e alguém configurou as duas
+   * separadamente, com máximos DIFERENTES (240 e 237). Sem esta coluna, uma
+   * maiúscula trocada no arquivo do mês que vem faz o tipo voltar como novo e
+   * a decisão some sem erro nenhum.
+   * ⚠️ Ela NÃO mescla nada sozinha: a busca tenta a grafia exata primeiro e só
+   * cai aqui quando não acha. Escolher entre 240 e 237 é do Legal, não do
+   * sistema — a tela mostra as duas e pergunta.
+   */
+  tarefaNorm        String   @map("tarefa_norm")
   /**
    * A média que a LIDERANÇA decidiu considerar, em minutos. `null` = usa a
    * medida na planilha.
@@ -951,10 +970,40 @@ model PontuacaoTarefaAjuste {
    * Quanto o sistema sugeria QUANDO a pessoa mudou — sem isso não há como
    * responder "ele aumentou ou o dado mudou?" seis meses depois.
    */
-  pontosAutoNaEpoca Int      @map("pontos_auto_na_epoca")
-  ajustadoPor       String   @map("ajustado_por")
-  ajustadoEm        DateTime @updatedAt @map("ajustado_em")
+  pontosAutoNaEpoca Int?     @map("pontos_auto_na_epoca")
+  /**
+   * Quem mexeu num VALOR (média, limite ou pontos), e quando.
+   * ⚠️ Nulo numa linha que só foi conferida: "eu olhei e está certo" não é
+   * "eu mudei", e carimbar o segundo no lugar do primeiro faria o histórico
+   * acusar de mexer na régua quem só a leu.
+   * ⚠️ `ajustadoEm` deixou de ser `@updatedAt` em 08/09/2026 — com a revisão,
+   * conferir sem mudar nada restampava a data do ajuste.
+   */
+  ajustadoPor       String?   @map("ajustado_por")
+  ajustadoEm        DateTime? @map("ajustado_em")
+  /**
+   * "CONFERI, E ESTÁ CERTO." Quem olhou o tipo e deu o valor por bom, sem
+   * necessariamente mudá-lo.
+   * ⚠️⚠️ Existe porque "ninguém nunca olhou" e "olharam e decidiram manter"
+   * eram a MESMA coisa no banco — os dois eram a ausência de linha. É a regra
+   * da casa outra vez: ausência de decisão não é decisão de manter. Sem isto,
+   * o tipo que a liderança conferiu e aprovou volta todo mês para a lista de
+   * pendências, e a lista de pendências que nunca esvazia deixa de ser lida.
+   * ⚠️ Mudar um valor TAMBÉM revisa: quem digita o número olhou para ele.
+   */
+  revisadoPor       String?   @map("revisado_por")
+  revisadoEm        DateTime? @map("revisado_em")
+  /**
+   * Quanto o tipo valia, em pontos, no instante da revisão.
+   * ⚠️⚠️ É o que permite dizer "isto mudou desde que você conferiu". O valor
+   * continua acompanhando a planilha (decisão do dono, 08/09/2026: os limites
+   * do gestor são uma REGRA, e regra se aplica a dado novo) — medido, um mês a
+   * mais moveu 6 dos 72 tipos do Legal, todos em ±1 ponto. Acompanhar sem
+   * avisar, porém, seria mudar a nota de alguém em silêncio.
+   */
+  pontosNaRevisao   Int?      @map("pontos_na_revisao")
 
   @@id([departmentId, tarefa])
+  @@index([departmentId, tarefaNorm])
   @@map("pontuacao_tarefa_ajuste")
 }

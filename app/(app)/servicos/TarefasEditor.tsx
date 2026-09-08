@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { ListChecks, RotateCcw, TriangleAlert, ChevronUp, ChevronDown } from 'lucide-react'
+import { ListChecks, RotateCcw, TriangleAlert, ChevronUp, ChevronDown, Check, Sparkles, GitCompareArrows } from 'lucide-react'
 
 type Tarefa = {
   tarefa: string; amostras: number
@@ -14,7 +14,21 @@ type Tarefa = {
   pontosAuto: number; pontos: number; pontosAjustados: boolean
   ajustado: boolean; ajustadoPor: string | null; ajustadoEm: string | null
   pontosAutoNaEpoca: number | null
+  revisado: boolean; revisadoPor: string | null; revisadoEm: string | null
+  pontosNaRevisao: number | null; mudouDesdeRevisao: boolean
+  grafias: string[]; grafiaDivergente: boolean; herdouDeGrafia: string | null
 }
+
+/* ── O QUE PRECISA DE OLHO ────────────────────────────────────────────────────
+   ⚠️⚠️ Com 74 tipos, "o que mudou" e "o que ninguém nunca viu" não são
+   perguntas que uma lista ordenada por frequência responde — e são exatamente
+   as duas perguntas de quem abre esta tela depois de subir a planilha do mês.
+   O filtro nasce em "pendentes" quando há pendência: a informação que a pessoa
+   veio buscar não pode depender de ela saber que existe um filtro. */
+type Filtro = 'todos' | 'pendentes' | 'mudaram' | 'grafias'
+const pendente = (t: Tarefa) => !t.revisado
+const mudou = (t: Tarefa) => t.mudouDesdeRevisao
+const duplicada = (t: Tarefa) => t.grafias.length > 0
 
 const dataBr = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'
@@ -33,7 +47,7 @@ const PUXADA = 1.6
 /** As colunas, num grid único — cabeçalho e linhas usam a MESMA definição, para
  *  não desalinharem quando uma das duas mudar. Sem largura fixa total: a coluna
  *  do nome absorve a sobra e a tabela nunca rola na horizontal. */
-const COLS = 'minmax(0,1fr) 58px 84px 84px 100px 80px 92px 32px'
+const COLS = 'minmax(0,1fr) 58px 84px 84px 100px 80px 92px 30px 30px'
 
 /** A ordenação, num lugar só — usada ao carregar e ao clicar num título. */
 function ordenar(lista: Tarefa[], ordem: { col: Coluna; desc: boolean }): string[] {
@@ -86,6 +100,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
      porque a tela nem pisca: o número simplesmente vai parar em outro canto. */
   const [ordemNomes, setOrdemNomes] = useState<string[]>([])
   const [salvando, setSalvando] = useState<Record<string, boolean>>({})
+  const [filtro, setFiltro] = useState<Filtro>('todos')
 
   async function carregar() {
     setCarregando(true)
@@ -93,8 +108,14 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
       const r = await fetch(`/api/servicos/tarefas?departmentId=${departmentId}`, { cache: 'no-store' })
       const d = await r.json()
       if (!r.ok) { setMsg(d.error ?? 'Não consegui ler os tipos de serviço.'); setTarefas([]); return }
-      setTarefas(d.tarefas ?? []); setFator(d.fatorPorMinuto ?? 0.5); setTotal(d.totalConcluidos ?? 0)
+      const lista: Tarefa[] = d.tarefas ?? []
+      setTarefas(lista); setFator(d.fatorPorMinuto ?? 0.5); setTotal(d.totalConcluidos ?? 0)
       setRascunho({})
+      /* ⚠️ A tela ABRE no que precisa de decisão, quando há. Era o pedido do
+         dono: guardar o que já foi decidido e "apresentar para ajuste os novos
+         lançamentos" — apresentar, não deixar disponível atrás de um filtro que
+         a pessoa precisa descobrir. */
+      setFiltro(lista.some(pendente) ? 'pendentes' : lista.some(mudou) ? 'mudaram' : 'todos')
       /* A ordem é FIXADA aqui, não recalculada a cada tecla — ver `nomesEmOrdem`. */
       setOrdemNomes(ordenar(d.tarefas ?? [], ordem))
     } finally { setCarregando(false) }
@@ -112,7 +133,7 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
    * ⚠️ Enquanto salva, a linha fica marcada (`salvando`) em vez de a tela
    * inteira parar: o retorno visual continua existindo, sem custar o contexto.
    */
-  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar', valor: number | null) {
+  async function salvar(t: Tarefa, campo: 'media' | 'pontos' | 'minimo' | 'maximo' | 'limpar' | 'revisar' | 'unificar_grafia', valor: number | null) {
     setSalvando((v) => ({ ...v, [t.tarefa]: true }))
     try {
       const r = await fetch('/api/servicos/tarefas', {
@@ -122,6 +143,9 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
       const d = await r.json()
       if (!r.ok) { setMsg(d.error ?? 'Não consegui salvar.'); return }
       setMsg(null)
+      /* Unificar grafia mexe em OUTRAS linhas além desta — a única operação da
+         tela que faz isso, e a única que justifica recarregar tudo. */
+      if (d.recarregar) { await carregar(); return }
       if (d.tarefa) setTarefas((ts) => ts.map((x) => (x.tarefa === d.tarefa.tarefa ? d.tarefa : x)))
       // O rascunho DESTA linha sai; o das outras fica como estava.
       setRascunho((r2) => { const c = { ...r2 }; delete c[t.tarefa]; return c })
@@ -153,6 +177,21 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
 
   const poucas = tarefas.filter((t) => t.amostras < POUCAS_AMOSTRAS).length
   const ajustadas = tarefas.filter((t) => t.ajustado).length
+  const nPendentes = tarefas.filter(pendente).length
+  const nMudaram = tarefas.filter(mudou).length
+  const nGrafias = tarefas.filter(duplicada).length
+  const nDivergentes = tarefas.filter((t) => t.grafiaDivergente).length
+
+  const passaNoFiltro = (t: Tarefa) =>
+    filtro === 'todos' ? true : filtro === 'pendentes' ? pendente(t) : filtro === 'mudaram' ? mudou(t) : duplicada(t)
+  const visiveis = ordenadas.filter(passaNoFiltro)
+
+  const CHIPS: { chave: Filtro; label: string; n: number; cor: string }[] = [
+    { chave: 'todos', label: 'Todos', n: tarefas.length, cor: 'var(--text-dim)' },
+    { chave: 'pendentes', label: 'Nunca revisados', n: nPendentes, cor: 'var(--warning)' },
+    { chave: 'mudaram', label: 'Mudaram desde a revisão', n: nMudaram, cor: 'var(--accent)' },
+    { chave: 'grafias', label: 'Grafia repetida', n: nGrafias, cor: 'var(--danger)' },
+  ]
 
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
@@ -166,7 +205,58 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
         porque quanto um serviço leva é característica dele, não da janela que você está olhando.
         {' '}<b>A média e os pontos são editáveis</b>: mudar a média recalcula os pontos na hora.
         {ajustadas > 0 && <> · <b style={{ color: 'var(--accent)' }}>{ajustadas} {ajustadas === 1 ? 'ajustado' : 'ajustados'} à mão</b></>}
+        {/* ⚠️⚠️ O QUE O SETOR DECIDE FICA. Era o pedido do dono em 08/09/2026, e
+            a tela precisa dizê-lo: a decisão é guardada por setor e por tipo,
+            fora do lote, e a planilha do mês que vem não a apaga. O que ela
+            faz é trazer tipos NOVOS — e esses o sistema não decide sozinho. */}
+        <div style={{ marginTop: 8 }}>
+          O que você decidir aqui <b>vale para os próximos arquivos</b>: fica guardado por tipo de serviço, não por
+          planilha. Os limites continuam valendo sobre os serviços novos — e o sistema avisa quando o valor de um tipo
+          se afastar do que você conferiu.
+        </div>
       </div>
+
+      {/* ── o que precisa de olho ───────────────────────────────────────────
+          ⚠️⚠️ "Ninguém nunca olhou" e "olharam e mantiveram o medido" eram a
+          MESMA coisa: a ausência de linha no banco. É a regra da casa em mais
+          uma roupa — ausência de decisão não é decisão de manter —, e o preço
+          era uma lista de pendências que nunca esvazia, que é uma lista que
+          ninguém lê. O ✓ de cada linha grava "conferi, e está certo". */}
+      {!carregando && tarefas.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {CHIPS.filter((c) => c.chave === 'todos' || c.n > 0).map((c) => {
+            const on = filtro === c.chave
+            return (
+              <button key={c.chave} onClick={() => setFiltro(c.chave)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 11px',
+                  background: on ? 'var(--surface-2)' : 'transparent',
+                  border: `1px solid ${on ? c.cor : 'var(--border)'}`, borderRadius: 999,
+                  color: on ? c.cor : 'var(--text-dim)', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 700 : 500,
+                }}>
+                {c.label}
+                <span style={{ fontVariantNumeric: 'tabular-nums', color: on ? c.cor : 'var(--text-mute)' }}>{c.n}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ⚠️⚠️ A MESMA GRAFIA, DUAS VEZES. Medido em 08/09/2026: "TAXAS PREFEITURA
+          (TFE/TFA) Emitir boletos" e "… emitir boletos" são o mesmo serviço, com
+          5 concluídos cada, e alguém do Legal configurou os dois separadamente —
+          com máximos DIFERENTES, 240 e 237. Nada acusava, porque são duas linhas
+          plausíveis. O sistema não escolhe entre 240 e 237: mostra e pergunta. */}
+      {nDivergentes > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(229,72,77,.08)', border: '1px solid rgba(229,72,77,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.55 }}>
+          <GitCompareArrows size={13} style={{ verticalAlign: -2 }} />{' '}
+          <b>{nDivergentes === 1 ? 'Um tipo aparece' : `${nDivergentes} tipos aparecem`} na planilha com mais de uma grafia</b>
+          {' '}(muda só a caixa ou o acento), e as réguas gravadas em cada grafia <b>não são iguais</b>. São o mesmo
+          serviço partido em duas linhas, cada uma com sua média. Escolha qual valor fica — o botão em cada linha copia
+          a régua dela para as outras grafias.
+        </div>
+      )}
 
       {poucas > 0 && (
         /* ⚠️⚠️ Média de amostra pequena não é média. Dos 74 tipos do Legal, 16
@@ -205,10 +295,22 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
               )
             })}
             <span />
+            <span />
           </div>
 
+          {visiveis.length === 0 && (
+            /* ⚠️ Lista vazia DIZ por quê e oferece a volta. Um filtro que
+               esvazia a tela sem explicação se lê como sistema quebrado. */
+            <div style={{ fontSize: 12.5, color: 'var(--text-dim)', padding: '14px 6px', lineHeight: 1.6 }}>
+              {filtro === 'pendentes' ? 'Todos os tipos já passaram por alguém — nenhum está sem revisão.'
+                : filtro === 'mudaram' ? 'Nenhum tipo se afastou do valor que foi conferido.'
+                : 'Nenhum tipo aparece com mais de uma grafia.'}
+              {' '}<button onClick={() => setFiltro('todos')} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600 }}>Ver todos os {tarefas.length}</button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {ordenadas.map((t) => {
+            {visiveis.map((t) => {
               const poucasAmostras = t.amostras < POUCAS_AMOSTRAS
               const puxada = t.mediaMedida >= t.medianaMinutos * PUXADA && t.amostras >= POUCAS_AMOSTRAS
               const rMedia = rascunho[t.tarefa]?.media ?? String(t.mediaEmUso)
@@ -343,6 +445,26 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                       }}
                     />
 
+                    {/* ⚠️⚠️ "CONFERI, E ESTÁ CERTO" — a decisão que antes não
+                        tinha onde ser gravada. Sem ela, o tipo que a liderança
+                        olhou e aprovou volta como pendente todo mês, e a lista
+                        de pendências que nunca esvazia deixa de ser lida.
+                        ⚠️ Some depois de conferido: um botão que não faz nada é
+                        pior que botão nenhum. Volta a aparecer se o valor se
+                        afastar do que foi conferido. */}
+                    <button
+                      onClick={() => salvar(t, 'revisar', null)}
+                      disabled={t.revisado && !t.mudouDesdeRevisao}
+                      title={!t.revisado
+                        ? 'Conferi, e este valor está certo — grava sua confirmação sem mudar o número.'
+                        : t.mudouDesdeRevisao
+                          ? `Valia ${t.pontosNaRevisao} quando ${t.revisadoPor} conferiu, em ${dataBr(t.revisadoEm)}. Confirmar o valor de agora (${t.pontos}).`
+                          : `Conferido por ${t.revisadoPor} em ${dataBr(t.revisadoEm)}.`}
+                      style={{ height: 28, width: 28, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: !t.revisado ? 'var(--warning)' : t.mudouDesdeRevisao ? 'var(--accent)' : 'var(--success)', cursor: t.revisado && !t.mudouDesdeRevisao ? 'default' : 'pointer' }}
+                    >
+                      <Check size={14} />
+                    </button>
+
                     <button
                       onClick={() => salvar(t, 'limpar', null)} disabled={!t.ajustado}
                       title={t.ajustado ? `Voltar ao medido (${t.mediaMedida} min → ${Math.max(1, Math.round(t.mediaMedida * fator))} pontos)` : 'Está no valor medido'}
@@ -359,6 +481,45 @@ export default function TarefasEditor({ departmentId, setorNome }: { departmentI
                       casos de 1 minuto: é o que separa "esta tarefa é longa" de
                       "esta tarefa travou num dia". */}
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4, fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5 }}>
+                    {/* ⚠️⚠️ NUNCA REVISADO ≠ REVISADO E MANTIDO. O tipo novo entra
+                        valendo o que a média dele medir, e com pouca amostra isso
+                        é um caso, não uma média: medido em 08/09/2026, quatro
+                        tipos estrearam em agosto valendo 108, 86, 46 e 18 pontos,
+                        e o de 108 tem UMA ocorrência de 3h35. */}
+                    {!t.revisado && (
+                      <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                        <Sparkles size={11} style={{ verticalAlign: -1 }} /> nunca revisado — vale {t.pontos} pelo cálculo
+                      </span>
+                    )}
+                    {/* ⚠️⚠️ O valor ACOMPANHA a planilha (decisão do dono), e por
+                        isso avisa quando se mexeu: acompanhar em silêncio seria
+                        mudar a nota de alguém sem ninguém saber. */}
+                    {t.mudouDesdeRevisao && (
+                      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                        valia {t.pontosNaRevisao} quando {t.revisadoPor} conferiu ({dataBr(t.revisadoEm)}) — agora vale {t.pontos}
+                      </span>
+                    )}
+                    {t.herdouDeGrafia && (
+                      <span style={{ color: 'var(--text-dim)' }}>
+                        régua herdada da grafia “{t.herdouDeGrafia}”
+                      </span>
+                    )}
+                    {t.grafias.length > 0 && (
+                      <span style={{ color: t.grafiaDivergente ? 'var(--danger)' : 'var(--text-dim)' }}>
+                        <b style={{ fontWeight: 600 }}>
+                          mesma tarefa, outra grafia:
+                        </b>{' '}
+                        “{t.grafias[0]}”{t.grafias.length > 1 ? ` e mais ${t.grafias.length - 1}` : ''}
+                        {t.grafiaDivergente && ' — as réguas divergem'}
+                        {t.ajustado && (
+                          <button onClick={() => salvar(t, 'unificar_grafia', null)}
+                            title="Copia a régua desta linha (mínimo, máximo, média e pontos) para as outras grafias do mesmo serviço."
+                            style={{ marginLeft: 8, background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '1px 7px', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700 }}>
+                            usar esta régua nas outras
+                          </button>
+                        )}
+                      </span>
+                    )}
                     <span>
                       <b style={{ color: 'var(--text-dim)', fontWeight: 600 }}>mais longos:</b>{' '}
                       {t.maiores.length
