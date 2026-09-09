@@ -9,6 +9,8 @@ export type PessoaDoSetor = {
   hasAvatar: boolean
   atividade: number; mensagens: number
   atrasos: number; minutosAtraso: number; advertencias: number
+  /** Falta GRAVE do Controle da LGPD — não vem do ponto. */
+  lgpdSuspensoes: number; lgpdAdvertencias: number
   /** null = ainda não avaliada nesta competência (≠ nota zero). */
   nota: number | null
   /** A pontuação do mês (disciplina + serviços + atividades). null = não
@@ -75,6 +77,9 @@ export type DeptMetrics = {
   whatsapp: { abertos: number; finalizados: number; handleSum: number }
   assiduidade: {
     atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
+    /** ⚠️ Medidas do Controle da LGPD no período. NÃO dependem da cobertura do
+     *  ponto: elas não vêm do dump do Nexo. */
+    lgpdSuspensoes: number; lgpdAdvertencias: number
     /** Os dias com ocorrência do setor DENTRO do filtro — alimentam o calendário. */
     dias?: { day: string; atrasos: number; abonados: number; minutos: number; pessoas: number; ate5: number; ate30: number; mais30: number }[]
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */

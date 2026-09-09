@@ -388,6 +388,17 @@ export async function GET(req: NextRequest) {
     prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true, msgCanais: true, msgDiretas: true, msgChamados: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, ...range }, _sum: { atrasos: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
+    /* ⚠️⚠️ AS MEDIDAS DE LGPD, por pessoa e por tipo. Ficam SEPARADAS da
+       advertência derivada do atraso: uma é a contagem do 2º atraso do mês, a
+       outra é medida assinada por vazamento de dado pessoal.
+       ⚠️ E elas NÃO dependem da cobertura do ponto — não vêm do dump do Nexo.
+       Um setor cuja janela o ponto não alcança mostra "—" em atraso e
+       advertência, e ainda assim tem de mostrar a suspensão que existiu. */
+    prisma.disciplinaEvento.groupBy({
+      by: ['personKey', 'tipo'],
+      where: { personKey: { in: chaves }, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: fromDay, lte: toDay } },
+      _count: { _all: true },
+    }),
     prisma.radioDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { seconds: true } }),
     /*
      * ⚠️⚠️ O WhatsApp FALTAVA aqui, e o comentário abaixo garantia que esta era
@@ -412,7 +423,7 @@ export async function GET(req: NextRequest) {
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { name: { in: nomes } }, _count: { _all: true } }),
   ]) : [[], [], [], [], [], [], [], [], [], [], []] as never
 
-  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gRadio, gWpp, gWppSempre] = grupos
+  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gLgpd, gRadio, gWpp, gWppSempre] = grupos
   const mapa = <T,>(rows: T[], chave: (r: T) => string | null, valor: (r: T) => number) =>
     new Map(rows.map((r) => [chave(r), valor(r)] as const))
 
@@ -426,6 +437,13 @@ export async function GET(req: NextRequest) {
   const mAtr = mapa(gAss, (r) => r.personKey, (r) => n(r._sum.atrasos))
   const mMin = mapa(gAss, (r) => r.personKey, (r) => n(r._sum.minutosAtraso))
   const mAdv = mapa(gAdv, (r) => r.personKey, (r) => r._count._all)
+  const mLgpdSusp = new Map<string, number>()
+  const mLgpdAdv = new Map<string, number>()
+  for (const l of gLgpd as { personKey: string; tipo: string; _count: { _all: number } }[]) {
+    const alvo = l.tipo === 'lgpd_suspensao' ? mLgpdSusp : mLgpdAdv
+    alvo.set(l.personKey, (alvo.get(l.personKey) ?? 0) + l._count._all)
+  }
+  const somaMapa = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0)
 
   const normNome = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
   const mWppFin = new Map(gWpp.map((r) => [normNome(r.name), n(r._sum.finalizados)]))
@@ -538,6 +556,10 @@ export async function GET(req: NextRequest) {
       atrasos: mAtr.get(pk) ?? 0,
       minutosAtraso: mMin.get(pk) ?? 0,
       advertencias: mAdv.get(pk) ?? 0,
+      /* Falta GRAVE — do Controle da LGPD do Nexus, natureza diferente da
+         advertência acima (derivada do 2º atraso do mês). */
+      lgpdSuspensoes: mLgpdSusp.get(pk) ?? 0,
+      lgpdAdvertencias: mLgpdAdv.get(pk) ?? 0,
       // null = ainda não avaliada nesta competência (≠ nota zero).
       nota: notaDe.get(p.id) ?? null,
       pontuacao: pontosMesDe.get(p.nexusUserId ?? p.id) ?? null,
@@ -724,6 +746,11 @@ export async function GET(req: NextRequest) {
          import do ponto (parado em 25/06/2026) não alcança. Zero aqui se lê como
          "o setor não teve ocorrência", e o que houve foi ninguém medir.
          É o QUINTO consumidor da mesma régua; ver `lib/ponto-cobertura.ts`. */
+      /* ⚠️ Fora do `janelaComPonto`, de propósito: a medida de LGPD não vem do
+         dump do ponto. Um setor cuja janela o ponto não alcança mostra "—" em
+         atraso e advertência e ainda assim tem de mostrar a suspensão. */
+      lgpdSuspensoes: somaMapa(mLgpdSusp),
+      lgpdAdvertencias: somaMapa(mLgpdAdv),
       janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
       motivoSemPonto: janelaTemDado(cobPonto, fromDay, toDay) ? null : motivoSemPonto(cobPonto, true, false),
       /* Os dias do PERÍODO, para o calendário de ocorrências do setor.

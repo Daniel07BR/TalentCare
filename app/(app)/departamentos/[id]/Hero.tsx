@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
+import { AlarmClock, AlertTriangle, ShieldAlert, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import Avatar from '../../Avatar'
 import { PainelPessoas, type PessoaDoPainel } from '../../PainelPessoas'
@@ -42,6 +42,22 @@ export function Hero({ m }: { m: DeptMetrics }) {
   const pessoasAdvert: PessoaDoPainel[] = m.pessoas
     .filter((p) => p.advertencias > 0)
     .map((p) => ({ ...base(p), valor: p.advertencias }))
+    .sort((a, b) => b.valor - a.valor)
+  /* ⚠️ Inclui quem levou ADVERTÊNCIA de LGPD sem suspensão: mesma natureza
+     (medida assinada por vazamento), e deixá-la de fora esconderia gente
+     envolvida numa lista que se propõe a mostrar os envolvidos. O cartão conta
+     só as suspensões; o painel avisa. */
+  const pessoasLgpd: PessoaDoPainel[] = m.pessoas
+    .map((p) => {
+      const s = p.lgpdSuspensoes ?? 0
+      const a = p.lgpdAdvertencias ?? 0
+      const partes = [
+        s ? `${s} suspensão${s === 1 ? '' : 'es'}` : '',
+        a ? `${a} advertência${a === 1 ? '' : 's'}` : '',
+      ].filter(Boolean)
+      return { ...base(p), valor: s + a, detalhe: partes.join(' · ') }
+    })
+    .filter((p) => p.valor > 0)
     .sort((a, b) => b.valor - a.valor)
   const gestores = m.chefia.filter((c) => c.nivel === 'gestor')
   const subs = m.chefia.filter((c) => c.nivel !== 'gestor')
@@ -173,6 +189,22 @@ export function Hero({ m }: { m: DeptMetrics }) {
               aoAbrir={!semPonto && pessoasAtraso.length ? () => setAberto('Atrasos') : undefined}
               quantos={pessoasAtraso.length}
             />
+            {/* ⚠️⚠️ SUSPENSÕES — e ele NÃO é regido por `semPonto`. A medida vem
+                do Controle da LGPD do Nexus, não do dump do ponto: numa janela
+                que o ponto não alcança, atraso e advertência viram "—" e a
+                suspensão continua sendo um fato registrado. Amarrá-la ao ponto
+                seria a ausência de uma fonte apagando o dado de outra. */}
+            <Sinal
+              Icone={ShieldAlert} rotulo="Suspensões"
+              valor={String(m.assiduidade.lgpdSuspensoes ?? 0)}
+              nota={m.assiduidade.lgpdAdvertencias
+                ? `por vazamento (LGPD) · e ${m.assiduidade.lgpdAdvertencias} advertência${m.assiduidade.lgpdAdvertencias === 1 ? '' : 's'}`
+                : 'por vazamento de dados (LGPD), no período'}
+              dica="Medidas do Controle da LGPD do Nexus — advertência e suspensão por vazamento de dado pessoal. São ASSINADAS, de natureza diferente da advertência ao lado, que é derivada do 2º atraso do mês. Não dependem do import de ponto."
+              cor={(m.assiduidade.lgpdSuspensoes ?? 0) > 0 ? 'var(--danger)' : 'var(--text-mute)'}
+              aoAbrir={pessoasLgpd.length ? () => setAberto('Suspensões') : undefined}
+              quantos={pessoasLgpd.length}
+            />
           </div>
 
           {/* A equipe — retrato de hoje, o contexto para ler os três acima.
@@ -202,6 +234,8 @@ export function Hero({ m }: { m: DeptMetrics }) {
           ? { pessoas: pessoasAtraso, cor: 'var(--warning)', nota: 'quantos atrasos cada um teve na janela', sufixo: 'atrasos' }
           : aberto === 'Advertências'
             ? { pessoas: pessoasAdvert, cor: 'var(--danger)', nota: 'quantas advertências cada um teve na janela', sufixo: 'advertências' }
+          : aberto === 'Suspensões'
+            ? { pessoas: pessoasLgpd, cor: 'var(--danger)', nota: 'medidas de LGPD na janela — o cartão conta só as suspensões', sufixo: 'medidas de LGPD' }
             : null
         if (!alvo?.pessoas.length) return null
         return (

@@ -1,5 +1,21 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim, 5) — O relatório de setor ganhou o sinal de Suspensões
+
+Pedido do dono. Mesmo formato dos outros sinais do cabeçalho, com a lista que
+abre — e uma diferença que é o ponto todo dele:
+
+⚠️⚠️ **Ele NÃO é regido por `semPonto`.** Atraso e advertência viram "—" quando a
+janela está fora do que o import do ponto alcançou; a medida de LGPD vem do
+Nexus, não do dump do Nexo. Amarrá-la à cobertura do ponto seria a ausência de
+UMA fonte apagando o dado de OUTRA — a mesma armadilha que a régua de pontuação
+já tinha resolvido lá dentro (`semDisciplina` não silencia a falta grave), agora
+na tela.
+
+`dept-metrics` passou a trazer as medidas **por pessoa e por tipo**, e o total
+fora do bloco de cobertura. A lista inclui quem levou advertência de LGPD sem
+suspensão: mesma natureza, e o painel avisa que o cartão conta só as suspensões.
+
 ## 2026-09-09 (fim, 4) — Os sinais do relatório de setor também abrem
 
 Mesmo tratamento dos cartões do painel, nos sinais de **Advertências** e
