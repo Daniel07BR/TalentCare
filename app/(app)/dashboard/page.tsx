@@ -55,6 +55,27 @@ export default function DashboardPage() {
      dizer que ainda está carregando, e tem de gritar se a leitura falhou: o
      `catch` mudo deixava o acumulado ali para sempre, rotulado de período. */
   const carregandoPeriodo = scoreLoading || assid.loading
+
+  /* ⚠️⚠️ O AVISO DE CARREGAMENTO SÓ APARECE SE DEMORAR (09/09/2026, relato do
+     dono: *"ao clicar nos filtros de período a tela pisca, aparece uma
+     informação no cabeçalho e some — parece um erro"*).
+
+     Ele NÃO foi removido, e não pode ser: enquanto os números do período não
+     chegam, o que está na tela é o acumulado de toda a história debaixo do
+     rótulo da janela — quem decidir naquele instante decide pelo número errado.
+     O defeito era o TEMPO: a resposta costuma vir em ~200 ms, então o aviso
+     nascia e morria, e um bloco que pisca no cabeçalho se lê como erro. Aviso
+     que ninguém consegue ler não avisa; assusta.
+
+     450 ms: abaixo disso a troca é percebida como instantânea e o aviso não
+     serve a ninguém; acima, ele é a única coisa que separa "está carregando" de
+     "este número é o certo". */
+  const [demorou, setDemorou] = useState(false)
+  useEffect(() => {
+    if (!carregandoPeriodo) { setDemorou(false); return }
+    const t = setTimeout(() => setDemorou(true), 450)
+    return () => clearTimeout(t)
+  }, [carregandoPeriodo])
   const erroPeriodo = scoreErro || assid.erro
 
   return (
@@ -78,7 +99,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {carregandoPeriodo && !erroPeriodo && (
+      {carregandoPeriodo && demorou && !erroPeriodo && (
         <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: 14 }}>
           Carregando os números do período… <span style={{ color: 'var(--text-mute)' }}>até chegarem, o score mostrado é o acumulado de toda a história, não o da janela.</span>
         </div>

@@ -14,7 +14,7 @@ import FormacaoEditor from './FormacaoEditor'
 import { Placar } from './Placar'
 import { Medidor } from './Medidor'
 import { CondutaLateral } from './CondutaLateral'
-import { RadioLateral } from './LateralExtras'
+import { RadioLateral, UltimaAtividade } from './LateralExtras'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import DadosEditor from './DadosEditor'
 import ServicosCard from './ServicosCard'
@@ -705,6 +705,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
           </div>
 
           <RadioLateral m={m} periodo={periodo} />
+          <UltimaAtividade m={m} />
         </div>
       </div>
     </div>

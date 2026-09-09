@@ -7,6 +7,9 @@ export type EmployeeMetrics = {
   fromDay: string
   toDay: string
   radio: { horas: number; sessoes: number; ultimaDay: string | null }
+  /** Quando cada fonte viu esta pessoa pela última vez, e até quando a FONTE
+   *  mediu. ⚠️ NÃO acompanha o filtro: a pergunta é "quando foi a última vez". */
+  ultimaAtividade?: { fonte: string; dela: string | null; fonteAte: string | null }[]
   classroom: { videos: number; courses: number; created: number; total: number }
   whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }

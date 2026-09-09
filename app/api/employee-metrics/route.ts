@@ -191,6 +191,58 @@ export async function GET(req: NextRequest) {
   const lgpdSusp = gLgpdPessoa.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
   const lgpdAdv = gLgpdPessoa.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
 
+  /* ── QUANDO CADA FONTE VIU ESTA PESSOA PELA ÚLTIMA VEZ ───────────────────
+     ⚠️⚠️ Existe para separar "ela parou" de "a FONTE dela parou" — a dívida que
+     o `FONTES.md` registra desde 03/09: o `gerencia_daily` do Gilberto termina
+     em 24/02/2026 com o espelho fresco (os outros até 03/09), e ele cai no fundo
+     do ranking por "0 atividade no mês". Numa lista de piores, é a diferença
+     entre uma conversa e uma injustiça.
+
+     ⚠️ NÃO acompanha o filtro, de propósito: a pergunta é "quando foi a última
+     vez", e recortá-la pela janela responderia outra coisa. A tela diz isso.
+
+     ⚠️ Duas datas por fonte, e é o par que informa: a da PESSOA sozinha não
+     distingue os dois casos. Só comparada com a da FONTE ela vira notícia.
+
+     ⚠️ WhatsApp casa por NOME (a fonte não tem `nexusUserId`) — a mesma régua
+     do resto do painel, com a normalização de acento e caixa. */
+  const ultimaAtividade = await (async () => {
+    const nx = user.nexusUserId
+    const nome = user.name
+    const linhas = await prisma.$queryRaw<{ fonte: string; dela: string | null; fonte_ate: string | null }[]>`
+      SELECT 'ClassRoom' AS fonte,
+             (SELECT MAX(day) FROM classroom_daily WHERE nexus_user_id = ${nx}) AS dela,
+             (SELECT MAX(day) FROM classroom_daily) AS fonte_ate
+      UNION ALL SELECT 'HelpDesk',
+             (SELECT MAX(day) FROM helpdesk_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM helpdesk_daily)
+      UNION ALL SELECT 'CIDE',
+             (SELECT MAX(day) FROM cide_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM cide_daily)
+      UNION ALL SELECT 'Consultoria Plus',
+             (SELECT MAX(day) FROM consultoria_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM consultoria_daily)
+      UNION ALL SELECT 'Gerência',
+             (SELECT MAX(day) FROM gerencia_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM gerencia_daily)
+      UNION ALL SELECT 'Chat Interno',
+             (SELECT MAX(day) FROM chat_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM chat_daily)
+      UNION ALL SELECT 'Rádio',
+             (SELECT MAX(day) FROM radio_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM radio_daily)
+      UNION ALL SELECT 'Painel de Atendimento',
+             (SELECT MAX(day) FROM whatsapp_attendant_daily
+               WHERE lower(translate(name,'ÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç','AAAAEEIOOOUCaaaaeeioooucc'))
+                   = lower(translate(${nome},'ÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç','AAAAEEIOOOUCaaaaeeioooucc'))),
+             (SELECT MAX(day) FROM whatsapp_attendant_daily)
+      UNION ALL SELECT 'Planilha do setor',
+             (SELECT MAX(dia) FROM servico_depto WHERE person_key = ${personKey}),
+             (SELECT MAX(dia) FROM servico_depto)
+    `
+    return linhas.map((l) => ({ fonte: l.fonte, dela: l.dela, fonteAte: l.fonte_ate }))
+  })()
+
   /* ── ONDE ELA ESTÁ NO SETOR, na competência do filtro ────────────────────
      ⚠️ Comparada só com quem PONTUA no setor naquele mês. Quem não tem nota
      (chefia, sem crédito, competência não rodada) não entra no denominador:
@@ -420,5 +472,8 @@ export async function GET(req: NextRequest) {
      * acompanha o filtro. A tela diz isso: é o "já acumulado", não o do período.
      */
     posicao,
+    /** Quando cada fonte viu esta pessoa pela última vez, e até quando a FONTE
+     *  mediu. É o PAR que informa — ver o comentário no cálculo. */
+    ultimaAtividade,
   })
 }
