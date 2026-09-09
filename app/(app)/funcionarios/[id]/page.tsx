@@ -96,7 +96,16 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const concluidasParts = m
     ? [
         { label: 'chamados resolvidos', sys: 'HelpDesk', n: m.helpdesk.resolved },
-        { label: 'cursos (concluídos/criados)', sys: 'ClassRoom', n: m.classroom.total },
+        /* ⚠️⚠️ CONSUMIR E PRODUZIR SEPARADOS (09/09/2026, pedido do dono). Esta
+           linha somava concluídos + criados num "4 cursos (concluídos/criados)"
+           — e a régua de pontuação já os separa há semanas: vídeo assistido
+           vale 1, curso concluído 2, curso CRIADO 6. Quem cria sempre cria
+           pouco, então na soma ele desaparecia dentro do volume de quem
+           consome, exatamente como acontecia no cartão do relatório de setor,
+           corrigido hoje mais cedo. A tela dizia uma coisa e a nota, outra. */
+        { label: 'cursos concluídos', sys: 'ClassRoom', n: m.classroom.courses },
+        { label: 'cursos CRIADOS', sys: 'ClassRoom', n: m.classroom.created },
+        { label: 'vídeos assistidos', sys: 'ClassRoom', n: m.classroom.videos },
         { label: 'empresas', sys: 'CIDE', n: m.cide.atividades },
         { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
         { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
