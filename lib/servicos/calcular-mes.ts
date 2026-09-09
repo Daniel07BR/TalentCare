@@ -29,6 +29,9 @@ type LinhaCalculo = {
   advertencias: number
   servicosConcluidos: number
   pontosDeServico: number
+  /** Faltas graves do mês (Controle da LGPD do Nexus). */
+  lgpdAdvertencias: number
+  lgpdSuspensoes: number
   totalAtividades: number
   pontosDeAtividade: number
   /** A pessoa não é medida pelo ponto: pontuou por serviço+atividade, sem a
@@ -51,18 +54,20 @@ type LinhaCalculo = {
    *
    * - `sem-credito`: nenhuma atividade e nenhum serviço no mês. Não há de onde
    *   sair nota; o que sobraria seria assiduidade com outro nome.
-   * - `chefia`: gestor, sub-encarregado, diretor. A pontuação mede EXECUÇÃO, e
-   *   chefia não é avaliada por volume de execução — muito menos ranqueada
-   *   contra a própria equipe. Decisão do dono, 08/09/2026.
-   *   ⚠️ O motivo é a FUNÇÃO, não a falta de fonte: a Joice (sub do Legal) tem
-   *   242 atividades e 8 serviços em agosto. Dizer "não passa por sistema
-   *   espelhado" sobre ela seria falso na tela.
+   * - `chefia`: **encarregado (Gestor), diretor e administrador**. A pontuação
+   *   mede EXECUÇÃO, e quem responde pelo time não é avaliado por volume de
+   *   execução nem ranqueado contra a própria equipe.
+   *
+   * ⚠️⚠️ **SUB-ENCARREGADO CONTINUA SENDO MEDIDO** (decisão do dono,
+   * 09/09/2026, corrigindo a primeira versão). O sub executa: a Joice, sub do
+   * Legal, fez 242 atividades e 8 serviços em agosto — tirá-la da nota apagaria
+   * trabalho medido de verdade. Só o encarregado sai.
    */
   semNota: null | 'sem-credito' | 'chefia'
 }
 
-/** Cargos que não são pontuados por execução. */
-const CARGOS_DE_CHEFIA = new Set(['Gestor', 'Sub-encarregado', 'Diretor', 'Administrador'])
+/** Cargos que não são pontuados por execução — ⚠️ SUB-ENCARREGADO NÃO ESTÁ AQUI. */
+const CARGOS_DE_CHEFIA = new Set(['Gestor', 'Diretor', 'Administrador'])
 
 /**
  * ⚠️⚠️ O MÊS PARCIAL (pedido do dono, 08/09/2026).
@@ -147,7 +152,7 @@ export async function montar(
 
   const pontosPorTarefa = new Map(cat.tarefas.map((t) => [normalizarTarefa(t.tarefa), t.pontos]))
 
-  const [pessoas, dias, discip, servicos, jaGravado] = await Promise.all([
+  const [pessoas, dias, discip, lgpd, servicos, jaGravado] = await Promise.all([
     prisma.user.findMany({
       where: { departmentId, origin: { in: ['nexus', 'staff'] }, active: true },
       select: { id: true, nexusUserId: true, name: true, jobTitle: true },
@@ -159,6 +164,17 @@ export async function montar(
     }),
     semDisciplinaNaJanela ? Promise.resolve([]) : prisma.disciplinaEvento.groupBy({
       by: ['personKey'], where: { tipo: 'advertencia', data: { gte: de, lte: disciplinaAte } }, _count: { _all: true },
+    }),
+    /* ⚠️⚠️ FALTA GRAVE — janela do MÊS, não `disciplinaAte`, e sem o freio do
+       `semDisciplinaNaJanela`. As duas coisas pelo mesmo motivo: a medida de
+       LGPD não vem do dump do ponto (que é import à mão e pode estar dias
+       atrás), vem do Controle da LGPD do Nexus, que chega por push. Cortá-la na
+       data do ponto esconderia uma suspensão de ontem porque o dump é de
+       anteontem. */
+    prisma.disciplinaEvento.groupBy({
+      by: ['personKey', 'tipo'],
+      where: { tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: de, lte: ate } },
+      _count: { _all: true },
     }),
     prisma.servicoDepto.findMany({
       where: { departmentId, status: 'concluida', dia: { gte: de, lte: ate }, personKey: { not: null } },
@@ -193,6 +209,12 @@ export async function montar(
     atr.set(d.personKey, v)
   }
   const adv = new Map(discip.map((d) => [d.personKey, d._count._all]))
+  const lgpdAdv = new Map<string, number>()
+  const lgpdSus = new Map<string, number>()
+  for (const l of lgpd) {
+    const alvo = l.tipo === 'lgpd_suspensao' ? lgpdSus : lgpdAdv
+    alvo.set(l.personKey, (alvo.get(l.personKey) ?? 0) + l._count._all)
+  }
   const serv = new Map<string, { n: number; pts: number }>()
   for (const s of servicos) {
     if (!s.personKey) continue
@@ -229,14 +251,21 @@ export async function montar(
         atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
         servicosConcluidos: s.n, pontosDeServico: s.pts,
         totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
+        lgpdAdvertencias: lgpdAdv.get(pk) ?? 0, lgpdSuspensoes: lgpdSus.get(pk) ?? 0,
       },
       { semDisciplina: semPonto, parcial },
     )
     /* ⚠️ A ordem importa: chefia primeiro. Um gestor SEM crédito sai por ser
        chefia, não por falta de fonte — e a tela diz o motivo certo. */
+    /* ⚠️⚠️ QUEM TEM FALTA GRAVE NO MÊS RECEBE NOTA, mesmo sem crédito nenhum.
+       `sem-credito` existe para não transformar ausência de fonte em zero
+       acusador — mas aqui a fonte EXISTE e diz algo grave. Deixá-la cair em "—"
+       faria a suspensão por vazamento de dados desaparecer da tela justamente
+       de quem não passa por sistema nenhum. */
+    const temFaltaGrave = (lgpdAdv.get(pk) ?? 0) + (lgpdSus.get(pk) ?? 0) > 0
     const semNota: LinhaCalculo['semNota'] =
       CARGOS_DE_CHEFIA.has(p.jobTitle ?? '') ? 'chefia'
-        : (totalAtiv === 0 && s.n === 0) ? 'sem-credito'
+        : (totalAtiv === 0 && s.n === 0 && !temFaltaGrave) ? 'sem-credito'
         : null
     linhas.push({
       semNota,
@@ -244,6 +273,7 @@ export async function montar(
       atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
       servicosConcluidos: s.n, pontosDeServico: s.pts,
       totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
+      lgpdAdvertencias: lgpdAdv.get(pk) ?? 0, lgpdSuspensoes: lgpdSus.get(pk) ?? 0,
       semPonto,
       pontos: c.pontos, detalhe: c.detalhe,
       jaTem: gravado.get(pk) ? { pontos: gravado.get(pk)!.pontos, origem: gravado.get(pk)!.origem } : null,

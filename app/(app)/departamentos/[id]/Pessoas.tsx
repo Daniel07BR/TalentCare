@@ -249,7 +249,7 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                      leitor concluir a única coisa que a tela não disse. */
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}
                     title={p.semNota === 'chefia'
-                      ? 'Função de chefia: a pontuação mede execução, e a chefia não é avaliada por volume de execução nem ranqueada contra a própria equipe.'
+                      ? 'Encarregado, diretor ou administrador: a pontuação mede execução, e quem responde pelo time não é avaliado por volume de execução nem ranqueado contra a própria equipe. Sub-encarregado continua sendo medido.'
                       : p.semNota === 'sem-credito'
                         ? 'Nenhuma atividade nos sistemas nem serviço na planilha neste mês — não há de onde sair pontuação. O que sobraria seria assiduidade com outro nome.'
                         : pontuacaoDoMes.motivo ?? undefined}>

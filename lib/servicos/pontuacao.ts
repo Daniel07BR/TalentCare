@@ -32,6 +32,20 @@ export const EVENTOS: EventoPontuacao[] = [
   { chave: 'advertencia', label: 'Advertência', descricao: 'cada advertência registrada no mês', sugestao: -15 },
   { chave: 'mes_sem_ocorrencia', label: 'Mês sem ocorrência', descricao: 'bônus se não houve atraso nem advertência', sugestao: 20 },
   { chave: 'servico_concluido', label: 'Serviço concluído', descricao: 'cada serviço concluído na planilha do setor', sugestao: 0 },
+  /* ⚠️⚠️ FALTA GRAVE — vem do CONTROLE DE LGPD do Nexus, não do ponto.
+     São medidas ASSINADAS por vazamento de dado pessoal, e por isso pesam
+     diferente de tudo que já estava aqui:
+     - a advertência que a régua já conhecia é DERIVADA do 2º atraso do mês (a
+       regra da casa); esta é um documento no acervo, com ordinal e data;
+     - ela conta MESMO para quem o ponto não mede: `semDisciplina` existe porque
+       atraso e advertência vêm do dump do Nexo, que não cobre todo mundo. Uma
+       suspensão de LGPD não vem de lá — ela é fato registrado sobre a pessoa,
+       e ignorá-la porque o ponto não a alcança seria a ausência de UMA fonte
+       apagando o dado de OUTRA;
+     - e ela derruba o bônus de mês sem ocorrência: mês com suspensão por
+       vazamento não é mês limpo, por definição. */
+  { chave: 'lgpd_advertencia', label: 'Advertência por vazamento (LGPD)', descricao: 'cada advertência assinada no Controle da LGPD', sugestao: -150 },
+  { chave: 'lgpd_suspensao', label: 'Suspensão por vazamento (LGPD)', descricao: 'cada suspensão assinada no Controle da LGPD', sugestao: -300 },
 ]
 
 export type Ocorrencias = {
@@ -59,6 +73,10 @@ export type Ocorrencias = {
    * serviço feito, independente do tipo. Hoje o Legal o deixou em 0.
    */
   pontosDeServico?: number
+  /** Advertências por vazamento de dados no mês (Controle da LGPD do Nexus). */
+  lgpdAdvertencias?: number
+  /** Suspensões por vazamento de dados no mês. */
+  lgpdSuspensoes?: number
 }
 
 export type Regra = {
@@ -112,6 +130,12 @@ export function calcular(
     linha('atraso_abonado', 'Atrasos abonados', oc.atrasosAbonados)
     linha('advertencia', 'Advertências', oc.advertencias)
   }
+  /* ⚠️⚠️ FORA do `if (!semDisc)`, de propósito — ver o comentário em `EVENTOS`.
+     A falta grave não vem do dump do ponto; ela é um documento assinado no
+     Controle da LGPD. Quem o ponto não mede continua sem base e sem bônus, mas
+     responde por ela. */
+  linha('lgpd_advertencia', 'Advertências por vazamento (LGPD)', oc.lgpdAdvertencias ?? 0)
+  linha('lgpd_suspensao', 'Suspensões por vazamento (LGPD)', oc.lgpdSuspensoes ?? 0)
   linha('servico_concluido', 'Serviços concluídos', oc.servicosConcluidos)
   /* ⚠️ Entra como UMA parcela, com o total e a contagem — e não 105 linhas.
      A conta aberta existe para a pessoa conferir; uma lista com um item por
@@ -136,7 +160,11 @@ export function calcular(
      roupa de calendário — e ela premiaria justamente quem ainda vai se atrasar.
      O que já aconteceu (atraso, advertência, serviço, atividade) conta; o que
      depende do mês inteiro, espera o mês inteiro. */
+  /* ⚠️ Mês com falta grave NÃO é mês sem ocorrência — vale para todo mundo,
+     inclusive para quem o ponto não mede (que nem chega aqui, mas a conta tem
+     de dizer a verdade se um dia chegar). */
   const limpo = oc.atrasos === 0 && oc.atrasosAbonados === 0 && oc.advertencias === 0
+    && !(oc.lgpdAdvertencias ?? 0) && !(oc.lgpdSuspensoes ?? 0)
   const bonus = ponto('mes_sem_ocorrencia')
   if (!semDisc && !opcoes?.parcial && limpo && bonus) {
     parcelas.push({ label: 'Mês sem ocorrência', quantidade: 1, unitario: bonus, total: bonus })

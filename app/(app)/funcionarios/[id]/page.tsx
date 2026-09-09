@@ -618,7 +618,17 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                                   acento). Capitalizar a chave crua põe "Advertencia"
                                   na cara de quem lê a ficha de uma pessoa real. */}
                               <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--danger)' }}>
-                                {d.tipo === 'advertencia' ? 'Advertência' : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}
+                                {d.tipo === 'advertencia' ? 'Advertência'
+                                  /* ⚠️ FALTA GRAVE. Vem do Controle da LGPD do
+                                     Nexus, é medida ASSINADA por vazamento de
+                                     dado pessoal — outra natureza da
+                                     advertência derivada do 2º atraso do mês,
+                                     que é a que domina esta lista. Sem
+                                     distinguir na tela, o gestor lê as duas
+                                     como a mesma coisa. */
+                                  : d.tipo === 'lgpd_suspensao' ? 'Suspensão · LGPD'
+                                  : d.tipo === 'lgpd_advertencia' ? 'Advertência · LGPD'
+                                  : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}
                               </div>
                               <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{d.motivo ?? 'sem motivo registrado'}</div>
                             </div>
