@@ -1,5 +1,68 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim) — A tabela de pesos entrou, e agosto foi gravado nos 16 setores
+
+Decisão do dono: aplicar a tabela proporcional. Recalculei antes de aplicar —
+ela fora medida com o sub-encarregado fora da nota, e ele voltou —, e ela se
+confirmou: Legal segue em **−50** (mediana 700), Pessoal foi de −32 para **−35**
+(a Joice e a Juliana de volta), o resto igual.
+
+⚠️ **A aplicação saiu da MESMA conta que a proposta** (`propor-pesos.ts` ganhou
+`--gravar`). Um segundo script "que aplica a tabela aprovada" divergiria do que a
+propôs no dia em que um dos dois mudasse — e o que está em jogo é o peso do
+atraso na nota de aumento de 95 pessoas.
+
+⚠️ **Os pesos da LGPD entram junto**, derivados do mesmo atraso (3× advertência,
+6× suspensão). Mexer no atraso e deixar a falta grave para trás daria, no
+Contábil, atraso −5 ao lado de suspensão −300: a mesma escala em dois mundos.
+
+| setor | atraso | advert. | mês limpo | LGPD adv/susp |
+|---|---|---|---|---|
+| Entregas | −62 | −93 | +124 | −186 / −372 |
+| Legal · TI | −50 | −75 | +100 | −150 / −300 |
+| Pessoal | −35 | −53 | +70 | −105 / −210 |
+| Recepção | −30 | −45 | +60 | −90 / −180 |
+| Financeiro | −26 | −39 | +52 | −78 / −156 |
+| Fiscal | −15 | −23 | +30 | −45 / −90 |
+| Contábil | −5 | −8 | +10 | −15 / −30 |
+| Consultoria | −4 | −6 | +8 | −12 / −24 |
+| Imóveis | −1 | −2 | +2 | −3 / −6 |
+
+### O resultado, contra o que teria sido
+
+| | replicando o Legal | com a tabela |
+|---|---|---|
+| notas gravadas | 95 | **61** |
+| **negativas** | **32 (34%)** | **7** |
+| zeros | 12 (8 da Diretoria) | **0** |
+
+Os zeros não viraram números: viraram **"—" com o motivo**. Seis setores não têm
+ninguém pontuado em agosto — Cozinha, Diretoria, Limpeza, Marketing, Pousada e
+Programação — porque ali todo mundo é chefia ou não passa por sistema nenhum.
+
+⚠️ **Esses seis seguem com os pesos copiados do Legal**, e isso é uma pendência
+visível, não silêncio: o script a imprime ao fim. No dia em que alguém do
+Marketing tiver atividade, a nota sai na escala do Legal sem ninguém ter
+decidido isso. Rode `propor-pesos.ts` de novo quando isso acontecer.
+
+### Legal regravado: 8 → 7
+
+O **Evandro** (Gestor) saiu — `gravarMes` apaga o que já estava gravado de quem
+passou a não receber nota, senão a regra nova só valeria para o futuro. A
+**Joice** (Sub) ficou, com 756, pela correção do dono de hoje.
+
+### ⚠️ E dois erros meus, os dois em voz alta
+
+- `propor-pesos 2026-08 --gravar` lia **`--gravar` como o id do setor modelo** e
+  morria em "Setor modelo sem régua". Falhou em voz alta por sorte: se o modelo
+  tivesse caído num default plausível, a tabela inteira teria sido gravada a
+  partir da régua errada. As flags passaram a sair antes dos posicionais.
+- E rodei o script gravando com a saída em `| head -8`: o **SIGPIPE matou o
+  processo depois do primeiro setor**, e só a Consultoria foi gravada. É a
+  lição já registrada na casa — `head` num script que escreve mata no meio. O
+  `upsert` salvou (rodar de novo completou), mas o conserto é não cortar a saída
+  de quem escreve.
+
 ## 2026-09-09 — A LGPD entrega as faltas graves, e elas descontam de verdade
 
 Pedido do dono: *"o LGPD tem histórico de advertência e suspensões referente
