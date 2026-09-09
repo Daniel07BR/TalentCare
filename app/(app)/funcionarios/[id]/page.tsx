@@ -14,6 +14,7 @@ import FormacaoEditor from './FormacaoEditor'
 import { Placar } from './Placar'
 import { Medidor } from './Medidor'
 import { CondutaLateral } from './CondutaLateral'
+import { RadioLateral } from './LateralExtras'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import DadosEditor from './DadosEditor'
 import ServicosCard from './ServicosCard'
@@ -67,8 +68,6 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
      olhasse duas vezes concluiria que a tela pisca sozinha.
 
      `null` faz cada bloco mostrar "—" até o dado do período chegar. */
-  const radioHoras = m ? m.radio.horas : null
-  const radioSessoes = m ? m.radio.sessoes : null
   const radioUltima = m
     ? (m.radio.ultimaDay ? new Date(`${m.radio.ultimaDay}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' }) : null)
     : null
@@ -182,15 +181,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   ))}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Rádio</div>
-                <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--chart-2)' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M16.5 4 7 8" /><rect x="3" y="8" width="18" height="12" rx="2" /><circle cx="8" cy="14" r="3" /><path d="M16 12h.01M18 16h.01" />
-                  </svg>
-                  {radioHoras != null ? `${radioHoras.toLocaleString('pt-BR')}h` : '—'}
-                </div>
-              </div>
+              {/* ⚠️ O chip do RÁDIO saiu daqui: ele virou cartão na coluna da
+                  direita, e mantê-lo aqui deixaria a mesma informação duas vezes
+                  na mesma tela. */}
             </div>
             <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
           </div>
@@ -555,34 +548,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--chart-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M16.5 4 7 8" />
-                          <rect x="3" y="8" width="18" height="12" rx="2" />
-                          <circle cx="8" cy="14" r="3" />
-                          <path d="M16 12h.01M18 16h.01" />
-                        </svg>
-                        Rádio Itamarathy
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{periodo}</span>
-                    </div>
-                    {radioHoras === 0 && radioSessoes === 0 ? (
-                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', marginTop: 'auto', marginBottom: 'auto' }}>Sem escuta no período.</div>
-                    ) : (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-                          <span className="cnum" style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--chart-2)' }}>{radioHoras}</span>
-                          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)' }}>horas ouvidas</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 'auto' }}>
-                          {radioSessoes != null ? `${radioSessoes.toLocaleString('pt-BR')} ${radioSessoes === 1 ? 'sessão' : 'sessões'}` : 'carregando…'}
-                          {radioUltima ? <> · última escuta {radioUltima}</> : null}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                    {/* ⚠️ O bloco do RÁDIO saiu daqui (09/09/2026) para a coluna
+                        da direita — movido, não copiado. Ele aparecia em dois
+                        lugares nesta página; um terceiro seria repetição. */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
                     {/* ⚠️⚠️ A RESSALVA VEM UMA VEZ, AQUI — e não repetida em cada
@@ -646,66 +614,6 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             convite a mexer sem querer — e o cadastro de escolaridade é
             manutenção, não parte do juízo.
           */}
-          <Secao
-            titulo="Formação"
-            sub="Retrato de hoje · não acompanha o filtro de período"
-            acao={
-              <button onClick={() => setEditando((v) => !v)} className="tc-btn"
-                style={{ background: editando ? 'var(--accent)' : 'transparent', border: `1px solid ${editando ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: editando ? '#fff' : 'var(--text-dim)', padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                {editando ? 'Fechar edição' : 'Editar cadastro'}
-              </button>
-            }
-          >
-<div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
-                </div>
-                <div style={{ marginBottom: 22 }}>
-                  {cr.total == null ? (
-                    <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>Carregando o período…</div>
-                  ) : (cr.total ?? 0) + (cr.videos ?? 0) > 0 ? (
-                    <ClassroomStats stats={[
-                      { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos ?? 0, color: 'var(--chart-2)' },
-                      { icon: PenLine, label: 'Cursos criados', value: cr.criados ?? 0, color: 'var(--accent)' },
-                      { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos ?? 0, color: 'var(--info)' },
-                      { icon: BookOpen, label: 'Total', value: cr.total ?? 0, color: 'var(--text)' },
-                    ]} />
-                  ) : (
-                    <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no ClassRoom neste período.</div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
-                  <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                      {vm.grauLevels.map((l) => (
-                        <span key={l.label} style={{ fontSize: 12.5, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 16%, transparent)`, padding: '3px 11px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Escolaridade</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Formação acadêmica <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· cadastro RH</span></div>
-                {vm.cursos.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
-                    {vm.cursos.map((c, i) => {
-                      const cor = formCor(c.quando, i)
-                      return (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `color-mix(in srgb, ${cor} 13%, var(--surface-2))`, borderLeft: `3px solid ${cor}`, borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
-                          <span style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</span>
-                          <span style={{ fontSize: 11.5, fontWeight: 600, color: cor }}>{c.quando}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>
-                )}
-                {editando && (
-                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-soft)' }}>
-                    <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
-                    <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
-                  </div>
-                )}
-          </Secao>
         </div>
 
 
@@ -729,6 +637,74 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         <div style={{ position: 'sticky', top: 16 }}>
           <PainelDoAvaliador vm={vm} m={m} periodo={periodo} estado={estadoTimeline} />
           <CondutaLateral m={m} periodo={periodo} />
+
+          {/* ⚠️ FORMAÇÃO veio para cá inteira (movida, não copiada). Ela é um
+              dos critérios da avaliação e é retrato de hoje — pertence ao lado
+              de quem vai avaliar, não no fim de uma página de três telas. */}
+          <div style={{ marginTop: 16 }}>
+            <Secao
+              titulo="Formação"
+              sub="Retrato de hoje · não acompanha o filtro de período"
+              acao={
+                <button onClick={() => setEditando((v) => !v)} className="tc-btn"
+                  style={{ background: editando ? 'var(--accent)' : 'transparent', border: `1px solid ${editando ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: editando ? '#fff' : 'var(--text-dim)', padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  {editando ? 'Fechar edição' : 'Editar cadastro'}
+                </button>
+              }
+            >
+  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--chart-2)' }} /> ClassRoom <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                  </div>
+                  <div style={{ marginBottom: 22 }}>
+                    {cr.total == null ? (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>Carregando o período…</div>
+                    ) : (cr.total ?? 0) + (cr.videos ?? 0) > 0 ? (
+                      <ClassroomStats stats={[
+                        { icon: GraduationCap, label: 'Cursos assistidos', value: cr.assistidos ?? 0, color: 'var(--chart-2)' },
+                        { icon: PenLine, label: 'Cursos criados', value: cr.criados ?? 0, color: 'var(--accent)' },
+                        { icon: PlayCircle, label: 'Vídeos assistidos', value: cr.videos ?? 0, color: 'var(--info)' },
+                        { icon: BookOpen, label: 'Total', value: cr.total ?? 0, color: 'var(--text)' },
+                      ]} />
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no ClassRoom neste período.</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, marginBottom: 22 }}>
+                    <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                        {vm.grauLevels.map((l) => (
+                          <span key={l.label} style={{ fontSize: 12.5, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 16%, transparent)`, padding: '3px 11px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Escolaridade</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Formação acadêmica <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· cadastro RH</span></div>
+                  {vm.cursos.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
+                      {vm.cursos.map((c, i) => {
+                        const cor = formCor(c.quando, i)
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `color-mix(in srgb, ${cor} 13%, var(--surface-2))`, borderLeft: `3px solid ${cor}`, borderRadius: 'var(--radius-sm)', padding: '11px 14px' }}>
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</span>
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: cor }}>{c.quando}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 12 }}>Sem cursos informados no cadastro.</div>
+                  )}
+                  {editando && (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-soft)' }}>
+                      <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
+                      <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
+                    </div>
+                  )}
+            </Secao>
+          </div>
+
+          <RadioLateral m={m} periodo={periodo} />
         </div>
       </div>
     </div>
