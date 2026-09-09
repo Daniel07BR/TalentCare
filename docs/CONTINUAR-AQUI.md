@@ -293,6 +293,45 @@ Chat 177, Gerência 46 — MEDIANA, não média, que o tempo decorrido infla), a
 média vem pré-preenchida. As 13 do Legal sem tempo receberam estimativa
 provisória e o Daniel calibrou.
 
+## 8b. A ÁREA DE ENTREGAS e o que ela ensinou sobre os espelhos (09/09/2026)
+
+`/entregas` é a área do setor Entregas (Elton e Gilberto), no espírito do Relatório
+Geral da Gerência. Rota própria; o caminho é o botão **"Área da mensageria"** na linha
+do nome do relatório do setor. Ver o `CHANGELOG` de 09/09 (fim, 6).
+
+⚠️⚠️ **Ela veio depois de consertar três números que ia mostrar** — e os dois primeiros
+valem para as outras nove fontes:
+
+1. **Correção retroativa não volta pelo sync incremental.** O recorte é pelo **dia do
+   evento**, não por quando o registro mudou. O km do Elton em agosto lia **1.028.354**
+   contra **1.265** reais, porque o odômetro foi corrigido na Gerência três dias depois
+   e o dia já tinha saído da janela. **212 dias divergentes em 4.609.**
+
+   ⚠️ E o segundo modo, mais silencioso: **métrica NOVA nasce vazia no passado**
+   (`viagens` estava zerada em 198 dias). Zero é um valor plausível.
+
+   Conserto: `run-gerencia-sync.mjs --completo` (cron às 03:10, ao lado do incremental
+   de :30). O ensaio é `scripts/diff-espelho-gerencia.mjs`, que é também o **molde**
+   para conferir as outras fontes — **ninguém mediu se elas divergem**.
+
+2. **O mesmo número com duas réguas em dois sistemas.** A jornada era
+   `ended_at − started_at` no endpoint e outra conta no Relatório Geral: **577,2 h ×
+   176,4 h** em agosto, para o mesmo homem. O `ended_at` recebe fecho tardio (um dia de
+   344 h). O endpoint foi alinhado ao `reports.ts`. **A fronteira entre dois sistemas é
+   onde a régua se duplica sem ninguém ver.**
+
+3. **Afastamento não existe como estado em lugar nenhum da casa.** O Gilberto parou de
+   verdade em 24/02/2026 — não era defeito de endpoint, como a dívida do `FONTES.md`
+   supunha. Mas o Nexus só tem `active`/`inactive`, e ele está ativo: o painel não sabe
+   distinguir "afastado" de "parou de trabalhar". A tela mostra **"—" com a data** em
+   vez de zero; a cura de verdade é um estado no Nexus, e é **decisão do dono**.
+
+⚠️ **Pendência de deploy:** a coluna `gerencia_daily.jornada_teto_min` está no
+`schema.prisma` e o endpoint já a devolve, mas o `npx prisma db push` foi barrado pelo
+classificador e está com o Daniel. Enquanto isso a linha está **comentada** no
+`run-gerencia-sync.mjs` (sem a coluna o Prisma recusa o upsert inteiro e o cron morre
+calado) e a tela mostra "—" para a fração de teto. Ver o `CHANGELOG`.
+
 ## 9. Frentes ABERTAS (08/09/2026)
 
 - ⚠️⚠️ **SUSPENSÃO — esperando dados REAIS.** Existe um briefing da regra de
