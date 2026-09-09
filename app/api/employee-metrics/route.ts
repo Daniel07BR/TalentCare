@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
+import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -44,7 +45,10 @@ export async function GET(req: NextRequest) {
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, assidDias, advert, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
+  /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
+  const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
+
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, assidDias, advert, gLgpdPessoa, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -110,6 +114,13 @@ export async function GET(req: NextRequest) {
       orderBy: { day: 'asc' },
     }),
     prisma.disciplinaEvento.count({ where: { personKey, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } } }),
+    /* ⚠️ A falta GRAVE do período, por tipo. Fora do bloco de cobertura do
+       ponto: a medida de LGPD não vem do dump do Nexo. */
+    prisma.disciplinaEvento.groupBy({
+      by: ['tipo'],
+      where: { personKey, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: fromDay, lte: toDay } },
+      _count: { _all: true },
+    }),
     /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
        confere `podeVer`; aquele dataset viaja inteiro no payload de toda página.
        Contagem pode viajar; o texto da advertência, não. */
@@ -133,9 +144,15 @@ export async function GET(req: NextRequest) {
       where: { personKey }, orderBy: { competencia: 'asc' },
       select: { competencia: true, pontos: true, origem: true, detalhe: true },
     }),
+    /* ⚠️⚠️ TODOS OS TIPOS, não só `advertencia`. Este filtro é anterior à fonte
+       de LGPD e o commit que a integrou não passou por aqui: o resultado é que a
+       ficha — para onde o painel de Suspensões manda o gestor clicar — não
+       recebia uma linha sequer da medida, e o ramo que a rotula na tela era
+       código morto. É a regra do `FONTES.md` cobrando o preço: integrar a fonte
+       não basta, percorra TODOS os consumidores. (Achado do crítico, 09/09.) */
     prisma.disciplinaEvento.findMany({
-      where: { personKey, tipo: 'advertencia' },
-      select: { data: true, motivo: true, dias: true, tipo: true },
+      where: { personKey },
+      select: { data: true, motivo: true, dias: true, tipo: true, source: true },
       orderBy: { data: 'desc' },
     }),
   ])
@@ -168,6 +185,35 @@ export async function GET(req: NextRequest) {
   const tAs = ct?._sum.chamadosAssumidos ?? 0
   const tCo = ct?._sum.chamadosConcluidos ?? 0
   const tSec = ct?._sum.segundosResolucao ?? 0
+
+  const lgpdSusp = gLgpdPessoa.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
+  const lgpdAdv = gLgpdPessoa.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
+
+  /* ── ONDE ELA ESTÁ NO SETOR, na competência do filtro ────────────────────
+     ⚠️ Comparada só com quem PONTUA no setor naquele mês. Quem não tem nota
+     (chefia, sem crédito, competência não rodada) não entra no denominador:
+     "3º de 7 que pontuam" é uma frase verdadeira; "3º de 21" contaria como
+     concorrente quem o sistema decidiu não pontuar. */
+  const doSetor = user.departmentId
+    ? await prisma.pontuacaoMes.findMany({
+        where: { departmentId: user.departmentId, competencia: compFicha },
+        select: { personKey: true, pontos: true },
+      })
+    : []
+  const ordenados = [...doSetor].sort((a, b) => b.pontos - a.pontos)
+  const idx = ordenados.findIndex((p) => p.personKey === personKey)
+  /* ⚠️ Soma de TODOS os meses gravados — não acompanha o filtro, e a tela diz. */
+  const acumulado = pontuacoes.reduce((a, p) => a + p.pontos, 0)
+  const posicao = {
+    competencia: compFicha,
+    /** `null` = ela não pontua nesta competência. Nunca o último lugar. */
+    posicao: idx >= 0 ? idx + 1 : null,
+    de: ordenados.length,
+    pontosNoMes: idx >= 0 ? ordenados[idx].pontos : null,
+    acumulado,
+    /** Quantos meses entraram no acumulado — sem isso "1.459" não tem escala. */
+    meses: pontuacoes.length,
+  }
 
   return NextResponse.json({
     period, fromDay, toDay,
@@ -237,8 +283,14 @@ export async function GET(req: NextRequest) {
              gravidade. Fica fora das três faixas em vez de virar "até 5 min". */
           semMedida: Math.max(0, atr - fx5 - fx30 - fxM),
         },
-        // faltas/suspensões: sem fonte na origem (null → ficha mostra "—").
-        faltas: null as number | null, suspensoes: null as number | null,
+        /* ⚠️ FALTA continua sem fonte na origem (o dump do Nexo não a traz) →
+           `null`, e a ficha mostra "—". SUSPENSÃO passou a ter fonte em
+           09/09/2026 (o Controle da LGPD do Nexus): cravá-la em `null` fazia a
+           ficha dizer "sem fonte" sobre um fato registrado — e era para essa
+           ficha que o painel de Suspensões mandava o gestor clicar. */
+        faltas: null as number | null,
+        suspensoes: lgpdSusp,
+        lgpdAdvertencias: lgpdAdv,
         /* ⚠️⚠️ A COBERTURA vem junto, na rota que a ficha JÁ chama — de propósito.
            A ficha evita fetch extra (ver o comentário no topo dela), e sem isso
            ela ficaria com a heurística velha: "há qualquer ocorrência no
@@ -299,5 +351,22 @@ export async function GET(req: NextRequest) {
        passam do teto que a régua atual permite. Exibir os dois com a mesma cara
        seria inventar procedência para número de gente de verdade. */
     pontuacao: pontuacoes.map((p) => ({ competencia: p.competencia, pontos: p.pontos, origem: p.origem, detalhe: p.detalhe })),
+    /**
+     * ONDE ELA ESTÁ no setor, na competência do filtro — o número do cabeçalho.
+     *
+     * ⚠️⚠️ A COMPETÊNCIA SEGUE O FILTRO quando ele cabe num mês só (o card de
+     * meses, ou um intervalo do calendário dentro de um mês); nos presets que
+     * cruzam meses fica o último mês FECHADO. É a MESMA régua do relatório de
+     * setor — duas telas que respondessem "qual mês?" diferente diriam posições
+     * diferentes sobre a mesma pessoa no mesmo dia.
+     *
+     * ⚠️ `posicao: null` quando ela não pontua naquele mês (chefia, sem crédito,
+     * ou competência não rodada). Um "—" honesto; nunca o último lugar, que é o
+     * que um `?? 0` produziria — e último lugar acusa.
+     *
+     * ⚠️ `acumulado` é a soma de TODOS os meses gravados, e por isso não
+     * acompanha o filtro. A tela diz isso: é o "já acumulado", não o do período.
+     */
+    posicao,
   })
 }

@@ -93,12 +93,17 @@ export type Kpi = {
   /**
    * QUEM ESTÁ ATRÁS DO NÚMERO — a lista que o cartão abre ao ser clicado.
    *
-   * ⚠️⚠️ Só entra aqui o que o `alcance` de quem lê JÁ trouxe. O `assidMap` vem
-   * de `/api/assiduidade-metrics`, que aplica a régua; o `perf` vem do dataset,
-   * que também aplica. Montar a lista de outra fonte seria abrir por nome o que
-   * a régua fechou por número — e o aviso mais forte do `CONTINUAR-AQUI` é
-   * exatamente este: antes de mandar algo para o navegador, pergunte quem pode
-   * ver.
+   * ⚠️⚠️ Advertências, Atrasos e Suspensões só listam quem tem valor no
+   * `assidMap`, que vem de `/api/assiduidade-metrics` com `porPersonKey(alcance)`
+   * aplicado — eles se limitam sozinhos à régua.
+   *
+   * ⚠️⚠️ **O HEADCOUNT NÃO.** `movimento` sai de `nonDir`, o dataset do cliente,
+   * que NÃO passa por `alcance`. Hoje é inofensivo porque `proxy.ts:117` manda
+   * todo não-ADMIN embora de `/dashboard` — ou seja, a régua que protege este
+   * cartão é o ROTEADOR, não a de conteúdo, e são duas réguas para a mesma
+   * pergunta. No dia em que o painel abrir para gestor, ele passa a listar por
+   * nome as admissões e demissões da casa inteira, com data. Achado do crítico
+   * em 09/09/2026; está na lista de dívida do `FONTES.md`.
    *
    * ⚠️ `null` = este cartão não abre. Turnover não abre porque a lista de quem
    * saiu já é uma tela inteira (`/turnover`), e um painel de 8 linhas ao lado de

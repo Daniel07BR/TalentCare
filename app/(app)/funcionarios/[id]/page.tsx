@@ -11,6 +11,8 @@ import { buildEmployeeVM, type EmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
+import { Placar } from './Placar'
+import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import DadosEditor from './DadosEditor'
 import ServicosCard from './ServicosCard'
 import TreinamentosEditor from './TreinamentosEditor'
@@ -72,9 +74,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     ? { assistidos: m.classroom.courses, criados: m.classroom.created, videos: m.classroom.videos, total: m.classroom.total }
     : { assistidos: null, criados: null, videos: null, total: null }
   const wpp = m?.whatsapp ?? null
-  const cons = m?.consultoria ?? null
   const hd = m?.helpdesk ?? null
-  const cd = m?.cide ?? null
   const gr = m?.gerencia ?? null
   const ch = m?.chat ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
@@ -133,7 +133,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const maxSys = Math.max(1, ...bySystem.map((b) => b.value ?? 0))
 
   return (
-    <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+    /* ⚠️ 1280 é o padrão da casa; a FICHA abre para 1600 (pedido do dono,
+       09/09/2026: "o sistema está se limitando a este espaço e deixando grandes
+       áreas cinzas"). É a página mais densa — cabeçalho, quatro blocos de fonte,
+       calendário e a coluna de avaliação —, e é onde o aperto mais custa.
+       ⚠️ `min(1600px, 100%)`, não 1600 cravado: em tela menor ela não pode
+       empurrar conteúdo para fora. As demais telas seguem em 1280 até o dono
+       decidir se quer a casa toda assim. */
+    <div className="tc-anim" style={{ maxWidth: 'min(1600px, 100%)', margin: '0 auto' }}>
       <button onClick={() => router.push('/funcionarios')} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar ao diretório</button>
 
       {/* Cabeçalho: identidade. O gauge e os fatores saíram — ver abaixo. */}
@@ -186,6 +193,24 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
           </div>
         </div>
+
+        {/* ⚠️⚠️ O PLACAR — pedido do dono (09/09/2026): os pontos acumulados
+            contando na entrada e onde ela está no setor, na competência do
+            filtro. Fica no cabeçalho de propósito: é a resposta da primeira
+            pergunta de quem abre uma ficha ("como ela está?"), e antes dele o
+            leitor tinha de rolar até o gráfico mensal e comparar de cabeça.
+            ⚠️ Só aparece quando a rota respondeu: enquanto carrega, um placar
+            zerado diria "zero pontos", que é uma frase sobre a pessoa. */}
+        {m?.posicao && (
+          <Placar
+            p={m.posicao}
+            setor={vm.dept}
+            competenciaLabel={competenciaLabel(m.posicao.competencia)}
+            motivoSemNota={m.posicao.de === 0
+              ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}`
+              : null}
+          />
+        )}
       </div>
 
       {/*
@@ -264,26 +289,6 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   </div>
                 )}
 
-                {cons && (
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z" /><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
-                      </svg>
-                      Consultoria Plus <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
-                    </div>
-                    {cons.has ? (
-                      <div style={{ display: 'flex', gap: 14 }}>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{cons.studies.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Estudos</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{cons.tickets.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Chamados</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-2)' }}>{cons.messages.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Mensagens</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-5)' }}>{cons.comments.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Comentários</div></div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no Consultoria Plus neste período.</div>
-                    )}
-                  </div>
-                )}
 
                 {hd && (
                   <div style={{ marginTop: 24 }}>
@@ -305,24 +310,20 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   </div>
                 )}
 
-                {cd && (
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 4v16" />
-                      </svg>
-                      CIDE · cadastro geral <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
-                    </div>
-                    {cd.has ? (
-                      <div style={{ display: 'flex', gap: 14 }}>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-5)' }}>{cd.atividades.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Empresas atendidas <span style={{ color: 'var(--text-mute)' }}>(cadastros mexidos)</span></div></div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no CIDE neste período.</div>
-                    )}
-                  </div>
-                )}
 
+                {/* ⚠️ CONSULTORIA PLUS e CIDE saíram daqui (pedido do dono,
+                    09/09/2026): eles voltavam logo abaixo do gráfico repetindo o
+                    que ele já diz. O CIDE era literalmente UM número ("116
+                    empresas atendidas") e a Consultoria, para quase todo mundo,
+                    era a frase "sem atividade neste período" ocupando um bloco.
+                    Os dois seguem no gráfico "Atividade por sistema", com o
+                    total — que é o que eles tinham a dizer.
+
+                    ⚠️ A GERÊNCIA FICOU, de propósito, e não é exceção arbitrária:
+                    ela carrega km, jornada e viagens, que NÃO estão no gráfico
+                    (ele conta ações, e km é magnitude). Tirá-la apagaria o único
+                    lugar da ficha onde o trabalho do mensageiro aparece por
+                    inteiro. */}
                 {gr && (gr.hasSaida || gr.hasEscritorio) && (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -485,8 +486,17 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     ) : null}
                   </div>
                   <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Faltas</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>histórico total</div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
+                  {/* ⚠️ "no período", não "histórico total": este número JÁ é
+                      contado com `data BETWEEN fromDay AND toDay` na rota, e o
+                      rótulo velho dizia a coisa errada sobre o número certo. A
+                      lista mais abaixo é que é o histórico completo, e ela diz. */}
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>no período · do 2º atraso do mês</div></div>
+                  {/* ⚠️⚠️ SUSPENSÃO TEM FONTE desde 09/09/2026 (o Controle da LGPD
+                      do Nexus). Estava cravada em "—  sem fonte" — e era para
+                      esta ficha que o painel de Suspensões mandava o gestor
+                      clicar. `null` continua sendo "—", mas agora só quando não
+                      dá para ler. */}
+                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: (ass.suspensoes ?? 0) > 0 ? 'var(--danger)' : 'var(--text-mute)' }}>{ass.suspensoes == null ? '—' : ass.suspensoes}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>{ass.suspensoes == null ? 'não foi possível ler' : 'no período · vazamento (LGPD)'}</div></div>
                 </div>
 
                 {/* ⚠️⚠️ A GRAVIDADE DO ATRASO (pedido do dono, 08/09/2026).

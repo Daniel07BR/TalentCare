@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlarmClock, AlertTriangle, ShieldAlert, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
@@ -26,6 +26,8 @@ export function Hero({ m }: { m: DeptMetrics }) {
      trocar o filtro de período o `m` é remontado, e uma lista congelada no
      estado mostraria a janela anterior debaixo do título da nova. */
   const [aberto, setAberto] = useState<string | null>(null)
+  /* ⚠️ Trocar o filtro fecha o painel — ver o comentário gêmeo no dashboard. */
+  useEffect(() => { setAberto(null) }, [m.period, m.fromDay, m.toDay])
 
   /* ── QUEM ESTÁ ATRÁS DE CADA SINAL ───────────────────────────────────────
      ⚠️⚠️ Sai de `m.pessoas`, que a rota já montou sob a régua de `alcance` —
@@ -196,12 +198,21 @@ export function Hero({ m }: { m: DeptMetrics }) {
                 seria a ausência de uma fonte apagando o dado de outra. */}
             <Sinal
               Icone={ShieldAlert} rotulo="Suspensões"
-              valor={String(m.assiduidade.lgpdSuspensoes ?? 0)}
-              nota={m.assiduidade.lgpdAdvertencias
-                ? `por vazamento (LGPD) · e ${m.assiduidade.lgpdAdvertencias} advertência${m.assiduidade.lgpdAdvertencias === 1 ? '' : 's'}`
-                : 'por vazamento de dados (LGPD), no período'}
+              /* ⚠️ `?? '—'` e NÃO `?? 0`: resposta velha em cache ou deploy pela
+                 metade viraria "0 suspensões", que é a melhor notícia da tela.
+                 Mesmo argumento do `?? false` do `janelaComPonto` acima. */
+              valor={m.assiduidade.lgpdSuspensoes == null ? '—' : String(m.assiduidade.lgpdSuspensoes)}
+              nota={m.assiduidade.lgpdSuspensoes == null
+                ? 'não foi possível ler'
+                : m.assiduidade.lgpdAdvertencias
+                  ? `por vazamento (LGPD) · e ${m.assiduidade.lgpdAdvertencias} advertência${m.assiduidade.lgpdAdvertencias === 1 ? '' : 's'}`
+                  : 'por vazamento de dados (LGPD), no período'}
               dica="Medidas do Controle da LGPD do Nexus — advertência e suspensão por vazamento de dado pessoal. São ASSINADAS, de natureza diferente da advertência ao lado, que é derivada do 2º atraso do mês. Não dependem do import de ponto."
               cor={(m.assiduidade.lgpdSuspensoes ?? 0) > 0 ? 'var(--danger)' : 'var(--text-mute)'}
+              /* ⚠️ O selo conta a LISTA, e a lista sai de `m.pessoas` (ativos do
+                 setor) enquanto o número sai da rota (que não corta inativo).
+                 Quando divergirem, é o número que manda — o selo diz "N na
+                 lista", não "N no total". */
               aoAbrir={pessoasLgpd.length ? () => setAberto('Suspensões') : undefined}
               quantos={pessoasLgpd.length}
             />
@@ -240,7 +251,7 @@ export function Hero({ m }: { m: DeptMetrics }) {
         if (!alvo?.pessoas.length) return null
         return (
           <PainelPessoas
-            titulo={`${aberto} · ${m.setor.nome}`} nota={alvo.nota}
+            titulo={`${aberto} · ${m.setor.nome}`} nota={alvo.nota} periodo={m.label}
             pessoas={alvo.pessoas} cor={alvo.cor} sufixo={alvo.sufixo}
             aoFechar={() => setAberto(null)}
           />

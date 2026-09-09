@@ -273,6 +273,23 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
 
               {/* OCORRÊNCIAS — só aparecem quando existem */}
               <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                {/* ⚠️⚠️ A FALTA GRAVE PRIMEIRO. Ela já vinha no payload e a
+                    coluna olhava só atraso e advertência: a linha de quem levou
+                    suspensão por vazamento saía como "—" logo abaixo de um
+                    cabeçalho acendendo "Suspensões 1". O gestor percorre esta
+                    lista nome a nome — é aqui que ela não pode faltar. */}
+                {(p.lgpdSuspensoes ?? 0) > 0 && (
+                  <span title={`${p.lgpdSuspensoes} suspensão(ões) por vazamento de dados (LGPD)`}
+                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--danger)', borderRadius: 20, padding: '2px 8px' }}>
+                    {p.lgpdSuspensoes} susp
+                  </span>
+                )}
+                {(p.lgpdAdvertencias ?? 0) > 0 && (
+                  <span title={`${p.lgpdAdvertencias} advertência(s) por vazamento de dados (LGPD)`}
+                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', background: 'var(--surface-2)', border: '1px solid var(--danger)', borderRadius: 20, padding: '1px 7px' }}>
+                    {p.lgpdAdvertencias} LGPD
+                  </span>
+                )}
                 {p.advertencias > 0 && (
                   <span title={`${p.advertencias} advertência(s)`} style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', background: 'var(--surface-2)', borderRadius: 20, padding: '2px 8px' }}>
                     {p.advertencias} adv
@@ -283,7 +300,10 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                     {p.atrasos} atr
                   </span>
                 )}
-                {p.advertencias === 0 && p.atrasos === 0 && (
+                {/* ⚠️ O "—" só quando NÃO há ocorrência de espécie nenhuma —
+                    a falta grave entra na conta, senão ela reaparece aqui. */}
+                {p.advertencias === 0 && p.atrasos === 0
+                  && !(p.lgpdSuspensoes ?? 0) && !(p.lgpdAdvertencias ?? 0) && (
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>—</span>
                 )}
               </div>

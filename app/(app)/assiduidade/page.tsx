@@ -24,7 +24,10 @@ export default function AssiduidadePage() {
     { label: 'Assiduidade média', value: vm.assidMedio == null ? '—' : `${vm.assidMedio}%`, color: vm.assidMedio == null ? 'var(--text-mute)' : scoreColor(vm.assidMedio) },
     { label: 'Atrasos', value: vm.totalAtrasos.toLocaleString('pt-BR'), color: 'var(--warning)' },
     { label: 'Tempo atrasado', value: fmtMin(vm.totalMinutos), color: 'var(--warning)' },
-    { label: 'Advertências (total)', value: vm.totalAdvert.toLocaleString('pt-BR'), color: 'var(--danger)' },
+    /* ⚠️ "no período", não "(total)": desde 09/09/2026 a advertência obedece ao
+       filtro aqui, como o atraso ao lado. O rótulo velho sobreviveria à
+       correção e diria a coisa errada sobre o número certo. */
+    { label: 'Advertências no período', value: vm.totalAdvert.toLocaleString('pt-BR'), color: 'var(--danger)' },
     { label: 'Atrasos abonados', value: vm.totalAbonados.toLocaleString('pt-BR'), color: 'var(--text-mute)' },
     { label: 'Pessoas c/ ocorrência', value: vm.pessoas.toLocaleString('pt-BR'), color: 'var(--info)' },
   ]
@@ -63,7 +66,7 @@ export default function AssiduidadePage() {
       {/* Dois leaderboards: mais atrasou / mais advertências */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <Leaderboard title="Top 5 · quem mais atrasou" subtitle="Nº de atrasos no período" people={vm.topAtrasos} metric="atrasos" color="var(--warning)" router={router} />
-        <Leaderboard title="Top 5 · mais advertências" subtitle="Advertências · histórico total (acumulado)" people={vm.topAdvert} metric="advertencias" color="var(--danger)" router={router} />
+        <Leaderboard title="Top 5 · mais advertências" subtitle="Advertências no período do filtro" people={vm.topAdvert} metric="advertencias" color="var(--danger)" router={router} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>

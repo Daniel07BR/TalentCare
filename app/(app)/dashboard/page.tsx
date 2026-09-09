@@ -4,7 +4,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { useFrescor } from '@/lib/ui/frescor'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PainelPessoas } from '../PainelPessoas'
 import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
@@ -26,6 +26,12 @@ export default function DashboardPage() {
      ao trocar o filtro os KPIs são remontados, e um objeto congelado no estado
      mostraria a lista da janela anterior debaixo do título da nova. */
   const [aberto, setAberto] = useState<string | null>(null)
+  /* ⚠️⚠️ TROCAR O FILTRO FECHA O PAINEL. Sem isto ele trocava o conteúdo em
+     SILÊNCIO sob o mesmo título (durante o carregamento o map antigo ainda está
+     lá), e — pior — se a janela nova não tivesse ninguém o painel sumia com
+     `aberto` ainda no estado, reaparecendo sozinho na troca seguinte, sem
+     clique. Achado do crítico, 09/09/2026. */
+  useEffect(() => { setAberto(null) }, [period, from, to])
   const data = withRealScores(useTalentData(), signals)
   const assid = useAssiduidadePeriod()
   const frescor = useFrescor()
@@ -136,7 +142,7 @@ export default function DashboardPage() {
         if (!k?.pessoas?.length) return null
         return (
           <PainelPessoas
-            titulo={k.label} nota={k.pessoasNota} pessoas={k.pessoas} cor={k.color}
+            titulo={k.label} nota={k.pessoasNota} periodo={periodLabel} pessoas={k.pessoas} cor={k.color}
             sufixo={k.pessoasSufixo ?? k.label.toLowerCase()} aoFechar={() => setAberto(null)}
           />
         )

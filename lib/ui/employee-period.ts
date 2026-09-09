@@ -40,6 +40,8 @@ export type EmployeeMetrics = {
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
     pontoAte?: string | null
     faltas: number | null; suspensoes: number | null
+    /** Advertências por vazamento (LGPD) no período. */
+    lgpdAdvertencias?: number
     /* A cobertura do ponto vem NESTA rota, que a ficha já chama — ela evita
        fetch extra de propósito. `pessoaMedida` = está no roster do ponto;
        `janelaComPonto` = o import alcançou esta janela. Ver `lib/ponto-cobertura.ts`. */
@@ -58,6 +60,16 @@ export type EmployeeMetrics = {
   }
   /** Pontuação mensal do setor. `origem` distingue informado de calculado. */
   pontuacao?: { competencia: string; pontos: number; origem: string; detalhe: string | null }[]
+  /** O placar do cabeçalho: acumulado + onde ela está no setor na competência
+   *  do filtro. ⚠️ `posicao: null` = ela não pontua naquele mês. */
+  posicao?: {
+    competencia: string
+    posicao: number | null
+    de: number
+    pontosNoMes: number | null
+    acumulado: number
+    meses: number
+  }
 }
 
 // Métricas reais da pessoa NO PERÍODO (do banco local) p/ a ficha respeitar o filtro.

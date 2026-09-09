@@ -271,6 +271,15 @@ julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido a
 ### Ainda em pé
 
 - **`/relatorios`** nunca saiu do "Em breve".
+- **⚠️⚠️ O painel de Headcount do `/dashboard` não passa pela régua de `alcance`.**
+  Os cartões de Advertências, Atrasos e Suspensões listam só quem tem valor no
+  `assidMap`, que vem com `porPersonKey(alcance)` aplicado — eles se limitam
+  sozinhos. O de Headcount monta a lista do dataset do cliente, que não filtra:
+  hoje é inofensivo **só porque `proxy.ts:117` manda todo não-ADMIN embora de
+  `/dashboard`**. A régua que protege esse cartão é o ROTEADOR, não a de
+  conteúdo — duas réguas para a mesma pergunta, que é a falha que mais se repete
+  aqui. No dia em que o painel abrir para gestor, ele lista por nome as
+  admissões e demissões da casa inteira, com data. Achado do crítico, 09/09/2026.
 - **⚠️⚠️ Inativo que SAI do diretório nunca é percebido.** O varredor de órfãos
   do `lib/nexus.ts` só olha registros `active: true` — e está **certo**: o
   TalentCare pede ao Nexus só os funcionários ATIVOS

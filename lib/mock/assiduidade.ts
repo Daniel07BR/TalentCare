@@ -29,15 +29,27 @@ export const assidPct = (atrasos: number, advert: number) => Math.max(0, 100 - a
 export function assiduidadeVM(data: TalentData, period?: PeriodAssid, janelaComPonto = true) {
   const colorOf = new Map(data.departments.map((d) => [d.id, d.color]))
 
+  /* ⚠️⚠️ ADVERTÊNCIA OBEDECE AO FILTRO — corrigido em 09/09/2026, achado do
+     crítico. Ela era a ÚNICA parcela acumulada aqui, e o efeito não era
+     cosmético: a assiduidade é `100 − atrasos·2 − advertências·5`, então uma
+     pessoa com um mês IMPECÁVEL lia **0%** numa tela chamada Assiduidade porque
+     carregava as advertências da vida inteira. Medido na janela 1–9/set: o
+     Evandro dá **100** no `/ranking` e **0** aqui; a média da casa lia **55%**
+     quando é **97%**; 22 das 75 pessoas com histórico ficavam travadas em zero.
+
+     É a face invertida do `null` com a vítima trocada, e o mesmo 820 que o dono
+     acabou de mandar tirar do painel — ele tinha mudado de tela, não sumido. */
   const stat = (e: TalentData['employees'][number]) => {
-    // Advertência = registro disciplinar CUMULATIVO → sempre acumulado (não filtra
-    // por período; senão o histórico — que praticamente parou em abr/2026 — some).
-    const advertencias = e.advertencias
     if (period) {
       const p = period.get(personKeyOf(e))
-      return { atrasos: p?.atrasos ?? 0, abonados: p?.abonados ?? 0, minutos: p?.minutos ?? 0, advertencias }
+      return {
+        atrasos: p?.atrasos ?? 0, abonados: p?.abonados ?? 0, minutos: p?.minutos ?? 0,
+        advertencias: p?.advertencias ?? 0,
+      }
     }
-    return { atrasos: e.atrasos, abonados: e.atrasosAbon, minutos: e.minutosAtraso, advertencias }
+    /* Sem o map do período (carregando, ou erro): cai no acumulado da vida, como
+       sempre foi. Quem chama distingue os dois estados na tela. */
+    return { atrasos: e.atrasos, abonados: e.atrasosAbon, minutos: e.minutosAtraso, advertencias: e.advertencias }
   }
 
   // Só o quadro ATIVO (desligado não entra no painel de assiduidade).

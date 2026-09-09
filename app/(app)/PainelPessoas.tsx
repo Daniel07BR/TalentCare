@@ -32,9 +32,16 @@ export type PessoaDoPainel = {
    confere permissão por conta própria. O painel é o índice, não o destino.
    ============================================================ */
 
-export function PainelPessoas({ titulo, nota, pessoas, cor, sufixo, aoFechar }: {
+export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoFechar }: {
   titulo: string
   nota?: string
+  /**
+   * ⚠️⚠️ DE QUE JANELA ESTA LISTA FALA. O painel cobre a barra de período (ele
+   * é modal), então enquanto está aberto a única coisa que nomeia a janela fica
+   * atrás dele — e um título só "Advertências" sobre uma lista que muda com o
+   * filtro é a regra (b) da casa quebrada dentro de um modal.
+   */
+  periodo?: string
   pessoas: PessoaDoPainel[]
   cor: string
   /** "atrasos", "advertências" — o que o número de cada linha significa. */
@@ -76,7 +83,7 @@ export function PainelPessoas({ titulo, nota, pessoas, cor, sufixo, aoFechar }: 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>{titulo}</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 2 }}>
-              {nota ? `${nota} · ` : ''}{pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'}
+              {periodo ? `${periodo} · ` : ''}{nota ? `${nota} · ` : ''}{pessoas.length} {pessoas.length === 1 ? 'pessoa' : 'pessoas'}
             </div>
           </div>
           <button onClick={aoFechar} aria-label="Fechar"

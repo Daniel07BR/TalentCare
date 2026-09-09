@@ -78,8 +78,10 @@ export type DeptMetrics = {
   assiduidade: {
     atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
     /** ⚠️ Medidas do Controle da LGPD no período. NÃO dependem da cobertura do
-     *  ponto: elas não vêm do dump do Nexo. */
-    lgpdSuspensoes: number; lgpdAdvertencias: number
+     *  ponto: elas não vêm do dump do Nexo.
+     *  ⚠️ `null` = resposta velha ou rota anterior a 09/09/2026 — a tela mostra
+     *  "—", nunca 0: zero suspensões é a melhor notícia dela. */
+    lgpdSuspensoes: number | null; lgpdAdvertencias: number | null
     /** Os dias com ocorrência do setor DENTRO do filtro — alimentam o calendário. */
     dias?: { day: string; atrasos: number; abonados: number; minutos: number; pessoas: number; ate5: number; ate30: number; mais30: number }[]
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
