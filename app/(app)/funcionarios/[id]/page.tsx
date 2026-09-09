@@ -13,6 +13,7 @@ import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
 import { Placar } from './Placar'
 import { Medidor } from './Medidor'
+import { CondutaLateral } from './CondutaLateral'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import DadosEditor from './DadosEditor'
 import ServicosCard from './ServicosCard'
@@ -475,42 +476,13 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>Ponto eletrônico · {periodo}</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>{/* ⚠️⚠️ Este cartão mostrava `100 − atrasos×2 − advertências×5` como se fosse
-       uma TAXA de presença — e é a `assidNotaFrom()` do score, o mesmo fator que
-       vale 20% dele. Quem não tem ponto na fonte recebia "100%": zero atraso por
-       AUSÊNCIA DE DADO virava nota máxima, na mesma fileira em que "Faltas" e
-       "Suspensões" mostram "—" com "sem fonte". A fileira era honesta em duas
-       células e inventava na primeira. */}
-                    <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: temPonto ? 'var(--text)' : 'var(--text-mute)' }}>{temPonto ? `${ass.assid}%` : '—'}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Índice de assiduidade</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-mute)', marginTop: 3 }} title="100 − atrasos×2 − advertências×5. Não é taxa de presença.">
-                      {temPonto ? '100 − atrasos×2 − advert.×5' : (ass?.motivoSemPonto ?? 'sem registro de ponto')}
-                    </div></div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
-                    <div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.atrasos}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Atrasos</div>
-                    {ass.minutos > 0 || ass.atrasosAbon > 0 ? (
-                      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>
-                        {ass.minutos > 0 ? `${ass.minutos} min` : null}
-                        {ass.minutos > 0 && ass.atrasosAbon > 0 ? ' · ' : null}
-                        {ass.atrasosAbon > 0 ? `${ass.atrasosAbon} abonado${ass.atrasosAbon > 1 ? 's' : ''}` : null}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-mute)' }}>—</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Faltas</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>sem fonte</div></div>
-                  {/* ⚠️ "no período", não "histórico total": este número JÁ é
-                      contado com `data BETWEEN fromDay AND toDay` na rota, e o
-                      rótulo velho dizia a coisa errada sobre o número certo. A
-                      lista mais abaixo é que é o histórico completo, e ela diz. */}
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{ass.advertencias}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Advertências</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>no período · do 2º atraso do mês</div></div>
-                  {/* ⚠️⚠️ SUSPENSÃO TEM FONTE desde 09/09/2026 (o Controle da LGPD
-                      do Nexus). Estava cravada em "—  sem fonte" — e era para
-                      esta ficha que o painel de Suspensões mandava o gestor
-                      clicar. `null` continua sendo "—", mas agora só quando não
-                      dá para ler. */}
-                  <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: (ass.suspensoes ?? 0) > 0 ? 'var(--danger)' : 'var(--text-mute)' }}>{ass.suspensoes == null ? '—' : ass.suspensoes}</div><div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Suspensões</div><div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 3 }}>{ass.suspensoes == null ? 'não foi possível ler' : 'no período · vazamento (LGPD)'}</div></div>
-                </div>
+                {/* ⚠️ A FILEIRA DE NÚMEROS SAIU DAQUI (09/09/2026) para a coluna
+                    da direita, ao lado de "Antes de avaliar" — MOVIDA, não
+                    copiada. Ela estava a três telas de rolagem do botão
+                    "Avaliar", e repeti-la nas duas alturas seria a duplicação
+                    que o dono acabou de mandar tirar do bloco dos sistemas.
+                    Aqui fica o que é visual e não cabe em 340px: a gravidade em
+                    faixas, o calendário e a lista de advertências. */}
 
                 {/* ⚠️⚠️ A GRAVIDADE DO ATRASO (pedido do dono, 08/09/2026).
                     "6 atrasos · 43 min" não distingue seis vezes chegando 7
@@ -750,7 +722,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
           avaliação mensal. O painel aqui passou a servir a quem vai AVALIAR: o
           que aconteceu no mês, e o que perguntar na conversa.
         */}
-        <PainelDoAvaliador vm={vm} m={m} periodo={periodo} estado={estadoTimeline} />
+        {/* ⚠️ A coluna da direita é curta e a da esquerda é longa — sobrava
+            tela. A CONDUTA veio para cá (movida, não copiada: os mesmos números
+            saíram da fileira do bloco de assiduidade), porque quem lê esta
+            coluna está prestes a avaliar e conduta é um dos critérios. */}
+        <div style={{ position: 'sticky', top: 16 }}>
+          <PainelDoAvaliador vm={vm} m={m} periodo={periodo} estado={estadoTimeline} />
+          <CondutaLateral m={m} periodo={periodo} />
+        </div>
       </div>
     </div>
   )
