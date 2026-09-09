@@ -4,6 +4,8 @@ import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { useFrescor } from '@/lib/ui/frescor'
+import { useState } from 'react'
+import { PainelPessoas } from './PainelPessoas'
 import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
 import { buildDashboard } from '@/lib/mock/dashboard'
@@ -20,6 +22,10 @@ export default function DashboardPage() {
   const { period, from, to, label: periodLabel } = usePeriod()
   const router = useRouter()
   const { signals, loading: scoreLoading, erro: scoreErro } = useScoreSignals()
+  /* Qual cartão está aberto. `null` = nenhum. Guarda o RÓTULO e não o objeto:
+     ao trocar o filtro os KPIs são remontados, e um objeto congelado no estado
+     mostraria a lista da janela anterior debaixo do título da nova. */
+  const [aberto, setAberto] = useState<string | null>(null)
   const data = withRealScores(useTalentData(), signals)
   const assid = useAssiduidadePeriod()
   const frescor = useFrescor()
@@ -82,9 +88,23 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 16 }}>
         {vm.kpis.map((k) => {
           const semDado = k.value === '—'
+          /* ⚠️ Só é clicável quando HÁ lista. Cartão que parece botão e não abre
+             nada ensina o leitor a não clicar em nenhum. */
+          const abre = !!k.pessoas?.length
           return (
-          <div key={k.label} className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 130 }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500 }}>{k.label}</div>
+          <div key={k.label} className="tc-card"
+            onClick={abre ? () => setAberto(k.label) : undefined}
+            role={abre ? 'button' : undefined}
+            tabIndex={abre ? 0 : undefined}
+            onKeyDown={abre ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAberto(k.label) } } : undefined}
+            title={abre ? `Ver as ${k.pessoas!.length} pessoas` : undefined}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 130, cursor: abre ? 'pointer' : 'default' }}>
+            <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {k.label}
+              {/* A pista de que dá para abrir — discreta, no rótulo, e não um
+                  botão competindo com o número. */}
+              {abre && <span style={{ fontSize: 9.5, color: 'var(--text-mute)', border: '1px solid var(--border)', borderRadius: 20, padding: '1px 6px' }}>{k.pessoas!.length} pessoas</span>}
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               {/* ⚠️ "—" em cinza, nunca um 0 grande: zero se lê como "não houve",
                   e aqui o que houve foi ninguém medir. */}
@@ -107,6 +127,20 @@ export default function DashboardPage() {
           </div>
         )})}
       </div>
+
+      {/* ⚠️ Lido do `vm` recém-montado (pelo rótulo), nunca de uma cópia no
+          estado: o filtro de período remonta os KPIs, e uma lista congelada
+          apareceria debaixo do título da janela nova. */}
+      {(() => {
+        const k = vm.kpis.find((x) => x.label === aberto)
+        if (!k?.pessoas?.length) return null
+        return (
+          <PainelPessoas
+            titulo={k.label} nota={k.pessoasNota} pessoas={k.pessoas} cor={k.color}
+            sufixo={k.label.toLowerCase()} aoFechar={() => setAberto(null)}
+          />
+        )
+      })()}
 
       {/* Atendimentos por departamento (WhatsApp) + Curva de turnover */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16, marginBottom: 16 }}>

@@ -90,6 +90,31 @@ export type Kpi = {
    *  gráfico sem dado — era daí que vinham as quatro sparklines sorteadas. */
   spark: string | null
   sparkColor: string
+  /**
+   * QUEM ESTÁ ATRÁS DO NÚMERO — a lista que o cartão abre ao ser clicado.
+   *
+   * ⚠️⚠️ Só entra aqui o que o `alcance` de quem lê JÁ trouxe. O `assidMap` vem
+   * de `/api/assiduidade-metrics`, que aplica a régua; o `perf` vem do dataset,
+   * que também aplica. Montar a lista de outra fonte seria abrir por nome o que
+   * a régua fechou por número — e o aviso mais forte do `CONTINUAR-AQUI` é
+   * exatamente este: antes de mandar algo para o navegador, pergunte quem pode
+   * ver.
+   *
+   * ⚠️ `null` = este cartão não abre. Turnover não abre porque a lista de quem
+   * saiu já é uma tela inteira (`/turnover`), e um painel de 8 linhas ao lado de
+   * um relatório completo é o caminho pior competindo com o melhor.
+   */
+  pessoas: KpiPessoa[] | null
+  /** O que o painel diz no topo, antes da lista. */
+  pessoasNota?: string
+}
+
+export type KpiPessoa = {
+  id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean
+  /** O número desta pessoa (atrasos, advertências…). */
+  valor: number
+  /** Uma linha de contexto: "43 min somados", "entrou em 14/07". */
+  detalhe?: string
 }
 export type EscSegment = { label: string; count: number; color: string; dash: string; offset: string }
 export type DeptHighlight = { deptId: string; deptNome: string; color: string; id: string; nome: string; cargo: string; initials: string; hasAvatar: boolean; score: number; scoreColor: string; comparadoCom: number }
@@ -231,12 +256,54 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
      virando **0 atrasos**, em verde, ao lado de "Advertências 732". */
   const atrasosVal = janelaComPonto ? atrasosPonto : null
 
-  const kdef: (Omit<Kpi, 'spark' | 'sparkColor' | 'deltaColor' | 'deltaArrow'> & { vals: number[]; up: boolean | null })[] = [
+  /* ── QUEM ESTÁ ATRÁS DE CADA NÚMERO ──────────────────────────────────────
+     Pedido do dono (09/09/2026): poder clicar no cartão e ver as pessoas.
+     ⚠️ Tudo daqui sai do que a régua de alcance já trouxe — ver `Kpi.pessoas`. */
+  const nomeDept = new Map(data.departments.map((d) => [d.id, d.nome]))
+  const pessoaBase = (e: Employee) => ({
+    id: e.id, nome: e.nome, cargo: e.cargo,
+    setor: nomeDept.get(e.dept) ?? '—', hasAvatar: e.hasAvatar,
+  })
+  const br2 = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—')
+
+  /* ⚠️ Ordena por valor e CORTA o que é zero: um painel de "quem se atrasou" com
+     80 linhas em zero acusaria 80 pessoas para mostrar 12. Quem não aparece na
+     lista é quem não teve ocorrência — e isso o número já diz. */
+  const comValor = (f: (e: Employee) => number, detalhe?: (e: Employee) => string) =>
+    perf
+      .map((e) => ({ ...pessoaBase(e), valor: f(e), detalhe: detalhe?.(e) }))
+      .filter((p) => p.valor > 0)
+      .sort((a, b) => b.valor - a.valor)
+
+  const atrasosPessoas = assidMap
+    ? comValor(
+        (e) => assidMap.get(pk(e))?.atrasos ?? 0,
+        (e) => {
+          const m = assidMap.get(pk(e))?.minutos ?? 0
+          return m ? `${m} min somados` : ''
+        },
+      )
+    : null
+  const advertPessoas = assidMap ? comValor((e) => assidMap.get(pk(e))?.advertencias ?? 0) : null
+
+  /* HEADCOUNT abre o MOVIMENTO da janela, não as 86 pessoas: o número grande é
+     um retrato de hoje, e o que a legenda promete ("3 entradas · 4 saídas") é o
+     que alguém quer ver por nome. */
+  const movimento: KpiPessoa[] = [
+    ...nonDir.filter((e) => dentroDaJanela(e.hireISO)).map((e) => ({ ...pessoaBase(e), valor: 1, detalhe: `entrou em ${br2(e.hireISO)}` })),
+    ...nonDir.filter((e) => dentroDaJanela(e.leftISO)).map((e) => ({ ...pessoaBase(e), valor: 1, detalhe: `saiu em ${br2(e.leftISO)}` })),
+  ].sort((a, b) => (a.detalhe ?? '').localeCompare(b.detalhe ?? ''))
+
+  const kdef: (Omit<Kpi, 'spark' | 'sparkColor' | 'deltaColor' | 'deltaArrow'> & { vals: number[]; up: boolean | null; pessoas: KpiPessoa[] | null; pessoasNota?: string })[] = [
     {
       label: 'Headcount', value: perf.length, unit: '', color: 'var(--info)',
       delta: saldoHc === 0 ? '0' : (saldoHc > 0 ? '+' : '') + saldoHc, up: saldoHc >= 0,
       nota: `${admitidos} ${admitidos === 1 ? 'entrada' : 'entradas'} · ${saidas} ${saidas === 1 ? 'saída' : 'saídas'} no período`,
       vals: hcSerie,
+      /* ⚠️ Abre o MOVIMENTO da janela, não as 86 pessoas: o número grande é um
+         retrato de hoje, e o que a legenda promete é o que alguém quer por nome. */
+      pessoas: movimento.length ? movimento : null,
+      pessoasNota: 'quem entrou e quem saiu nesta janela',
     },
     {
       label: 'Turnover', value: tser.rate, unit: '%', color: 'var(--success)', delta: '', up: null,
@@ -246,6 +313,10 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
          saudável. O rótulo do cartão passa a dizer de que janela ele fala. */
       nota: `${tser.saidas} ${tser.saidas === 1 ? 'saída' : 'saídas'} em ${tser.dias} dias · não anualizado`,
       vals: tser.vals.length > 1 ? tser.vals : [0, 0],
+      /* ⚠️ NÃO abre, de propósito: quem saiu já é uma TELA inteira (`/turnover`,
+         com motivo, tempo de casa e a curva). Um painel de oito linhas ao lado
+         de um relatório completo é o caminho pior competindo com o melhor. */
+      pessoas: null,
     },
     {
       label: 'Advertências', value: advVal ?? '—', unit: '', color: 'var(--danger)', delta: '', up: null,
@@ -253,6 +324,8 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
         ? (motivoSemPonto ?? 'sem dado de ponto nesta janela')
         : pontoTruncado ? `no período, medido até ${br(pontoAte!)}` : 'no período · derivadas do 2º atraso do mês',
       vals: [],
+      pessoas: advVal == null ? null : (advertPessoas?.length ? advertPessoas : null),
+      pessoasNota: 'quantas advertências cada um teve na janela',
     },
     {
       label: 'Atrasos', value: atrasosVal ?? '—', unit: '', color: 'var(--chart-5)', delta: '', up: null,
@@ -260,6 +333,8 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
         ? (motivoSemPonto ?? 'sem dado de ponto nesta janela')
         : pontoTruncado ? `no período, medido até ${br(pontoAte!)}` : 'no período',
       vals: atrasosSerie.length > 1 ? atrasosSerie : [],
+      pessoas: atrasosVal == null ? null : (atrasosPessoas?.length ? atrasosPessoas : null),
+      pessoasNota: 'quantos atrasos cada um teve na janela',
     },
     {
       /* SUSPENSÕES — pedido do dono (09/09/2026), no lugar do "Score médio".
@@ -281,10 +356,18 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
         ? 'não foi possível ler'
         : `por vazamento de dados (LGPD), no período${lgpdAdvertencias ? ` · e ${lgpdAdvertencias} advertência${lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : ''}`,
       vals: [],
+      /* ⚠️⚠️ NÃO abre — e a razão é uma pergunta ABERTA, não um esquecimento.
+         No Nexus a área de LGPD é fechada (T.I e Diretoria); aqui o cartão é
+         lido por gestor. Mandar a lista nominal por `alcance` daria ao gestor,
+         no TalentCare, o que o Nexus não lhe dá — duas réguas para a mesma
+         pergunta, que é a falha que mais se repete nesta casa. Enquanto o dono
+         não decidir, a contagem fica e o nome não sai por aqui. */
+      pessoas: null,
     },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({
     label: k.label, value: k.value, unit: k.unit, delta: k.delta, nota: k.nota, color: k.color,
+    pessoas: k.pessoas, pessoasNota: k.pessoasNota,
     deltaColor: k.up == null ? 'var(--text-dim)' : k.up ? 'var(--success)' : 'var(--danger)',
     deltaArrow: k.up == null ? '' : k.up ? '▲' : '▼',
     spark: k.vals.length > 1 ? geomSpark(k.vals, 64, 24) : null,
