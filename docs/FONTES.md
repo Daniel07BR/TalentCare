@@ -10,7 +10,7 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 | 3 | ClassRoom | `.71` | `classroom_daily` | `:10` |
 | 4 | Consultoria Plus | `.68` | `consultoria_daily` | `:15` |
 | 5 | HelpDesk | `.77` | `helpdesk_daily` | `:20` |
-| 6 | CIDE | `.74` | `cide_daily` | `:25` |
+| 6 | CIDE — *Cadastro Integrado de Dados Empresariais* | `.74` | `cide_daily` | `:25` |
 | 7 | Gerência (mensageria) | `.72` | `gerencia_daily` | `:30` |
 | 8 | **Chat Interno** | `.69` | `chat_daily` + `chat_dept_daily` | `:35` |
 | — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |

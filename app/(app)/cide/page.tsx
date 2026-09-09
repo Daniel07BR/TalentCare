@@ -32,7 +32,11 @@ export default function CidePage() {
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <CideIcon size={24} /> CIDE · Cadastro Geral
+            {/* ⚠️ CIDE = Cadastro Integrado de Dados Empresariais (correção do
+                dono, 09/09/2026). "Cadastro Geral" era o nome do banco de dados
+                do sistema (`cadastro_geral`, schema `cg`) escapando para a tela
+                — nome interno não é rótulo. */}
+            <CideIcon size={24} /> CIDE · Cadastro Integrado de Dados Empresariais
           </h1>
           <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>Atividade = EMPRESAS cujo cadastro a pessoa mexeu no dia. Não é a contagem de linhas do histórico: salvar uma empresa grava uma linha por campo mexido, e 98% delas são geradas pelo salvamento</div>
         </div>

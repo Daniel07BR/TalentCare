@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
   }
 
   for (const r of cide) {
-    if (r.atividades > 0) push('CIDE', 'var(--chart-5)', r.day, `Registrou ${plural(r.atividades, 'atividade', 'atividades')}`, 'alterações no cadastro geral')
+    if (r.atividades > 0) push('CIDE', 'var(--chart-5)', r.day, `Registrou ${plural(r.atividades, 'atividade', 'atividades')}`, 'alterações no cadastro de empresas')
   }
   for (const r of cons) {
     const parts: string[] = []
