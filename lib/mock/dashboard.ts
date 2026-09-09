@@ -80,26 +80,6 @@ function turnoverSeries(emps: Employee[], period: Period, from?: string | null, 
   return { vals, rate, labels, saidas: exitsWin, dias, bucketFins }
 }
 
-/**
- * Advertências ACUMULADAS ao fim de cada um dos últimos 12 meses.
- *
- * ⚠️ O número do cartão é o acumulado de toda a história; a sparkline tem de
- * responder à MESMA pergunta, senão são dois tempos diferentes lado a lado num
- * cartão de 64 pixels. Assim o último ponto da curva É o número exibido.
- */
-function serieAdvertenciasAcumulada(emps: Employee[]): number[] {
-  const datas: string[] = []
-  for (const e of emps) for (const d of e.discEventos) if (d.tipo === 'advertencia') datas.push(d.data)
-  if (!datas.length) return []
-  const hoje = new Date()
-  const fins: string[] = []
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i + 1, 0) // último dia do mês
-    fins.push(d.toISOString().slice(0, 10))
-  }
-  return fins.map((f) => datas.filter((d) => d <= f).length)
-}
-
 export type Kpi = {
   label: string; value: string | number; unit: string
   delta: string; deltaColor: string; deltaArrow: string
@@ -132,6 +112,9 @@ export type DeptHighlight = { deptId: string; deptNome: string; color: string; i
 
 export type OpcoesDashboard = {
   assidMap?: PeriodAssid
+  /** Medidas do Controle da LGPD no período. `null` = não foi possível ler. */
+  lgpdSuspensoes?: number | null
+  lgpdAdvertencias?: number | null
   /** Extremos do calendário, quando `period === 'custom'`. */
   from?: string | null
   to?: string | null
@@ -146,7 +129,7 @@ export type OpcoesDashboard = {
 }
 
 export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDashboard = {}) {
-  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null } = opts
+  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null, lgpdSuspensoes = null, lgpdAdvertencias = null } = opts
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
 
@@ -169,8 +152,17 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
   const atrasosPonto = assidMap
     ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.atrasos ?? 0), 0)
     : perf.reduce((a, e) => a + e.atrasos, 0)
-  // Advertências = registro cumulativo → SEMPRE acumulado (não por período).
-  const advertPonto = perf.reduce((a, e) => a + e.advertencias, 0)
+  /* ⚠️⚠️ ADVERTÊNCIAS PASSARAM A OBEDECER AO FILTRO (09/09/2026, pedido do dono).
+     Era o último número da fileira que não obedecia: o cartão mostrava 820 em
+     "30 dias" e 820 em "1 a 9 de setembro", com o rótulo do período em cima. A
+     ressalva "acumulado — não filtra por período" existia e estava correta, mas
+     um número que não responde à pergunta ao lado dele é um número respondendo
+     outra pergunta — a regra (b) da casa, que custou os "59 cursos" do TI.
+     ⚠️ `null` quando a janela não foi medida, como os atrasos: sem cobertura de
+     ponto, zero advertência se lê como "ninguém foi advertido". */
+  const advertPonto = assidMap
+    ? perf.reduce((a, e) => a + (assidMap.get(pk(e))?.advertencias ?? 0), 0)
+    : perf.reduce((a, e) => a + e.advertencias, 0)
   // Turnover REAL period-aware (saídas no período ÷ headcount). nonDir = sem Diretoria.
   const tser = turnoverSeries(nonDir, period, from, to)
   const { fromDay, toDay } = periodDays(period, from, to)
@@ -224,11 +216,14 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     return nonDir.filter((e) => (!e.hireISO || e.hireISO.slice(0, 10) <= dia) && (!e.leftISO || e.leftISO.slice(0, 10) > dia)).length
   })
 
-  /* ADVERTÊNCIAS — registro CUMULATIVO por decisão da casa: uma advertência não
-     "sai" do histórico quando o filtro anda. O cartão passa a dizer isso (era
-     dívida aberta no `PERIODO-E-DEPLOY.md`: faltava o rótulo, não a decisão), e a
-     sparkline é o MESMO acumulado mês a mês — o último ponto dela é o número. */
-  const advSerie = serieAdvertenciasAcumulada(perf)
+  /* ⚠️ A SPARKLINE SAIU JUNTO com o acumulado. Ela desenhava
+     `serieAdvertenciasAcumulada` — advertências acumuladas mês a mês, uma curva
+     que só sobe — e agora o número é do PERÍODO. Curva que sempre sobe embaixo
+     de um número que vai e volta com o filtro é o gráfico dizendo uma coisa e o
+     número outra, lado a lado. Sem série inventada: o cartão fica sem
+     sparkline até existir a série certa (advertências POR BUCKET da janela,
+     como a de atrasos). */
+  const advVal = janelaComPonto ? advertPonto : null
 
   /* ATRASOS — obedece ao filtro. `null` quando a janela não foi medida: o ponto
      entra por import à mão e em 03/09/2026 parava em 25/06, então "7 dias",
@@ -253,8 +248,11 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
       vals: tser.vals.length > 1 ? tser.vals : [0, 0],
     },
     {
-      label: 'Advertências', value: advertPonto, unit: '', color: 'var(--danger)', delta: '', up: null,
-      nota: 'acumulado — não filtra por período', vals: advSerie,
+      label: 'Advertências', value: advVal ?? '—', unit: '', color: 'var(--danger)', delta: '', up: null,
+      nota: advVal == null
+        ? (motivoSemPonto ?? 'sem dado de ponto nesta janela')
+        : pontoTruncado ? `no período, medido até ${br(pontoAte!)}` : 'no período · derivadas do 2º atraso do mês',
+      vals: [],
     },
     {
       label: 'Atrasos', value: atrasosVal ?? '—', unit: '', color: 'var(--chart-5)', delta: '', up: null,
@@ -264,12 +262,25 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
       vals: atrasosSerie.length > 1 ? atrasosSerie : [],
     },
     {
-      /* ⚠️ Sem delta e sem sparkline, de propósito. O score é um PERCENTIL dentro
-         do setor: a média de percentis é quase constante por construção, e uma
-         seta de tendência sobre ela diria mais sobre o arredondamento do que
-         sobre a casa. O número fica; a tendência inventada, não. */
-      label: 'Score médio', value: compScore, unit: '/100', color: 'var(--accent)', delta: '', up: null,
-      nota: `${scored.length} de ${perf.length} com score aplicável`, vals: [],
+      /* SUSPENSÕES — pedido do dono (09/09/2026), no lugar do "Score médio".
+         Vêm do Controle da LGPD do Nexus: medida ASSINADA por vazamento de dado
+         pessoal, não a advertência derivada do atraso que está no cartão ao
+         lado. É o número mais grave da fileira e o que menos aparecia.
+
+         ⚠️ `null` (→ "—") quando a leitura FALHOU, nunca 0: zero suspensões é a
+         melhor notícia do painel, e uma queda de rede não pode produzi-la.
+
+         ⚠️ A nota carrega as advertências de LGPD quando existem na janela.
+         Elas não cabem no cartão de "Advertências" (aquele conta a derivada do
+         2º atraso, outra natureza) e sumiriam da tela inteira sem isto.
+
+         ⚠️ Sem sparkline: são poucos eventos e esparsos — 5 em 2026 na casa
+         toda. Uma curva sobre isso desenha ruído com cara de tendência. */
+      label: 'Suspensões', value: lgpdSuspensoes ?? '—', unit: '', color: 'var(--danger)', delta: '', up: null,
+      nota: lgpdSuspensoes == null
+        ? 'não foi possível ler'
+        : `por vazamento de dados (LGPD), no período${lgpdAdvertencias ? ` · e ${lgpdAdvertencias} advertência${lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : ''}`,
+      vals: [],
     },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({

@@ -31,6 +31,8 @@ export default function DashboardPage() {
     atrasosPorDia: assid.porDia,
     pontoDesde: assid.pontoDesde,
     pontoAte: assid.pontoAte,
+    lgpdSuspensoes: assid.lgpdSuspensoes,
+    lgpdAdvertencias: assid.lgpdAdvertencias,
   })
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall

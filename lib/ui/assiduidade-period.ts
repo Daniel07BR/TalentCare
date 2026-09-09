@@ -18,6 +18,12 @@ export type AssidPeriodo = {
    *  janela toca a cobertura em algum ponto. */
   pontoDesde: string | null
   pontoAte: string | null
+  /** Medidas do Controle da LGPD no período — contagem, nunca nomes.
+   *  ⚠️ `null` = NÃO foi possível ler (rota velha, rede caída). Nunca 0: zero
+   *  suspensões é a melhor notícia do painel, e uma queda de rede não pode
+   *  produzi-la. Mesma regra do `map: null` logo abaixo. */
+  lgpdSuspensoes: number | null
+  lgpdAdvertencias: number | null
   loading: boolean
   /**
    * A busca FALHOU.
@@ -37,7 +43,8 @@ export type AssidPeriodo = {
 // do ponto nunca alcançou volta como um Map vazio, e Map vazio se lê como "zero
 // atraso para todo mundo" — a resposta mais tranquilizadora e a única errada.
 const VAZIO: Omit<AssidPeriodo, 'loading'> = {
-  map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoDesde: null, pontoAte: null, erro: false,
+  map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoDesde: null, pontoAte: null,
+  lgpdSuspensoes: null, lgpdAdvertencias: null, erro: false,
 }
 
 export function useAssiduidadePeriod(): AssidPeriodo {
@@ -54,6 +61,7 @@ export function useAssiduidadePeriod(): AssidPeriodo {
         byPerson: Row[]; porDia?: { day: string; atrasos: number }[]
         janelaComPonto?: boolean; motivoSemPonto?: string | null
         pontoDesde?: string | null; pontoAte?: string | null
+        lgpdSuspensoes?: number; lgpdAdvertencias?: number
       }) => {
         if (!alive) return
         const m: PeriodAssid = new Map()
@@ -67,6 +75,8 @@ export function useAssiduidadePeriod(): AssidPeriodo {
           motivoSemPonto: d.motivoSemPonto ?? null,
           pontoDesde: d.pontoDesde ?? null,
           pontoAte: d.pontoAte ?? null,
+          lgpdSuspensoes: d.lgpdSuspensoes ?? null,
+          lgpdAdvertencias: d.lgpdAdvertencias ?? null,
           erro: false,
         })
       })

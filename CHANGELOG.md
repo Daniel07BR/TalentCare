@@ -1,5 +1,49 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim, 2) — A advertência passou a obedecer ao filtro, e o Score médio deu lugar às Suspensões
+
+Pedido do dono: *"as advertências não estão se adaptando ao período de pesquisa;
+troque o campo de score médio para suspensões."*
+
+### Advertências: o último número da fileira que não obedecia
+
+O cartão mostrava **820** em "Últimos 30 dias" e **820** em "1 a 9 de setembro",
+com o rótulo do período em cima. A ressalva *"acumulado — não filtra por
+período"* existia e estava correta — mas um número que não responde à pergunta
+ao lado dele está respondendo outra, e é a regra (b) da casa, a mesma que custou
+os "59 cursos" do TI.
+
+O dado por período já existia (`/api/assiduidade-metrics` devolve
+`advertencias` por pessoa na janela desde 03/09); o cartão é que somava
+`e.advertencias`, o acumulado de toda a história.
+
+⚠️ **A sparkline saiu junto.** Ela desenhava `serieAdvertenciasAcumulada` —
+advertências acumuladas mês a mês, uma curva que só sobe — e o número agora vai e
+volta com o filtro. Curva que sempre sobe embaixo de um número que anda é o
+gráfico dizendo uma coisa e o número outra, no mesmo cartão de 64 pixels. Fica
+sem sparkline até existir a série certa (por bucket da janela, como a de
+atrasos). A função morreu junto; a dívida saiu do `PERIODO-E-DEPLOY.md`.
+
+⚠️ E vale a mesma trava dos atrasos: **"—" quando a janela não foi medida**. Sem
+cobertura de ponto, zero advertência se lê como "ninguém foi advertido".
+
+### Suspensões no lugar do Score médio
+
+Vêm do Controle da LGPD: medida **assinada** por vazamento de dado pessoal — não
+a advertência derivada do 2º atraso que está no cartão ao lado. É o número mais
+grave da fileira e o que menos aparecia.
+
+- **`null` → "—" quando a leitura falha, nunca 0.** Zero suspensões é a melhor
+  notícia do painel, e uma queda de rede não pode produzi-la.
+- **A nota carrega as advertências de LGPD** quando existem na janela: elas não
+  cabem no cartão de "Advertências" (aquele conta a derivada do atraso, outra
+  natureza) e sumiriam da tela inteira sem isso.
+- **Sem sparkline**: são poucos eventos e esparsos — 5 em 2026 na casa toda. Uma
+  curva sobre isso desenha ruído com cara de tendência.
+- ⚠️ A contagem viaja como **total do alcance**, não por pessoa: a lista nominal
+  de quem levou suspensão por vazamento é a coisa mais sensível do painel, e
+  quem precisa do nome abre a ficha, que confere `podeVer`.
+
 ## 2026-09-09 (fim) — A tabela de pesos entrou, e agosto foi gravado nos 16 setores
 
 Decisão do dono: aplicar a tabela proporcional. Recalculei antes de aplicar —

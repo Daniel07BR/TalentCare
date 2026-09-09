@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
 
-  const [pontoRows, advRows, atrasoPorDia] = await Promise.all([
+  const [pontoRows, advRows, lgpdRows, atrasoPorDia] = await Promise.all([
     prisma.assiduidadeDaily.groupBy({
       by: ['personKey'],
       // ⚠️ `personKey` = `nexusUserId ?? id` — cobre o STAFF sem conta no Nexus.
@@ -25,6 +25,21 @@ export async function GET(req: NextRequest) {
     prisma.disciplinaEvento.groupBy({
       by: ['personKey'],
       where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) },
+      _count: { _all: true },
+    }),
+    /* ⚠️ AS MEDIDAS DE LGPD, no MESMO período. Ficam separadas das advertências
+       derivadas de propósito: uma é a contagem do 2º atraso do mês (regra da
+       casa), a outra é medida ASSINADA por vazamento de dado pessoal. Somá-las
+       num número só faria o cartão dizer "advertências" sobre duas coisas de
+       naturezas diferentes — e é justamente a distinção que a ficha passou a
+       mostrar. */
+    prisma.disciplinaEvento.groupBy({
+      by: ['tipo'],
+      where: {
+        tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] },
+        data: { gte: fromDay, lte: toDay },
+        ...porPersonKey(alcance),
+      },
       _count: { _all: true },
     }),
     /* A série DIÁRIA de atrasos na janela — é o que a sparkline do KPI desenha.
@@ -37,6 +52,8 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
+  const lgpdSuspensoes = lgpdRows.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
+  const lgpdAdvertencias = lgpdRows.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
   const advByKey = new Map(advRows.map((r) => [r.personKey, r._count._all]))
   const keys = new Set<string>([...pontoRows.map((r) => r.personKey), ...advByKey.keys()])
   const byPerson = [...keys].map((personKey) => {
@@ -79,5 +96,12 @@ export async function GET(req: NextRequest) {
        é ausência — e não entra na série. */
     pontoDesde: cob.primeiroDia,
     pontoAte: cob.ultimoDia,
+    /* ⚠️ Contagens do SETOR alcançado, no período — não por pessoa: o cartão do
+       painel é um total, e mandar a lista nominal de quem levou suspensão por
+       vazamento de dados para o dataset do cliente seria entregar a coisa mais
+       sensível do painel a quem só precisa do número. Quem precisa do nome abre
+       a ficha, que confere `podeVer`. */
+    lgpdSuspensoes,
+    lgpdAdvertencias,
   })
 }
