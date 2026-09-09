@@ -102,6 +102,36 @@ o freio, **77 pessoas teriam caído**.
 isso tem sua própria `mapRole`/`resolveRole`. As duas divergem em silêncio e **vence
 quem roda por último — que é sempre o cron**. Mexeu em `lib/nexus.ts`, mexa lá.
 
+### ⚠️⚠️ A CORREÇÃO RETROATIVA NÃO VOLTA PELO SYNC INCREMENTAL
+
+O recorte dos endpoints `<algo>-daily` é pelo **DIA DO EVENTO**, não por quando o
+registro foi alterado. Então tudo o que a origem **conserta depois** — e a origem
+conserta — fica congelado errado no espelho, sem erro nenhum e sem log nenhum.
+
+Medido em 09/09/2026, comparando `gerencia_daily` com o que o endpoint devolvia no
+mesmo instante para a base inteira: **212 dias divergentes** em 4.609.
+
+| o que estava errado | espelho | origem |
+|---|---|---|
+| km do Elton em 07/08/2026 | **882.601** | 58 |
+| km do Elton em 26/08/2026 | 144.697 | 67 |
+| **km do Elton em agosto (mês)** | **1.028.354** | **1.265** |
+| `viagens` em 198 dias do histórico | 0 | 1 |
+
+O km: o app leu o odômetro errado, o Legal corrigiu na Gerência três dias depois
+(`km_adjustments`, "KM fez a leitura do ultimo numero"), e o dia 07/08 já tinha saído
+da janela do cron. O painel mostrava **813 vezes** o valor real ao lado do nome dele.
+
+As `viagens`: métrica acrescentada ao endpoint **depois** do backfill. Como o
+incremental só olha para a frente, o histórico inteiro nasceu zerado — nenhuma viagem
+em 25 anos de base, para os dois mensageiros. **Métrica nova numa fonte incremental
+nasce vazia no passado, e ninguém percebe: zero é um valor plausível.**
+
+⚠️ O conserto é `run-gerencia-sync.mjs --completo`, no cron às 03:10, além do
+incremental de :30. O completo custa **4.610 linhas e ~16 s** — barato para o que
+evita. **As outras nove fontes com cron têm o mesmo formato de recorte e ninguém
+mediu se elas divergem.** Vale rodar o mesmo diff em cada uma.
+
 ### ⚠️ O upsert não remove o que sumiu da origem
 
 `update: SET` só toca no que a fonte devolve. Quando um endpoint **parou** de devolver
@@ -300,11 +330,30 @@ julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido a
   diretório, então nenhuma carga reescreve `foraDoDiretorio`. O conserto de
   verdade é pedir `includeInactive=true` no sync e comparar o conjunto inteiro —
   aí o desligado que continua no diretório se distingue do que saiu dele.
-- **Fonte parada por PESSOA não se distingue de pessoa parada.** `gerencia_daily`
-  do Gilberto termina em **24/02/2026** com o espelho fresco (outras pessoas até
-  03/09); o WhatsApp da Bianca Brito para em 20/07 e o CIDE dela em 08/07. Os dois
-  caem no fundo do ranking por "0 atividade no mês". Numa lista de piores, é a
-  diferença entre uma conversa e uma injustiça.
+- **Fonte parada por PESSOA não se distingue de pessoa parada.** ✅ **MEDIDA e
+  tratada NA ÁREA DE ENTREGAS em 09/09/2026; segue em pé no resto do sistema.**
+
+  O caso do **Gilberto** foi investigado até o fim, e o diagnóstico que circulava
+  estava errado: **não era o endpoint da Gerência.** Os 25 serviços dele em
+  julho/2026 são **mutirão de backlog** — dois lotes fechados em 17/07/2026 às
+  08:31 e às 10:05, com `scheduled_for` de 2022 a 2025 — e o corte de 180 dias os
+  remove **de propósito** (o comentário do endpoint cita exatamente esse caso).
+  Fora o mutirão, a última atividade real dele é **24/02/2026**, e o corte aparece
+  em TODAS as fontes: último ponto em fev/2026, última advertência em 23/02.
+
+  ⚠️⚠️ **O que ficou provado é pior, e é geral: nenhum sistema da casa registra
+  AFASTAMENTO.** O cadastro do Nexus só tem `active`/`inactive`, e ele está
+  **ativo**. Então o painel não tem como distinguir "afastado" de "parou de
+  trabalhar" — e a diferença, numa lista de piores, é a diferença entre uma
+  conversa e uma injustiça.
+
+  A área `/entregas` trata o sintoma: mostra **"—" com a data do último registro**
+  em vez de zero, e diz na tela que o espelho está em dia (logo, não é o sync). A
+  cura de verdade é um estado de afastamento no Nexus, que o diretório entrega aos
+  15 sistemas — decisão do dono, ainda aberta.
+
+  Os outros casos seguem sem tratamento: o WhatsApp da Bianca Brito para em 20/07 e
+  o CIDE dela em 08/07.
 - **Coorte sem volume** ainda produz percentil: Imóveis teve **9 atividades no mês
   entre 4 pessoas**, e a Fabiana Higa, com 5, tira percentil 100. A trava de hoje
   olha `total <= 0` e `MIN_PARES`, nunca o volume.

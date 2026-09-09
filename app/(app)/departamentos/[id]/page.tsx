@@ -14,6 +14,7 @@ import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
 import { Pessoas } from './Pessoas'
 import { Tendencia, Turnover } from './Tendencia'
 import { CardFonte } from './CardFonte'
+import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 import { Hero, Escolaridade } from './Hero'
 import { usePeriod } from '@/lib/ui/period'
 import { criterioDe, ancoraDe, competenciaLabel, ANCORAS } from '@/lib/avaliacoes/criterios'
@@ -156,6 +157,21 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Relatório do setor</div>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: '-.7px' }}>{vm.name}</h1>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {/* ⚠️ O CAMINHO ATÉ A ÁREA DE ENTREGAS. Ele é o mesmo padrão do botão da
+            planilha: a tela mora à parte e se chega a ela pelo resumo do setor a
+            que ela se aplica. Item de menu ficaria aceso para os 16 setores e
+            levaria 15 deles a uma tela que não é sobre eles. */}
+        {m?.setor.id === ENTREGAS_DEPT_ID && (
+          <button
+            onClick={() => router.push('/entregas')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+            title="A área da mensageria: serviços, saídas, km, viagens e jornada, dia a dia"
+          >
+            <Truck size={15} />
+            Área da mensageria
+          </button>
+        )}
         {m?.setor.podeGerir && (
           <button
             onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
@@ -166,6 +182,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
             {m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
           </button>
         )}
+        </div>
       </div>
 
       {m && <Hero m={m} />}

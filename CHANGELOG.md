@@ -1,5 +1,124 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim, 6) — A área do setor ENTREGAS, e três números que mentiam antes dela
+
+Pedido do dono: uma área para o setor Entregas (Elton e Gilberto), no espírito do
+Relatório Geral da Gerência. **A tela veio por último de propósito** — três dos
+números que ela ia mostrar estavam errados, e tela nova sobre número errado só
+espalha o erro.
+
+### ⚠️⚠️ 1. O diagnóstico que circulava sobre o Gilberto estava ERRADO
+
+A dívida do `FONTES.md` dizia que o `gerencia_daily` dele parava em 24/02 "com o
+espelho fresco", e a suspeita era um defeito no endpoint da Gerência — um join,
+um filtro por `active`, o campo de data do recorte.
+
+**Não é o endpoint.** Os 25 serviços dele em julho são **mutirão de backlog**: dois
+lotes fechados em 17/07/2026, às 08:31 e às 10:05, com `scheduled_for` de 2022 a
+2025. O corte de 180 dias os remove **de propósito**, e o comentário do próprio
+endpoint já citava este caso pelo nome. Fora o mutirão, a última atividade real dele
+é **24/02/2026** — e o corte aparece em TODAS as fontes: último ponto em fev/2026,
+última advertência em 23/02.
+
+⚠️⚠️ O que ficou provado é pior, e é geral: **nenhum sistema da casa registra
+afastamento.** O Nexus só tem `active`/`inactive`, e ele está **ativo**. O painel não
+tem como distinguir "afastado" de "parou de trabalhar".
+
+**Decisão do dono:** a tela diz *"sem registro desde 24/02"* com a data e o quanto
+faz, nunca zero — e diz também que o espelho está em dia, para que a lacuna não seja
+confundida com sync parado. O estado de afastamento no Nexus fica como decisão aberta.
+
+### ⚠️⚠️ 2. O KM do espelho estava 813 VEZES maior que o real
+
+| km do Elton em agosto/2026 | |
+|---|---|
+| espelho do TalentCare | **1.028.354** |
+| origem (Gerência) | **1.265** |
+
+O app leu o odômetro errado em 07/08 (882.601 km num dia), o Legal corrigiu na
+Gerência em 10/08 — e a correção **nunca voltou**. O endpoint recorta pelo **DIA DO
+EVENTO**, não por quando o registro mudou, e o dia 07/08 já tinha saído da janela do
+cron incremental.
+
+Comparando espelho × fonte na base inteira: **212 dias divergentes** em 4.609. Os
+outros 198 eram `viagens` — métrica acrescentada ao endpoint **depois** do backfill:
+o histórico inteiro nasceu zerado, nenhuma viagem em 25 anos de base. *Métrica nova
+numa fonte incremental nasce vazia no passado, e zero é um valor plausível.*
+
+✅ `run-gerencia-sync.mjs` ganhou **`--completo`** (ignora o watermark, reconcilia
+tudo: 4.610 linhas em ~16 s), rodou em produção e o diff voltou a **0 divergências**.
+Cron novo às **03:10**, ao lado do incremental de :30.
+
+⚠️ **As outras nove fontes com cron têm o mesmo formato de recorte e ninguém mediu se
+elas divergem.** Vale rodar o mesmo diff em cada uma — está no `FONTES.md`.
+
+### ⚠️⚠️ 3. A jornada tinha DUAS verdades, e o TalentCare mostrava a pior
+
+| jornada do Elton, agosto/2026 | |
+|---|---|
+| régua do espelho (`ended_at − started_at`) | **577,2 h** |
+| régua do Relatório Geral da Gerência | **176,4 h** |
+
+O `ended_at` também recebe o **fecho tardio**: o 17/08 do Elton "começou" em 18/08
+10:16 e "terminou" em 01/09 19:43 — **344 horas num dia**, com zero saída e zero
+serviço. O `reports.ts` da Gerência já resolvia isso (saída do ponto → fim da última
+saída → `ended_at`, com teto de 16 h); o `talent-daily` nunca aplicou a mesma conta.
+Eram duas verdades sobre quantas horas o mesmo homem trabalhou, e a que o dono usa de
+referência era a outra.
+
+✅ **Decisão do dono: alinhar o endpoint à régua do relatório.** Feito no `.72`, com o
+comentário que amarra as duas cópias uma à outra. Única diferença deliberada: um
+`GREATEST(0, …)` de fora, porque o relatório soma o mês e aqui a linha é diária —
+"trabalhou −71 min" é um número impossível na tela (um dia em toda a base).
+
+### E a métrica nova que a tela exigiu: `jornada_teto_min`
+
+Alinhar não bastava. **A saída também tem fecho tardio** — o 31/07 do Elton
+"terminou" em 03/08, depois do fim de semana —, e aí a régua do relatório cai no teto
+de 16 h. Em agosto são **59,2 h das 176,3 h: 34% da jornada é teto, não medição.**
+
+Um número com um terço de teto, exibido inteiro, é jornada cheia aos olhos de quem
+lê. O endpoint passou a devolver `jornadaTetoMin` como métrica **separada** (quem
+quiser a jornada crua ignora a linha), o espelho ganhou a coluna, e o cartão da tela
+escreve a fração: *"⚠ 59,2 h (34%) são o teto de 16 h — dias em que ninguém encerrou
+a saída"*.
+
+### A tela: `/entregas`
+
+Rota própria (decisão do dono), com o caminho pelo botão **"Área da mensageria"** na
+linha do nome do relatório do setor — o mesmo padrão do botão da planilha, e pelo
+mesmo motivo: item de menu ficaria aceso para os 16 setores e levaria 15 deles a uma
+tela que não é sobre eles.
+
+O que ela mostra, tudo do espelho e tudo obedecendo ao filtro: serviços concluídos
+(com a média por saída), km, saídas, viagens, jornada (com a fração de teto),
+mensageiros com registro, a linha de cada pessoa, **conclusões por dia** com o eixo
+no intervalo inteiro (dia parado e fim de semana contam), e a demanda de escritório.
+
+⚠️ A régua de acesso é a mesma do relatório de setor (`quemEh` + vínculo gravado):
+Entregas é chefiada pelo **Legal**, então quem manda é o vínculo, não o setor em que
+a pessoa senta.
+
+⚠️ **`—` nunca é zero.** Quem tem história na fonte e parou antes da janela recebe
+`—` e a data; quem teve dia medido sem resultado recebe `0`. O rodapé da lista diz a
+diferença, porque a distinção só funciona se quem lê souber que ela existe.
+
+### ⚠️⚠️ O que o Relatório Geral tem e esta tela NÃO tem — e está escrito na tela
+
+Sair da tela de referência sem dizer por quê faria a área parecer incompleta por
+descuido. Então o bloco existe, com os números:
+
+1. **Protocolos baixados por pessoa.** `protocols.delivered_by` é lixo do import do
+   Access: dos entregues em 2026, **27.488** saíram no nome de "Sistema" e o resto
+   está quase todo sem autor. **Nenhum dos dois mensageiros aparece uma vez sequer.**
+2. **Taxa de conclusão em anel.** Em toda a base há **8 `pending` e 2 `in_progress`**,
+   todos do mês corrente: junho, julho e agosto fecharam 100%. Anel cravado em 100%
+   é enfeite, não medição.
+3. **A faixa de acumulado do sistema.** No Relatório Geral ela é honesta porque avisa
+   que não obedece ao filtro. Aqui teria **dois** desvios — nem período nem setor —,
+   e "27.488 protocolos" ao lado do nome de duas pessoas é o defeito dos "59 cursos"
+   com outro rótulo.
+
 ## 2026-09-09 (fim, 5) — O relatório de setor ganhou o sinal de Suspensões
 
 Pedido do dono. Mesmo formato dos outros sinais do cabeçalho, com a lista que

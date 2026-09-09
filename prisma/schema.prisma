@@ -434,6 +434,16 @@ model GerenciaDaily {
   saidas         Int      @default(0) // cada saída registrada no app
   viagens        Int      @default(0) // dia com serviço em rota marcada como viagem (fora do estado)
   jornadaMin     Int      @default(0) @map("jornada_min")
+  // Quanto da jornada do dia veio do TETO de 16 h em vez de um fim medido.
+  // ⚠️⚠️ A jornada só é confiável quando existe um fim de verdade: a saída do
+  // ponto (`clock_out_at`) ou o fim da última saída do dia. Quando os dois
+  // faltam, sobra o `ended_at`, que também recebe o fecho TARDIO — e aí a
+  // conta bate no teto de 16 h e para. Medido em 09/09/2026: agosto do Elton
+  // tem 176,3 h, das quais **59,2 h (34%) são teto** — 4 dias em que ninguém
+  // encerrou a saída (o 31/07 dele "terminou" em 03/08, depois do fim de
+  // semana). Sem este campo a tela não teria como dizer isso, e 176 h se leem
+  // como jornada cheia.
+  jornadaTetoMin Int      @default(0) @map("jornada_teto_min")
   protAbertos    Int      @default(0) @map("prot_abertos")
   protAprovados  Int      @default(0) @map("prot_aprovados")
   servCriados    Int      @default(0) @map("serv_criados")
