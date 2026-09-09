@@ -209,7 +209,7 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
                   o que separa este número do "acumulado com rótulo de período"
                   que a casa já pagou caro para tirar de outras telas. */}
               {p.mesesCortados.length > 0 && (
-                <><br /><span style={{ color: 'var(--warn, #b45309)' }}>
+                <><br /><span style={{ color: 'var(--warn)' }}>
                   {p.mesesCortados.length === 1 ? 'o mês' : 'os meses'} de{' '}
                   {p.mesesCortados.map((m) => m.split('-').reverse().join('/')).join(' e ')}{' '}
                   {p.mesesCortados.length === 1 ? 'entra' : 'entram'} inteiro{p.mesesCortados.length === 1 ? '' : 's'}: a janela corta o mês, a pontuação não
@@ -247,10 +247,10 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
                   não por produção. Um parcial exibido como número fechado é
                   menor do que será, e quem lê conclui a coisa errada. */}
               {p.estado === 'parcial' && (
-                <><br /><b style={{ color: 'var(--warn, #b45309)' }}>parcial</b> · mês em curso, ainda sem os serviços da planilha</>
+                <><br /><b style={{ color: 'var(--warn)' }}>parcial</b> · mês em curso, ainda sem os serviços da planilha</>
               )}
               {p.estado === 'previa' && (
-                <><br /><b style={{ color: 'var(--warn, #b45309)' }}>prévia</b> · a régua ainda não foi gravada neste mês</>
+                <><br /><b style={{ color: 'var(--warn)' }}>prévia</b> · a régua ainda não foi gravada neste mês</>
               )}
             </>}
       >

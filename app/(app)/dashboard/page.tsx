@@ -219,8 +219,8 @@ export default function DashboardPage() {
               número é parcial, senão quem lê acha que é do filtro inteiro. */}
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
             Quem mais pontuou em cada setor{vm.pontuacaoInfo.competencia ? ` · ${competenciaLabel(vm.pontuacaoInfo.competencia)}` : ''}
-            {vm.pontuacaoInfo.estado === 'parcial' && <> · <b style={{ color: 'var(--warn, #b45309)' }}>parcial</b>, mês em curso</>}
-            {vm.pontuacaoInfo.estado === 'previa' && <> · <b style={{ color: 'var(--warn, #b45309)' }}>prévia</b>, ainda não gravada</>}
+            {vm.pontuacaoInfo.estado === 'parcial' && <> · <b style={{ color: 'var(--warn)' }}>parcial</b>, mês em curso</>}
+            {vm.pontuacaoInfo.estado === 'previa' && <> · <b style={{ color: 'var(--warn)' }}>prévia</b>, ainda não gravada</>}
             <br />pontos de setores diferentes <b>não</b> se comparam — a planilha de serviços não cobre todos
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 420, overflowY: 'auto' }}>

@@ -222,7 +222,11 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         Rolar é mais barato que clicar e lembrar. Depois de sair a Trajetória e o
         Reconhecimento (que eram inventados), sobraram quatro blocos: cabe.
       */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+      {/* ⚠️ A coluna da direita foi de 340 para 380 px: a ficha abriu para 1600
+          e agora ela carrega quatro blocos, incluindo a Formação, que é o mais
+          largo deles. `minmax(0, …)` na coluna da esquerda impede que um bloco
+          largo lá dentro (a linha do tempo) empurre a grade e esprema esta. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 380px', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
 
           {/* A planilha do setor (11ª fonte). Some sozinho em quem não tem essa
@@ -634,7 +638,10 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
             tela. A CONDUTA veio para cá (movida, não copiada: os mesmos números
             saíram da fileira do bloco de assiduidade), porque quem lê esta
             coluna está prestes a avaliar e conduta é um dos critérios. */}
-        <div style={{ position: 'sticky', top: 16 }}>
+        {/* ⚠️ `minWidth: 0` — sem ele o conteúdo mais largo de dentro (a grade do
+            ClassRoom) empurra a coluna e vaza pela borda, que foi exatamente o
+            que cortou "Vídeos assistidos" na tela. */}
+        <div style={{ position: 'sticky', top: 16, minWidth: 0 }}>
           <PainelDoAvaliador vm={vm} m={m} periodo={periodo} estado={estadoTimeline} />
           <CondutaLateral m={m} periodo={periodo} />
 

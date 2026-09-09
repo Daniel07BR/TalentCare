@@ -9,21 +9,54 @@
   --text:#1a1d23; --text-dim:#5b6470; --text-mute:#8b919c;
   --accent:#b9791a; --accent-dim:#946012; --accent-soft:rgba(245,166,35,.16);
   --danger:#d83f44; --success:#1f9d4d; --warning:#b9791a; --info:#2f6fd6;
+  /* ⚠️ `--warn` existe porque telas escritas em 09/09/2026 usavam
+     `var(--warn, #b45309)` — e o token NÃO existia, então o fallback valia
+     sempre: um âmbar escuro, que no tema escuro fica quase invisível. Fallback
+     que nunca falha é um valor cravado com cara de variável. */
+  --warn:#b45309;
   --chart-1:#e0941a; --chart-2:#159b87; --chart-3:#7c5cf0; --chart-4:#2196c4; --chart-5:#e0556b; --chart-6:#8aab2e;
   --radius:12px; --radius-sm:8px; --radius-lg:16px;
   --header-bg:rgba(255,255,255,.82);
   --shadow-1:0 1px 2px rgba(16,24,40,.06); --shadow-2:0 8px 24px rgba(16,24,40,.1);
   --ease:cubic-bezier(.4,0,.2,1);
 }
+/* ⚠️⚠️ TEMA ESCURO — revisado em 09/09/2026 a pedido do dono ("melhore o
+   contraste e as cores").
+
+   O que estava apertado, e por quê importa num painel que decide aumento:
+
+   - `--text-mute` (#6b727e) sobre `--surface` dava ~3,4:1 — abaixo do mínimo
+     legível. E ele NÃO é decoração: é a cor de "no período", "sem registro de
+     ponto", "medido até 08/09" — as legendas que dizem o que o número é. Um
+     painel cujo número se lê e cuja RESSALVA não, é pior que um sem ressalva.
+   - `--surface` e `--surface-2` diferiam por 3% de luminância: os cartões
+     dentro de cartões (os medidores, os blocos de fonte) sumiam um no outro.
+   - `--border` mal aparecia, então a grade que separa um bloco do outro só
+     existia no código.
+
+   Agora: fundo mais fundo, superfícies mais claras (separação real), texto
+   mais alto e as cores de estado clareadas — no escuro, um vermelho de tema
+   claro vira uma mancha marrom. */
 [data-theme="dark"]{
-  --bg:#0f1115; --surface:#171a21; --surface-2:#1e222b; --surface-3:#252a35;
-  --border:#2a2f3a; --border-soft:#21252e;
-  --text:#e6e8ec; --text-dim:#9aa1ac; --text-mute:#6b727e;
-  --accent:#f5a623; --accent-dim:#b9791a; --accent-soft:rgba(245,166,35,.12);
-  --danger:#e5484d; --success:#3fb255; --warning:#f5a623; --info:#5b9df0;
-  --chart-1:#f5a623; --chart-2:#36b9a6; --chart-3:#a78bfa; --chart-4:#56c5e8; --chart-5:#f1788a; --chart-6:#b6d957;
-  --header-bg:rgba(15,17,21,.8);
-  --shadow-1:0 1px 2px rgba(0,0,0,.3); --shadow-2:0 8px 24px rgba(0,0,0,.35);
+  /* Medido (WCAG), e é por isso que estes valores e não outros:
+       texto      #f0f2f6 sobre a superfície … 14,7:1
+       secundário #a8b0bc …………………………………………… 7,5:1
+       legenda    #8b94a3 sobre superfície ……… 5,9:1  · sobre a interna 4,9:1
+     ⚠️ A legenda foi o caso decisivo: ela era 3,6:1 e é a cor de "no período",
+     "medido até 08/09", "sem registro de ponto" — a ressalva que diz o que o
+     número é. Painel cujo número se lê e cuja ressalva não é pior que um sem
+     ressalva nenhuma.
+     ⚠️ E a separação entre superfícies foi de 1,09 para 1,20: os cartões dentro
+     de cartões (os medidores, os blocos de fonte) sumiam um dentro do outro. */
+  --bg:#0a0c10; --surface:#13171e; --surface-2:#212733; --surface-3:#2e3542;
+  --border:#333a47; --border-soft:#272d38;
+  --text:#f0f2f6; --text-dim:#a8b0bc; --text-mute:#8b94a3;
+  --accent:#f7b23f; --accent-dim:#c98a1e; --accent-soft:rgba(247,178,63,.16);
+  --danger:#f0666b; --success:#4ec46a; --warning:#f7b23f; --info:#6fabf5;
+  --warn:#fbbf24;
+  --chart-1:#f7b23f; --chart-2:#3fc9b4; --chart-3:#b39cff; --chart-4:#66cff0; --chart-5:#f78b9c; --chart-6:#c2e065;
+  --header-bg:rgba(10,12,16,.85);
+  --shadow-1:0 1px 2px rgba(0,0,0,.4); --shadow-2:0 10px 28px rgba(0,0,0,.45);
 }
 
 *{box-sizing:border-box;}
