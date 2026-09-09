@@ -1,5 +1,97 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 — A LGPD entrega as faltas graves, e elas descontam de verdade
+
+Pedido do dono: *"o LGPD tem histórico de advertência e suspensões referente
+vazamento de dados; o sistema tem que entregar ao TalentCare automaticamente os
+próximos que forem cadastrados, e o TalentCare tem que computar como faltas
+graves e tirar mais pontos."*
+
+### Dois canais, porque um só não basta
+
+Pelo §13 do contrato de integração da casa:
+
+- **Push** — `systems.lgpd_push_url`. O Nexus dispara no instante em que a
+  medida é registrada em `/lgpd`. Fire-and-forget: o registro da suspensão nunca
+  falha porque um espelho de RH está fora.
+- **Pull** — `GET /api/integrations/lgpd-medidas?since=`, e o
+  `run-lgpd-sync.mjs` de hora em hora (:40). **Push que falha, falha calado**, e
+  a lição dos oito espelhos vale aqui inteira.
+
+⚠️⚠️ **O sync NÃO reimplementa a gravação.** Ele passa cada medida pelo MESMO
+receptor que o push usa (`/api/integrations/nexus-lgpd` → `lib/lgpd.ts`). Dois
+caminhos de escrita concordam até o dia em que um muda — e o que se grava aqui é
+falta grave na ficha de gente.
+
+### ⚠️⚠️ O canal é FECHADO POR PADRÃO
+
+`systems.lgpd_feed` nasce `false`, ao contrário do `password_mirror`, e a
+diferença é deliberada: senha espelhada é infraestrutura (quem deixasse de
+recebê-la quebraria no dia em que o Nexus caísse); medida disciplinar é o dado
+mais sensível que o diretório encosta — diz que uma pessoa com nome foi suspensa
+por vazar dado pessoal. A régua vale nas **duas** portas: a URL de push sozinha
+não autoriza nada. Conferido: a chave do CIDE recebe **403**.
+
+### O que atravessa, e o que fica
+
+Só medida **punitiva** (advertência e suspensão) e só a que tem **vínculo** com o
+diretório. Do acervo de 64, **29 têm vínculo e 35 não** — são ex-funcionárias que
+o import do GPI trouxe e que guardam apenas o nome. Mandar o nome convidaria o
+outro lado a casar por texto, que é como o import do ponto casou *"Wendel
+Ribeiro da Silva"* com *"Edileuza da Silva"*. Elas saem como **contagem**
+(`semVinculo`), e o log do sync a repete: quem consome precisa saber que existem
+sem saber quem são.
+
+⚠️ `since` filtra por `updated_at`, não por `occurred_at`: medida antiga
+**corrigida** hoje tem de chegar ao espelho, e nunca chegaria por um filtro na
+data do fato.
+
+### No TalentCare: `source='lgpd'` e `tipo` próprio
+
+⚠️⚠️ **`source = 'lgpd'` não é detalhe.** O import do ponto é wipe+rebuild e
+apaga `disciplina_evento WHERE source = 'nexo'`. Com qualquer outro `source` a
+medida sumiria na próxima carga do dump — sem erro nenhum.
+
+⚠️⚠️ **E o `tipo` é próprio** (`lgpd_advertencia` / `lgpd_suspensao`), não
+`advertencia`. A advertência que já existia na tabela é **derivada** do 2º atraso
+do mês e vale −75; uma advertência por vazamento é **assinada**, é outra
+natureza. Dividindo o mesmo `tipo`, a falta grave entraria pelo peso do atraso —
+e a assiduidade (`100 − atrasos·2 − advertências·5`), que mede **presença**,
+passaria a descontar por vazamento de dado.
+
+### As três coisas que separam a falta grave do atraso
+
+1. **Conta mesmo para quem o ponto não mede.** `semDisciplina` existe porque
+   atraso e advertência vêm do dump do Nexo, que não cobre todo mundo. A medida
+   de LGPD não vem de lá — ignorá-la ali seria a ausência de UMA fonte apagando
+   o dado de OUTRA.
+2. **Derruba o bônus de mês sem ocorrência.** Mês com suspensão por vazamento
+   não é mês limpo, por definição.
+3. **Tira a pessoa de `sem-credito`.** Sem isso, a suspensão desapareceria em
+   "—" justamente de quem não passa por sistema nenhum.
+
+### O efeito, medido
+
+29 medidas gravadas, 0 recusadas. As de 2026 são todas do **Pessoal**, e a mais
+recente é de **04/09**. Setembro parcial, com os pesos semeados (advertência
+LGPD = 3× o atraso do setor, suspensão = 6× — no Legal, −150 e −300):
+
+| pessoa | conta |
+|---|---|
+| Tauana Moura | 180 |
+| Yasmim Russo | 128 |
+| **Juliana Fiel** | **−202** — Suspensões por vazamento (LGPD) **−300** · Atividades +98 |
+
+⚠️ A Juliana é **Sub-encarregada**, e isto só funciona porque no mesmo dia o dono
+corrigiu a régua de chefia: **sub-encarregado voltou a ser medido**; só
+encarregado, diretor e administrador ficam fora da nota. Na versão anterior, a
+suspensão dela por vazamento de dados descontaria **zero**.
+
+⚠️ E um defeito meu, achado na conferência: o motivo saía repetido (*"1ª
+Suspensão por vazamento de dados (LGPD) — 1ª Suspensão LGPD"*). A comparação
+montava o padrão com `a` e o título traz **`ª` (U+00AA)**, que não decompõe em
+`a` ao tirar acento — os dois nunca casavam. Passou a comparar por palavra.
+
 ## 2026-09-08 (fim, 3) — O mês corrente pontua ao vivo, e o CIDE contava trilha de auditoria
 
 ### A pergunta do dono

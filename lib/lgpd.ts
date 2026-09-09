@@ -69,8 +69,24 @@ export async function gravarMedidaLgpd(prisma: PrismaClient, m: MedidaCrua) {
   const personKey = user.nexusUserId ?? user.id
   const ordinal = typeof m.measureOrder === 'number' ? m.measureOrder : null
   const rotulo = tipo === TIPO_LGPD.suspensao ? 'Suspensão' : 'Advertência'
-  const motivo = `${ordinal ? `${ordinal}ª ` : ''}${rotulo} por vazamento de dados (LGPD)`
-    + (texto(m.title) && texto(m.title) !== rotulo ? ` — ${texto(m.title)}` : '')
+  const base = `${ordinal ? `${ordinal}ª ` : ''}${rotulo} por vazamento de dados (LGPD)`
+  /* ⚠️ O título da origem só entra quando ACRESCENTA. Ele costuma ser
+     "1ª Suspensão LGPD" — a mesma informação que o rótulo já dá —, e repeti-la
+     produzia "1ª Suspensão por vazamento de dados (LGPD) — 1ª Suspensão LGPD".
+     Frase que se repete não informa; é a lição da lista de advertências da
+     ficha, onde sete linhas idênticas escondiam o que era útil.
+
+     ⚠️ Compara por PALAVRA, não por texto montado: a primeira versão montava o
+     padrão com "a" e o título traz "ª" (U+00AA), que não decompõe em "a" ao
+     tirar acento — os dois nunca casavam e a duplicata passou para o banco. */
+  const palavras = (x: string) => new Set(
+    x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .split(/[^a-z0-9]+/).filter(Boolean),
+  )
+  const t = texto(m.title)
+  const dasBase = palavras(base)
+  const redundante = !t || [...palavras(t)].every((w) => dasBase.has(w))
+  const motivo = redundante ? base : `${base} — ${t}`
 
   await prisma.disciplinaEvento.upsert({
     where: { source_sourceId: { source: 'lgpd', sourceId: id } },

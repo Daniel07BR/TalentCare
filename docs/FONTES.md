@@ -15,6 +15,7 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 | 8 | **Chat Interno** | `.69` | `chat_daily` + `chat_dept_daily` | `:35` |
 | — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |
 | — | Ponto / disciplina | dump do Nexo | `assiduidade_daily`, `disciplina_evento` | import à mão |
+| — | **Controle da LGPD** | Nexus `.75` | `disciplina_evento` (`source='lgpd'`) | push + `:40` |
 
 ---
 
@@ -144,6 +145,7 @@ nenhum" e parece defeito.
 | Gerência | `u.name <> 'Sistema'` | a importação do Access carimbou **27.501** protocolos como entregues por um usuário chamado "Sistema" |
 | Gerência | `completed_at` > 180 d de `scheduled_for` | mutirão de backlog vira "serviço feito naquele dia" por quem nem estava trabalhando |
 | CIDE | `responsavel <> 'Sistema'` | mesmo padrão do "Sistema" da Gerência |
+| **LGPD** | só medida **punitiva** e só a que tem **vínculo** | ⚠️⚠️ `advertencia` e `suspensao` atravessam; `orientacao` e `outro` não descontam ponto e não viajam. E **35 dos 64** registros do acervo não têm `employeeId` — são ex-funcionárias que o import do GPI trouxe e que guardam só o nome. Mandar o nome convidaria o consumidor a casar por texto, que é como o import do ponto casou "Wendel Ribeiro da Silva" com "Edileuza da Silva". Saem como **contagem** (`semVinculo`) |
 | **CIDE** | **conta EMPRESAS tocadas, não linhas do histórico** | ⚠️⚠️ `cg.alteracoes` é a TRILHA DE AUDITORIA: salvar o cadastro de uma empresa grava uma linha por campo mexido. Agosto/2026: **1.920 das 1.961** linhas com responsável humano (98%) têm `origem = 'SISTEMA'`. A 15 min por linha, as 172 de um único dia viravam **43 horas**. E a inflação **não é uniforme** — Legal **4,9×**, Pessoal **1,0×** —, então ela mexia no ranking entre pessoas e entre setores. O endpoint entrega `atividades` (linhas), `empresas` (a unidade de trabalho) e `manuais`; o painel usa `empresas` |
 
 ### O tempo, quando é de chamado
