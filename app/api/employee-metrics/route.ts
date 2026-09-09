@@ -293,8 +293,46 @@ export async function GET(req: NextRequest) {
   const doSetor = gravadoNoSetor.length ? gravadoNoSetor : calculado
   const ordenados = [...doSetor].sort((a, b) => b.pontos - a.pontos)
   const idx = ordenados.findIndex((p) => p.personKey === personKey)
-  /* ⚠️ Soma de TODOS os meses gravados — não acompanha o filtro, e a tela diz. */
-  const acumulado = pontuacoes.reduce((a, p) => a + p.pontos, 0)
+  /* ⚠️⚠️ O ACUMULADO PASSOU A OBEDECER AO FILTRO (09/09/2026, decisão do dono:
+     *"os pontos acumulados devem ser dentro do período selecionado"*). Antes era
+     a soma da vida inteira, e por isso "Ago" e "Atual" mostravam o mesmo 1.459 —
+     um número parado ao lado de um filtro que anda é a regra (b) da casa.
+
+     ⚠️ A pontuação é MENSAL e o filtro é por DIA: entra a competência que
+     ENCOSTA na janela. E é aqui que mora a armadilha — "7 dias" pode pegar
+     31/08 e 07/09, e somar agosto INTEIRO ali seria o acumulado com rótulo de
+     período outra vez. Por isso a rota devolve `mesesCortados`: quando a janela
+     não cobre o mês inteiro, a tela diz que o número é do mês, não do recorte.
+
+     ⚠️ E o mês CORRENTE entra pelo parcial calculado, não pelo gravado (que não
+     existe) — senão setembro valeria zero no acumulado de quem trabalhou nele. */
+  const mesDe = (d: string) => d.slice(0, 7)
+  const mesesNaJanela = new Set<string>()
+  for (let m = mesDe(fromDay); m <= mesDe(toDay);) {
+    mesesNaJanela.add(m)
+    const [y, mm] = m.split('-').map(Number)
+    const prox = new Date(Date.UTC(y, mm, 1))
+    m = `${prox.getUTCFullYear()}-${String(prox.getUTCMonth() + 1).padStart(2, '0')}`
+  }
+  const gravadosNaJanela = pontuacoes.filter((p) => mesesNaJanela.has(p.competencia))
+  const mesesDoPlacar = gravadosNaJanela.map((p) => ({ competencia: p.competencia, pontos: p.pontos }))
+  /* O mês da competência da POSIÇÃO, quando ele está na janela e não tem linha
+     gravada, entra com o valor que a régua acabou de calcular. */
+  if (mesesNaJanela.has(compFicha) && !gravadosNaJanela.some((p) => p.competencia === compFicha) && idx >= 0) {
+    mesesDoPlacar.push({ competencia: compFicha, pontos: ordenados[idx].pontos })
+  }
+  mesesDoPlacar.sort((a, b) => a.competencia.localeCompare(b.competencia))
+  const acumulado = mesesDoPlacar.reduce((a, p) => a + p.pontos, 0)
+  /* Um mês que a janela CORTA (não pega dele o primeiro ao último dia) entra com
+     o valor do mês inteiro — e a tela precisa dizer isso. */
+  const primeiroDiaDoMes = (m: string) => `${m}-01`
+  const ultimoDiaDoMes = (m: string) => {
+    const [y, mm] = m.split('-').map(Number)
+    return new Date(Date.UTC(y, mm, 0)).toISOString().slice(0, 10)
+  }
+  const mesesCortados = mesesDoPlacar
+    .filter((p) => primeiroDiaDoMes(p.competencia) < fromDay || ultimoDiaDoMes(p.competencia) > toDay)
+    .map((p) => p.competencia)
   const posicao = {
     competencia: compFicha,
     /** `null` = ela não pontua nesta competência. Nunca o último lugar. */
@@ -307,7 +345,11 @@ export async function GET(req: NextRequest) {
     pontosDoPrimeiro: ordenados.length ? ordenados[0].pontos : null,
     acumulado,
     /** Quantos meses entraram no acumulado — sem isso "1.459" não tem escala. */
-    meses: pontuacoes.length,
+    meses: mesesDoPlacar.length,
+    /** Os meses que somaram, para a rosca — já recortados pela janela. */
+    mesesDoPlacar,
+    /** Meses que a janela CORTA: o valor deles é do mês inteiro. */
+    mesesCortados,
     /** De onde saiu a posição: mês gravado, parcial ao vivo, prévia de mês
      *  fechado, ou nada. A tela TEM de dizer — um parcial exibido como número
      *  fechado é menor do que será, e quem lê conclui que a pessoa produziu

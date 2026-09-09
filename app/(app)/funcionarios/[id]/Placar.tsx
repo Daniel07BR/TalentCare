@@ -34,6 +34,8 @@ export type PosicaoFicha = {
   pontosDoPrimeiro: number | null
   acumulado: number
   meses: number
+  mesesDoPlacar: MesDoPlacar[]
+  mesesCortados: string[]
   estado: 'gravado' | 'parcial' | 'previa' | 'indisponivel'
   semNota: string | null
   motivo: string | null
@@ -197,12 +199,22 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
     }}>
       {/* ── ACUMULADO: o contador, com a rosca dos meses ─────────────────── */}
       <Anel
-        titulo="Pontos acumulados"
+        titulo="Pontos no período"
         legenda={p.meses === 0
-          ? 'nenhum mês pontuado ainda'
+          ? 'nenhum mês pontuado nesta janela'
           : <>cada fatia é um mês · <b>{p.meses}</b> {p.meses === 1 ? 'mês' : 'meses'}
               {negativos > 0 && <><br />{negativos} {negativos === 1 ? 'mês' : 'meses'} de saldo negativo, fora do anel</>}
-              <br /><span style={{ opacity: .8 }}>não acompanha o filtro</span></>}
+              {/* ⚠️⚠️ A pontuação é MENSAL e o filtro é por DIA. Quando a janela
+                  corta um mês, o valor somado é o do MÊS INTEIRO — dizer isso é
+                  o que separa este número do "acumulado com rótulo de período"
+                  que a casa já pagou caro para tirar de outras telas. */}
+              {p.mesesCortados.length > 0 && (
+                <><br /><span style={{ color: 'var(--warn, #b45309)' }}>
+                  {p.mesesCortados.length === 1 ? 'o mês' : 'os meses'} de{' '}
+                  {p.mesesCortados.map((m) => m.split('-').reverse().join('/')).join(' e ')}{' '}
+                  {p.mesesCortados.length === 1 ? 'entra' : 'entram'} inteiro{p.mesesCortados.length === 1 ? '' : 's'}: a janela corta o mês, a pontuação não
+                </span></>
+              )}</>}
       >
         <RoscaMeses meses={meses} cor="var(--accent)" />
         <g transform="rotate(90)">

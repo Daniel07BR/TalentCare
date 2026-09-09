@@ -76,6 +76,10 @@ export type EmployeeMetrics = {
     meses: number
     /** 'gravado' | 'parcial' (mês em curso, ao vivo) | 'previa' (mês fechado
      *  ainda não gravado) | 'indisponivel'. A tela diz qual é. */
+    /** Os meses que somaram no acumulado, já recortados pela janela. */
+    mesesDoPlacar: { competencia: string; pontos: number }[]
+    /** Meses que a janela corta — o valor deles é do mês inteiro. */
+    mesesCortados: string[]
     estado: 'gravado' | 'parcial' | 'previa' | 'indisponivel'
     /** Por que ELA não pontua: 'chefia' | 'sem-credito' | null. */
     semNota: string | null
