@@ -107,6 +107,10 @@ export type Kpi = {
   pessoas: KpiPessoa[] | null
   /** O que o painel diz no topo, antes da lista. */
   pessoasNota?: string
+  /** O que o número de cada linha CONTA. ⚠️ Nem sempre é o rótulo do cartão: em
+   *  "Suspensões" cada linha conta medidas de LGPD (suspensão + advertência),
+   *  porque a lista mostra todos os envolvidos e o cartão só as suspensões. */
+  pessoasSufixo?: string
 }
 
 export type KpiPessoa = {
@@ -286,6 +290,28 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     : null
   const advertPessoas = assidMap ? comValor((e) => assidMap.get(pk(e))?.advertencias ?? 0) : null
 
+  /* SUSPENSÕES — decisão do dono (09/09/2026): "o gestor responde pelo time".
+     ⚠️ A lista inclui quem levou ADVERTÊNCIA de LGPD e nenhuma suspensão: são
+     medidas da mesma natureza (assinadas, por vazamento de dado), e deixá-las
+     de fora esconderia gente ENVOLVIDA numa lista que se propõe a mostrar os
+     envolvidos. O `valor` é o total de medidas; o `detalhe` diz a composição, e
+     o cartão continua contando só as suspensões — a nota do painel avisa. */
+  const lgpdPessoas = assidMap
+    ? perf
+        .map((e) => {
+          const a = assidMap.get(pk(e))
+          const s = a?.lgpdSuspensoes ?? 0
+          const adv = a?.lgpdAdvertencias ?? 0
+          const partes = [
+            s ? `${s} suspensão${s === 1 ? '' : 'es'}` : '',
+            adv ? `${adv} advertência${adv === 1 ? '' : 's'}` : '',
+          ].filter(Boolean)
+          return { ...pessoaBase(e), valor: s + adv, detalhe: partes.join(' · ') }
+        })
+        .filter((p) => p.valor > 0)
+        .sort((a, b) => b.valor - a.valor)
+    : null
+
   /* HEADCOUNT abre o MOVIMENTO da janela, não as 86 pessoas: o número grande é
      um retrato de hoje, e o que a legenda promete ("3 entradas · 4 saídas") é o
      que alguém quer ver por nome. */
@@ -294,7 +320,7 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     ...nonDir.filter((e) => dentroDaJanela(e.leftISO)).map((e) => ({ ...pessoaBase(e), valor: 1, detalhe: `saiu em ${br2(e.leftISO)}` })),
   ].sort((a, b) => (a.detalhe ?? '').localeCompare(b.detalhe ?? ''))
 
-  const kdef: (Omit<Kpi, 'spark' | 'sparkColor' | 'deltaColor' | 'deltaArrow'> & { vals: number[]; up: boolean | null; pessoas: KpiPessoa[] | null; pessoasNota?: string })[] = [
+  const kdef: (Omit<Kpi, 'spark' | 'sparkColor' | 'deltaColor' | 'deltaArrow'> & { vals: number[]; up: boolean | null; pessoas: KpiPessoa[] | null; pessoasNota?: string; pessoasSufixo?: string })[] = [
     {
       label: 'Headcount', value: perf.length, unit: '', color: 'var(--info)',
       delta: saldoHc === 0 ? '0' : (saldoHc > 0 ? '+' : '') + saldoHc, up: saldoHc >= 0,
@@ -356,18 +382,21 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
         ? 'não foi possível ler'
         : `por vazamento de dados (LGPD), no período${lgpdAdvertencias ? ` · e ${lgpdAdvertencias} advertência${lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : ''}`,
       vals: [],
-      /* ⚠️⚠️ NÃO abre — e a razão é uma pergunta ABERTA, não um esquecimento.
-         No Nexus a área de LGPD é fechada (T.I e Diretoria); aqui o cartão é
-         lido por gestor. Mandar a lista nominal por `alcance` daria ao gestor,
-         no TalentCare, o que o Nexus não lhe dá — duas réguas para a mesma
-         pergunta, que é a falha que mais se repete nesta casa. Enquanto o dono
-         não decidir, a contagem fica e o nome não sai por aqui. */
-      pessoas: null,
+      /* ⚠️⚠️ ABRE POR DECISÃO EXPLÍCITA DO DONO (09/09/2026), não por descuido.
+         No Nexus a área de LGPD é fechada (T.I e Diretoria) e aqui o cartão é
+         lido por gestor — então isto DÁ ao gestor, no TalentCare, o que o Nexus
+         não lhe dá. A pergunta foi feita e a resposta foi "o gestor responde
+         pelo time". Vale o mesmo `alcance` do resto: o gestor vê o time dele, a
+         Diretoria vê a casa. Se um dia a régua do Nexus mudar, este é o lugar a
+         revisar junto. */
+      pessoas: lgpdSuspensoes == null ? null : (lgpdPessoas?.length ? lgpdPessoas : null),
+      pessoasNota: 'medidas de LGPD na janela — o cartão conta só as suspensões',
+      pessoasSufixo: 'medidas de LGPD',
     },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({
     label: k.label, value: k.value, unit: k.unit, delta: k.delta, nota: k.nota, color: k.color,
-    pessoas: k.pessoas, pessoasNota: k.pessoasNota,
+    pessoas: k.pessoas, pessoasNota: k.pessoasNota, pessoasSufixo: k.pessoasSufixo,
     deltaColor: k.up == null ? 'var(--text-dim)' : k.up ? 'var(--success)' : 'var(--danger)',
     deltaArrow: k.up == null ? '' : k.up ? '▲' : '▼',
     spark: k.vals.length > 1 ? geomSpark(k.vals, 64, 24) : null,

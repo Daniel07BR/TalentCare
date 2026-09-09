@@ -8,7 +8,13 @@
 import type { TalentData } from './data'
 import { deptName } from './employee'
 
-export type PeriodAssid = Map<string, { atrasos: number; abonados: number; minutos: number; advertencias: number }>
+export type PeriodAssid = Map<string, {
+  atrasos: number; abonados: number; minutos: number; advertencias: number
+  /** Medidas do Controle da LGPD na janela — falta GRAVE, natureza diferente da
+   *  advertência acima (que é derivada do 2º atraso do mês). */
+  lgpdSuspensoes?: number
+  lgpdAdvertencias?: number
+}>
 
 export type AssidPerson = {
   id: string; nome: string; cargo: string; dept: string; initials: string; color: string; hasAvatar: boolean

@@ -1,5 +1,55 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim, 3) — Os cartões do painel abrem QUEM está atrás do número
+
+Pedido do dono: *"em todos os cards que der para clicar e expor todos os
+usuários envolvidos, para a pessoa ter mais detalhes à mão."*
+
+| cartão | abre | o que lista |
+|---|---|---|
+| Headcount | ✅ | o **movimento** da janela: quem entrou e quem saiu, com a data |
+| Advertências | ✅ | quantas cada um teve, com barra comparativa |
+| Atrasos | ✅ | quantos cada um, e os **minutos somados** |
+| **Suspensões** | ✅ | as medidas de LGPD, com a composição por pessoa |
+| Turnover | ✕ | quem saiu já é uma TELA inteira (`/turnover`), com motivo e tempo de casa. Painel de oito linhas ao lado de um relatório completo é o caminho pior competindo com o melhor |
+
+⚠️⚠️ **O painel não busca nada.** Recebe a lista pronta, montada só com o que a
+régua de `alcance` já entregou àquela sessão. Um painel que fosse ao servidor
+buscar "os envolvidos" seria uma segunda régua de conteúdo — e ela mora num
+lugar só (`lib/alcance.ts`).
+
+⚠️ Cartão só vira clicável quando **há** lista, e ganha um selo discreto no
+rótulo ("3 pessoas"). Cartão que parece botão e não abre nada ensina o leitor a
+não clicar em nenhum.
+
+⚠️ A lista é lida do `vm` recém-montado, pelo rótulo — nunca de uma cópia no
+estado: o filtro de período remonta os KPIs, e uma lista congelada apareceria
+debaixo do título da janela nova.
+
+### ⚠️⚠️ E a decisão de régua que o cartão de Suspensões exigia
+
+No **Nexus** a área de LGPD é fechada (T.I e Diretoria). No TalentCare este
+cartão é lido também por **gestor**, cujo `alcance` alcança o próprio time —
+então abrir a lista **dá ao gestor, aqui, o que o Nexus não lhe dá**. Duas
+réguas para a mesma pergunta é a falha que mais se repete nesta casa, então a
+pergunta foi feita antes de construir.
+
+E havia um lado a dizer: **isso já acontecia em parte.** Quando a falta grave
+entrou (mais cedo hoje), a suspensão passou a aparecer na conta aberta da
+pontuação e na lista de disciplina da ficha — o gestor do Pessoal já via a
+medida da Juliana. Se a resposta fosse "não deve ver", o conserto não seria
+deixar de acrescentar: seria **tirar** o que já estava lá.
+
+**Resposta do dono: "o gestor responde pelo time".** O cartão abre, com o mesmo
+`alcance` do resto. Se um dia a régua do Nexus mudar, este é o lugar a revisar
+junto — está anotado no código, no ponto exato.
+
+⚠️ A lista inclui quem levou **advertência** de LGPD sem suspensão: é medida da
+mesma natureza, e deixá-la de fora esconderia gente envolvida numa lista que se
+propõe a mostrar os envolvidos. O `valor` de cada linha é o total de medidas, o
+`detalhe` diz a composição, e o rodapé do painel avisa que o cartão conta só as
+suspensões.
+
 ## 2026-09-09 (fim, 2) — A advertência passou a obedecer ao filtro, e o Score médio deu lugar às Suspensões
 
 Pedido do dono: *"as advertências não estão se adaptando ao período de pesquisa;

@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 import type { PeriodAssid } from '@/lib/mock/assiduidade'
 
-type Row = { personKey: string; atrasos: number; abonados: number; minutos: number; advertencias: number }
+type Row = {
+  personKey: string; atrasos: number; abonados: number; minutos: number; advertencias: number
+  lgpdSuspensoes?: number; lgpdAdvertencias?: number
+}
 
 export type AssidPeriodo = {
   map: PeriodAssid | null
@@ -65,7 +68,10 @@ export function useAssiduidadePeriod(): AssidPeriodo {
       }) => {
         if (!alive) return
         const m: PeriodAssid = new Map()
-        for (const u of d.byPerson) m.set(u.personKey, { atrasos: u.atrasos, abonados: u.abonados, minutos: u.minutos, advertencias: u.advertencias })
+        for (const u of d.byPerson) m.set(u.personKey, {
+          atrasos: u.atrasos, abonados: u.abonados, minutos: u.minutos, advertencias: u.advertencias,
+          lgpdSuspensoes: u.lgpdSuspensoes ?? 0, lgpdAdvertencias: u.lgpdAdvertencias ?? 0,
+        })
         /* ⚠️ `?? false`, nunca `?? true`: rota velha, resposta em cache ou deploy
            pela metade têm de cair no "—", não no "está tudo em ordem". */
         setSt({

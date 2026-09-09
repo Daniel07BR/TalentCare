@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
        naturezas diferentes — e é justamente a distinção que a ficha passou a
        mostrar. */
     prisma.disciplinaEvento.groupBy({
-      by: ['tipo'],
+      by: ['personKey', 'tipo'],
       where: {
         tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] },
         data: { gte: fromDay, lte: toDay },
@@ -52,10 +52,28 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  const lgpdSuspensoes = lgpdRows.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
-  const lgpdAdvertencias = lgpdRows.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
+  /* ⚠️⚠️ POR PESSOA, e não só o total (decisão do dono, 09/09/2026: "o gestor
+     responde pelo time"). Continua passando pelo MESMO `porPersonKey(alcance)`
+     das outras contagens — o gestor vê o time dele, a Diretoria vê a casa. Foi
+     uma decisão consciente e não um efeito colateral: no Nexus a área de LGPD é
+     fechada, e aqui o gestor passa a ver a falta grave de quem ele responde. */
+  const lgpdSuspPorKey = new Map<string, number>()
+  const lgpdAdvPorKey = new Map<string, number>()
+  for (const r of lgpdRows) {
+    const alvo = r.tipo === 'lgpd_suspensao' ? lgpdSuspPorKey : lgpdAdvPorKey
+    alvo.set(r.personKey, (alvo.get(r.personKey) ?? 0) + r._count._all)
+  }
+  const soma = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0)
+  const lgpdSuspensoes = soma(lgpdSuspPorKey)
+  const lgpdAdvertencias = soma(lgpdAdvPorKey)
   const advByKey = new Map(advRows.map((r) => [r.personKey, r._count._all]))
-  const keys = new Set<string>([...pontoRows.map((r) => r.personKey), ...advByKey.keys()])
+  /* ⚠️ As chaves da LGPD entram no conjunto: quem levou suspensão e NÃO tem
+     linha de ponto nem advertência derivada não apareceria na lista — e é
+     justamente a pessoa que o painel precisa mostrar. */
+  const keys = new Set<string>([
+    ...pontoRows.map((r) => r.personKey), ...advByKey.keys(),
+    ...lgpdSuspPorKey.keys(), ...lgpdAdvPorKey.keys(),
+  ])
   const byPerson = [...keys].map((personKey) => {
     const p = pontoRows.find((r) => r.personKey === personKey)
     return {
@@ -64,6 +82,8 @@ export async function GET(req: NextRequest) {
       abonados: p?._sum.atrasosAbon ?? 0,
       minutos: p?._sum.minutosAtraso ?? 0,
       advertencias: advByKey.get(personKey) ?? 0,
+      lgpdSuspensoes: lgpdSuspPorKey.get(personKey) ?? 0,
+      lgpdAdvertencias: lgpdAdvPorKey.get(personKey) ?? 0,
     }
   })
 

@@ -137,7 +137,7 @@ export default function DashboardPage() {
         return (
           <PainelPessoas
             titulo={k.label} nota={k.pessoasNota} pessoas={k.pessoas} cor={k.color}
-            sufixo={k.label.toLowerCase()} aoFechar={() => setAberto(null)}
+            sufixo={k.pessoasSufixo ?? k.label.toLowerCase()} aoFechar={() => setAberto(null)}
           />
         )
       })()}
