@@ -67,6 +67,8 @@ export type EmployeeMetrics = {
     posicao: number | null
     de: number
     pontosNoMes: number | null
+    /** Pontos do 1º do setor — o denominador do anel de posição. */
+    pontosDoPrimeiro: number | null
     acumulado: number
     meses: number
   }

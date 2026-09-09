@@ -204,6 +204,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         {m?.posicao && (
           <Placar
             p={m.posicao}
+            meses={m.pontuacao ?? []}
             setor={vm.dept}
             competenciaLabel={competenciaLabel(m.posicao.competencia)}
             motivoSemNota={m.posicao.de === 0

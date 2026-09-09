@@ -210,6 +210,10 @@ export async function GET(req: NextRequest) {
     posicao: idx >= 0 ? idx + 1 : null,
     de: ordenados.length,
     pontosNoMes: idx >= 0 ? ordenados[idx].pontos : null,
+    /* ⚠️ Os pontos do 1º colocado — é o DENOMINADOR do anel. Sem ele o arco não
+       poderia significar nada, e anel que enche por enfeite é a regra (d) da
+       casa quebrada: gráfico sem dado atrás. */
+    pontosDoPrimeiro: ordenados.length ? ordenados[0].pontos : null,
     acumulado,
     /** Quantos meses entraram no acumulado — sem isso "1.459" não tem escala. */
     meses: pontuacoes.length,
