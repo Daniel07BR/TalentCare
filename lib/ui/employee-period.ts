@@ -71,6 +71,13 @@ export type EmployeeMetrics = {
     pontosDoPrimeiro: number | null
     acumulado: number
     meses: number
+    /** 'gravado' | 'parcial' (mês em curso, ao vivo) | 'previa' (mês fechado
+     *  ainda não gravado) | 'indisponivel'. A tela diz qual é. */
+    estado: 'gravado' | 'parcial' | 'previa' | 'indisponivel'
+    /** Por que ELA não pontua: 'chefia' | 'sem-credito' | null. */
+    semNota: string | null
+    /** Por que o SETOR inteiro não tem número. */
+    motivo: string | null
   }
 }
 

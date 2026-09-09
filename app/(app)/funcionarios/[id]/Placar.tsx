@@ -34,6 +34,9 @@ export type PosicaoFicha = {
   pontosDoPrimeiro: number | null
   acumulado: number
   meses: number
+  estado: 'gravado' | 'parcial' | 'previa' | 'indisponivel'
+  semNota: string | null
+  motivo: string | null
 }
 
 const semMovimento = () =>
@@ -215,13 +218,28 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
       <Anel
         titulo={`No ${setor} · ${competenciaLabel}`}
         legenda={p.posicao == null
-          ? (motivoSemNota ?? `sem pontuação em ${competenciaLabel}`)
+          ? (p.semNota === 'chefia'
+              ? 'encarregado: a pontuação mede execução, e quem responde pelo time não é ranqueado contra a própria equipe'
+              : p.semNota === 'sem-credito'
+                ? `sem atividade nem serviço em ${competenciaLabel} — não há de onde sair pontuação`
+                : p.motivo ?? motivoSemNota ?? `sem pontuação em ${competenciaLabel}`)
           : <>
               <b>{p.pontosNoMes?.toLocaleString('pt-BR')}</b> pontos no mês
               {!primeiro && p.pontosDoPrimeiro
                 ? <> · <b>{pct}%</b> do 1º colocado</>
                 : <> · <b>o maior</b> do setor</>}
               <br /><span style={{ opacity: .8 }}>entre os {p.de} que pontuam</span>
+              {/* ⚠️⚠️ PARCIAL TEM DE SE ANUNCIAR. O mês em curso soma o que já
+                  aconteceu e ainda não tem a planilha de serviços do setor —
+                  quem executa serviço aparece mais embaixo por falta de fonte,
+                  não por produção. Um parcial exibido como número fechado é
+                  menor do que será, e quem lê conclui a coisa errada. */}
+              {p.estado === 'parcial' && (
+                <><br /><b style={{ color: 'var(--warn, #b45309)' }}>parcial</b> · mês em curso, ainda sem os serviços da planilha</>
+              )}
+              {p.estado === 'previa' && (
+                <><br /><b style={{ color: 'var(--warn, #b45309)' }}>prévia</b> · a régua ainda não foi gravada neste mês</>
+              )}
             </>}
       >
         <AnelPosicao fracao={p.posicao == null ? 0 : fracao} cor={cor} />

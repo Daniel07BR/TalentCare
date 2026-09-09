@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
+import { montar } from '@/lib/servicos/calcular-mes'
+import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -194,12 +196,49 @@ export async function GET(req: NextRequest) {
      (chefia, sem crédito, competência não rodada) não entra no denominador:
      "3º de 7 que pontuam" é uma frase verdadeira; "3º de 21" contaria como
      concorrente quem o sistema decidiu não pontuar. */
-  const doSetor = user.departmentId
+  const gravadoNoSetor = user.departmentId
     ? await prisma.pontuacaoMes.findMany({
         where: { departmentId: user.departmentId, competencia: compFicha },
         select: { personKey: true, pontos: true },
       })
     : []
+
+  /* ⚠️⚠️ O SISTEMA TRABALHA COM O QUE TEM (pedido do dono, 09/09/2026).
+     Antes isto lia SÓ o gravado, e `pontuacao_mes` só ganha linha quando alguém
+     roda a competência — então o mês corrente inteiro mostrava "—" na ficha,
+     dizendo "ninguém do Legal pontuou em setembro" enquanto as oito pessoas já
+     tinham atividade registrada naquele dia. A planilha de serviços sobe no fim
+     do mês; a atividade dos sistemas do Nexus é ao vivo, e ela basta para dizer
+     onde a pessoa está AGORA.
+
+     ⚠️ A conta é a MESMA do relatório de setor e do CLI (`montar`) — não uma
+     segunda régua. Parcial no mês corrente (sem bônus de mês limpo, sem gravar);
+     prévia num mês fechado que ninguém rodou.
+
+     ⚠️ E quem não recebe nota (encarregado, ou sem fonte de crédito no mês) não
+     entra nem como concorrente nem como colocado: `semNota` é respeitado aqui
+     como na lista do setor, senão a ficha diria uma posição que a outra tela
+     nega. */
+  const mesCorrente = compFicha === competenciaAtual()
+  let calculado: { personKey: string; pontos: number }[] = []
+  let estado: 'gravado' | 'parcial' | 'previa' | 'indisponivel' = gravadoNoSetor.length ? 'gravado' : 'indisponivel'
+  let motivoSemCalculo: string | null = null
+  let semNotaDela: string | null = null
+
+  if (!gravadoNoSetor.length && user.departmentId) {
+    const r = await montar(user.departmentId, compFicha, { parcial: mesCorrente })
+    if ('erro' in r) {
+      motivoSemCalculo = (r.erro ?? '').includes('régua')
+        ? 'este setor ainda não tem régua de pontuação'
+        : r.erro ?? null
+    } else {
+      calculado = r.linhas.filter((l) => !l.semNota).map((l) => ({ personKey: l.personKey, pontos: l.pontos }))
+      semNotaDela = r.linhas.find((l) => l.personKey === personKey)?.semNota ?? null
+      estado = r.parcial ? 'parcial' : 'previa'
+    }
+  }
+
+  const doSetor = gravadoNoSetor.length ? gravadoNoSetor : calculado
   const ordenados = [...doSetor].sort((a, b) => b.pontos - a.pontos)
   const idx = ordenados.findIndex((p) => p.personKey === personKey)
   /* ⚠️ Soma de TODOS os meses gravados — não acompanha o filtro, e a tela diz. */
@@ -217,6 +256,15 @@ export async function GET(req: NextRequest) {
     acumulado,
     /** Quantos meses entraram no acumulado — sem isso "1.459" não tem escala. */
     meses: pontuacoes.length,
+    /** De onde saiu a posição: mês gravado, parcial ao vivo, prévia de mês
+     *  fechado, ou nada. A tela TEM de dizer — um parcial exibido como número
+     *  fechado é menor do que será, e quem lê conclui que a pessoa produziu
+     *  menos. */
+    estado,
+    /** Por que ELA não pontua (chefia / sem-credito), quando é o caso. */
+    semNota: semNotaDela,
+    /** Por que o setor inteiro não tem número (sem régua, mês não coberto…). */
+    motivo: motivoSemCalculo,
   }
 
   return NextResponse.json({

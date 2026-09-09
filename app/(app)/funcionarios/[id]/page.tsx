@@ -12,6 +12,7 @@ import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
 import FormacaoEditor from './FormacaoEditor'
 import { Placar } from './Placar'
+import { Medidor } from './Medidor'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import DadosEditor from './DadosEditor'
 import ServicosCard from './ServicosCard'
@@ -282,10 +283,12 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2Zm5.6 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.8-.6-3-1.3-5-4.4-5.2-4.6-.1-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.5.1.3.6 1.1 1.4 1.7 1 .9 1.8 1.2 2 1.3.3.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.5.3.1.2.1.6-.1 1.2Z" /></svg>
                       Atendimentos · WhatsApp <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 14 }}>
-                      <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{wpp.abertos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos</div></div>
-                      <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{wpp.finalizados.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Finalizados</div></div>
-                      <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{wpp.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio</div></div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                      <Medidor valor={wpp.abertos} rotulo="Abertos" nota="no período" cor="var(--accent)" />
+                      {/* ⚠️ O anel é finalizados ÷ abertos — um denominador que
+                          existe e que diz algo: quanto do que entrou, saiu. */}
+                      <Medidor valor={wpp.finalizados} de={wpp.abertos} rotulo="Finalizados" cor="var(--success)" />
+                      <Medidor valor={null} texto={wpp.tempoMedio} rotulo="Tempo médio" nota="por atendimento" cor="var(--info)" />
                     </div>
                   </div>
                 )}
@@ -300,10 +303,15 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       HelpDesk · chamados <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                     </div>
                     {hd.has ? (
-                      <div style={{ display: 'flex', gap: 14 }}>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{hd.opened.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{hd.resolved.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Resolvidos{hd.formalized > 0 ? <span style={{ color: 'var(--text-mute)' }}> · {hd.formalized} formaliz.</span> : null}</div></div>
-                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--chart-4)' }}>{hd.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio de resolução</div></div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                        <Medidor valor={hd.opened} rotulo="Abertos" nota="no período" cor="var(--info)" />
+                        {/* ⚠️ Sem anel aqui: quem ABRE chamado no HelpDesk é a
+                            casa toda e quem RESOLVE é o T.I, então resolvidos ÷
+                            abertos não é a mesma fila — o anel afirmaria uma
+                            taxa de resolução que a pessoa não tem como ter. */}
+                        <Medidor valor={hd.resolved} rotulo="Resolvidos"
+                          nota={hd.formalized > 0 ? `${hd.formalized} formalizados` : 'no período'} cor="var(--success)" />
+                        <Medidor valor={null} texto={hd.tempoMedio} rotulo="Tempo médio" nota="de resolução" cor="var(--chart-4)" />
                       </div>
                     ) : (
                       <div style={{ fontSize: 12.5, color: 'var(--text-mute)', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>Sem atividade no HelpDesk neste período.</div>
@@ -383,14 +391,18 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     {ch.hasChamado && (
                       <div style={{ marginBottom: ch.hasConversa ? 12 : 0 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Chamados entre setores</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 10 }}>
-                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{ch.chamadosConcluidos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Concluídos</div></div>
-                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700, color: 'var(--info)' }}>{ch.chamadosAbertos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Abertos por ela</div></div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                          {/* ⚠️ O anel é concluídos ÷ assumidos — a fila dela.
+                              Contra "abertos por ela" seria outra conversa: quem
+                              abre pede, quem assume entrega. */}
+                          <Medidor valor={ch.chamadosConcluidos} de={ch.chamadosAssumidos || null}
+                            rotulo="Concluídos" nota={ch.chamadosAssumidos ? undefined : 'no período'} cor="var(--success)" />
+                          <Medidor valor={ch.chamadosAbertos} rotulo="Abertos por ela" nota="pedidos que ela fez" cor="var(--info)" />
                           {ch.chamadosAssumidos > 0 && (
-                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.chamadosAssumidos.toLocaleString('pt-BR')}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Assumidos</div></div>
+                            <Medidor valor={ch.chamadosAssumidos} rotulo="Assumidos" nota="que ela pegou" cor="var(--chart-2)" />
                           )}
                           {ch.chamadosConcluidos > 0 && (
-                            <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 14 }}><div className="cnum" style={{ fontSize: 24, fontWeight: 700 }}>{ch.tempoMedio}</div><div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Tempo médio <span style={{ color: 'var(--text-mute)' }}>(só expediente)</span></div></div>
+                            <Medidor valor={null} texto={ch.tempoMedio} rotulo="Tempo médio" nota="só expediente" cor="var(--chart-4)" />
                           )}
                         </div>
                       </div>
