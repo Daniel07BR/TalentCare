@@ -183,11 +183,24 @@ function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competenc
           </>
         ) : (
           <>
-            {/* ⚠️ O "—" diz o MOTIVO. "Sem pontuação" sozinho se lê como
-                "não pontuou", que é uma afirmação sobre a pessoa. */}
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-mute)' }} title={p.semNota ?? undefined}>—</div>
+            {/* ⚠️ O "—" diz o MOTIVO — e em PORTUGUÊS. `semNota` é um slug
+                (`sem-credito`, `chefia`), e imprimi-lo cru foi o que o ensaio
+                ponta a ponta pegou: a célula dizia "sem-credito". O texto é o
+                MESMO do relatório de setor, de propósito: a mesma pessoa, no
+                mesmo mês, não pode ganhar duas explicações diferentes conforme
+                a tela em que se olha para ela. */}
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-mute)' }}
+              title={
+                p.semNota === 'chefia'
+                  ? 'Encarregado, diretor ou administrador: a pontuação mede execução, e quem responde pelo time não é avaliado por volume de execução nem ranqueado contra a própria equipe. Sub-encarregado continua sendo medido.'
+                  : p.semNota === 'sem-credito'
+                    ? 'Nenhuma atividade nos sistemas nem serviço na planilha neste mês — não há de onde sair pontuação. O que sobraria seria assiduidade com outro nome.'
+                    : undefined
+              }>—</div>
             <div style={{ fontSize: 9.5, color: 'var(--text-mute)' }}>
-              {p.semNota ? p.semNota.slice(0, 22) : `sem nota em ${mesAno(competencia)}`}
+              {p.semNota === 'chefia' ? 'chefia'
+                : p.semNota === 'sem-credito' ? 'sem fonte no mês'
+                : `sem nota em ${mesAno(competencia)}`}
             </div>
           </>
         )}

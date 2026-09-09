@@ -404,7 +404,10 @@ export async function GET(req: NextRequest) {
          - `dias…` = quantos dias da janela o app cobre  → a tela diz sobre
                      quantos dias de quantos o número fala */
       appFora: !!primeiroKm._min.day && toDay < primeiroKm._min.day,
-      appDiasNaJanela: primeiroKm._min.day
+      /* ⚠️ Zero quando a janela é toda anterior ao app: senão o cálculo devolve
+         um "1" sem sentido (o intervalo fica invertido) que ninguém usa hoje,
+         mas que o próximo consumidor leria como "um dia coberto". */
+      appDiasNaJanela: primeiroKm._min.day && toDay >= primeiroKm._min.day
         ? Math.max(0, diasNoIntervalo(
             fromDay > primeiroKm._min.day ? fromDay : primeiroKm._min.day,
             toDay,
