@@ -1,8 +1,10 @@
 'use client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlarmClock, AlertTriangle, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import Avatar from '../../Avatar'
+import { PainelPessoas, type PessoaDoPainel } from '../../PainelPessoas'
 
 /* ============================================================
    O TOPO DA PÁGINA — quem responde pelo setor, e o que está aceso.
@@ -20,6 +22,27 @@ const CIN = { display: 'flex', filter: 'grayscale(1)', opacity: 0.9 } as React.C
 
 export function Hero({ m }: { m: DeptMetrics }) {
   const router = useRouter()
+  /* Qual sinal está aberto (pelo rótulo). ⚠️ Pelo RÓTULO e não pelo objeto: ao
+     trocar o filtro de período o `m` é remontado, e uma lista congelada no
+     estado mostraria a janela anterior debaixo do título da nova. */
+  const [aberto, setAberto] = useState<string | null>(null)
+
+  /* ── QUEM ESTÁ ATRÁS DE CADA SINAL ───────────────────────────────────────
+     ⚠️⚠️ Sai de `m.pessoas`, que a rota já montou sob a régua de `alcance` —
+     não de uma busca nova. É a mesma decisão do painel do dashboard: uma
+     segunda origem para "os envolvidos" seria uma segunda régua de conteúdo.
+     ⚠️ Corta os zeros: uma lista de "quem se atrasou" com o setor inteiro em
+     zero acusaria 20 pessoas para mostrar 3. */
+  const base = (p: DeptMetrics['pessoas'][number]): Omit<PessoaDoPainel, 'valor' | 'detalhe'> =>
+    ({ id: p.id, nome: p.nome, cargo: p.cargo, setor: m.setor.nome, hasAvatar: p.hasAvatar })
+  const pessoasAtraso: PessoaDoPainel[] = m.pessoas
+    .filter((p) => p.atrasos > 0)
+    .map((p) => ({ ...base(p), valor: p.atrasos, detalhe: p.minutosAtraso ? `${p.minutosAtraso} min somados` : '' }))
+    .sort((a, b) => b.valor - a.valor)
+  const pessoasAdvert: PessoaDoPainel[] = m.pessoas
+    .filter((p) => p.advertencias > 0)
+    .map((p) => ({ ...base(p), valor: p.advertencias }))
+    .sort((a, b) => b.valor - a.valor)
   const gestores = m.chefia.filter((c) => c.nivel === 'gestor')
   const subs = m.chefia.filter((c) => c.nivel !== 'gestor')
   const d = m.demografia
@@ -136,6 +159,8 @@ export function Hero({ m }: { m: DeptMetrics }) {
                 ? 'O ponto entra por importação manual e não alcançou esta janela. Zero aqui significaria "não houve advertência", e o que houve foi ninguém medir.'
                 : 'Eventos de advertência registrados no ponto, dentro do intervalo selecionado.'}
               cor={!semPonto && m.assiduidade.advertencias > 0 ? 'var(--danger)' : 'var(--text-mute)'}
+              aoAbrir={!semPonto && pessoasAdvert.length ? () => setAberto('Advertências') : undefined}
+              quantos={pessoasAdvert.length}
             />
             <Sinal
               Icone={AlarmClock} rotulo="Atrasos"
@@ -145,6 +170,8 @@ export function Hero({ m }: { m: DeptMetrics }) {
                 ? 'O ponto entra por importação manual e não alcançou esta janela.'
                 : `Atrasos NÃO abonados no período. Os abonados (${m.assiduidade.abonados}) são justificados e não punem.`}
               cor={!semPonto && m.assiduidade.atrasos > 0 ? 'var(--warning)' : 'var(--text-mute)'}
+              aoAbrir={!semPonto && pessoasAtraso.length ? () => setAberto('Atrasos') : undefined}
+              quantos={pessoasAtraso.length}
             />
           </div>
 
@@ -167,18 +194,48 @@ export function Hero({ m }: { m: DeptMetrics }) {
           </div>
         </div>
       </div>
+      {(() => {
+        /* ⚠️ Lido do `m` recém-chegado, pelo rótulo — nunca de uma cópia no
+           estado: trocar o filtro remonta o setor, e uma lista congelada
+           apareceria debaixo do título da janela nova. */
+        const alvo = aberto === 'Atrasos'
+          ? { pessoas: pessoasAtraso, cor: 'var(--warning)', nota: 'quantos atrasos cada um teve na janela', sufixo: 'atrasos' }
+          : aberto === 'Advertências'
+            ? { pessoas: pessoasAdvert, cor: 'var(--danger)', nota: 'quantas advertências cada um teve na janela', sufixo: 'advertências' }
+            : null
+        if (!alvo?.pessoas.length) return null
+        return (
+          <PainelPessoas
+            titulo={`${aberto} · ${m.setor.nome}`} nota={alvo.nota}
+            pessoas={alvo.pessoas} cor={alvo.cor} sufixo={alvo.sufixo}
+            aoFechar={() => setAberto(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
 
-function Sinal({ Icone, rotulo, valor, nota, dica, cor }: {
+function Sinal({ Icone, rotulo, valor, nota, dica, cor, aoAbrir, quantos }: {
   Icone: typeof AlarmClock; rotulo: string; valor: string; nota: string; dica: string; cor: string
+  /** ⚠️ Só quando HÁ lista: cartão que parece botão e não abre nada ensina o
+   *  leitor a não clicar em nenhum. Mesma regra do painel do dashboard. */
+  aoAbrir?: () => void
+  quantos?: number
 }) {
+  const abre = !!aoAbrir
   return (
-    <div title={dica} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', borderLeft: `3px solid ${cor}`, cursor: 'help' }}>
+    <div
+      title={abre ? `${dica}\n\nClique para ver as ${quantos} pessoas.` : dica}
+      onClick={aoAbrir}
+      role={abre ? 'button' : undefined}
+      tabIndex={abre ? 0 : undefined}
+      onKeyDown={abre ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aoAbrir!() } } : undefined}
+      style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', borderLeft: `3px solid ${cor}`, cursor: abre ? 'pointer' : 'help' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
         <Icone size={13} color={cor} />
         <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{rotulo}</span>
+        {abre && <span style={{ fontSize: 9, color: 'var(--text-mute)', border: '1px solid var(--border)', borderRadius: 20, padding: '0 5px' }}>{quantos}</span>}
       </div>
       <div className="cnum" style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-.8px', color: cor }}>{valor}</div>
       <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 1 }}>{nota}</div>

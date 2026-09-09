@@ -1,5 +1,23 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-09 (fim, 4) — Os sinais do relatório de setor também abrem
+
+Mesmo tratamento dos cartões do painel, nos sinais de **Advertências** e
+**Atrasos** do cabeçalho do setor: clique (ou Enter) e sai quem está atrás do
+número, com os minutos somados de cada um e a barra comparativa dentro do setor.
+
+⚠️ A lista sai de `m.pessoas`, que a rota já montou sob a régua de `alcance` —
+não de uma busca nova. É a mesma decisão do painel: uma segunda origem para "os
+envolvidos" seria uma segunda régua de conteúdo.
+
+⚠️ `PainelPessoas` saiu de `dashboard/` para `app/(app)/`, e o formato de uma
+linha (`PessoaDoPainel`) mora com ele. Duas cópias do mesmo painel acabariam
+divergindo, e quem lê veria o mesmo cartão se comportar diferente em cada tela.
+
+⚠️ Vale a mesma trava: o sinal só fica clicável quando **há** lista, e o "—" de
+janela sem ponto continua não abrindo nada — não há lista de "quem se atrasou"
+num período que ninguém mediu.
+
 ## 2026-09-09 (fim, 3) — Os cartões do painel abrem QUEM está atrás do número
 
 Pedido do dono: *"em todos os cards que der para clicar e expor todos os

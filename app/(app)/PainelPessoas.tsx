@@ -2,8 +2,20 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
-import type { KpiPessoa } from '@/lib/mock/dashboard'
-import Avatar from '../Avatar'
+import Avatar from './Avatar'
+
+/**
+ * Uma linha do painel. É o mesmo formato para o painel do dashboard e para o do
+ * relatório de setor — duas formas para a mesma coisa acabariam divergindo, e
+ * quem lê veria o mesmo cartão se comportar diferente em cada tela.
+ */
+export type PessoaDoPainel = {
+  id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean
+  /** O número desta pessoa (atrasos, advertências…). */
+  valor: number
+  /** Uma linha de contexto: "43 min somados", "entrou em 14/07". */
+  detalhe?: string
+}
 
 /* ============================================================
    QUEM ESTÁ ATRÁS DO NÚMERO — o painel que o cartão do KPI abre.
@@ -23,7 +35,7 @@ import Avatar from '../Avatar'
 export function PainelPessoas({ titulo, nota, pessoas, cor, sufixo, aoFechar }: {
   titulo: string
   nota?: string
-  pessoas: KpiPessoa[]
+  pessoas: PessoaDoPainel[]
   cor: string
   /** "atrasos", "advertências" — o que o número de cada linha significa. */
   sufixo: string

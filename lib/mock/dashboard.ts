@@ -113,11 +113,12 @@ export type Kpi = {
   pessoasSufixo?: string
 }
 
+/** Uma linha do painel — o formato mora em `app/(app)/PainelPessoas.tsx`, que
+ *  é quem o desenha. Repetido aqui como tipo estrutural para o `lib/` não
+ *  importar de `app/`. */
 export type KpiPessoa = {
   id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean
-  /** O número desta pessoa (atrasos, advertências…). */
   valor: number
-  /** Uma linha de contexto: "43 min somados", "entrou em 14/07". */
   detalhe?: string
 }
 export type EscSegment = { label: string; count: number; color: string; dash: string; offset: string }
