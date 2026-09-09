@@ -65,17 +65,10 @@ async function main() {
       saidas: n(r.saidas),
       viagens: n(r.viagens),
       jornadaMin: n(r.jornadaMin),
-      /* ⚠️⚠️ DESLIGADO ATÉ O `npx prisma db push` RODAR NA PRODUÇÃO (.78).
-         A coluna `gerencia_daily.jornada_teto_min` existe no `schema.prisma` e
-         o endpoint da Gerência já devolve `jornadaTetoMin`, mas o push foi
-         barrado pelo classificador e está com o dono. Sem a coluna, o Prisma
-         recusa o upsert inteiro (`PrismaClientValidationError`) e o cron das
-         :30 morre — o espelho pararia calado, que é exatamente o defeito que
-         esta sessão passou a tarde consertando. Deploy de schema vem ANTES do
-         código que o usa; inverti a ordem e este comentário é o preço.
-         PARA LIGAR: rode o push e descomente a linha abaixo (aqui e no `.78`),
-         depois `run-gerencia-sync.mjs --completo` para preencher o histórico. */
-      // jornadaTetoMin: n(r.jornadaTetoMin),
+      /* Quanto da jornada do dia veio do TETO de 16 h em vez de um fim medido.
+         ⚠️ Métrica SEPARADA de propósito: quem quiser a jornada crua soma só
+         `jornadaMin`. Ver o comentário no endpoint da Gerência. */
+      jornadaTetoMin: n(r.jornadaTetoMin),
       protAbertos: n(r.protAbertos),
       protAprovados: n(r.protAprovados),
       servCriados: n(r.servCriados),

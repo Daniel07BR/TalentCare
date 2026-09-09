@@ -326,11 +326,17 @@ valem para as outras nove fontes:
    distinguir "afastado" de "parou de trabalhar". A tela mostra **"—" com a data** em
    vez de zero; a cura de verdade é um estado no Nexus, e é **decisão do dono**.
 
-⚠️ **Pendência de deploy:** a coluna `gerencia_daily.jornada_teto_min` está no
-`schema.prisma` e o endpoint já a devolve, mas o `npx prisma db push` foi barrado pelo
-classificador e está com o Daniel. Enquanto isso a linha está **comentada** no
-`run-gerencia-sync.mjs` (sem a coluna o Prisma recusa o upsert inteiro e o cron morre
-calado) e a tela mostra "—" para a fração de teto. Ver o `CHANGELOG`.
+✅ **`jornada_teto_min` está no ar** (09/09/2026): coluna aplicada, client
+regenerado, sync religado, backfill completo rodado e diff em **0 divergências**.
+Agosto do Elton: **176,3 h de total, 117,1 h medidas, 59,2 h de teto (34%)**.
+
+⚠️ **A ORDEM do deploy de schema, que quase custou caro aqui:** `db push` →
+`generate` → religar o código que usa o campo → `--completo` (a coluna nasce com
+`DEFAULT 0` e o histórico inteiro mentiria) → `build` → `restart`. Eu inverti — subi o
+código antes do schema — e o cron das :30 teria morrido calado com
+`PrismaClientValidationError`. **Deploy de schema vem ANTES do código que o usa**, e
+há dois lugares que fazem `SELECT *` nessa tabela (`app/api/employee-timeline`, que é
+a ficha para onde a área de Entregas leva o clique, e o upsert do sync).
 
 ## 9. Frentes ABERTAS (08/09/2026)
 
