@@ -17,6 +17,7 @@ export type PessoaEntregas = {
   saiuEm: string | null
   naFonte: boolean
   diasComRegistro: number
+  diasDaFonteNaJanela: number
   servicos: number
   km: number
   saidas: number
@@ -37,6 +38,7 @@ export type PessoaEntregas = {
   pontos: number | null
   pontosOrigem: string | null
   pontosDetalhe: string | null
+  semNota: string | null
 }
 
 export type EntregasMetrics = {
@@ -45,7 +47,8 @@ export type EntregasMetrics = {
   toDay: string
   dias: number
   setor: { id: string; nome: string }
-  competencia: string | null
+  competencia: string
+  pontuacao: { parcial: boolean; previa: boolean; motivo: string | null }
   pessoas: PessoaEntregas[]
   totais: {
     servicos: number; km: number; saidas: number; viagens: number
@@ -58,6 +61,11 @@ export type EntregasMetrics = {
   cobertura: {
     kmDesde: string | null
     saidasDesde: string | null
+    servicosDesde: string | null
+    /** A janela inteira é anterior ao dia em que o app passou a medir. */
+    appFora: boolean
+    /** Quantos dias da janela o app cobre. */
+    appDiasNaJanela: number
     fonteAte: string | null
     fonteParada: boolean
   }

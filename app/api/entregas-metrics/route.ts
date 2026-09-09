@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo } from '@/lib/period-range'
 import { quemEh } from '@/lib/avaliacoes/regua'
+import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
+import { montar } from '@/lib/servicos/calcular-mes'
+import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 
 /* ============================================================
@@ -40,14 +43,20 @@ export async function GET(req: NextRequest) {
   const quem = await quemEh((session.user as { id: string }).id)
   if (!quem) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-  /* ⚠️ A régua fina, igual à do relatório de setor: o middleware só conhece o
-     caminho, e o caminho é o mesmo para quem quer que esteja logado. Entregas
-     é chefiada pelo Legal (Evandro e Joice), então o vínculo gravado é o que
-     manda — não o setor em que a pessoa senta. */
+  /* ⚠️ A régua fina: o middleware só conhece o caminho, e o caminho é o mesmo
+     para quem quer que esteja logado. Entregas é chefiada pelo **Legal**
+     (Evandro e Joice), então quem manda é o VÍNCULO gravado.
+
+     ⚠️⚠️ E NÃO entra "eu sento neste setor". `lib/alcance.ts` recusa esse
+     critério com todas as letras — *"o setor DELE não entra por ser dele… a Ana
+     Carolina, Colaborador do Fiscal, alcançaria as 31 pessoas do setor só por
+     sentar lá"*. A primeira versão desta rota tinha a cláusula, herdada por
+     cópia, e ela era inerte só por acidente (os dois do setor são
+     `SEM_PERMISSAO`); bastaria um deles virar sub-encarregado para entrar pela
+     porta errada. Achado do crítico, 09/09/2026. */
   const podeVer =
     quem.escopo.tipo === 'tudo' ||
-    quem.escopo.avaliaDepartmentIds.includes(ENTREGAS_DEPT_ID) ||
-    quem.departmentId === ENTREGAS_DEPT_ID
+    quem.escopo.avaliaDepartmentIds.includes(ENTREGAS_DEPT_ID)
   if (!podeVer) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
@@ -71,7 +80,15 @@ export async function GET(req: NextRequest) {
   const nexusIds = equipe.map((p) => p.nexusUserId).filter((v): v is string => !!v)
   const personKeys = equipe.map((p) => p.nexusUserId ?? p.id)
 
-  const [noPeriodo, historico, serie, notas, primeiroKm, primeiraSaida, ultimoDiaDaFonte] =
+  /* ⚠️ A MESMA derivação do relatório de setor (`dept-metrics`): quando o filtro
+     cabe num mês só (o card de meses, ou um intervalo do calendário dentro de um
+     mês), a competência é aquele mês; nos presets que cruzam meses fica o último
+     mês FECHADO. Copiar a linha é ruim, mas divergir dela é pior — e é o que
+     estava acontecendo. */
+  const compDoFiltro = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
+  const mesCorrente = compDoFiltro === competenciaAtual()
+
+  const [noPeriodo, historico, serie, notas, primeiroKm, primeiraSaida, primeiroServico, ultimoDiaDaFonte] =
     await Promise.all([
       /* ── O que a pessoa fez NO INTERVALO ─────────────────────────────── */
       prisma.gerenciaDaily.groupBy({
@@ -112,21 +129,27 @@ export async function GET(req: NextRequest) {
         _sum: { servicos: true, km: true, saidas: true },
         orderBy: { day: 'asc' },
       }),
-      /* ⚠️ A nota do mês vem do que foi GRAVADO por `calcular-mes.ts`. Não se
-         recalcula aqui: duas contas do mesmo número acabam divergindo, e esta
-         é a que decide aumento. Quem não tem linha recebe "—" com o motivo.
+      /* ⚠️⚠️ A NOTA DO MÊS, PELA MESMA COMPETÊNCIA E PELA MESMA CONTA DO
+         RELATÓRIO DE SETOR — e as duas coisas foram erro meu antes.
 
-         ⚠️⚠️ E é a ÚLTIMA COMPETÊNCIA GRAVADA, não a corrente. O mês corrente
-         só ganha valor depois de fechar e de alguém rodar a régua — em
-         09/09/2026, `pontuacao_mes` de setembro está VAZIA para o setor
-         inteiro. Cravar a competência atual faria a coluna mostrar "—" para
-         todo mundo durante o mês todo, e "—" para todos se lê como "este setor
-         não pontua", que é falso: o Elton tem 870 em agosto. A tela diz QUAL
-         mês está mostrando. */
+         A primeira versão lia só o que estava GRAVADO, na competência
+         CORRENTE. Setembro nunca tem valor gravado (`gravarMes` não grava mês
+         aberto, decisão de 08/09), então a coluna mostrava "— sem pontuação"
+         para os dois o mês inteiro — e "sem pontuação" se lê como "não
+         pontuou", não como "setembro só fecha no dia 30".
+
+         Pior: `/departamentos/<id>`, que este botão liga a esta tela, deriva a
+         competência DO FILTRO e chama `montar(parcial)`. Com "30 dias" o
+         relatório dizia **ago/2026, Elton 870** e esta tela dizia **set/2026,
+         Elton "—"**: mesma pessoa, mesmo instante, mesmo filtro, dois números.
+
+         O argumento de "não recalcular para não ter duas contas" estava
+         invertido: `montar()` **é** a régua única. Chamá-la é o caminho de uma
+         régua só; não chamá-la foi o que produziu a divergência. Achado do
+         crítico, 09/09/2026. */
       prisma.pontuacaoMes.findMany({
-        where: { personKey: { in: personKeys } },
+        where: { personKey: { in: personKeys }, competencia: compDoFiltro },
         select: { personKey: true, competencia: true, pontos: true, origem: true, detalhe: true },
-        orderBy: { competencia: 'desc' },
       }),
       /* ⚠️⚠️ AS JANELAS DA FONTE, MEDIDAS — não cravadas no texto.
          Serviço vem desde 2001 (import do Access); km, saídas e jornada só
@@ -135,6 +158,9 @@ export async function GET(req: NextRequest) {
          primeiro dia com valor acompanha a fonte sozinho. */
       prisma.gerenciaDaily.aggregate({ where: { km: { gt: 0 } }, _min: { day: true } }),
       prisma.gerenciaDaily.aggregate({ where: { saidas: { gt: 0 } }, _min: { day: true } }),
+      /* ⚠️ O "2001" do texto era CRAVADO no JSX, com a condição olhando outro
+         valor. A rota mede — o texto só repete o que ela disser. */
+      prisma.gerenciaDaily.aggregate({ where: { servicos: { gt: 0 } }, _min: { day: true } }),
       /* ⚠️ Até quando a FONTE INTEIRA tem dado — não só esta equipe. É o que
          separa "esta pessoa parou" de "o sync parou": se o último dia da casa
          também for fevereiro, o problema é o cron, não o Gilberto. */
@@ -170,10 +196,48 @@ export async function GET(req: NextRequest) {
   /* A competência mais recente em que ALGUÉM do setor tem nota gravada, e as
      notas só dela — comparar pessoas em meses diferentes na mesma coluna seria
      um ranking entre janelas distintas. */
-  const compMostrada = notas.length ? notas[0].competencia : null
-  const notaDe = new Map(
-    notas.filter((n) => n.competencia === compMostrada).map((n) => [n.personKey, n]),
-  )
+  const notaDe = new Map(notas.map((n) => [n.personKey, n]))
+  /* Sem valor gravado na competência: a PRÉVIA sai da mesma lib que grava
+     (`montar`), como no relatório de setor. Parcial no mês corrente, prévia num
+     mês fechado ainda não rodado. Quem não recebe nota entra com o MOTIVO, não
+     com zero. */
+  const semNotaDe = new Map<string, string>()
+  let motivoDaCompetencia: string | null = null
+  let pontuacaoParcial = false
+  let pontuacaoPrevia = false
+  /* ⚠️ FALHA EM VOZ ALTA, como no relatório de setor: a prévia se desliga assim
+     que existe UM valor gravado na competência, e sem este aviso as outras
+     pessoas voltam a "—" sem nenhuma mensagem. Hoje é o caso exato do setor —
+     agosto tem nota gravada só do Elton —, e "—" mudo ao lado de 870 se lê como
+     "o outro tirou zero". Misturar mês gravado com prévia na mesma coluna
+     comparativa seria pior; dizer que a prévia está desligada, não. */
+  const ativosNaEquipe = equipe.filter((p) => p.active).length
+  if (notas.length > 0 && notas.length < ativosNaEquipe) {
+    motivoDaCompetencia =
+      `${notas.length} de ${ativosNaEquipe} pessoas têm valor gravado em ${compDoFiltro} — `
+      + 'enquanto houver valor gravado, a prévia ao vivo das demais fica desligada'
+  }
+  if (notas.length === 0) {
+    const r = await montar(ENTREGAS_DEPT_ID, compDoFiltro, { parcial: mesCorrente })
+    if ('erro' in r) {
+      /* ⚠️ A recusa da lib é escrita para quem PODE criar a régua (o gestor do
+         setor); quem lê isto pode ser a Diretoria, para quem "crie a régua" não
+         é uma instrução executável. */
+      motivoDaCompetencia = (r.erro ?? '').includes('régua')
+        ? 'este setor ainda não tem régua de pontuação vigente nesta competência'
+        : r.erro ?? null
+    } else {
+      pontuacaoParcial = r.parcial
+      pontuacaoPrevia = !r.parcial
+      for (const l of r.linhas) {
+        if (l.semNota) { semNotaDe.set(l.personKey, l.semNota); continue }
+        notaDe.set(l.personKey, {
+          personKey: l.personKey, competencia: compDoFiltro,
+          pontos: l.pontos, origem: 'previa', detalhe: l.detalhe,
+        })
+      }
+    }
+  }
 
   const hoje = new Date().toISOString().slice(0, 10)
   const fonteAte = ultimoDiaDaFonte._max.day ?? null
@@ -185,13 +249,30 @@ export async function GET(req: NextRequest) {
     const nota = notaDe.get(p.nexusUserId ?? p.id)
     const ultimoDia = h?._max.day ?? null
 
-    /* ⚠️⚠️ "Sem registro desde X" NÃO é o mesmo que "não fez nada".
-       A bandeira só acende quando a pessoa TEM história na fonte e a história
-       parou ANTES da janela pedida — aí o zero da janela é ausência de fonte,
-       não ausência de trabalho. Quem nunca teve linha nenhuma (o escritório,
-       por exemplo) não entra nisso: para essa pessoa a Gerência simplesmente
-       não é fonte, e dizer "parou" seria inventar um passado. */
-    const fontePara = !!ultimoDia && ultimoDia < fromDay
+    /* ⚠️⚠️ "Sem registro desde X" NÃO é o mesmo que "não fez nada" — e a
+       primeira régua desta bandeira estava ERRADA.
+
+       Ela era `ultimoDia < fromDay`: a pessoa só ficava marcada quando a
+       história dela terminava ANTES da janela. Em "Ano corrente" o último dia
+       do Gilberto (24/02/2026) cai DENTRO da janela, então a bandeira apagava
+       — e a tela mostrava "2 de 2 pessoas tiveram registro", com a linha dele
+       imprimindo 153 serviços ao lado dos 1.183 do Elton, sem uma palavra
+       sobre os seis meses e meio de silêncio. **Justamente no filtro que a
+       chefia abre para comparar os dois.** Achado do crítico, 09/09/2026.
+
+       A régua certa não olha a JANELA: olha a FONTE. Quem está escuro está
+       escuro em todo filtro. A lacuna é entre o último dia da pessoa e o
+       último dia que a fonte tem para o setor — se a fonte andou meses sem
+       ela, o silêncio é dela, não do recorte.
+
+       ⚠️ O corte de 30 dias não é gosto: a unidade de decisão deste sistema é
+       o MÊS (a nota é mensal, a régua é por competência). Um mensageiro sem
+       um único registro num mês inteiro que a fonte cobriu é a anomalia que
+       vale contar. O texto na tela mostra a lacuna MEDIDA, nunca o limiar. */
+    const lacuna = ultimoDia && fonteAte
+      ? Math.round((new Date(`${fonteAte}T12:00:00Z`).getTime() - new Date(`${ultimoDia}T12:00:00Z`).getTime()) / 86400_000)
+      : null
+    const fontePara = lacuna != null && lacuna >= 30
     const diasParado = ultimoDia
       ? Math.round((new Date(`${hoje}T12:00:00Z`).getTime() - new Date(`${ultimoDia}T12:00:00Z`).getTime()) / 86400_000)
       : null
@@ -209,6 +290,9 @@ export async function GET(req: NextRequest) {
          não é zero, é "esta fonte não fala dela". */
       naFonte: !!h,
       diasComRegistro: (k ? porPessoa.get(k)?._count._all : 0) ?? 0,
+      /** Dias em que a FONTE teve registro (de qualquer um do setor) na janela —
+       *  o denominador honesto de "esta pessoa cobre a janela inteira?". */
+      diasDaFonteNaJanela: serie.length,
       servicos: s?.servicos ?? 0,
       km: s?.km ?? 0,
       saidas: s?.saidas ?? 0,
@@ -235,6 +319,8 @@ export async function GET(req: NextRequest) {
       pontos: nota?.pontos ?? null,
       pontosOrigem: nota?.origem ?? null,
       pontosDetalhe: nota?.detalhe ?? null,
+      /** Por que esta pessoa NÃO recebe nota — o "—" tem de dizer o motivo. */
+      semNota: semNotaDe.get(p.nexusUserId ?? p.id) ?? null,
     }
   })
 
@@ -247,7 +333,12 @@ export async function GET(req: NextRequest) {
     period, fromDay, toDay,
     dias: diasNoIntervalo(fromDay, toDay),
     setor: { id: dept.id, nome: dept.name },
-    competencia: compMostrada,
+    competencia: compDoFiltro,
+    pontuacao: {
+      parcial: pontuacaoParcial,
+      previa: pontuacaoPrevia,
+      motivo: motivoDaCompetencia,
+    },
     pessoas,
     totais: {
       servicos: soma((p) => p.servicos),
@@ -276,6 +367,24 @@ export async function GET(req: NextRequest) {
       /** Primeiro dia com km/saída no espelho — quando o app começou a medir. */
       kmDesde: primeiroKm._min.day ?? null,
       saidasDesde: primeiraSaida._min.day ?? null,
+      /** Primeiro dia com serviço — o outro extremo da janela desigual. */
+      servicosDesde: primeiroServico._min.day ?? null,
+      /* ⚠️⚠️ A JANELA PEDIDA CRUZA A BORDA DO QUE O APP MEDE?
+         Sem isto a tela afirmava, sobre junho/2026, "Jornada 0 h — toda medida
+         entre um início e um fim registrados" para um homem que rodou 12 dias e
+         concluiu 156 serviços. Km escapava por ter a ressalva; jornada e saídas
+         não tinham nenhuma. É a regra do `null` outra vez: o zero afirmava algo
+         sobre a pessoa quando era a fonte que não existia ainda.
+         - `fora`  = a janela inteira é anterior ao app  → a tela mostra "—"
+         - `dias…` = quantos dias da janela o app cobre  → a tela diz sobre
+                     quantos dias de quantos o número fala */
+      appFora: !!primeiroKm._min.day && toDay < primeiroKm._min.day,
+      appDiasNaJanela: primeiroKm._min.day
+        ? Math.max(0, diasNoIntervalo(
+            fromDay > primeiroKm._min.day ? fromDay : primeiroKm._min.day,
+            toDay,
+          ))
+        : 0,
       /** Último dia com dado na fonte INTEIRA (todas as pessoas). */
       fonteAte,
       /** A fonte inteira parou antes da janela? Aí o problema é o sync. */

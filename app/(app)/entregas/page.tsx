@@ -48,15 +48,21 @@ const card: React.CSSProperties = {
 }
 
 /* ── Um cartão de número ─────────────────────────────────────────────────── */
+/* ⚠️⚠️ `valor === null` imprime "—", nunca 0. É a regra da casa no componente,
+   e não em cada chamada: um cartão novo que esquecer a distinção passaria a
+   afirmar "zero medido" sobre uma janela que a fonte não cobre — que foi
+   exatamente o defeito encontrado pelo crítico em 09/09/2026 nos cartões de
+   Jornada e Saídas, sobre junho/2026. */
 function Kpi({ label, valor, unidade, cor, nota, atencao }: {
-  label: string; valor: string; unidade?: string; cor?: string; nota?: string; atencao?: boolean
+  label: string; valor: string | null; unidade?: string; cor?: string; nota?: string; atencao?: boolean
 }) {
+  const vazio = valor === null
   return (
     <div style={{ ...card, padding: '14px 16px' }}>
       <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
-        <span className="cnum" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-1px', color: cor ?? 'var(--text)' }}>{valor}</span>
-        {unidade ? <span style={{ fontSize: 12, color: 'var(--text-mute)', fontWeight: 600 }}>{unidade}</span> : null}
+        <span className="cnum" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-1px', color: vazio ? 'var(--text-mute)' : cor ?? 'var(--text)' }}>{vazio ? '—' : valor}</span>
+        {unidade && !vazio ? <span style={{ fontSize: 12, color: 'var(--text-mute)', fontWeight: 600 }}>{unidade}</span> : null}
       </div>
       {nota ? (
         <div style={{ fontSize: 10.5, color: atencao ? 'var(--warn)' : 'var(--text-mute)', marginTop: 3, lineHeight: 1.45 }}>{nota}</div>
@@ -77,7 +83,10 @@ function Cobertura({ m }: { m: EntregasMetrics }) {
       <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
       <span>
         <strong>As janelas da fonte são desiguais, e isso muda o que cada filtro mostra.</strong>{' '}
-        Serviço concluído existe no espelho desde {c.fonteAte ? '2001' : '—'} (veio do import do
+        {/* ⚠️ O "2001" era CRAVADO aqui, com a condição olhando outro valor. A rota
+            mede `min(day)`; o texto só repete o que ela disser. */}
+        Serviço concluído existe no espelho desde{' '}
+        <strong>{c.servicosDesde ? c.servicosDesde.slice(0, 4) : '—'}</strong> (veio do import do
         Access);{' '}
         {c.kmDesde
           ? <>km e jornada só a partir de <strong>{dataLonga(c.kmDesde)}</strong>, quando o app passou a registrar a saída</>
@@ -90,7 +99,7 @@ function Cobertura({ m }: { m: EntregasMetrics }) {
 }
 
 /* ── A linha de uma pessoa ───────────────────────────────────────────────── */
-function LinhaPessoa({ p, competencia }: { p: PessoaEntregas; competencia: string | null }) {
+function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competencia: string; appFora: boolean }) {
   const router = useRouter()
   /* ⚠️⚠️ A DECISÃO CENTRAL DESTA TELA. Quem tem história na fonte e parou antes
      da janela não recebe uma fileira de zeros: recebe "—" e a data. Zero é uma
@@ -98,10 +107,14 @@ function LinhaPessoa({ p, competencia }: { p: PessoaEntregas; competencia: strin
   const mudo = p.fontePara
   const semFonte = !p.naFonte
 
-  const cols: { label: string; v: number; destaque?: boolean }[] = [
+  /* ⚠️⚠️ Km e Saídas só existem desde que o app mede. Numa janela anterior a
+     isso a célula é "—", não 0: em 01/03–31/03 a linha do Elton lia
+     `152 · 0 · 0 · 0`, e os três zeros eram sobre colunas que não existiam.
+     Achado do crítico, 09/09/2026. */
+  const cols: { label: string; v: number | null; destaque?: boolean }[] = [
     { label: 'Serviços', v: p.servicos, destaque: true },
-    { label: 'Saídas', v: p.saidas },
-    { label: 'Km', v: p.km },
+    { label: 'Saídas', v: appFora ? null : p.saidas },
+    { label: 'Km', v: appFora ? null : p.km },
     { label: 'Viagens', v: p.viagens },
   ]
 
@@ -134,9 +147,9 @@ function LinhaPessoa({ p, competencia }: { p: PessoaEntregas; competencia: strin
       {cols.map((c) => (
         <div key={c.label} className="cnum" style={{
           fontSize: 13.5, fontWeight: c.destaque ? 800 : 600, textAlign: 'right',
-          color: mudo || semFonte ? 'var(--text-mute)' : c.v === 0 ? 'var(--text-mute)' : c.destaque ? 'var(--text)' : 'var(--text-dim)',
+          color: mudo || semFonte || c.v === null || c.v === 0 ? 'var(--text-mute)' : c.destaque ? 'var(--text)' : 'var(--text-dim)',
         }}>
-          {mudo || semFonte ? '—' : num(c.v)}
+          {mudo || semFonte || c.v === null ? '—' : num(c.v)}
         </div>
       ))}
 
@@ -148,14 +161,16 @@ function LinhaPessoa({ p, competencia }: { p: PessoaEntregas; competencia: strin
               {num(p.pontos)}
             </div>
             <div style={{ fontSize: 9.5, color: 'var(--text-mute)' }}>
-              {p.pontosOrigem === 'informado' ? 'informado' : 'pontos'}
+              {p.pontosOrigem === 'informado' ? 'informado' : p.pontosOrigem === 'previa' ? 'prévia' : 'gravado'}
             </div>
           </>
         ) : (
           <>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-mute)' }}>—</div>
+            {/* ⚠️ O "—" diz o MOTIVO. "Sem pontuação" sozinho se lê como
+                "não pontuou", que é uma afirmação sobre a pessoa. */}
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-mute)' }} title={p.semNota ?? undefined}>—</div>
             <div style={{ fontSize: 9.5, color: 'var(--text-mute)' }}>
-              {competencia ? `sem nota em ${mesAno(competencia)}` : 'régua não rodada'}
+              {p.semNota ? p.semNota.slice(0, 22) : `sem nota em ${mesAno(competencia)}`}
             </div>
           </>
         )}
@@ -260,19 +275,26 @@ function ForaDaTela() {
       <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>
         O que o Relatório Geral tem e esta tela não — de propósito
       </div>
+      {/* ⚠️ Os números abaixo são LITERAIS, medidos uma vez na origem — o
+          TalentCare não espelha `protocols` nem o status dos serviços, então não
+          há como recalculá-los aqui. Literal sem data envelhece calado (foi o
+          caso do "Atualizado há 12 min"), então cada um vem DATADO: quem ler em
+          2027 sabe que está lendo uma medição de 2026, não uma afirmação sobre
+          hoje. Achado do crítico, 09/09/2026. */}
       <div style={{ fontSize: 11.5, color: 'var(--text-dim)', lineHeight: 1.7 }}>
         <div style={{ marginBottom: 7 }}>
           <strong>Protocolos baixados por pessoa.</strong> O campo de autoria da entrega é lixo do
-          import do Access: dos protocolos entregues em 2026, <strong className="cnum">27.488</strong>{' '}
-          saíram no nome de um usuário chamado &ldquo;Sistema&rdquo; e o resto está quase todo sem
-          autor. Nenhum dos mensageiros aparece uma vez. Creditar entrega a partir daí seria
-          inventar autoria.
+          import do Access: <em>medido em 09/09/2026</em>, dos 27.804 protocolos entregues em
+          2026, <strong className="cnum">27.488</strong> saíram no nome de um usuário chamado
+          &ldquo;Sistema&rdquo; e o resto está quase todo sem autor. Nenhum dos mensageiros
+          aparece uma vez. Creditar entrega a partir daí seria inventar autoria.
         </div>
         <div style={{ marginBottom: 7 }}>
-          <strong>Taxa de conclusão em anel.</strong> Em toda a base da Gerência há{' '}
-          <strong className="cnum">8</strong> serviços pendentes e <strong className="cnum">2</strong>{' '}
-          em andamento, todos do mês corrente: junho, julho e agosto fecharam em 100%. Um anel
-          cravado em 100% é enfeite, não medição.
+          <strong>Taxa de conclusão em anel.</strong> <em>Medido em 09/09/2026</em>: em toda a base
+          da Gerência havia <strong className="cnum">8</strong> serviços pendentes e{' '}
+          <strong className="cnum">2</strong> em andamento, todos do mês corrente, contra 56.845
+          concluídos — junho, julho e agosto fecharam em 100%. Um anel cravado em 100% é enfeite,
+          não medição.
         </div>
         <div>
           <strong>A faixa de acumulado do sistema.</strong> No Relatório Geral ela é honesta porque
@@ -314,11 +336,36 @@ export default function EntregasPage() {
   }
 
   const t = m.totais
-  /* ⚠️ `null` = a coluna do teto ainda não existe no banco. Não é "nenhuma
-     hora de teto": é "não sabemos", e a tela tem de dizer a diferença. */
+  const c = m.cobertura
+
+  /* ⚠️⚠️ AS DUAS JANELAS DA FONTE, aplicadas número a número.
+     Serviço tem 25 anos de espelho; km, saída e jornada só existem desde que o
+     app passou a registrar. Quando a janela pedida é ANTERIOR a isso, o valor
+     não é zero — é inexistente, e a tela mostra "—". Quando ela CRUZA a borda,
+     o número é real mas fala de menos dias do que o rótulo sugere, e o cartão
+     diz de quantos. */
+  const appFora = c.appFora
+  const appParcial = !appFora && !!c.kmDesde && m.fromDay < c.kmDesde
+  const notaApp = appParcial
+    ? `só os ${num(c.appDiasNaJanela)} dias desde ${dataLonga(c.kmDesde!)} — o app não media antes`
+    : c.kmDesde ? `medido desde ${dataLonga(c.kmDesde)}` : undefined
+  const notaForaApp = c.kmDesde ? `o app só passou a medir em ${dataLonga(c.kmDesde)}` : 'sem um dia com valor no espelho'
+
+  /* ⚠️ `null` = a coluna do teto ainda não existe no banco. Não é "nenhuma hora
+     de teto": é "não sabemos", e a tela tem de dizer a diferença. */
   const teto = t.jornadaTetoMin
   const pctTeto = teto != null && t.jornadaMin > 0 ? Math.round((teto / t.jornadaMin) * 100) : null
-  const mediaDia = t.saidas > 0 ? (t.servicos / t.saidas) : null
+  /* O que foi MEDIDO entre um início e um fim de verdade. Nos dias que batem o
+     teto, `jornadaMin` É o teto, então a subtração é exata. */
+  const jornadaMedida = teto != null ? t.jornadaMin - teto : null
+
+  /* ⚠️⚠️ "por saída" cruza DUAS janelas de cobertura e por isso só sai quando a
+     janela inteira está dentro do que o app mede. Medido pelo crítico: no
+     preset "Ano" o numerador conta 1.336 serviços de jan a set e o denominador
+     conta 48 saídas de 55 dias — a tela dizia **27,8 por saída** onde o medido
+     é 7,5. É o "59 cursos" outra vez: número plausível respondendo outra
+     pergunta. */
+  const mediaPorSaida = !appFora && !appParcial && t.saidas > 0 ? t.servicos / t.saidas : null
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -347,34 +394,52 @@ export default function EntregasPage() {
           label="Serviços concluídos"
           valor={num(t.servicos)}
           cor="var(--chart-2)"
-          nota={mediaDia != null ? `${mediaDia.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por saída` : undefined}
+          nota={
+            mediaPorSaida != null
+              ? `${mediaPorSaida.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por saída`
+              : appFora || appParcial
+                ? 'a média por saída não sai nesta janela: serviço tem 25 anos de espelho e saída só existe desde que o app mede'
+                : undefined
+          }
         />
         <Kpi
           label="Km rodados"
-          valor={num(t.km)}
+          valor={appFora ? null : num(t.km)}
           unidade="km"
-          nota={m.cobertura.kmDesde ? `só desde ${dataLonga(m.cobertura.kmDesde)}` : 'sem dia com km no espelho'}
+          nota={appFora ? notaForaApp : notaApp}
+          atencao={appParcial}
         />
-        <Kpi label="Saídas" valor={num(t.saidas)} nota="roteiros registrados no app" />
+        <Kpi
+          label="Saídas"
+          valor={appFora ? null : num(t.saidas)}
+          nota={appFora ? notaForaApp : appParcial ? notaApp : 'roteiros registrados no app'}
+          atencao={appParcial}
+        />
         <Kpi
           label="Viagens"
           valor={num(t.viagens)}
           cor="var(--accent)"
           nota="dias em rota marcada como viagem"
         />
-        {/* ⚠️⚠️ A jornada com a fração de teto ESCRITA no próprio cartão. */}
+        {/* ⚠️⚠️ O NÚMERO GRANDE É O MEDIDO, e o teto vai ao lado.
+            Antes o cartão trazia 176,3 h em 26 px e a ressalva em 10,5 px — mas
+            "quantas horas o Elton fez" tem duas respostas, 176 e 117, e a que o
+            olho pega tinha de ser a medida. O total continua escrito, porque é
+            ele que bate com o Relatório Geral da Gerência. */}
         <Kpi
-          label="Jornada"
-          valor={horas(t.jornadaMin)}
+          label="Jornada medida"
+          valor={appFora ? null : jornadaMedida != null ? horas(jornadaMedida) : horas(t.jornadaMin)}
           unidade="h"
           nota={
-            teto == null
-              ? 'quanto disto é o teto de 16 h ainda não é medido — a coluna do espelho não foi criada'
-              : teto > 0
-                ? `⚠ ${horas(teto)} h (${pctTeto}%) são o teto de 16 h — dias em que ninguém encerrou a saída`
-                : 'toda medida entre um início e um fim registrados'
+            appFora
+              ? notaForaApp
+              : teto == null
+                ? `total de ${horas(t.jornadaMin)} h — quanto disto é teto de 16 h ainda não é medido (coluna do espelho não criada)`
+                : teto > 0
+                  ? `⚠ + ${horas(teto)} h de teto de 16 h (${pctTeto}% do total), em dias que ninguém encerrou · o Relatório Geral soma as duas: ${horas(t.jornadaMin)} h`
+                  : 'todas entre um início e um fim registrados'
           }
-          atencao={teto == null || teto > 0}
+          atencao={teto == null || (teto ?? 0) > 0}
         />
         <Kpi
           label="Com serviço"
@@ -397,10 +462,15 @@ export default function EntregasPage() {
             <div style={{ fontSize: 14, fontWeight: 600 }}>Quem saiu na rua</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>
               Serviços, saídas, km e viagens <strong>no período</strong>
-              {m.competencia
-                ? <> · a pontuação é de <strong>{mesAno(m.competencia)}</strong>, a última competência
-                    gravada — ela é mensal e <strong>não acompanha o filtro</strong></>
-                : <> · nenhuma competência foi gravada para este setor ainda</>}
+              {' '}· a pontuação é de <strong>{mesAno(m.competencia)}</strong>
+              {m.pontuacao.parcial
+                ? <>, <strong>parcial</strong> (o mês não fechou — falta o que ainda não aconteceu)</>
+                : m.pontuacao.previa
+                  ? <>, <strong>prévia</strong> (mês fechado, régua ainda não gravada)</>
+                  : <> (gravada)</>}
+              {' '}— ela é mensal e <strong>não acompanha o filtro</strong>, mas
+              <strong> troca de competência</strong> com ele
+              {m.pontuacao.motivo ? <> · ⚠ {m.pontuacao.motivo}</> : null}
             </div>
           </div>
         </div>
@@ -416,7 +486,7 @@ export default function EntregasPage() {
             {mesAno(m.competencia)}
           </div>
         </div>
-        {m.pessoas.map((p) => <LinhaPessoa key={p.id} p={p} competencia={m.competencia} />)}
+        {m.pessoas.map((p) => <LinhaPessoa key={p.id} p={p} competencia={m.competencia} appFora={appFora} />)}
         <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 10, lineHeight: 1.55 }}>
           &ldquo;—&rdquo; não é zero: é a fonte sem dado para aquela pessoa nesta janela. O zero
           aparece como <span className="cnum">0</span> e quer dizer que houve dia medido sem

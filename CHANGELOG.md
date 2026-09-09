@@ -103,6 +103,53 @@ a pessoa senta.
 `—` e a data; quem teve dia medido sem resultado recebe `0`. O rodapé da lista diz a
 diferença, porque a distinção só funciona se quem lê souber que ela existe.
 
+### O agente crítico achou seis defeitos, e um deles quebrava a tela inteira
+
+Rodado com o briefing do `AGENTE-CRITICO.md` e mandado ao banco — ele conferiu contra
+o `.78` **e** contra a origem no `.72`. O que voltou:
+
+⚠️⚠️ **"Ano corrente" apagava a parada do Gilberto — justamente no filtro que a chefia
+abre para comparar os dois.** A bandeira era `ultimoDia < fromDay`, e o último dia
+dele (24/02/2026) cai DENTRO de "Ano corrente": o cartão de aviso não aparecia, a
+linha imprimia 153 serviços ao lado dos 1.183 do Elton, e o cabeçalho dizia **"2 de 2
+pessoas tiveram registro"**. A régua olhava a JANELA quando tinha de olhar a FONTE —
+quem está escuro está escuro em todo filtro. Hoje a lacuna é entre o último dia da
+pessoa e o último dia que a fonte tem (`fonteAte`), e o corte de 30 dias está ancorado
+na unidade de decisão do sistema, que é o mês. **O defeito era exatamente o que o
+bloco de comentário da tela dizia existir para impedir.**
+
+⚠️⚠️ **Jornada e Saídas afirmavam "0 medido" sobre junho/2026**, para um homem que
+rodou 12 dias e concluiu 156 serviços. Km escapava por ter a ressalva; os outros dois
+não tinham nenhuma. A regra do `null` outra vez, com a fonte no lugar da pessoa: o
+zero falava de uma coluna que ainda não existia. Agora o componente `Kpi` aceita
+`null` e imprime "—" — **a regra virou do componente, não de cada chamada**, para que
+um cartão novo não repita o esquecimento.
+
+⚠️⚠️ **"por saída" cruzava duas janelas de cobertura.** No preset "Ano" o numerador
+conta 1.336 serviços de jan a set e o denominador conta 48 saídas de 55 dias: a tela
+dizia **27,8 por saída** onde o medido é **7,5**. É o "59 cursos" com outra roupa.
+
+⚠️⚠️ **A pontuação contradizia a tela irmã.** Com "30 dias",
+`/departamentos/<Entregas>` dizia **ago/2026, Elton 870** e `/entregas` dizia
+**set/2026, Elton "—"** — mesma pessoa, mesmo instante, mesmo filtro, dois números, e
+um botão ligando uma tela à outra. Meu argumento de "não recalcular para não ter duas
+contas" estava **invertido**: `montar()` **é** a régua única; chamá-la é o caminho de
+uma régua só, e não chamá-la foi o que produziu a divergência. A competência passou a
+sair do filtro pela mesma linha do `dept-metrics`.
+
+Também entraram: a régua de acesso perdeu a cláusula `departmentId === Entregas` (que
+`lib/alcance.ts` recusa com todas as letras — *"o setor DELE não entra por ser dele"*);
+o número grande da Jornada passou a ser o **medido**, com o teto ao lado; os literais
+(27.488 / 8 / 2) ficaram **datados**, porque literal sem data envelhece calado; e o
+teto de 400 dias do gráfico parou de cortar em silêncio.
+
+### ⚠️⚠️ E a nota de agosto do Elton estava calculada sobre o espelho errado
+
+Consequência do conserto do km: com o espelho reconciliado, os serviços dele em agosto
+foram de **161 para 169**. Rodei o ensaio de agosto nos **10 setores** que têm
+`gerencia_daily` e comparei com o gravado: **só a dele mudou** — os outros tiveram
+apenas km e jornada alterados, que não entram no score. Regravado: **870 → 910**.
+
 ### ⚠️⚠️ O que o Relatório Geral tem e esta tela NÃO tem — e está escrito na tela
 
 Sair da tela de referência sem dizer por quê faria a área parecer incompleta por
