@@ -36,7 +36,11 @@ export async function GET() {
     prisma.gerenciaDaily.aggregate({ _max: { day: true } }),
     prisma.chatDaily.aggregate({ _max: { day: true } }),
     prisma.assiduidadeDaily.aggregate({ _max: { day: true } }),
-    prisma.disciplinaEvento.aggregate({ _max: { data: true } }),
+    /* ⚠️ Só o que veio do ponto: esta tela diz até quando cada FONTE mediu, e
+       uma medida de LGPD registrada hoje faria o dump do ponto — que é import à
+       mão e pode estar semanas atrás — parecer fresco. "Watermark recente não
+       prova frescor", e aqui seria o watermark de outra fonte. */
+    prisma.disciplinaEvento.aggregate({ where: { source: 'nexo' }, _max: { data: true } }),
   ])
 
   const fontes = [

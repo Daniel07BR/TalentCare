@@ -61,7 +61,19 @@ export async function coberturaDoPonto(): Promise<CoberturaPonto> {
     }),
     prisma.pontoMatch.findMany({ select: { personKey: true } }),
     prisma.assiduidadeDaily.aggregate({ _min: { day: true }, _max: { day: true } }),
-    prisma.disciplinaEvento.aggregate({ _min: { data: true }, _max: { data: true } }),
+    /* ⚠️⚠️ SÓ O QUE VEIO DO PONTO (`source: 'nexo'`). Esta função responde "até
+       quando o PONTO mediu", e desde 09/09/2026 a mesma tabela também guarda as
+       medidas do Controle da LGPD, que vão de 2022 a hoje. Sem o filtro,
+       `primeiroDia` virava **2022-02-23** em vez de 2025-10-01 — e aí `montar`
+       aceitaria calcular um mês de 2023, sem uma linha de ponto, como se fosse
+       um mês MEDIDO: todo mundo com "mês sem ocorrência" e o bônus junto. É a
+       ausência-que-elogia entrando pela porta de uma fonte nova.
+       ⚠️ Filtra por FONTE, não por tipo: um tipo novo de medida quebraria a
+       lista de tipos outra vez, em silêncio. */
+    prisma.disciplinaEvento.aggregate({
+      where: { source: 'nexo' },
+      _min: { data: true }, _max: { data: true },
+    }),
   ])
 
   const roster = new Set<string>([

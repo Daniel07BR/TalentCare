@@ -70,6 +70,28 @@ passaria a descontar por vazamento de dado.
 3. **Tira a pessoa de `sem-credito`.** Sem isso, a suspensão desapareceria em
    "—" justamente de quem não passa por sistema nenhum.
 
+### ⚠️⚠️ E a fonte nova quase reintroduziu a ausência-que-elogia
+
+A regra do `FONTES.md` — *"integrar a fonte NÃO basta, percorra TODOS os
+consumidores"* — cobrou o preço na hora. `disciplina_evento` tem seis
+consumidores; quatro filtram `tipo = 'advertencia'` e passaram ilesos. **Dois
+liam a tabela inteira:**
+
+- **`lib/ponto-cobertura.ts`** — é quem responde *"até quando o PONTO mediu"*, e
+  lia `min/max` de tudo. Com as medidas de LGPD dentro, `primeiroDia` ia de
+  **2025-10-01** para **2022-02-23**. O efeito não é cosmético: `montar` recusa
+  um mês quando `de < primeiroDia`, então um mês de 2023 — **sem uma linha de
+  ponto** — passaria a ser tratado como mês MEDIDO, e todo mundo levaria o bônus
+  de "mês sem ocorrência". A ausência elogiando, entrando pela porta de uma
+  fonte nova.
+- **`app/api/frescor/route.ts`** — uma medida de LGPD registrada hoje faria o
+  dump do ponto (import à mão, que pode estar semanas atrás) parecer fresco.
+  *"Watermark recente não prova frescor"* — aqui seria o watermark de outra
+  fonte.
+
+Os dois passaram a filtrar por **`source: 'nexo'`**, não por tipo: um tipo novo
+de medida quebraria a lista de tipos outra vez, e em silêncio.
+
 ### O efeito, medido
 
 29 medidas gravadas, 0 recusadas. As de 2026 são todas do **Pessoal**, e a mais
