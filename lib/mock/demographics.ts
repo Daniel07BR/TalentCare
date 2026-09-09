@@ -81,7 +81,13 @@ function genderStats(emps: Employee[]) {
   const f = emps.filter((e) => gNorm(e.gender) === 'F')
   const ni = emps.filter((e) => gNorm(e.gender) === '?')
   const avg = (list: Employee[]) => { const a = list.map((e) => ageOf(e.birthDate)).filter((x): x is number => x != null); return a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : null }
-  const score = (list: Employee[]) => { const sc = list.filter((e) => e.hasScore); return sc.length ? Math.round(sc.reduce((s, e) => s + e.score, 0) / sc.length) : 0 }
+  /* ⚠️⚠️ `null`, NUNCA 0, quando ninguém do grupo tem score aplicável. Zero num
+     cartão chamado "Score médio" se lê como "esse grupo é péssimo", e o que
+     houve foi ninguém ser medido — é a regra do `null` da casa, e este era o
+     último lugar do painel onde ela ainda não valia. Hoje os dois grupos têm
+     gente pontuável (25 homens, 67 mulheres), então o defeito estava esperando
+     um recorte pequeno para aparecer. */
+  const score = (list: Employee[]) => { const sc = list.filter((e) => e.hasScore); return sc.length ? Math.round(sc.reduce((s, e) => s + e.score, 0) / sc.length) : null }
   const total = m.length + f.length || 1
   return {
     m: m.length, f: f.length, ni: ni.length,

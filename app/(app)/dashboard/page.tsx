@@ -10,6 +10,7 @@ import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
 import { buildDashboard } from '@/lib/mock/dashboard'
 import { generationsVM, genderVM } from '@/lib/mock/demographics'
+import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import Avatar from '../Avatar'
 import WhatsappDeptCard from './WhatsappDeptCard'
 import RadioDeptCard from './RadioDeptCard'
@@ -45,6 +46,9 @@ export default function DashboardPage() {
     pontoAte: assid.pontoAte,
     lgpdSuspensoes: assid.lgpdSuspensoes,
     lgpdAdvertencias: assid.lgpdAdvertencias,
+    pontuacao: signals?.pontuacao,
+    competenciaPontuacao: signals?.competenciaPontuacao,
+    estadoPontuacao: signals?.estadoPontuacao,
   })
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall
@@ -209,7 +213,16 @@ export default function DashboardPage() {
               comparação que o `/ranking` avisa, em amarelo, que não vale: o
               score é percentil DENTRO do depto. Ordenada, ela virava um ranking
               de setores pelo campeão de cada um, sem aviso nenhum. */}
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>O melhor de cada setor · cada um comparado só dentro do próprio depto, então os números <b>não</b> se comparam entre linhas</div>
+          {/* ⚠️⚠️ O NÚMERO MUDOU DE NATUREZA (09/09/2026): é a PONTUAÇÃO da
+              régua — a que o dono calibrou e a que decide aumento —, não o
+              score de percentil. A tela tem de dizer qual competência e se o
+              número é parcial, senão quem lê acha que é do filtro inteiro. */}
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
+            Quem mais pontuou em cada setor{vm.pontuacaoInfo.competencia ? ` · ${competenciaLabel(vm.pontuacaoInfo.competencia)}` : ''}
+            {vm.pontuacaoInfo.estado === 'parcial' && <> · <b style={{ color: 'var(--warn, #b45309)' }}>parcial</b>, mês em curso</>}
+            {vm.pontuacaoInfo.estado === 'previa' && <> · <b style={{ color: 'var(--warn, #b45309)' }}>prévia</b>, ainda não gravada</>}
+            <br />pontos de setores diferentes <b>não</b> se comparam — a planilha de serviços não cobre todos
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 420, overflowY: 'auto' }}>
             {vm.deptHighlights.map((r) => (
               <div key={r.deptId} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
@@ -225,7 +238,7 @@ export default function DashboardPage() {
                     {r.comparadoCom <= 1 && <span style={{ color: 'var(--warning)' }}> · único avaliável no setor</span>}
                   </div>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.score}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.score.toLocaleString('pt-BR')}</span>
               </div>
             ))}
           </div>
@@ -315,7 +328,9 @@ export default function DashboardPage() {
               </div>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 18 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Idade média</div><div style={{ fontSize: 15, fontWeight: 700 }}>{g.age ?? '—'}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 15, fontWeight: 700 }}>{g.score}</div></div>
+                {/* ⚠️ "—" quando ninguém do grupo é medido. Zero aqui acusaria
+                    o grupo por uma ausência de dado. */}
+                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 15, fontWeight: 700, color: g.score == null ? 'var(--text-mute)' : undefined }}>{g.score ?? '—'}</div></div>
               </div>
             </div>
           ))}

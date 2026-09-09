@@ -463,6 +463,13 @@ export function activityOf(e: Employee): number {
 // "Score médio" do painel marcava **68**; sem essa inflação, **52**.
 export type ScoreSignals = {
   porPessoa: Map<string, { activity: number; atrasos: number; advertencias: number }>
+  /** ⚠️ A PONTUAÇÃO DA RÉGUA por pessoa, na competência do filtro — a que o dono
+   *  calibrou (disciplina + serviços + atividades), NÃO o percentil de
+   *  atividade que forma o `score`. Quem não está no mapa não pontua naquela
+   *  competência (encarregado, sem crédito, ou setor sem régua): é "—", nunca 0. */
+  pontuacao?: Map<string, number>
+  competenciaPontuacao?: string
+  estadoPontuacao?: 'gravado' | 'parcial' | 'previa' | 'misto'
   /** A janela pedida cai dentro do que o ponto realmente cobriu? */
   janelaComPonto: boolean
   /** O que dizer na tela quando não cai (ex.: "ponto importado até 25/06/2026"). */

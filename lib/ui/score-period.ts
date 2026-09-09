@@ -32,6 +32,9 @@ export function useScoreSignals(): { signals: ScoreSignals | null; loading: bool
         byPerson: { id: string; activity: number; atrasos: number; advertencias: number }[]
         janelaComPonto?: boolean
         motivoSemPonto?: string | null
+        pontuacao?: { id: string; pontos: number }[]
+        competenciaPontuacao?: string
+        estadoPontuacao?: 'gravado' | 'parcial' | 'previa' | 'misto'
       }) => {
         if (!alive) return
         const porPessoa = new Map<string, { activity: number; atrasos: number; advertencias: number }>()
@@ -45,6 +48,9 @@ export function useScoreSignals(): { signals: ScoreSignals | null; loading: bool
           porPessoa,
           janelaComPonto: d.janelaComPonto ?? false,
           motivoSemPonto: d.motivoSemPonto ?? null,
+          pontuacao: new Map((d.pontuacao ?? []).map((p) => [p.id, p.pontos])),
+          competenciaPontuacao: d.competenciaPontuacao,
+          estadoPontuacao: d.estadoPontuacao,
         })
       })
       .catch(() => { if (alive) { setSignals(null); setErro(true) } })

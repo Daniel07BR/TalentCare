@@ -147,6 +147,11 @@ export type DeptHighlight = { deptId: string; deptNome: string; color: string; i
 
 export type OpcoesDashboard = {
   assidMap?: PeriodAssid
+  /** ⚠️ A PONTUAÇÃO DA RÉGUA por pessoa, na competência do filtro — a que o dono
+   *  calibrou. Quem não está no mapa não pontua: é "—", nunca 0. */
+  pontuacao?: Map<string, number>
+  competenciaPontuacao?: string
+  estadoPontuacao?: 'gravado' | 'parcial' | 'previa' | 'misto'
   /** Medidas do Controle da LGPD no período. `null` = não foi possível ler. */
   lgpdSuspensoes?: number | null
   lgpdAdvertencias?: number | null
@@ -164,7 +169,7 @@ export type OpcoesDashboard = {
 }
 
 export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDashboard = {}) {
-  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null, lgpdSuspensoes = null, lgpdAdvertencias = null } = opts
+  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null, lgpdSuspensoes = null, lgpdAdvertencias = null, pontuacao, competenciaPontuacao, estadoPontuacao } = opts
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
 
@@ -426,18 +431,40 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     if (e.cargo.toLowerCase().includes('gestor')) continue // destaque é do time — gestores não entram
     const l = byDeptScored.get(e.dept) ?? []; l.push(e); byDeptScored.set(e.dept, l)
   }
+  /* ⚠️⚠️ O DESTAQUE PASSOU A USAR A PONTUAÇÃO DA RÉGUA (09/09/2026, decisão do
+     dono), e não o `score` de percentil. Eram DUAS réguas de desempenho no
+     mesmo painel: o score é percentil de atividade + assiduidade + formação, e
+     ninguém o validou; a pontuação é a que o dono calibrou peso por peso e é a
+     que decide aumento. O Lucas dava 94 numa e 1.319 na outra.
+
+     ⚠️ Só entra quem PONTUA na competência. Quem não está no mapa (encarregado,
+     sem crédito, setor sem régua) não vira destaque com nota zero — some da
+     lista, e o setor inteiro some quando ninguém dele pontua. É "—" por
+     ausência, não zero por acusação.
+
+     ⚠️ A comparação continua sendo DENTRO do setor. Pontos de setores
+     diferentes não se comparam (o Legal tem planilha de serviços; o Fiscal
+     não), e por isso a ordem segue alfabética — lista, não pódio. */
+  const pontosDe = (e: Employee) => pontuacao?.get(e.id)
   const deptHighlights: DeptHighlight[] = [...byDeptScored.entries()].map(([id, list]) => {
-    const top = list.slice().sort((a, b) => b.score - a.score)[0]
+    const comPontos = list.filter((e) => pontosDe(e) != null)
+    if (!comPontos.length) return null
+    const top = comPontos.slice().sort((a, b) => (pontosDe(b) ?? 0) - (pontosDe(a) ?? 0))[0]
+    const pts = pontosDe(top) as number
     return {
       deptId: id, deptNome: data.deptMeta[id] ?? id, color: deptColorById.get(id) ?? 'var(--accent)',
       id: top.id, nome: top.nome, cargo: top.cargo, initials: top.initials, hasAvatar: top.hasAvatar,
-      score: top.score, scoreColor: scoreColor(top.score),
+      /* ⚠️ A cor sai da POSIÇÃO no próprio setor, não de uma faixa fixa: pontos
+         são absolutos, e "1.319 é verde, 198 é vermelho" seria uma régua de
+         valor inventada — a mesma armadilha do gauge de score que saiu daqui. */
+      score: pts, scoreColor: 'var(--accent)',
       /* ⚠️ Contra quantos ele foi comparado. "Melhor de um" não é destaque: em
          setor de uma pessoa só o número não separa ninguém, e a tela precisa
          poder dizer isso em vez de coroar quem não teve com quem competir. */
-      comparadoCom: list.length,
+      comparadoCom: comPontos.length,
     }
-  }).sort((a, b) => a.deptNome.localeCompare(b.deptNome))
+  }).filter((x): x is DeptHighlight => x !== null)
+    .sort((a, b) => a.deptNome.localeCompare(b.deptNome))
 
   // Multi-contagem: cada pessoa entra em CADA formação que tem (MBA + Pós +
   // Extensão de Pós contam separado). Cores semânticas por nível (ESC_COLOR).
@@ -468,6 +495,8 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     turnoverWinRate: tser.rate, turnoverLabels: tser.labels,
     turnoverSaidas: tser.saidas, turnoverDias: tser.dias,
     deptHighlights, headcountTotal: perf.length,
+    /** O que o número do destaque é, para a tela poder dizer. */
+    pontuacaoInfo: { competencia: competenciaPontuacao ?? null, estado: estadoPontuacao ?? null },
     escSegments, escTopPct: Math.round(escTop.c / escTotal * 100), escTopLabel: escTop.l.replace('Superior ', 'Sup. '),
   }
 }

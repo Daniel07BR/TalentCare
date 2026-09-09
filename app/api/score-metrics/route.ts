@@ -5,6 +5,9 @@ import { rangeDaRequisicao } from '@/lib/period-range'
 import { alcanceDeQuemLe, porNexus, porPersonKey, porNome } from '@/lib/alcance'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
+import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
+import { montar } from '@/lib/servicos/calcular-mes'
+import { competenciaAtual } from '@/lib/servicos/pontuacao'
 
 // Sinais do SCORE por pessoa NO PERÍODO (atividade nos sistemas + assiduidade),
 // lidos dos espelhos diários locais. O cálculo do score (percentil por depto,
@@ -87,6 +90,50 @@ export async function GET(req: NextRequest) {
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }
   })
 
+  /* ── A PONTUAÇÃO DA RÉGUA, por pessoa, na competência do filtro ───────────
+     ⚠️⚠️ Pedido do dono (09/09/2026): o painel passa a mostrar a pontuação que
+     ELE calibrou, não o score de percentil. Eram duas réguas de desempenho no
+     mesmo painel, e só uma foi validada.
+
+     ⚠️ Gravado quando existe; calculado quando não — pela MESMA lib do
+     relatório de setor e da ficha (`montar`), nunca uma terceira conta. No mês
+     corrente é parcial; num mês fechado não gravado, prévia.
+
+     ⚠️ EM PARALELO, e isso foi medido antes de escrever: 16 setores em série
+     custam 1.349 ms e em paralelo **401 ms**. Numa home que já faz dezenas de
+     consultas, a diferença entre as duas formas é a diferença entre caber e não
+     caber. */
+  const compScore = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
+  const gravadas = await prisma.pontuacaoMes.groupBy({
+    by: ['departmentId'], where: { competencia: compScore }, _count: { _all: true },
+  })
+  const temGravado = new Set(gravadas.map((g) => g.departmentId))
+  const setores = await prisma.department.findMany({ where: { active: true }, select: { id: true } })
+
+  const pontos = new Map<string, number>()
+  const gravadasRows = await prisma.pontuacaoMes.findMany({
+    where: { competencia: compScore }, select: { personKey: true, pontos: true },
+  })
+  for (const r of gravadasRows) pontos.set(r.personKey, r.pontos)
+
+  const faltando = setores.filter((s) => !temGravado.has(s.id))
+  const calculados = await Promise.all(
+    faltando.map((s) => montar(s.id, compScore, { parcial: compScore === competenciaAtual() })),
+  )
+  let estadoPontuacao: 'gravado' | 'parcial' | 'previa' | 'misto' = temGravado.size ? 'gravado' : 'parcial'
+  for (const r of calculados) {
+    if ('erro' in r) continue
+    /* ⚠️ `semNota` respeitado: quem o cálculo decidiu não pontuar (encarregado,
+       sem crédito) não recebe número aqui também — senão o painel diria uma
+       posição que o relatório de setor nega. */
+    for (const l of r.linhas) if (!l.semNota) pontos.set(l.personKey, l.pontos)
+    estadoPontuacao = temGravado.size ? 'misto' : (r.parcial ? 'parcial' : 'previa')
+  }
+
+  const pontuacao = users
+    .map((u) => ({ id: u.id, pontos: pontos.get(u.nexusUserId ?? u.id) }))
+    .filter((x): x is { id: string; pontos: number } => x.pontos != null)
+
   /* ⚠️⚠️ A JANELA FOI MEDIDA? O ponto entra por import à mão, não por cron, e em
      03/09/2026 o dump terminava em 25/06: em "7 dias", "30 dias" e "Trimestre
      atual" (jul–set) o `groupBy` acima devolve VAZIO para todo mundo, e vazio
@@ -99,6 +146,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     period, fromDay, toDay, byPerson,
+    /** A pontuação da régua por pessoa, na competência do filtro. */
+    pontuacao, competenciaPontuacao: compScore, estadoPontuacao,
     janelaComPonto,
     motivoSemPonto: janelaComPonto ? null : motivoSemPonto(cob, true, false),
     pontoAte: cob.ultimoDia,
