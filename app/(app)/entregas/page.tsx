@@ -101,10 +101,22 @@ function Cobertura({ m }: { m: EntregasMetrics }) {
 /* ── A linha de uma pessoa ───────────────────────────────────────────────── */
 function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competencia: string; appFora: boolean }) {
   const router = useRouter()
-  /* ⚠️⚠️ A DECISÃO CENTRAL DESTA TELA. Quem tem história na fonte e parou antes
-     da janela não recebe uma fileira de zeros: recebe "—" e a data. Zero é uma
-     afirmação sobre a pessoa; "—" com data é uma afirmação sobre o dado. */
-  const mudo = p.fontePara
+  /* ⚠️⚠️ A DECISÃO CENTRAL DESTA TELA — e a primeira versão dela juntava DUAS
+     perguntas numa variável só, o que produziu o defeito inverso do que queria
+     evitar.
+
+     São duas perguntas independentes:
+       (a) "esta pessoa tem número NESTA janela?"   → `diasComRegistro`
+       (b) "a fonte parou de falar dela?"           → `fontePara`
+
+     A célula responde (a). O silêncio se anota na LINHA, respondendo (b).
+     Enquanto `mudo` era `p.fontePara`, o filtro "Ano corrente" — o único em que
+     as duas divergem, e justamente o que a chefia abre para comparar os dois —
+     apagava os **153 serviços que o Gilberto de fato fez em 2026**, deixando
+     `— — — —` numa linha cujo próprio subtítulo dizia "14 dias com registro",
+     enquanto o KPI somava 1.337 e a lista mostrava 1.184. Três afirmações
+     contraditórias na mesma tela. Achado do crítico, rodada 2. */
+  const mudo = p.naFonte && p.diasComRegistro === 0
   const semFonte = !p.naFonte
 
   /* ⚠️⚠️ Km e Saídas só existem desde que o app mede. Numa janela anterior a
@@ -140,6 +152,11 @@ function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competenc
             {p.cargo}
             {p.jornadaMin > 0 ? <> · {horas(p.jornadaMin)} h de jornada</> : null}
             {p.diasComRegistro > 0 ? <> · {p.diasComRegistro} {p.diasComRegistro === 1 ? 'dia' : 'dias'} com registro</> : null}
+            {/* ⚠️ O silêncio vai na LINHA, ao lado do número — não no lugar
+                dele. O número é o que ela fez; a marca é até quando. */}
+            {p.fontePara && p.ultimoDia
+              ? <span style={{ color: 'var(--warn)' }}> · nada desde {dataLonga(p.ultimoDia)}</span>
+              : null}
           </div>
         </div>
       </div>
@@ -190,8 +207,14 @@ function FonteParada({ pessoas, fonteAte }: { pessoas: PessoaEntregas[]; fonteAt
     }}>
       <AlertTriangle size={18} style={{ color: 'var(--warn)', flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
       <div style={{ minWidth: 0 }}>
+        {/* ⚠️ O título fala do que é verdade em TODA janela — "a fonte parou de
+            falar dela" —, e não "não tem registro nesta janela", que era falso
+            justamente em "Ano corrente", onde ele tem 14 dias dentro do
+            recorte. Cartão de alerta que erra o fato ensina a ignorar o cartão. */}
         <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 6 }}>
-          {parados.length === 1 ? 'Uma pessoa deste setor não tem registro nesta janela' : `${parados.length} pessoas deste setor não têm registro nesta janela`}
+          {parados.length === 1
+            ? 'A fonte parou de registrar uma pessoa deste setor'
+            : `A fonte parou de registrar ${parados.length} pessoas deste setor`}
         </div>
         {parados.map((p) => (
           <div key={p.id} style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 4 }}>
@@ -199,6 +222,15 @@ function FonteParada({ pessoas, fonteAte }: { pessoas: PessoaEntregas[]; fonteAt
             <strong>{dataLonga(p.ultimoDia!)}</strong>
             {p.diasParado != null ? <> ({num(p.diasParado)} dias atrás)</> : null}, com{' '}
             <strong className="cnum">{num(p.servicosNaVida)}</strong> serviços concluídos ao longo da história.
+            {/* ⚠️ Quando a janela pedida ALCANÇA parte da história dela, o que
+                ela fez ali é real e continua na lista — o que falta é o resto
+                da janela. Dizer os dois separa "produziu pouco" de "parou". */}
+            {p.diasComRegistro > 0
+              ? <> Nesta janela ele aparece em <strong className="cnum">{num(p.diasComRegistro)}</strong>{' '}
+                  {p.diasComRegistro === 1 ? 'dia' : 'dias'} — com{' '}
+                  <strong className="cnum">{num(p.servicos)}</strong> serviços, todos até aquela data;
+                  o resto do período está em branco.</>
+              : <> Nesta janela não há uma linha sequer dele.</>}
           </div>
         ))}
         {/* ⚠️⚠️ O parágrafo que impede a leitura errada. Sem ele, "sem registro"
@@ -219,13 +251,20 @@ function FonteParada({ pessoas, fonteAte }: { pessoas: PessoaEntregas[]; fonteAt
 function Escritorio({ m }: { m: EntregasMetrics }) {
   const t = m.totais
   const protocolo = t.protAbertos + t.protAprovados + t.reagendados + t.cancelados + t.datasAlteradas
+  /* ⚠️⚠️ ESTE BLOCO TEM BORDA COMO OS OUTROS, e a primeira versão não tinha.
+     Autoria de registro no sistema começa em 2026 — antes disso é o import do
+     Access, sem autor. Em junho/2026 a tela declarava no alto "km e jornada só
+     a partir de 17/07" e três blocos abaixo imprimia `0` em negrito para um
+     campo que nasceu no mesmo dia. Era o `null → 0` sobrevivendo num cartão que
+     a revisão não tinha visitado. Achado do crítico, rodada 2. */
+  const fora = m.cobertura.registrosFora
   const linhas = [
-    { label: 'Serviços criados', v: t.servCriados, forte: true },
-    { label: 'Protocolos abertos', v: t.protAbertos },
-    { label: 'Protocolos aprovados', v: t.protAprovados },
-    { label: 'Reagendados', v: t.reagendados },
-    { label: 'Cancelados', v: t.cancelados },
-    { label: 'Datas alteradas', v: t.datasAlteradas },
+    { label: 'Serviços criados', v: fora ? null : t.servCriados, forte: true },
+    { label: 'Protocolos abertos', v: fora ? null : t.protAbertos },
+    { label: 'Protocolos aprovados', v: fora ? null : t.protAprovados },
+    { label: 'Reagendados', v: fora ? null : t.reagendados },
+    { label: 'Cancelados', v: fora ? null : t.cancelados },
+    { label: 'Datas alteradas', v: fora ? null : t.datasAlteradas },
   ]
   return (
     <div className="tc-card" style={card}>
@@ -238,11 +277,11 @@ function Escritorio({ m }: { m: EntregasMetrics }) {
         {linhas.map((l) => (
           <div key={l.label} style={{
             background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '10px 12px',
-            border: l.forte && l.v > 0 ? '1px solid var(--border)' : '1px solid transparent',
+            border: l.forte && (l.v ?? 0) > 0 ? '1px solid var(--border)' : '1px solid transparent',
           }}>
             <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{l.label}</div>
-            <div className="cnum" style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: l.v === 0 ? 'var(--text-mute)' : 'var(--text)' }}>
-              {num(l.v)}
+            <div className="cnum" style={{ fontSize: 18, fontWeight: 700, marginTop: 2, color: l.v === null || l.v === 0 ? 'var(--text-mute)' : 'var(--text)' }}>
+              {l.v === null ? '—' : num(l.v)}
             </div>
           </div>
         ))}
@@ -255,10 +294,15 @@ function Escritorio({ m }: { m: EntregasMetrics }) {
           a primeira versão desta tela chamava, contaria trabalho de rua como trabalho
           de mesa. */}
       <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 12, lineHeight: 1.6 }}>
+        {fora ? (
+          <>Neste período o sistema ainda não guardava <strong>quem</strong> criou o registro —
+          antes de {m.cobertura.registrosDesde ? dataLonga(m.cobertura.registrosDesde) : 'a virada'} o
+          acervo vem do import do Access, sem autor. Por isso &ldquo;—&rdquo; e não zero.{' '}</>
+        ) : null}
         <strong>Serviço criado pelo mensageiro vem do app, na rua</strong> — a origem guarda os dois
         caminhos (escritório e app) no mesmo campo, e para quem entrega é sempre o app. É trabalho
         de execução, não demanda de mesa.
-        {protocolo === 0 ? (
+        {!fora && protocolo === 0 ? (
           <> Protocolo, esse sim, ninguém daqui abriu no período: quem entrega não costuma demandar,
           e o bloco fica na tela para que a ausência seja <strong>vista</strong> — no dia em que
           aparecer um número, ele aparece sozinho.</>
@@ -426,15 +470,21 @@ export default function EntregasPage() {
             "quantas horas o Elton fez" tem duas respostas, 176 e 117, e a que o
             olho pega tinha de ser a medida. O total continua escrito, porque é
             ele que bate com o Relatório Geral da Gerência. */}
+        {/* ⚠️⚠️ O RÓTULO SEGUE O QUE O NÚMERO É. Enquanto a coluna do teto não
+            existir no banco, `jornadaMedida` é `null` e o cartão só pode
+            mostrar o TOTAL — então ele volta a se chamar "Jornada", neutro.
+            Chamar de "Jornada medida" um número que embute 25% de teto é pior
+            do que o rótulo neutro de antes: o rótulo afirma o que o número não
+            é. Achado do crítico, rodada 2. */}
         <Kpi
-          label="Jornada medida"
+          label={jornadaMedida != null ? 'Jornada medida' : 'Jornada'}
           valor={appFora ? null : jornadaMedida != null ? horas(jornadaMedida) : horas(t.jornadaMin)}
           unidade="h"
           nota={
             appFora
               ? notaForaApp
               : teto == null
-                ? `total de ${horas(t.jornadaMin)} h — quanto disto é teto de 16 h ainda não é medido (coluna do espelho não criada)`
+                ? '⚠ total bruto: inclui os dias em que ninguém encerrou a saída e a conta parou no teto de 16 h — a coluna que separa os dois ainda não existe no espelho'
                 : teto > 0
                   ? `⚠ + ${horas(teto)} h de teto de 16 h (${pctTeto}% do total), em dias que ninguém encerrou · o Relatório Geral soma as duas: ${horas(t.jornadaMin)} h`
                   : 'todas entre um início e um fim registrados'

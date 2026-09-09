@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   const compDoFiltro = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
   const mesCorrente = compDoFiltro === competenciaAtual()
 
-  const [noPeriodo, historico, serie, notas, primeiroKm, primeiraSaida, primeiroServico, ultimoDiaDaFonte] =
+  const [noPeriodo, historico, serie, notas, primeiroKm, primeiraSaida, primeiroServico, primeiroRegistro, ultimoDiaDaFonte] =
     await Promise.all([
       /* ── O que a pessoa fez NO INTERVALO ─────────────────────────────── */
       prisma.gerenciaDaily.groupBy({
@@ -161,6 +161,14 @@ export async function GET(req: NextRequest) {
       /* ⚠️ O "2001" do texto era CRAVADO no JSX, com a condição olhando outro
          valor. A rota mede — o texto só repete o que ela disser. */
       prisma.gerenciaDaily.aggregate({ where: { servicos: { gt: 0 } }, _min: { day: true } }),
+      /* ⚠️ A borda dos REGISTROS de escritório é outra: `protocols.created_by`
+         só passa a existir em 02/03/2026 (antes disso é import do Access, sem
+         autor). Sem ela o bloco "Registros no sistema" repetiria, para 2025, o
+         mesmo zero que os outros cartões acabaram de deixar de afirmar. */
+      prisma.gerenciaDaily.aggregate({
+        where: { OR: [{ protAbertos: { gt: 0 } }, { protAprovados: { gt: 0 } }, { servCriados: { gt: 0 } }] },
+        _min: { day: true },
+      }),
       /* ⚠️ Até quando a FONTE INTEIRA tem dado — não só esta equipe. É o que
          separa "esta pessoa parou" de "o sync parou": se o último dia da casa
          também for fevereiro, o problema é o cron, não o Gilberto. */
@@ -217,24 +225,37 @@ export async function GET(req: NextRequest) {
       `${notas.length} de ${ativosNaEquipe} pessoas têm valor gravado em ${compDoFiltro} — `
       + 'enquanto houver valor gravado, a prévia ao vivo das demais fica desligada'
   }
-  if (notas.length === 0) {
+  /* ⚠️⚠️ `montar` roda MESMO quando já há nota gravada — só que aí aproveita-se
+     apenas o `semNota`, nunca os pontos (a prévia continua desligada, e é o que
+     o aviso acima diz). É a diferença entre "sem nota em ago/2026", que se lê
+     como *não calculamos*, e "sem nota: nenhuma fonte de crédito no mês", que é
+     o que a régua de fato respondeu sobre o Gilberto. O cálculo já foi feito;
+     ele não ficou de fora por acidente, e a tela tem de saber dizer isso.
+     Achado do crítico, rodada 2. */
+  {
     const r = await montar(ENTREGAS_DEPT_ID, compDoFiltro, { parcial: mesCorrente })
     if ('erro' in r) {
       /* ⚠️ A recusa da lib é escrita para quem PODE criar a régua (o gestor do
          setor); quem lê isto pode ser a Diretoria, para quem "crie a régua" não
          é uma instrução executável. */
-      motivoDaCompetencia = (r.erro ?? '').includes('régua')
-        ? 'este setor ainda não tem régua de pontuação vigente nesta competência'
-        : r.erro ?? null
+      if (notas.length === 0) {
+        motivoDaCompetencia = (r.erro ?? '').includes('régua')
+          ? 'este setor ainda não tem régua de pontuação vigente nesta competência'
+          : r.erro ?? null
+      }
     } else {
-      pontuacaoParcial = r.parcial
-      pontuacaoPrevia = !r.parcial
-      for (const l of r.linhas) {
-        if (l.semNota) { semNotaDe.set(l.personKey, l.semNota); continue }
-        notaDe.set(l.personKey, {
-          personKey: l.personKey, competencia: compDoFiltro,
-          pontos: l.pontos, origem: 'previa', detalhe: l.detalhe,
-        })
+      for (const l of r.linhas) if (l.semNota) semNotaDe.set(l.personKey, l.semNota)
+      // Os PONTOS da prévia só entram quando não há nada gravado na competência.
+      if (notas.length === 0) {
+        pontuacaoParcial = r.parcial
+        pontuacaoPrevia = !r.parcial
+        for (const l of r.linhas) {
+          if (l.semNota) continue
+          notaDe.set(l.personKey, {
+            personKey: l.personKey, competencia: compDoFiltro,
+            pontos: l.pontos, origem: 'previa', detalhe: l.detalhe,
+          })
+        }
       }
     }
   }
@@ -369,6 +390,10 @@ export async function GET(req: NextRequest) {
       saidasDesde: primeiraSaida._min.day ?? null,
       /** Primeiro dia com serviço — o outro extremo da janela desigual. */
       servicosDesde: primeiroServico._min.day ?? null,
+      /** Primeiro dia com protocolo/serviço criado por gente — a borda do bloco
+       *  "Registros no sistema". */
+      registrosDesde: primeiroRegistro._min.day ?? null,
+      registrosFora: !!primeiroRegistro._min.day && toDay < primeiroRegistro._min.day,
       /* ⚠️⚠️ A JANELA PEDIDA CRUZA A BORDA DO QUE O APP MEDE?
          Sem isto a tela afirmava, sobre junho/2026, "Jornada 0 h — toda medida
          entre um início e um fim registrados" para um homem que rodou 12 dias e

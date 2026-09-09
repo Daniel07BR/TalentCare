@@ -62,6 +62,8 @@ export type EntregasMetrics = {
     kmDesde: string | null
     saidasDesde: string | null
     servicosDesde: string | null
+    registrosDesde: string | null
+    registrosFora: boolean
     /** A janela inteira é anterior ao dia em que o app passou a medir. */
     appFora: boolean
     /** Quantos dias da janela o app cobre. */

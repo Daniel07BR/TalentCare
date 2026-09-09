@@ -143,6 +143,48 @@ o número grande da Jornada passou a ser o **medido**, com o teto ao lado; os li
 (27.488 / 8 / 2) ficaram **datados**, porque literal sem data envelhece calado; e o
 teto de 400 dias do gráfico parou de cortar em silêncio.
 
+### A rodada 2 do crítico: o conserto do "Ano corrente" tinha invertido o defeito
+
+⚠️⚠️ **A régua nova acertou o detector e errou o alvo.** A bandeira passou a olhar a
+fonte (certo), mas a tela aplicou a bandeira ao **valor**: `mudo = p.fontePara` pintava
+`— — — —` nas quatro células do Gilberto em "Ano corrente" — apagando os **153
+serviços que ele de fato fez em 2026**. A linha se contradizia sozinha ("14 dias com
+registro" seguido de quatro traços), o KPI somava **1.337** e a lista mostrava
+**1.184**, e a diferença não aparecia em lugar nenhum.
+
+São **duas perguntas**, e cada uma tem o seu lugar:
+
+| pergunta | responde | onde aparece |
+|---|---|---|
+| "tem número nesta janela?" | `diasComRegistro` | a **célula** |
+| "a fonte parou de falar dela?" | `fontePara` | a **linha**, ao lado do número |
+
+O cartão de aviso também mentia no título — dizia *"não tem registro nesta janela"*
+sobre alguém com 14 dias dentro dela. Agora diz *"a fonte parou de registrar"*, que é
+verdade em toda janela, e detalha quantos dias dela ele alcança.
+
+**Mais três, todos medidos:**
+
+- ⚠️ **"Jornada medida" mostrava o total.** Sem a coluna do teto, `jornadaMedida` é
+  `null` e o cartão caía no total — com o rótulo afirmando o que o número não era
+  (25% dele é teto). O rótulo voltou a ser **"Jornada"**, neutro, enquanto a coluna
+  não existir. Rótulo que afirma é pior que rótulo que se cala.
+- ⚠️ **O bloco "Registros no sistema" não tinha borda.** Autoria de registro só existe
+  em 2026 — antes é import do Access, sem autor. Em junho a tela declarava a borda do
+  app no alto e imprimia `0` em negrito três blocos abaixo. Era o `null → 0`
+  sobrevivendo num cartão que a revisão não tinha visitado.
+- ⚠️ **O "—" do Gilberto na pontuação dizia menos do que o sistema sabia.** Como havia
+  nota gravada do Elton, `montar` não era chamada e a célula dizia "sem nota em
+  ago/2026" — que se lê como *não calculamos*. A régua já tinha respondido: **"nenhuma
+  fonte de crédito no mês"**. Agora `montar` roda sempre, mas só o `semNota` é
+  aproveitado quando há valor gravado; a prévia continua desligada.
+
+O crítico confirmou contra o banco o que ficou bom: a borda `appFora`/`appParcial` nos
+três cartões e nas células, a média por saída (6,3 em 30 dias, e nada em Ano), a
+competência única com o relatório de setor, a régua de acesso sem a terceira cláusula,
+os literais datados — e que **as 61 notas de agosto dos 10 setores com `gerencia_daily`
+batem exatamente**, com só a do Elton precisando da regravação.
+
 ### ⚠️⚠️ E a nota de agosto do Elton estava calculada sobre o espelho errado
 
 Consequência do conserto do km: com o espelho reconciliado, os serviços dele em agosto
