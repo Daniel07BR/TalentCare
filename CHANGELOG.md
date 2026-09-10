@@ -43,7 +43,28 @@ apareceria diferente da que a tela produz para a mesma formação, e o donut
 passaria a ter duas gramáticas. Ele também **não sobrescreve quem já tem** nível
 registrado.
 
-### ⚠️⚠️ O botão "Vincular" da tela está armado para gravar na PESSOA ERRADA
+### ✅ As duas pendências foram fechadas (decisão do dono, no mesmo dia)
+
+- **FABIANA RODRIGUES SOARES · Ensino Fundamental** foi para a **Fabiana
+  Rodrigues Soares certa** (Limpeza, inativa), e não para a Fabiana Higa que a
+  tela sugeria. ⚠️ Conferido depois: a **Fabiana Higa ficou intacta**, com o
+  Superior em Ciências da Computação dela — a rota só apaga o vínculo anterior
+  quando a linha estava presa a outra pessoa, e esta estava solta.
+- **Bruna Costa**: **Superior (cursando), curso EM ABERTO**. O nível é o que o
+  RH sabe; o curso, que veio com interrogação, fica em branco em vez de virar
+  texto na ficha. `curso: ''` faz o `detail` sair nulo — a tela mostra o nível e
+  nenhuma frase inventada.
+
+⚠️ As duas foram aplicadas **pelas ROTAS REAIS** (`education-link` e
+`education-set`), com sessão forjada pelo `AUTH_SECRET`, e não por `INSERT`. O
+`education-link` faz coisas que uma escrita à mão não faria — apagar o vínculo
+anterior e virar o `status` do staging para `applied`, que é o que tira a linha
+de "A revisar". Reescrever isso seria uma segunda régua para a mesma operação.
+
+**A tela zerou:** 0 em "A revisar" e **0 de 86 pessoas ativas sem formação
+registrada**.
+
+### ⚠️⚠️ O botão "Vincular" da tela estava armado para gravar na PESSOA ERRADA
 
 Achado ao conferir o print. A linha "A revisar" mostra **FABIANA RODRIGUES
 SOARES · Ensino Fundamental** e sugere vincular a **Fabiana Higa · Imóveis**.
@@ -58,7 +79,7 @@ da Fabiana Higa**, que hoje tem **Superior (cursando)** — rebaixando a formaç
 uma pessoa por um dado que é de outra. A pessoa certa **está no dropdown** (a
 lista de opções não filtra inativos), então dá para corrigir na hora.
 
-Nada foi feito aqui: é decisão do dono, com a tela na frente.
+(Resolvido no mesmo dia — ver acima.)
 
 ### A conta que fecha
 
