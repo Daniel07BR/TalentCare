@@ -6,6 +6,7 @@ import type { PeriodAssid } from '@/lib/mock/assiduidade'
 type Row = {
   personKey: string; atrasos: number; abonados: number; minutos: number; advertencias: number
   lgpdSuspensoes?: number; lgpdAdvertencias?: number
+  suspensoesAtraso?: number
 }
 
 export type AssidPeriodo = {
@@ -27,6 +28,8 @@ export type AssidPeriodo = {
    *  produzi-la. Mesma regra do `map: null` logo abaixo. */
   lgpdSuspensoes: number | null
   lgpdAdvertencias: number | null
+  /** Suspensões por ATRASO no período (planilha do DP) — mesma regra do `null`. */
+  suspensoesAtraso: number | null
   loading: boolean
   /**
    * A busca FALHOU.
@@ -47,7 +50,7 @@ export type AssidPeriodo = {
 // atraso para todo mundo" — a resposta mais tranquilizadora e a única errada.
 const VAZIO: Omit<AssidPeriodo, 'loading'> = {
   map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoDesde: null, pontoAte: null,
-  lgpdSuspensoes: null, lgpdAdvertencias: null, erro: false,
+  lgpdSuspensoes: null, lgpdAdvertencias: null, suspensoesAtraso: null, erro: false,
 }
 
 export function useAssiduidadePeriod(): AssidPeriodo {
@@ -64,13 +67,14 @@ export function useAssiduidadePeriod(): AssidPeriodo {
         byPerson: Row[]; porDia?: { day: string; atrasos: number }[]
         janelaComPonto?: boolean; motivoSemPonto?: string | null
         pontoDesde?: string | null; pontoAte?: string | null
-        lgpdSuspensoes?: number; lgpdAdvertencias?: number
+        lgpdSuspensoes?: number; lgpdAdvertencias?: number; suspensoesAtraso?: number
       }) => {
         if (!alive) return
         const m: PeriodAssid = new Map()
         for (const u of d.byPerson) m.set(u.personKey, {
           atrasos: u.atrasos, abonados: u.abonados, minutos: u.minutos, advertencias: u.advertencias,
           lgpdSuspensoes: u.lgpdSuspensoes ?? 0, lgpdAdvertencias: u.lgpdAdvertencias ?? 0,
+          suspensoesAtraso: u.suspensoesAtraso ?? 0,
         })
         /* ⚠️ `?? false`, nunca `?? true`: rota velha, resposta em cache ou deploy
            pela metade têm de cair no "—", não no "está tudo em ordem". */
@@ -83,6 +87,7 @@ export function useAssiduidadePeriod(): AssidPeriodo {
           pontoAte: d.pontoAte ?? null,
           lgpdSuspensoes: d.lgpdSuspensoes ?? null,
           lgpdAdvertencias: d.lgpdAdvertencias ?? null,
+          suspensoesAtraso: d.suspensoesAtraso ?? null,
           erro: false,
         })
       })

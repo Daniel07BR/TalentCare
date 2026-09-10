@@ -27,6 +27,18 @@ const cookie = { cookie: `authjs.session-token=${token}` }
 
 console.log(`sessão: ${quem.name} (${quem.role}) · janela: agosto/2026\n`)
 
+/* ⚠️ O DASHBOARD tem rota PRÓPRIA (`assiduidade-metrics`) e foi o consumidor que
+   escapou da primeira varredura: o cartão dizia "Suspensões 0" em agosto/2026,
+   mês com duas suspensões reais no Fiscal. Ele vem primeiro no ensaio por isso. */
+const g = await (await fetch(`${BASE}/api/assiduidade-metrics?${JANELA}`, { headers: cookie })).json()
+console.log('── DASHBOARD (casa inteira)')
+console.log(`   cartão Suspensões: ${(g.lgpdSuspensoes ?? 0) + (g.suspensoesAtraso ?? 0)}`
+  + `  (por atraso: ${g.suspensoesAtraso ?? '—'} · LGPD: ${g.lgpdSuspensoes ?? '—'} · advert. LGPD: ${g.lgpdAdvertencias ?? '—'})`)
+for (const p of (g.byPerson ?? []).filter((p) => (p.suspensoesAtraso ?? 0) > 0)) {
+  console.log(`   · ${p.personKey}  ${p.suspensoesAtraso} por atraso`)
+}
+console.log()
+
 const d = await (await fetch(`${BASE}/api/dept-metrics?id=${FISCAL}&${JANELA}`, { headers: cookie })).json()
 const a = d.assiduidade ?? {}
 console.log('── RELATÓRIO DO SETOR (Fiscal)')

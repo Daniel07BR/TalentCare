@@ -75,6 +75,31 @@ A nota gravada é um retrato do dia em que se rodou, e as fontes por baixo dela
 continuam se mexendo. **Nenhuma das duas avisa ninguém.** Contábil, Fiscal e
 Pessoal foram regravados; a conferência voltou a 61 iguais, 0 divergentes.
 
+### ⚠️⚠️ E um consumidor ESCAPOU da primeira varredura — o dashboard
+
+O dono viu no navegador: **"Suspensões 0"** no painel da casa, em agosto/2026,
+mês com duas suspensões reais no Fiscal. O relatório do setor já mostrava 2.
+
+A causa é a que a casa já conhece: o **dashboard tem rota própria**
+(`/api/assiduidade-metrics`), separada da do relatório de setor. Percorri os
+consumidores pelo `grep` de `disciplinaEvento` e consertei os que apareceram —
+mas conferi cada um lendo o código, e não percorri a lista até o fim contra uma
+pergunta única. O cartão mais grave do painel mais visto ficou mentindo por
+omissão por meia hora.
+
+A varredura passou a ser mecânica, e é o que fecha esta entrega:
+
+```
+para cada arquivo que menciona lgpdSuspensoes ou lgpd_suspensao,
+  ele também menciona a suspensão por atraso?
+```
+
+Ela achou ainda um segundo esquecido: **`Pessoas.tsx`**, a lista nome a nome do
+setor — e o comentário que já estava lá descrevia o defeito com todas as letras:
+*"a linha de quem levou suspensão saía como '—' logo abaixo de um cabeçalho
+acendendo Suspensões 1"*. Ganhou selo próprio, em `var(--warn)` para não se
+confundir com o de LGPD.
+
 ### Os consumidores, percorridos
 
 Um tipo novo em `disciplina_evento` não aparece sozinho:

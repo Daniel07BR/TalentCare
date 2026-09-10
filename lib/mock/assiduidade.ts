@@ -13,6 +13,8 @@ export type PeriodAssid = Map<string, {
   /** Medidas do Controle da LGPD na janela — falta GRAVE, natureza diferente da
    *  advertência acima (que é derivada do 2º atraso do mês). */
   lgpdSuspensoes?: number
+  /** Suspensões por ATRASO (planilha do DP). */
+  suspensoesAtraso?: number
   lgpdAdvertencias?: number
 }>
 

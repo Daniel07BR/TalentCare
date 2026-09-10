@@ -278,6 +278,17 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                     suspensão por vazamento saía como "—" logo abaixo de um
                     cabeçalho acendendo "Suspensões 1". O gestor percorre esta
                     lista nome a nome — é aqui que ela não pode faltar. */}
+                {/* ⚠️ A suspensão por ATRASO ganhou selo próprio em 10/09/2026,
+                    pelo mesmo motivo do comentário acima: o cabeçalho passou a
+                    acender "Suspensões 2" no Fiscal e a linha de quem levou não
+                    diria nada. Selo distinto do de LGPD porque são naturezas
+                    diferentes — e o `title` diz qual é. */}
+                {(p.suspensoesAtraso ?? 0) > 0 && (
+                  <span title={`${p.suspensoesAtraso} suspensão(ões) por atraso — 6º atraso do mês, ou 4º acima de 10 min`}
+                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--warn)', borderRadius: 20, padding: '2px 8px' }}>
+                    {p.suspensoesAtraso} susp. atraso
+                  </span>
+                )}
                 {(p.lgpdSuspensoes ?? 0) > 0 && (
                   <span title={`${p.lgpdSuspensoes} suspensão(ões) por vazamento de dados (LGPD)`}
                     style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--danger)', borderRadius: 20, padding: '2px 8px' }}>
@@ -302,7 +313,7 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                 )}
                 {/* ⚠️ O "—" só quando NÃO há ocorrência de espécie nenhuma —
                     a falta grave entra na conta, senão ela reaparece aqui. */}
-                {p.advertencias === 0 && p.atrasos === 0
+                {p.advertencias === 0 && p.atrasos === 0 && !(p.suspensoesAtraso ?? 0)
                   && !(p.lgpdSuspensoes ?? 0) && !(p.lgpdAdvertencias ?? 0) && (
                   <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>—</span>
                 )}

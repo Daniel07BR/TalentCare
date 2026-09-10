@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
     prisma.disciplinaEvento.groupBy({
       by: ['personKey', 'tipo'],
       where: {
-        tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] },
+        /* ⚠️ `suspensao` (por ATRASO) entrou em 10/09/2026 com o histórico real
+           do DP. Sem ela o cartão do painel mostrava **0** num mês com duas
+           suspensões de verdade (Fiscal, ago/2026) — o número mais grave da
+           fileira mentindo por omissão. Vai SEPARADA no payload: quem soma é a
+           tela, dizendo a composição. */
+        tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao', 'suspensao'] },
         data: { gte: fromDay, lte: toDay },
         ...porPersonKey(alcance),
       },
@@ -59,20 +64,24 @@ export async function GET(req: NextRequest) {
      fechada, e aqui o gestor passa a ver a falta grave de quem ele responde. */
   const lgpdSuspPorKey = new Map<string, number>()
   const lgpdAdvPorKey = new Map<string, number>()
+  const suspAtrasoPorKey = new Map<string, number>()
   for (const r of lgpdRows) {
-    const alvo = r.tipo === 'lgpd_suspensao' ? lgpdSuspPorKey : lgpdAdvPorKey
+    const alvo = r.tipo === 'lgpd_suspensao' ? lgpdSuspPorKey
+      : r.tipo === 'suspensao' ? suspAtrasoPorKey
+      : lgpdAdvPorKey
     alvo.set(r.personKey, (alvo.get(r.personKey) ?? 0) + r._count._all)
   }
   const soma = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0)
   const lgpdSuspensoes = soma(lgpdSuspPorKey)
   const lgpdAdvertencias = soma(lgpdAdvPorKey)
+  const suspensoesAtraso = soma(suspAtrasoPorKey)
   const advByKey = new Map(advRows.map((r) => [r.personKey, r._count._all]))
   /* ⚠️ As chaves da LGPD entram no conjunto: quem levou suspensão e NÃO tem
      linha de ponto nem advertência derivada não apareceria na lista — e é
      justamente a pessoa que o painel precisa mostrar. */
   const keys = new Set<string>([
     ...pontoRows.map((r) => r.personKey), ...advByKey.keys(),
-    ...lgpdSuspPorKey.keys(), ...lgpdAdvPorKey.keys(),
+    ...lgpdSuspPorKey.keys(), ...lgpdAdvPorKey.keys(), ...suspAtrasoPorKey.keys(),
   ])
   const byPerson = [...keys].map((personKey) => {
     const p = pontoRows.find((r) => r.personKey === personKey)
@@ -84,6 +93,7 @@ export async function GET(req: NextRequest) {
       advertencias: advByKey.get(personKey) ?? 0,
       lgpdSuspensoes: lgpdSuspPorKey.get(personKey) ?? 0,
       lgpdAdvertencias: lgpdAdvPorKey.get(personKey) ?? 0,
+      suspensoesAtraso: suspAtrasoPorKey.get(personKey) ?? 0,
     }
   })
 
@@ -123,5 +133,6 @@ export async function GET(req: NextRequest) {
        a ficha, que confere `podeVer`. */
     lgpdSuspensoes,
     lgpdAdvertencias,
+    suspensoesAtraso,
   })
 }

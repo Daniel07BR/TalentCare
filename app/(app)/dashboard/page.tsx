@@ -45,6 +45,7 @@ export default function DashboardPage() {
     pontoDesde: assid.pontoDesde,
     pontoAte: assid.pontoAte,
     lgpdSuspensoes: assid.lgpdSuspensoes,
+    suspensoesAtraso: assid.suspensoesAtraso,
     lgpdAdvertencias: assid.lgpdAdvertencias,
     pontuacao: signals?.pontuacao,
     competenciaPontuacao: signals?.competenciaPontuacao,

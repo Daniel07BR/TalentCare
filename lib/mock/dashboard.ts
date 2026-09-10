@@ -154,6 +154,8 @@ export type OpcoesDashboard = {
   estadoPontuacao?: 'gravado' | 'parcial' | 'previa' | 'misto'
   /** Medidas do Controle da LGPD no período. `null` = não foi possível ler. */
   lgpdSuspensoes?: number | null
+  /** Suspensões por ATRASO no período (planilha do DP) — natureza distinta. */
+  suspensoesAtraso?: number | null
   lgpdAdvertencias?: number | null
   /** Extremos do calendário, quando `period === 'custom'`. */
   from?: string | null
@@ -169,7 +171,7 @@ export type OpcoesDashboard = {
 }
 
 export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDashboard = {}) {
-  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null, lgpdSuspensoes = null, lgpdAdvertencias = null, pontuacao, competenciaPontuacao, estadoPontuacao } = opts
+  const { assidMap, from, to, janelaComPonto = false, motivoSemPonto = null, atrasosPorDia = [], pontoDesde = null, pontoAte = null, lgpdSuspensoes = null, lgpdAdvertencias = null, suspensoesAtraso = null, pontuacao, competenciaPontuacao, estadoPontuacao } = opts
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const isDir = (deptId: string) => norm(data.deptMeta[deptId] || '').includes('diretoria')
 
@@ -311,13 +313,15 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     ? perf
         .map((e) => {
           const a = assidMap.get(pk(e))
+          const sa = a?.suspensoesAtraso ?? 0
           const s = a?.lgpdSuspensoes ?? 0
           const adv = a?.lgpdAdvertencias ?? 0
           const partes = [
-            s ? `${s} suspensão${s === 1 ? '' : 'es'}` : '',
-            adv ? `${adv} advertência${adv === 1 ? '' : 's'}` : '',
+            sa ? `${sa} suspensão${sa === 1 ? '' : 'es'} por atraso` : '',
+            s ? `${s} suspensão${s === 1 ? '' : 'es'} de LGPD` : '',
+            adv ? `${adv} advertência${adv === 1 ? '' : 's'} de LGPD` : '',
           ].filter(Boolean)
-          return { ...pessoaBase(e), valor: s + adv, detalhe: partes.join(' · ') }
+          return { ...pessoaBase(e), valor: sa + s + adv, detalhe: partes.join(' · ') }
         })
         .filter((p) => p.valor > 0)
         .sort((a, b) => b.valor - a.valor)
@@ -388,10 +392,25 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
 
          ⚠️ Sem sparkline: são poucos eventos e esparsos — 5 em 2026 na casa
          toda. Uma curva sobre isso desenha ruído com cara de tendência. */
-      label: 'Suspensões', value: lgpdSuspensoes ?? '—', unit: '', color: 'var(--danger)', delta: '', up: null,
-      nota: lgpdSuspensoes == null
+      /* ⚠️⚠️ DUAS NATUREZAS NO MESMO NÚMERO desde 10/09/2026, quando o histórico
+         real de suspensões do DP entrou: a suspensão por ATRASO (6º atraso do
+         mês, ou 4º acima de 10 min, assinada pelo encarregado) e a de LGPD (por
+         vazamento de dado pessoal). O cartão contava só a segunda e mostrava
+         **0** para agosto/2026, mês em que duas pessoas do Fiscal foram
+         suspensas de verdade — o número mais grave da fileira mentindo por
+         omissão, que é pior do que não estar lá.
+         ⚠️ A nota diz a COMPOSIÇÃO: somar sem dizer faria "2 suspensões" que
+         ninguém sabe de quê, e as duas levam a conversas diferentes. */
+      label: 'Suspensões',
+      value: lgpdSuspensoes == null && suspensoesAtraso == null ? '—' : (lgpdSuspensoes ?? 0) + (suspensoesAtraso ?? 0),
+      unit: '', color: 'var(--danger)', delta: '', up: null,
+      nota: lgpdSuspensoes == null && suspensoesAtraso == null
         ? 'não foi possível ler'
-        : `por vazamento de dados (LGPD), no período${lgpdAdvertencias ? ` · e ${lgpdAdvertencias} advertência${lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : ''}`,
+        : [
+            suspensoesAtraso ? `${suspensoesAtraso} por atraso (6º do mês)` : '',
+            lgpdSuspensoes ? `${lgpdSuspensoes} por vazamento (LGPD)` : '',
+            lgpdAdvertencias ? `e ${lgpdAdvertencias} advertência${lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : '',
+          ].filter(Boolean).join(' · ') || 'nenhuma no período',
       vals: [],
       /* ⚠️⚠️ ABRE POR DECISÃO EXPLÍCITA DO DONO (09/09/2026), não por descuido.
          No Nexus a área de LGPD é fechada (T.I e Diretoria) e aqui o cartão é
@@ -400,9 +419,9 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
          pelo time". Vale o mesmo `alcance` do resto: o gestor vê o time dele, a
          Diretoria vê a casa. Se um dia a régua do Nexus mudar, este é o lugar a
          revisar junto. */
-      pessoas: lgpdSuspensoes == null ? null : (lgpdPessoas?.length ? lgpdPessoas : null),
-      pessoasNota: 'medidas de LGPD na janela — o cartão conta só as suspensões',
-      pessoasSufixo: 'medidas de LGPD',
+      pessoas: lgpdSuspensoes == null && suspensoesAtraso == null ? null : (lgpdPessoas?.length ? lgpdPessoas : null),
+      pessoasNota: 'medidas assinadas na janela — suspensão por atraso e medidas de LGPD; o cartão conta as suspensões das duas naturezas',
+      pessoasSufixo: 'medidas',
     },
   ]
   const kpis: Kpi[] = kdef.map((k) => ({
