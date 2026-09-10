@@ -187,10 +187,18 @@ SEM_PERMISSAO→ existe na lista, não entra
 > **na hora** em que o vínculo muda, nos dois sentidos — o sync de diretório roda
 > quando roda, e sem isso a pessoa bateria num 403 sem ninguém entender por quê.
 
-### ⚠️⚠️ Abrir para todos está DESLIGADO
+### A CHEFIA entra (10/09/2026); abrir para todos continua DESLIGADO
 
-`TALENTCARE_ACESSO_ABERTO` fica `off`. Ligar põe ~87 pessoas dentro e **não se
-desfaz**: o que foi visto foi visto.
+`TALENTCARE_ACESSO_GESTAO=on` abre a porta para quem tem cargo de chefia **ou**
+vínculo gravado — 16 pessoas, uma por setor com chefia, mais os sub-encarregados.
+`TALENTCARE_ACESSO_ABERTO` segue `off`: ligar põe os ~70 colaboradores dentro e **não
+se desfaz**, porque o que foi visto foi visto.
+
+⚠️ O degrau do meio é **derivado, não nominal**. Esticar a lista de ensaio até 16
+e-mails teria dado o mesmo resultado hoje e envelheceria calada nos dois sentidos:
+quem fosse promovido amanhã não entraria, e quem saísse da chefia continuaria
+entrando. Derivar do cargo faz o sync das :45 corrigir os dois casos sem ninguém
+lembrar — a mesma razão pela qual `ACESSO_ABERTO` sempre derivou.
 
 #### As duas dívidas que bloqueavam — ✅ resolvidas em 03/09/2026
 

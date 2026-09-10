@@ -1,5 +1,67 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-10 (3) — A chefia inteira entrou: 16 gestores, cada um na sua área
+
+Pedido do dono: *"os gestores e sub-encarregado do Legal já conseguem acessar e ver o
+relatório da própria equipe; faça o mesmo para os demais, cada um a sua área"*.
+
+**O que estava no ar antes:** duas pessoas — Evandro Padilha e Joice Rocha — dentro
+pela lista nominal `TALENTCARE_ACESSO_TESTE`, que existia para o ensaio. Os outros 14
+chefes eram `SEM_PERMISSAO`: apareciam na lista e batiam em `/acesso-negado`.
+
+**O que entrou:** um TERCEIRO degrau de acesso, `TALENTCARE_ACESSO_GESTAO`, entre "só
+a Diretoria" e "a casa inteira". Ele abre a porta para quem tem **cargo de chefia
+(`Gestor`, `Sub-encarregado`) OU vínculo gravado em `setor_avaliador`**.
+
+| | antes | depois |
+|---|---|---|
+| ADMIN (Diretoria + dono) | 10 | 10 |
+| GESTOR | 2 | **16** |
+| SEM_PERMISSAO | 84 | **70** |
+
+⚠️⚠️ **Por que um degrau DERIVADO e não mais 14 e-mails na lista de ensaio.** As duas
+saídas dariam o mesmo resultado hoje. A diferença aparece daqui a um mês: uma lista
+nominal envelhece calada nos **dois** sentidos — quem for promovido a Gestor não
+entra, e quem sair da chefia continua entrando, sem que nada acuse. O degrau derivado
+é recalculado pelo sync das :45 (`mapRole` é a mesma função nos dois caminhos), então
+a promoção e a saída se resolvem sozinhas. É a mesma razão pela qual `ACESSO_ABERTO`
+sempre derivou do cargo, e não de uma lista.
+
+⚠️ E ele **não** é `ACESSO_ABERTO` com outro nome: os ~70 colaboradores continuam
+fora. Abrir para eles é a decisão seguinte, e a chave segue `off`.
+
+⚠️ `TALENTCARE_ACESSO_TESTE` ficou **vazia** — o ensaio que ela existia para permitir
+terminou. Evandro e Joice continuam dentro pelo cargo, o que é a prova de que o degrau
+novo os carrega: se ele não funcionasse, os dois teriam caído junto com a lista.
+
+### O ensaio que o banco não faz — `scripts/ensaio-acesso-gestao.mjs`
+
+`role='GESTOR'` no banco prova que o sync calculou o que se queria. **Não** prova que a
+pessoa entra, nem que ela para na porta do vizinho — são duas réguas (a porta, em
+`proxy.ts`; o conteúdo, em `lib/alcance.ts` + `regua.ts`) e o defeito clássico é uma
+passar e a outra não. O script forja o cookie do next-auth de **cada um dos 16** e
+mede quatro coisas: 200 no setor dele (com a equipe dentro), 403 no setor alheio,
+`/ranking` e `/dashboard` fechados. Mais um colaborador de contraprova, que continua
+levando 403 no próprio setor — sem ele o ensaio diria "todos passaram" mesmo num
+sistema que tivesse aberto para os 87.
+
+Rodou limpo nos 16, incluindo os dois casos que não seguem o cargo: **Evandro e Joice
+alcançam Entregas e Legal** (Entregas fica debaixo do Legal) e a **Rosemeire, cargo
+`Colaborador`, alcança Cozinha e Limpeza** pelo vínculo.
+
+⚠️⚠️ **A Rosemeire está liberada e mesmo assim não entra.** O e-mail dela é
+`@staff.local` — colaboradora avulsa, sem conta no AD e com hash de senha
+inutilizável. Cozinha e Limpeza ficam **sem leitor de fato**, e isso não é defeito do
+acesso: é que não há a quem dar a conta. Fica anotado porque a tela de usuários vai
+mostrá-la como `GESTOR` e sugerir o contrário.
+
+**Consultoria (2), Pousada (1) e Diretoria (9)** seguem sem avaliador próprio — os
+três respondem à Diretoria por decisão de 02/09, não por falta de cadastro.
+
+**Arquivos:** `lib/nexus.ts` (o degrau + `ehChefia`), `run-sync.mjs` (a cópia gêmea da
+régua — mexeu num, mexe no outro), `scripts/ensaio-acesso-gestao.mjs` (novo),
+`docs/CONTINUAR-AQUI.md`, `docs/AVALIACOES.md`. Sem mudança de schema.
+
 ## 2026-09-10 (2) — A escolaridade das 6 pendentes, e o import que a apagaria
 
 O dono mandou a lista do RH para as 6 pessoas ativas sem formação registrada.

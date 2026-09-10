@@ -66,6 +66,26 @@ const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
 const ACESSO_TESTE = (process.env.TALENTCARE_ACESSO_TESTE ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
+/**
+ * ⚠️⚠️ O DEGRAU DO MEIO: a CHEFIA entra, o resto da casa não.
+ *
+ * Ligada em 10/09/2026, depois de o ensaio nominal ter sido percorrido por gente
+ * de verdade — o Evandro e a Joice, do Legal, entraram, abriram o relatório do
+ * setor deles e a régua de conteúdo (`lib/alcance.ts`) segurou. Pedido do dono:
+ * "o mesmo para os demais gestores e sub-encarregados, cada um a sua área".
+ *
+ * ⚠️ Ela é DERIVADA (cargo de gestão OU vínculo gravado), e essa é a diferença
+ * que importa em relação a continuar esticando a lista de ensaio. Uma lista
+ * nominal de 16 e-mails envelhece calada nos DOIS sentidos: quem for promovido a
+ * Gestor amanhã não entra, e quem sair da chefia continua entrando — sem que
+ * nada acuse. Derivar do cargo faz o sync das :45 corrigir os dois casos
+ * sozinho, que é a mesma razão pela qual `ACESSO_ABERTO` sempre derivou.
+ *
+ * ⚠️ E ela NÃO é `ACESSO_ABERTO` com outro nome: os ~70 colaboradores seguem
+ * `SEM_PERMISSAO`. Abrir para eles é a decisão seguinte, e continua desligada.
+ */
+const ACESSO_GESTAO = process.env.TALENTCARE_ACESSO_GESTAO === 'on'
+
 /** Cargos do Nexus que abrem o painel do próprio setor. */
 const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
 
@@ -92,13 +112,16 @@ export function mapRole(
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
   const emEnsaio = !!email && ACESSO_TESTE.includes(email.toLowerCase())
-  if (!ACESSO_ABERTO && !emEnsaio) return 'SEM_PERMISSAO'
   // ⚠️ O cargo decide só a PORTA (que telas), nunca o conteúdo. Quem avalia quem
   // continua vindo de `setor_avaliador`, confirmado por gente — ver
   // `lib/avaliacoes/regua.ts`. Um Gestor sem vínculo entra no painel do setor e
   // não avalia ninguém, e é isso mesmo.
-  if (temVinculo) return 'GESTOR'
-  if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'
+  const ehChefia = temVinculo || CARGOS_GESTAO.includes(norm(cargo))
+  /* ⚠️⚠️ As TRÊS portas, e a ordem importa: a chave geral, a lista nominal de
+     ensaio, e a chefia. Quem não passa por nenhuma continua existindo na lista
+     e sem entrar — que é o estado dos ~70 colaboradores. */
+  if (!ACESSO_ABERTO && !emEnsaio && !(ACESSO_GESTAO && ehChefia)) return 'SEM_PERMISSAO'
+  if (ehChefia) return 'GESTOR'
   return 'COLABORADOR'
 }
 

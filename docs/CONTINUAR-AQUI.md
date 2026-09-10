@@ -106,16 +106,22 @@ Diretoria.
 
 **Nenhuma avaliação publicada ainda** — a área acabou de entrar no ar.
 
-### A chave que ainda não foi virada
+### As TRÊS portas, e qual delas está aberta
 
-`TALENTCARE_ACESSO_ABERTO` está **off**: só a Diretoria (10 pessoas) e quem estiver na
-lista de ensaio entram. As duas dívidas que a bloqueavam foram fechadas em 03/09 (o
-vazamento do payload e as 11 rotas agregadas), e o caminho do gestor foi **percorrido
-por uma pessoa de verdade** — a **Joice Rocha**, Sub do Legal, via
-`TALENTCARE_ACESSO_TESTE`.
+| chave | quem entra | estado |
+|---|---|---|
+| (nenhuma) | Diretoria, por setor | sempre |
+| `TALENTCARE_ACESSO_GESTAO` | quem tem cargo de chefia **ou** vínculo gravado | **on** desde 10/09/2026 — 16 pessoas |
+| `TALENTCARE_ACESSO_ABERTO` | a casa inteira, ~70 colaboradores a mais | **off** |
 
-⚠️ Virar a chave põe ~87 pessoas dentro e **não se desfaz**. É decisão do Daniel, não
-sua.
+O degrau do meio entrou depois de o ensaio nominal ter sido percorrido por gente de
+verdade (Evandro e Joice, do Legal). Ele é **derivado** — cargo de gestão ou vínculo —
+e não uma lista de e-mails: o sync das :45 põe quem for promovido e tira quem sair da
+chefia, sozinho. A lista nominal `TALENTCARE_ACESSO_TESTE` ficou **vazia**; ela existe
+para o próximo ensaio, não para carregar gente.
+
+⚠️ Virar `ACESSO_ABERTO` põe os colaboradores dentro e **não se desfaz**. É decisão do
+Daniel, não sua.
 
 ## 6. O que vem a seguir
 
@@ -220,14 +226,30 @@ passou a mostrar os tipos novos antes de confirmar.
 
 ### O acesso, hoje
 
-`TALENTCARE_ACESSO_ABERTO` continua **off** — e virar essa chave segue sendo
-decisão do Daniel. Quem entra: a Diretoria (por setor) e a lista nominal
-`TALENTCARE_ACESSO_TESTE`, hoje com **Joice Rocha e Evandro Padilha**.
+`TALENTCARE_ACESSO_GESTAO=on` desde 10/09/2026: **16 pessoas** com papel `GESTOR`
+(todo Gestor e Sub-encarregado ativo, mais a Rosemeire, que é `Colaborador` com
+vínculo). `TALENTCARE_ACESSO_ABERTO` continua **off** — os ~70 colaboradores seguem
+`SEM_PERMISSAO`, e virar essa chave segue sendo decisão do Daniel.
 
-⚠️ `mapRole` (`lib/nexus.ts:95`) devolve `SEM_PERMISSAO` **antes** de olhar o
-vínculo. Foi por isso que o Evandro, Gestor do Legal com dois vínculos gravados,
-não conseguia entrar: ele não estava na lista de ensaio. Acrescentar alguém à
-lista é a saída reversível; a chave grande não é.
+⚠️ `mapRole` (`lib/nexus.ts`) devolve `SEM_PERMISSAO` **antes** de olhar o vínculo.
+Foi por isso que o Evandro, Gestor do Legal com dois vínculos gravados, não conseguia
+entrar antes de estar na lista de ensaio — e é a razão de o degrau novo ter de somar
+`ehChefia` à condição de saída, e não só ao `return` de baixo.
+
+⚠️⚠️ **A Rosemeire não entra de fato.** Ela é `GESTOR` no banco e responde por Cozinha
+e Limpeza, mas o e-mail dela é `@staff.local` — colaboradora avulsa, sem conta no AD e
+sem senha que case. Cozinha e Limpeza ficam, na prática, **sem leitor**. Não é defeito
+do acesso; é que não há a quem dar a conta.
+
+**Como conferir depois de mexer na régua:**
+
+```bash
+ssh talentcare@192.168.0.78 'cd /var/www/talentcare && node --env-file=.env scripts/ensaio-acesso-gestao.mjs'
+```
+
+Ele forja a sessão de **cada** gestor e mede as duas réguas: 200 no setor dele, 403 no
+setor do vizinho, `/ranking` e `/dashboard` fechados, e um colaborador de contraprova
+que continua fora. Banco dizendo `role='GESTOR'` não prova nada disso.
 
 ## 7. Como o Daniel trabalha (o que economiza tempo)
 

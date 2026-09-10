@@ -37,14 +37,19 @@ const ACESSO_ABERTO = process.env.TALENTCARE_ACESSO_ABERTO === 'on'
 // ⚠️ Gêmea da lista em `lib/nexus.ts` — mexeu lá, mexa aqui (ver o aviso acima).
 const ACESSO_TESTE = (process.env.TALENTCARE_ACESSO_TESTE ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+// ⚠️ Gêmea do degrau do meio em `lib/nexus.ts` — a chefia entra, o resto não.
+// É este processo que faz a régua se corrigir sozinha quando alguém é promovido
+// ou sai da chefia; por isso o degrau deriva do cargo em vez de listar e-mails.
+const ACESSO_GESTAO = process.env.TALENTCARE_ACESSO_GESTAO === 'on'
 const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
 const mapRole = (email, setor, cargo, temVinculo = false) => {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
-  if (!ACESSO_ABERTO && !(email && ACESSO_TESTE.includes(email.toLowerCase()))) return 'SEM_PERMISSAO'
+  const emEnsaio = !!email && ACESSO_TESTE.includes(email.toLowerCase())
   // O VÍNCULO ganha do cargo: quem avalia alguém alcança a fila.
-  if (temVinculo) return 'GESTOR'
-  if (CARGOS_GESTAO.includes(norm(cargo))) return 'GESTOR'
+  const ehChefia = temVinculo || CARGOS_GESTAO.includes(norm(cargo))
+  if (!ACESSO_ABERTO && !emEnsaio && !(ACESSO_GESTAO && ehChefia)) return 'SEM_PERMISSAO'
+  if (ehChefia) return 'GESTOR'
   return 'COLABORADOR'
 }
 const resolveRole = (computed, current) => (current === 'ADMIN' ? 'ADMIN' : computed)
