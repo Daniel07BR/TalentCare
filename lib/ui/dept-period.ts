@@ -11,6 +11,8 @@ export type PessoaDoSetor = {
   atrasos: number; minutosAtraso: number; advertencias: number
   /** Falta GRAVE do Controle da LGPD — não vem do ponto. */
   lgpdSuspensoes: number; lgpdAdvertencias: number
+  /** Suspensões por ATRASO (planilha do DP) — natureza distinta da de LGPD. */
+  suspensoesAtraso: number
   /** null = ainda não avaliada nesta competência (≠ nota zero). */
   nota: number | null
   /** A pontuação do mês (disciplina + serviços + atividades). null = não
@@ -82,6 +84,7 @@ export type DeptMetrics = {
      *  ⚠️ `null` = resposta velha ou rota anterior a 09/09/2026 — a tela mostra
      *  "—", nunca 0: zero suspensões é a melhor notícia dela. */
     lgpdSuspensoes: number | null; lgpdAdvertencias: number | null
+    suspensoesAtraso: number | null
     /** Os dias com ocorrência do setor DENTRO do filtro — alimentam o calendário. */
     dias?: { day: string; atrasos: number; abonados: number; minutos: number; pessoas: number; ate5: number; ate30: number; mais30: number }[]
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */

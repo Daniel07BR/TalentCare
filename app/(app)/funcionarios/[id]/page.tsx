@@ -604,6 +604,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                                      como a mesma coisa. */
                                   : d.tipo === 'lgpd_suspensao' ? 'Suspensão · LGPD'
                                   : d.tipo === 'lgpd_advertencia' ? 'Advertência · LGPD'
+                                  /* ⚠️ SUSPENSÃO POR ATRASO — ato assinado pelo
+                                     encarregado (6º atraso do mês, ou 4º acima
+                                     de 10 min), importado da planilha do DP em
+                                     10/09/2026. Terceira natureza nesta lista, e
+                                     sem o rótulo ela caía no fallback e saía
+                                     como "Suspensao", sem acento, na ficha de
+                                     uma pessoa de verdade. */
+                                  : d.tipo === 'suspensao' ? 'Suspensão · atraso'
                                   : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}
                               </div>
                               <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{d.motivo ?? 'sem motivo registrado'}</div>

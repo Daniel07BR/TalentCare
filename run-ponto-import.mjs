@@ -318,7 +318,28 @@ async function main() {
     arr.push({ id: a.id, dia: a.day })
     porPessoaMes.set(k, arr)
   }
+  /* ⚠️⚠️ OS DIAS EM QUE EXISTE SUSPENSÃO ASSINADA NÃO GERAM ADVERTÊNCIA.
+     Medido em 10/09/2026, ao importar o histórico real do DP: as 8 suspensões
+     dentro da janela do ponto caem, TODAS AS 8, no mesmo dia de uma advertência
+     derivada aqui — porque são o MESMO fato. A regra fecha exata: 6 atrasos no
+     mês → 5 advertências (2ª à 6ª) → e a suspensão no dia do 6º. A última
+     "advertência" do mês não é advertência: é a suspensão, com o nome errado e
+     o desconto errado (o mais leve).
+
+     ⚠️ Esta trava mora AQUI, e não só no importador de suspensões, porque este
+     script é wipe+rebuild: ele apaga `source: 'nexo'` e regrava do dump. Sem
+     ela, o próximo import recriaria a advertência que a suspensão substituiu, e
+     a pessoa voltaria a ser punida duas vezes pelo mesmo atraso — em silêncio,
+     no dia em que alguém atualizasse o ponto. Apagar à mão o que um sync
+     reescreve é combinar com o cron quem ganha, e o cron roda por último. */
+  const suspensoes = await prisma.disciplinaEvento.findMany({
+    where: { tipo: 'suspensao' },
+    select: { personKey: true, data: true },
+  })
+  const diaComSuspensao = new Set(suspensoes.map((s) => `${s.personKey}\0${s.data}`))
+
   const eventos = []
+  let puladasPorSuspensao = 0
   for (const [k, ocorrencias] of porPessoaMes) {
     const personKey = k.split('\0')[0]
     // O 1º atraso do mês não gera advertência; do 2º em diante, um por atraso.
@@ -331,6 +352,10 @@ async function main() {
        ⚠️ A ressalva de que isto é contagem derivada, e não advertência
        assinada, passou para o cabeçalho do cartão — dita UMA vez, onde se lê. */
     ordenadas.slice(1).forEach((o, i) => {
+      /* ⚠️ O ordinal (`i + 2`) NÃO é recontado quando um dia é pulado: ele
+         descreve qual atraso do mês foi, e o atraso aconteceu. Renumerar faria
+         a ficha dizer "5º atraso" sobre o 6º. */
+      if (diaComSuspensao.has(`${personKey}\0${o.dia}`)) { puladasPorSuspensao++; return }
       eventos.push({
         personKey, source: 'nexo', sourceId: `regra2:${o.id}`,
         data: o.dia, tipo: 'advertencia',
@@ -385,6 +410,7 @@ async function main() {
       advertencias: {
         naTabelaDoAxis: adverts.filter((a) => matchOf.has(a.userId)).length,
         pelaRegraDo2oAtraso: eventos.length,
+        puladasPorTerSuspensaoNoMesmoDia: puladasPorSuspensao,
         jaExistem: await prisma.disciplinaEvento.count({ where: { source: 'nexo' } }),
       },
       vinculos: {
@@ -437,6 +463,7 @@ async function main() {
     pessoasCasadas: matchedPeople, dailyLinhas: dailyN,
     advertenciasNaTabelaDoAxis: advertNaTabela,
     advertenciasPelaRegraDo2o: eventos.length,
+    advertenciasPuladasPorSuspensao: puladasPorSuspensao,
     revisar: review.length, semPalpite: none.length,
     previos: stagingRows.filter((s) => s.confidence === 'previo').length,
   }, null, 2))

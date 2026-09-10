@@ -43,6 +43,8 @@ export type EmployeeMetrics = {
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
     pontoAte?: string | null
     faltas: number | null; suspensoes: number | null
+    /** Suspensões por ATRASO (planilha do DP) — separada da de LGPD. */
+    suspensoesAtraso?: number | null
     /** Advertências por vazamento (LGPD) no período. */
     lgpdAdvertencias?: number
     /* A cobertura do ponto vem NESTA rota, que a ficha já chama — ela evita

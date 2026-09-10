@@ -152,7 +152,7 @@ export async function montar(
 
   const pontosPorTarefa = new Map(cat.tarefas.map((t) => [normalizarTarefa(t.tarefa), t.pontos]))
 
-  const [pessoas, dias, discip, lgpd, servicos, jaGravado] = await Promise.all([
+  const [pessoas, dias, discip, lgpd, susp, servicos, jaGravado] = await Promise.all([
     prisma.user.findMany({
       where: { departmentId, origin: { in: ['nexus', 'staff'] }, active: true },
       select: { id: true, nexusUserId: true, name: true, jobTitle: true },
@@ -174,6 +174,19 @@ export async function montar(
     prisma.disciplinaEvento.groupBy({
       by: ['personKey', 'tipo'],
       where: { tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: de, lte: ate } },
+      _count: { _all: true },
+    }),
+    /* ⚠️⚠️ SUSPENSÃO POR ATRASO — janela do MÊS e SEM o freio do
+       `semDisciplinaNaJanela`, pelas duas razões das medidas de LGPD: ela não
+       vem do dump do ponto, vem da planilha ASSINADA do DP. Cortá-la na data do
+       ponto esconderia uma suspensão de agosto porque o dump parou em julho — a
+       ausência de UMA fonte apagando o dado de OUTRA.
+       ⚠️ E ela não se soma à advertência derivada do mesmo dia: quem substitui
+       uma pela outra é o import (`scripts/importar-suspensoes.ts`), no momento
+       da carga, porque são o mesmo fato. Aqui elas já chegam sem colisão. */
+    prisma.disciplinaEvento.groupBy({
+      by: ['personKey'],
+      where: { tipo: 'suspensao', data: { gte: de, lte: ate } },
       _count: { _all: true },
     }),
     prisma.servicoDepto.findMany({
@@ -209,6 +222,7 @@ export async function montar(
     atr.set(d.personKey, v)
   }
   const adv = new Map(discip.map((d) => [d.personKey, d._count._all]))
+  const suspensoes = new Map(susp.map((d) => [d.personKey, d._count._all]))
   const lgpdAdv = new Map<string, number>()
   const lgpdSus = new Map<string, number>()
   for (const l of lgpd) {
@@ -251,6 +265,7 @@ export async function montar(
         atrasos: o.a, atrasosAbonados: o.ab, advertencias: adv.get(pk) ?? 0,
         servicosConcluidos: s.n, pontosDeServico: s.pts,
         totalAtividades: totalAtiv, pontosDeAtividade: pontosAtiv,
+        suspensoes: suspensoes.get(pk) ?? 0,
         lgpdAdvertencias: lgpdAdv.get(pk) ?? 0, lgpdSuspensoes: lgpdSus.get(pk) ?? 0,
       },
       { semDisciplina: semPonto, parcial },
@@ -262,7 +277,10 @@ export async function montar(
        acusador — mas aqui a fonte EXISTE e diz algo grave. Deixá-la cair em "—"
        faria a suspensão por vazamento de dados desaparecer da tela justamente
        de quem não passa por sistema nenhum. */
-    const temFaltaGrave = (lgpdAdv.get(pk) ?? 0) + (lgpdSus.get(pk) ?? 0) > 0
+    /* ⚠️ A suspensão por atraso entra aqui junto com as de LGPD: é fato
+       registrado sobre a pessoa, e quem levou suspensão não pode sair da tela
+       em "—" por não ter crédito nenhum no mês. */
+    const temFaltaGrave = (lgpdAdv.get(pk) ?? 0) + (lgpdSus.get(pk) ?? 0) + (suspensoes.get(pk) ?? 0) > 0
     const semNota: LinhaCalculo['semNota'] =
       CARGOS_DE_CHEFIA.has(p.jobTitle ?? '') ? 'chefia'
         : (totalAtiv === 0 && s.n === 0 && !temFaltaGrave) ? 'sem-credito'

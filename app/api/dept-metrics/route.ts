@@ -396,7 +396,12 @@ export async function GET(req: NextRequest) {
        advertência, e ainda assim tem de mostrar a suspensão que existiu. */
     prisma.disciplinaEvento.groupBy({
       by: ['personKey', 'tipo'],
-      where: { personKey: { in: chaves }, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: fromDay, lte: toDay } },
+      /* ⚠️ `suspensao` (por atraso) entra na MESMA consulta desde 10/09/2026,
+         quando o histórico real do DP chegou. Deixá-la fora faria o cartão de
+         Suspensões do setor mostrar 0 num mês em que houve suspensão de
+         verdade — o número mais grave da fileira mentindo por omissão. Ela vai
+         SEPARADA no payload; quem soma é a tela, dizendo a composição. */
+      where: { personKey: { in: chaves }, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao', 'suspensao'] }, data: { gte: fromDay, lte: toDay } },
       _count: { _all: true },
     }),
     prisma.radioDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { seconds: true } }),
@@ -439,8 +444,11 @@ export async function GET(req: NextRequest) {
   const mAdv = mapa(gAdv, (r) => r.personKey, (r) => r._count._all)
   const mLgpdSusp = new Map<string, number>()
   const mLgpdAdv = new Map<string, number>()
+  const mSuspAtraso = new Map<string, number>()
   for (const l of gLgpd as { personKey: string; tipo: string; _count: { _all: number } }[]) {
-    const alvo = l.tipo === 'lgpd_suspensao' ? mLgpdSusp : mLgpdAdv
+    const alvo = l.tipo === 'lgpd_suspensao' ? mLgpdSusp
+      : l.tipo === 'suspensao' ? mSuspAtraso
+      : mLgpdAdv
     alvo.set(l.personKey, (alvo.get(l.personKey) ?? 0) + l._count._all)
   }
   const somaMapa = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0)
@@ -560,6 +568,7 @@ export async function GET(req: NextRequest) {
          advertência acima (derivada do 2º atraso do mês). */
       lgpdSuspensoes: mLgpdSusp.get(pk) ?? 0,
       lgpdAdvertencias: mLgpdAdv.get(pk) ?? 0,
+      suspensoesAtraso: mSuspAtraso.get(pk) ?? 0,
       // null = ainda não avaliada nesta competência (≠ nota zero).
       nota: notaDe.get(p.id) ?? null,
       pontuacao: pontosMesDe.get(p.nexusUserId ?? p.id) ?? null,
@@ -751,6 +760,7 @@ export async function GET(req: NextRequest) {
          atraso e advertência e ainda assim tem de mostrar a suspensão. */
       lgpdSuspensoes: somaMapa(mLgpdSusp),
       lgpdAdvertencias: somaMapa(mLgpdAdv),
+      suspensoesAtraso: somaMapa(mSuspAtraso),
       janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
       motivoSemPonto: janelaTemDado(cobPonto, fromDay, toDay) ? null : motivoSemPonto(cobPonto, true, false),
       /* Os dias do PERÍODO, para o calendário de ocorrências do setor.

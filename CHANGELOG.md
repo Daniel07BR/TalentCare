@@ -1,5 +1,107 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-10 — O histórico REAL de suspensões entrou, e ele desmentiu uma advertência
+
+O DP mandou a planilha de suspensões (4 abas, 52 registros, 2020→2026). O
+`CONTINUAR-AQUI.md` mantinha essa frente parada de propósito — *"SUSPENSÃO,
+esperando dados REAIS"* — com o aviso de **não derivar**, porque o encarregado
+pode liberar entrada e perdoar a medida.
+
+### ⚠️⚠️ A medição respondeu sozinha a pergunta que o doc deixou em aberto
+
+Era "substitui ou acrescenta?". As **8 suspensões dentro da janela do ponto caem,
+todas as 8, no mesmo dia de uma advertência derivada** — e a regra fecha exata:
+
+| | atrasos no mês | advertências derivadas | suspensão |
+|---|---|---|---|
+| Daniel Novais, mai/26 | 6 | 5 (2ª à 6ª) | no dia do 6º |
+| Maria Fonsêca, ago/26 | 6 | 5 | no dia do 6º |
+| Sabrina Brito, fev/26 | 4 (75 min) | 3 | no 4º, "acima de 10 min" |
+
+Ou seja: **a última advertência derivada de cada um desses meses nunca foi
+advertência — é a suspensão**, gravada com o nome errado e o desconto errado (o
+mais leve). É o mesmo padrão que a casa já pegou quando "a advertência era o
+mesmo atraso contado de novo". Então **substitui**: somar puniria duas vezes pelo
+mesmo fato.
+
+⚠️ E o conserto NÃO ficou só no importador. `run-ponto-import.mjs` é wipe+rebuild
+e recriaria a advertência no próximo dump — em silêncio, no dia em que alguém
+atualizasse o ponto. Ele passou a consultar as suspensões reais e a **não
+derivar advertência no dia em que existe uma**. O ordinal não é renumerado: ele
+descreve qual atraso do mês foi, e o atraso aconteceu.
+
+### ⚠️⚠️ A trava que o dono propôs pegou dois casamentos errados
+
+O casamento é por nome (exato, ou 1º nome + 2 tokens). O dono acrescentou uma
+segunda trava: **se o fato é anterior à admissão da pessoa, não é ela.** Ela
+pegou dois vínculos que o nome tinha aprovado com confiança:
+
+| planilha | casou com | admissão | suspensão |
+|---|---|---|---|
+| CAMILA HELENA ALEIXO SILVA | Camila Silva, Fiscal | 23/04/2026 | **26/06/2024** |
+| JOÃO VÍCTOR DE MORAIS SILVA | Joao Victor, Financeiro | 13/05/2026 | **26/09/2023** |
+
+Duas suspensões que teriam ido para a ficha da pessoa errada. **Ficaram 28
+suspensões, 15 pessoas**; 22 foram descartadas por serem de gente que saiu e
+nunca esteve no TalentCare (decisão do dono), e o ensaio as lista.
+
+⚠️ Um caso ficou EM ABERTO por decisão do dono: "SAMIRA GONÇALVES MOREIRA"
+(29/11/2022) × "Samira Santos" (Contábil, desligada em 13/06/2026). Só o primeiro
+nome bate. Fica fora até o DP confirmar.
+
+### A régua ganhou o evento `suspensao`
+
+**2× a advertência** (decisão do dono), em todos os 16 setores: Fiscal −46, Legal
+−150, Contábil −16, Entregas −186. Entre a advertência (1,5× o atraso) e a
+advertência por vazamento de dado (3×), que é outra natureza.
+
+⚠️ O peso nasce em `propor-pesos.ts`, junto da fórmula que propõe todos os
+outros — não num INSERT à parte. Mas com uma flag nova, `--so-suspensao`: rodar
+a proposta INTEIRA teria mexido, de carona, na régua de aumento de 61 pessoas,
+porque ela depende da MEDIANA do setor e a mediana do Entregas subiu quando o
+espelho da Gerência foi reconciliado (o atraso saltaria de −62 para −65). A flag
+grava só o item novo, derivado da advertência que está VIGENTE.
+
+### ⚠️ E uma descoberta de carona: as notas de agosto estavam velhas
+
+`scripts/conferir-mes.ts` (novo) compara o gravado com o que a régua calcula
+agora. Em agosto, **8 de 61 notas tinham mudado** — e só 2 pela suspensão:
+
+- **Raissa Leal 76 → 65** e **Maria Fonsêca 38 → 15** (a suspensão)
+- **Yasmin Ensinas 354 → 396**, e mais cinco de +6 — o backfill completo da
+  Gerência das 03:10 trouxe atividade de agosto que o incremental nunca traria.
+
+A nota gravada é um retrato do dia em que se rodou, e as fontes por baixo dela
+continuam se mexendo. **Nenhuma das duas avisa ninguém.** Contábil, Fiscal e
+Pessoal foram regravados; a conferência voltou a 61 iguais, 0 divergentes.
+
+### Os consumidores, percorridos
+
+Um tipo novo em `disciplina_evento` não aparece sozinho:
+
+- **ficha**: a lista já o pegava (não filtra por tipo), mas caía no fallback e
+  imprimia **"Suspensao"**, sem acento, na ficha de uma pessoa real — o
+  comentário logo acima do código alertava para exatamente isso. Agora é
+  "Suspensão · atraso".
+- **painel de Conduta**: linha própria, **separada** da de LGPD. "2 suspensões"
+  num número só não diria de quê, e as duas levam a conversas diferentes.
+- **cartão de Suspensões do setor**: passou a somar as duas naturezas — senão
+  mostraria **0** num mês em que houve suspensão de verdade —, com a composição
+  na nota e na lista que abre.
+- **`calcular-mes.ts` / `pontuacao.ts`**: `EVENTOS` é lista FECHADA de propósito,
+  então o tipo entrou nos três lugares (catálogo, conta e "mês sem ocorrência" —
+  mês com suspensão não é mês limpo). E a suspensão conta como falta grave para
+  quem o ponto não mede: quem levou suspensão não pode sair da tela em "—".
+
+⚠️ `source: 'disciplina'` e não `'nexo'`, porque o import do ponto apaga
+`where: { source: 'nexo' }`. Com source próprio, a suspensão sobrevive ao
+reimport. A idempotência é `(source, sourceId)` com o **hash do arquivo** dentro:
+reenviar a mesma planilha não duplica, e uma planilha CORRIGIDA entra como
+registro novo em vez de colidir em silêncio.
+
+⚠️ A planilha tem PII e foi **apagada do servidor** depois da carga, como o dump
+do ponto.
+
 ## 2026-09-09 (fim, 6) — A área do setor ENTREGAS, e três números que mentiam antes dela
 
 Pedido do dono: uma área para o setor Entregas (Elton e Gilberto), no espírito do

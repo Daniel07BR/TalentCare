@@ -49,15 +49,26 @@ export function Hero({ m }: { m: DeptMetrics }) {
      (medida assinada por vazamento), e deixá-la de fora esconderia gente
      envolvida numa lista que se propõe a mostrar os envolvidos. O cartão conta
      só as suspensões; o painel avisa. */
+  /* ⚠️⚠️ A suspensão por ATRASO entrou nesta lista em 10/09/2026, com o
+     histórico real do DP. Ela é ato assinado pelo encarregado (6º atraso do
+     mês, ou 4º acima de 10 min) — natureza diferente da medida de LGPD, que é
+     por vazamento de dado pessoal. Ficam no MESMO cartão porque a pergunta de
+     quem lê é "quem foi suspenso neste setor", e um cartão que respondesse só
+     metade dela mostraria 0 num mês em que houve suspensão de verdade.
+     ⚠️ Mas o `detalhe` de cada linha diz de QUE tipo é cada uma: somar sem
+     dizer faria "2 suspensões" que ninguém sabe de quê — e as duas levam a
+     conversas diferentes com a pessoa. */
   const pessoasLgpd: PessoaDoPainel[] = m.pessoas
     .map((p) => {
+      const sa = p.suspensoesAtraso ?? 0
       const s = p.lgpdSuspensoes ?? 0
       const a = p.lgpdAdvertencias ?? 0
       const partes = [
-        s ? `${s} suspensão${s === 1 ? '' : 'es'}` : '',
-        a ? `${a} advertência${a === 1 ? '' : 's'}` : '',
+        sa ? `${sa} suspensão${sa === 1 ? '' : 'es'} por atraso` : '',
+        s ? `${s} suspensão${s === 1 ? '' : 'es'} de LGPD` : '',
+        a ? `${a} advertência${a === 1 ? '' : 's'} de LGPD` : '',
       ].filter(Boolean)
-      return { ...base(p), valor: s + a, detalhe: partes.join(' · ') }
+      return { ...base(p), valor: sa + s + a, detalhe: partes.join(' · ') }
     })
     .filter((p) => p.valor > 0)
     .sort((a, b) => b.valor - a.valor)
@@ -201,14 +212,16 @@ export function Hero({ m }: { m: DeptMetrics }) {
               /* ⚠️ `?? '—'` e NÃO `?? 0`: resposta velha em cache ou deploy pela
                  metade viraria "0 suspensões", que é a melhor notícia da tela.
                  Mesmo argumento do `?? false` do `janelaComPonto` acima. */
-              valor={m.assiduidade.lgpdSuspensoes == null ? '—' : String(m.assiduidade.lgpdSuspensoes)}
+              valor={m.assiduidade.lgpdSuspensoes == null ? '—' : String((m.assiduidade.lgpdSuspensoes ?? 0) + (m.assiduidade.suspensoesAtraso ?? 0))}
               nota={m.assiduidade.lgpdSuspensoes == null
                 ? 'não foi possível ler'
-                : m.assiduidade.lgpdAdvertencias
-                  ? `por vazamento (LGPD) · e ${m.assiduidade.lgpdAdvertencias} advertência${m.assiduidade.lgpdAdvertencias === 1 ? '' : 's'}`
-                  : 'por vazamento de dados (LGPD), no período'}
-              dica="Medidas do Controle da LGPD do Nexus — advertência e suspensão por vazamento de dado pessoal. São ASSINADAS, de natureza diferente da advertência ao lado, que é derivada do 2º atraso do mês. Não dependem do import de ponto."
-              cor={(m.assiduidade.lgpdSuspensoes ?? 0) > 0 ? 'var(--danger)' : 'var(--text-mute)'}
+                : [
+                    m.assiduidade.suspensoesAtraso ? `${m.assiduidade.suspensoesAtraso} por atraso` : '',
+                    m.assiduidade.lgpdSuspensoes ? `${m.assiduidade.lgpdSuspensoes} por vazamento (LGPD)` : '',
+                    m.assiduidade.lgpdAdvertencias ? `e ${m.assiduidade.lgpdAdvertencias} advertência${m.assiduidade.lgpdAdvertencias === 1 ? '' : 's'} de LGPD` : '',
+                  ].filter(Boolean).join(' · ') || 'nenhuma no período'}
+              dica="Medidas ASSINADAS, de duas naturezas: suspensão por ATRASO (6º atraso do mês, ou 4º acima de 10 min, registrada pelo encarregado) e as do Controle da LGPD do Nexus (vazamento de dado pessoal). As duas são de natureza diferente da advertência ao lado, que é derivada do 2º atraso do mês. Nenhuma depende do import de ponto."
+              cor={((m.assiduidade.lgpdSuspensoes ?? 0) + (m.assiduidade.suspensoesAtraso ?? 0)) > 0 ? 'var(--danger)' : 'var(--text-mute)'}
               /* ⚠️ O selo conta a LISTA, e a lista sai de `m.pessoas` (ativos do
                  setor) enquanto o número sai da rota (que não corta inativo).
                  Quando divergirem, é o número que manda — o selo diz "N na
@@ -246,7 +259,7 @@ export function Hero({ m }: { m: DeptMetrics }) {
           : aberto === 'Advertências'
             ? { pessoas: pessoasAdvert, cor: 'var(--danger)', nota: 'quantas advertências cada um teve na janela', sufixo: 'advertências' }
           : aberto === 'Suspensões'
-            ? { pessoas: pessoasLgpd, cor: 'var(--danger)', nota: 'medidas de LGPD na janela — o cartão conta só as suspensões', sufixo: 'medidas de LGPD' }
+            ? { pessoas: pessoasLgpd, cor: 'var(--danger)', nota: 'medidas assinadas na janela — suspensão por atraso e medidas de LGPD; o cartão conta as suspensões das duas naturezas', sufixo: 'medidas' }
             : null
         if (!alvo?.pessoas.length) return null
         return (

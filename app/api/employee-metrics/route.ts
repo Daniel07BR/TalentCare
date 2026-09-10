@@ -120,7 +120,10 @@ export async function GET(req: NextRequest) {
        ponto: a medida de LGPD não vem do dump do Nexo. */
     prisma.disciplinaEvento.groupBy({
       by: ['tipo'],
-      where: { personKey, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao'] }, data: { gte: fromDay, lte: toDay } },
+      /* ⚠️ `suspensao` (por atraso) entra junto: também é ato ASSINADO, também
+         não vem do dump do Nexo, e deixá-la fora faria a ficha contar falta
+         grave só de LGPD — escondendo a suspensão que a pessoa de fato levou. */
+      where: { personKey, tipo: { in: ['lgpd_advertencia', 'lgpd_suspensao', 'suspensao'] }, data: { gte: fromDay, lte: toDay } },
       _count: { _all: true },
     }),
     /* ⚠️ A LISTA com o motivo sai daqui, e não do dataset do cliente: esta rota
@@ -190,6 +193,11 @@ export async function GET(req: NextRequest) {
 
   const lgpdSusp = gLgpdPessoa.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
   const lgpdAdv = gLgpdPessoa.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
+  /* ⚠️ SEPARADA da suspensão de LGPD, não somada. São dois fatos de naturezas
+     diferentes — uma é vazamento de dado pessoal, a outra é o 6º atraso do mês
+     — com pesos diferentes na régua e conversas diferentes com a pessoa. Somá-las
+     num número só faria a ficha dizer "2 suspensões" sem dizer de quê. */
+  const suspAtraso = gLgpdPessoa.find((r) => r.tipo === 'suspensao')?._count._all ?? 0
 
   /* ── QUANDO CADA FONTE VIU ESTA PESSOA PELA ÚLTIMA VEZ ───────────────────
      ⚠️⚠️ Existe para separar "ela parou" de "a FONTE dela parou" — a dívida que
@@ -437,6 +445,8 @@ export async function GET(req: NextRequest) {
         faltas: null as number | null,
         suspensoes: lgpdSusp,
         lgpdAdvertencias: lgpdAdv,
+        /** Suspensões por ATRASO assinadas no período (planilha do DP). */
+        suspensoesAtraso: suspAtraso,
         /* ⚠️⚠️ A COBERTURA vem junto, na rota que a ficha JÁ chama — de propósito.
            A ficha evita fetch extra (ver o comentário no topo dela), e sem isso
            ela ficaria com a heurística velha: "há qualquer ocorrência no

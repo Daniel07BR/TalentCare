@@ -30,6 +30,22 @@ export const EVENTOS: EventoPontuacao[] = [
   { chave: 'atraso', label: 'Atraso', descricao: 'cada atraso NÃO abonado no mês', sugestao: -10 },
   { chave: 'atraso_abonado', label: 'Atraso abonado', descricao: 'cada atraso justificado — no Legal, o 1º do mês', sugestao: 0 },
   { chave: 'advertencia', label: 'Advertência', descricao: 'cada advertência registrada no mês', sugestao: -15 },
+  /* ⚠️⚠️ SUSPENSÃO POR ATRASO — o registro ASSINADO do encarregado, importado da
+     planilha do DP (10/09/2026), e não uma contagem derivada como a advertência
+     logo acima.
+
+     A regra de produção que a planilha materializa: **6º atraso do mês** =
+     suspensão; e o gatilho paralelo do **4º atraso acima de 10 minutos**.
+
+     ⚠️ Ela SUBSTITUI a advertência derivada do mesmo dia, não soma. Medido em
+     10/09/2026: as 8 suspensões dentro da janela do ponto caem, todas as 8, no
+     dia de uma advertência derivada — porque são o MESMO fato, com o nome
+     errado. Ver `scripts/importar-suspensoes.ts`.
+
+     ⚠️ Fica FORA do `if (!semDisc)` como as de LGPD: é ato assinado sobre a
+     pessoa, não medição do dump do Nexo. Quem o ponto não cobre segue sem base
+     e sem bônus, mas responde pela suspensão que levou. */
+  { chave: 'suspensao', label: 'Suspensão por atraso', descricao: 'cada suspensão assinada (6º atraso do mês, ou 4º acima de 10 min)', sugestao: -30 },
   { chave: 'mes_sem_ocorrencia', label: 'Mês sem ocorrência', descricao: 'bônus se não houve atraso nem advertência', sugestao: 20 },
   { chave: 'servico_concluido', label: 'Serviço concluído', descricao: 'cada serviço concluído na planilha do setor', sugestao: 0 },
   /* ⚠️⚠️ FALTA GRAVE — vem do CONTROLE DE LGPD do Nexus, não do ponto.
@@ -74,6 +90,8 @@ export type Ocorrencias = {
    */
   pontosDeServico?: number
   /** Advertências por vazamento de dados no mês (Controle da LGPD do Nexus). */
+  /** Suspensões por atraso assinadas no mês (planilha do DP). */
+  suspensoes?: number
   lgpdAdvertencias?: number
   /** Suspensões por vazamento de dados no mês. */
   lgpdSuspensoes?: number
@@ -134,6 +152,8 @@ export function calcular(
      A falta grave não vem do dump do ponto; ela é um documento assinado no
      Controle da LGPD. Quem o ponto não mede continua sem base e sem bônus, mas
      responde por ela. */
+  /* ⚠️ FORA do `if (!semDisc)` pelo mesmo motivo das de LGPD: é ato assinado. */
+  linha('suspensao', 'Suspensões por atraso', oc.suspensoes ?? 0)
   linha('lgpd_advertencia', 'Advertências por vazamento (LGPD)', oc.lgpdAdvertencias ?? 0)
   linha('lgpd_suspensao', 'Suspensões por vazamento (LGPD)', oc.lgpdSuspensoes ?? 0)
   linha('servico_concluido', 'Serviços concluídos', oc.servicosConcluidos)
@@ -164,6 +184,7 @@ export function calcular(
      inclusive para quem o ponto não mede (que nem chega aqui, mas a conta tem
      de dizer a verdade se um dia chegar). */
   const limpo = oc.atrasos === 0 && oc.atrasosAbonados === 0 && oc.advertencias === 0
+    && !(oc.suspensoes ?? 0)
     && !(oc.lgpdAdvertencias ?? 0) && !(oc.lgpdSuspensoes ?? 0)
   const bonus = ponto('mes_sem_ocorrencia')
   if (!semDisc && !opcoes?.parcial && limpo && bonus) {

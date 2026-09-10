@@ -52,7 +52,60 @@ async function creditoDoSetor(id: string, comp: string) {
   return { n: vals.length, mediana: mediana(vals), soma: vals.reduce((a, b) => a + b, 0) }
 }
 
+/** ⚠️ Uma leitura só do argumento, no escopo do módulo: as duas rotas do script
+ *  (a proposta completa e o `--so-suspensao`) precisam dela, e duas leituras
+ *  divergiriam no dia em que alguém trocasse o nome da flag. */
+const gravar = process.argv.includes('--gravar')
+
+/* ⚠️⚠️ `--so-suspensao`: grava APENAS o item `suspensao`, derivado da
+   advertência JÁ VIGENTE de cada setor — sem recalcular mais nada.
+
+   Existe porque a tabela de pesos foi calibrada e aprovada pelo dono em
+   09/09/2026, e a proposta completa depende da MEDIANA do setor, que muda
+   sozinha quando um espelho é corrigido: em 10/09, com o km e os serviços da
+   Gerência reconciliados, a mediana do Entregas subiu e a proposta saltou de
+   −62 para −65 no atraso. Rodar a proposta inteira só para acrescentar um
+   evento novo mexeria, de carona, na régua de aumento de 61 pessoas.
+
+   ⚠️ E ele NÃO é um segundo script "que aplica a tabela aprovada": é a MESMA
+   fórmula (`advertência × 2`) do bloco de itens acima, lida da régua que está
+   valendo em vez da que seria proposta. A casa já pagou por ter duas contas do
+   mesmo peso. */
+async function soSuspensao() {
+  /* ⚠️ `PontuacaoRegra` não tem relação com `Department` no schema — o nome do
+     setor vem por consulta à parte. */
+  const [regras, setores] = await Promise.all([
+    prisma.pontuacaoRegra.findMany({ include: { itens: true }, orderBy: { vigenteDesde: 'desc' } }),
+    prisma.department.findMany({ select: { id: true, name: true } }),
+  ])
+  const nomeDoSetor = new Map(setores.map((d) => [d.id, d.name]))
+  const vistos = new Set<string>()
+  console.log(gravar ? 'GRAVANDO' : 'ENSAIO (nada gravado)', '— só o item `suspensao` = advertência × 2\n')
+  console.log('setor'.padEnd(14), 'advert'.padStart(7), 'suspensão'.padStart(10), '  vigente desde')
+  for (const r of regras) {
+    // Só a régua MAIS RECENTE de cada setor — versão antiga é história.
+    if (vistos.has(r.departmentId)) continue
+    vistos.add(r.departmentId)
+    const adv = r.itens.find((i) => i.evento === 'advertencia')?.pontos
+    const setor = nomeDoSetor.get(r.departmentId) ?? r.departmentId
+    if (adv == null) { console.log(setor.padEnd(14), '  (sem advertência na régua — pulo)'); continue }
+    const pontos = -Math.abs(adv) * 2
+    const atual = r.itens.find((i) => i.evento === 'suspensao')?.pontos
+    const marca = atual == null ? '' : atual === pontos ? '   (já estava)' : `   (era ${atual})`
+    console.log(setor.padEnd(14), String(adv).padStart(7), String(pontos).padStart(10), `  ${r.vigenteDesde}${marca}`)
+    if (gravar) {
+      await prisma.pontuacaoRegraItem.upsert({
+        where: { regraId_evento: { regraId: r.id, evento: 'suspensao' } },
+        create: { regraId: r.id, evento: 'suspensao', pontos },
+        update: { pontos },
+      })
+    }
+  }
+  console.log(gravar ? '\nGRAVADO.' : '\n(ensaio — repita com --gravar)')
+}
+
 async function main() {
+  if (process.argv.includes('--so-suspensao')) return soSuspensao()
   /* ⚠️ As FLAGS saem antes dos posicionais. Sem isto, `propor-pesos 2026-08
      --gravar` lia "--gravar" como o id do setor modelo e morria em "Setor
      modelo sem régua" — falhando em voz alta, por sorte: se o modelo tivesse
@@ -73,9 +126,8 @@ async function main() {
 
   console.log(`\nMODELO (Legal), ${comp}: mediana de crédito ${base.mediana} · atraso ${atrasoModelo}`)
   console.log(`FRAÇÃO: um atraso custa ${(fracao * 100).toFixed(1)}% da mediana do setor\n`)
-  const gravar = process.argv.includes('--gravar')
   console.log(gravar ? 'GRAVANDO\n' : 'ENSAIO (nada gravado)\n')
-  console.log('setor'.padEnd(14), 'pontua'.padStart(7), 'mediana'.padStart(8), 'atraso'.padStart(7), 'advert'.padStart(7), 'mês limpo'.padStart(10), '  lgpd adv/susp')
+  console.log('setor'.padEnd(14), 'pontua'.padStart(7), 'mediana'.padStart(8), 'atraso'.padStart(7), 'advert'.padStart(7), 'mês limpo'.padStart(10), 'suspensão'.padStart(8), '  lgpd adv/susp')
   const semMediana: string[] = []
 
   const setores = await prisma.department.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
@@ -94,17 +146,27 @@ async function main() {
        como foram semeados. Mexer no atraso e deixar a falta grave para trás
        daria, no Contábil, atraso −5 ao lado de suspensão −300: a mesma escala
        em dois mundos. */
+    const advertencia = Math.round(atraso * 1.5)
     const itens: Record<string, number> = {
       atraso: -atraso,
       atraso_abonado: 0,
-      advertencia: -Math.round(atraso * 1.5),
+      advertencia: -advertencia,
       mes_sem_ocorrencia: atraso * 2,
+      /* ⚠️⚠️ SUSPENSÃO POR ATRASO = 2× a advertência (decisão do dono,
+         10/09/2026, ao entrar o histórico real do DP). Ela nasce AQUI, e não
+         num INSERT à parte, pelo mesmo motivo dos pesos de LGPD: a proposta e a
+         aplicação têm de sair da MESMA conta, senão divergem no dia em que
+         alguém recalibrar o atraso — e o que está em jogo é a nota de aumento.
+         Fica entre a advertência (1,5× o atraso) e a advertência por vazamento
+         de dado (3×), que é outra natureza. */
+      suspensao: -(advertencia * 2),
       lgpd_advertencia: -(atraso * 3),
       lgpd_suspensao: -(atraso * 6),
     }
     console.log(
       s.name.padEnd(14), String(c.n).padStart(7), String(c.mediana).padStart(8),
       String(-atraso).padStart(7), String(itens.advertencia).padStart(7), String(itens.mes_sem_ocorrencia).padStart(10),
+      String(itens.suspensao).padStart(8),
       `  ${itens.lgpd_advertencia}/${itens.lgpd_suspensao}`,
     )
     if (gravar) {

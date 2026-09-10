@@ -340,15 +340,29 @@ a ficha para onde a área de Entregas leva o clique, e o upsert do sync).
 
 ## 9. Frentes ABERTAS (08/09/2026)
 
-- ⚠️⚠️ **SUSPENSÃO — esperando dados REAIS.** Existe um briefing da regra de
-  produção (2º–5º atraso = advertência; 6º+ = suspensão; + gatilho de 4 atrasos
-  "pesados" ≥10 min). **NÃO derivar**: o encarregado pode liberar entrada e
-  PERDOAR suspensão/advertência, então a regra derivada não é a realidade. A
-  advertência que hoje está derivada dos atrasos (`run-ponto-import.mjs`,
-  "2º atraso em diante") tem o MESMO problema — quando os dados reais de
-  disciplina chegarem, decidir com o dono se SUBSTITUI a advertência derivada
-  ou só ACRESCENTA a suspensão. Suspensão desconta mais que advertência (−75);
-  o evento `suspensao` ainda não existe na régua.
+- ✅ **SUSPENSÃO — RESOLVIDA em 10/09/2026, com os dados reais do DP.** 28
+  suspensões, 15 pessoas, 2020→2026. A resposta para "substitui ou acrescenta"
+  veio da medição: as **8 suspensões dentro da janela do ponto caem, todas as 8,
+  no mesmo dia de uma advertência derivada** — são o MESMO fato, com o nome
+  errado. Então **substitui**, e a trava mora também no `run-ponto-import.mjs`
+  (que é wipe+rebuild e recriaria a advertência no próximo dump).
+  O evento `suspensao` entrou na régua a **2× a advertência**. Ver o `CHANGELOG`
+  de 10/09 e `scripts/importar-suspensoes.ts`.
+
+  ⚠️ **A advertência derivada CONTINUA derivada** nos outros dias: a planilha só
+  traz suspensões, e não há como saber quais advertências o encarregado perdoou.
+  O aviso original vale para elas.
+
+  ⚠️ **Um caso EM ABERTO:** "SAMIRA GONÇALVES MOREIRA" (29/11/2022) × "Samira
+  Santos" (Contábil, desligada em 13/06/2026) — só o primeiro nome bate. Fora
+  até o DP confirmar.
+
+- ⚠️⚠️ **A NOTA GRAVADA ENVELHECE SOZINHA, e nada avisa.** Ela é o retrato do dia
+  em que se rodou `rodar-mes.ts`, e as fontes por baixo continuam se mexendo:
+  em 10/09, **8 de 61 notas de agosto** já estavam diferentes — 2 pela suspensão
+  e 6 porque o backfill completo da Gerência trouxe atividade que o incremental
+  nunca traria. **Rode `scripts/conferir-mes.ts <AAAA-MM>`** depois de qualquer
+  carga que mexa em fonte; ele diz de quem é a diferença e de quanto, sem gravar.
 - **A pontuação só foi rodada para o LEGAL.** Os outros setores têm a régua
   disponível mas ninguém rodou/calibrou. A lista do setor mostra "sem pontuação
   no mês" para eles.

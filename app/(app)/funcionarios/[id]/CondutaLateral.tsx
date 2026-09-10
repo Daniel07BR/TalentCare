@@ -54,6 +54,7 @@ export function CondutaLateral({ m, periodo }: { m: EmployeeMetrics | null; peri
   const temPonto = ass.janelaComPonto !== false && ass.pessoaMedida !== false
   const susp = ass.suspensoes
   const lgpdAdv = ass.lgpdAdvertencias ?? 0
+  const suspAtraso = ass.suspensoesAtraso ?? 0
 
   return (
     <div className="tc-card" style={{
@@ -98,6 +99,17 @@ export function CondutaLateral({ m, periodo }: { m: EmployeeMetrics | null; peri
       {/* ⚠️ A falta GRAVE NÃO depende do ponto: ela vem do Controle da LGPD do
           Nexus, não do dump do Nexo. Amarrá-la ao `temPonto` faria a ausência de
           uma fonte apagar o dado de outra. */}
+      {/* ⚠️⚠️ DUAS LINHAS, não uma soma. A suspensão por ATRASO é ato assinado
+          pelo encarregado (6º atraso do mês, ou 4º acima de 10 min) e chegou em
+          10/09/2026 com o histórico real do DP; a de LGPD é medida por
+          vazamento de dado pessoal. Pesam diferente na régua e levam a
+          conversas diferentes — "2 suspensões" num número só não diria de quê.
+          ⚠️ Nenhuma das duas depende do `temPonto`: são fatos registrados, não
+          medição do dump do Nexo. */}
+      <Linha rotulo="Suspensões por atraso" valor={suspAtraso}
+        nota="no período · 6º atraso do mês, ou 4º acima de 10 min"
+        alerta={(suspAtraso ?? 0) > 0} />
+
       <Linha rotulo="Suspensões" valor={susp}
         nota={susp == null ? 'não foi possível ler' : 'no período · vazamento (LGPD)'}
         alerta={(susp ?? 0) > 0} />
