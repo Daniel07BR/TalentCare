@@ -82,6 +82,7 @@ async function main() {
     .map((e) => ({ id: e.nexusUserId, name: e.name, toks: toks(e.name) }))
 
   await prisma.educationStaging.deleteMany({})
+  const preservados = []
   let strong = 0, review = 0, none = 0, applied = 0
   for (const r of recs) {
     const nome = r['Nome'].trim()
@@ -109,15 +110,39 @@ async function main() {
     })
     if (confidence === 'strong') {
       strong++
-      await prisma.employeeEducation.upsert({
-        where: { nexusUserId: matched },
-        create: { nexusUserId: matched, level, sexo: r['Sexo'] ?? null, detail: detailOf(r) || null, raw },
-        update: { level, sexo: r['Sexo'] ?? null, detail: detailOf(r) || null, raw },
+      /* ⚠️⚠️ O QUE FOI POSTO À MÃO NÃO É SOBRESCRITO PELA PLANILHA.
+         O `update` tocava `level`, `sexo` e `detail` sem olhar o `source`, então
+         toda escolaridade digitada na tela `/escolaridade` seria apagada na
+         próxima carga do RH — em silêncio, e justamente a das pessoas que estão
+         na tela por NÃO virem completas na planilha. É a lição da conta
+         `Sistema`: escrever à mão um campo que um import reescreve é combinar
+         com o import quem ganha, e quem roda por último ganha.
+         ⚠️ A pendência não some, ela fica VISÍVEL: o script imprime quantos
+         pulou. Se a planilha passar a trazer o dado certo de alguém, é na tela
+         que se resolve — apagando a marca manual daquela pessoa. */
+      const jaTem = await prisma.employeeEducation.findUnique({
+        where: { nexusUserId: matched }, select: { source: true },
       })
-      applied++
+      if (jaTem?.source === 'manual') {
+        preservados.push(nome)
+      } else {
+        await prisma.employeeEducation.upsert({
+          where: { nexusUserId: matched },
+          create: { nexusUserId: matched, level, sexo: r['Sexo'] ?? null, detail: detailOf(r) || null, raw },
+          update: { level, sexo: r['Sexo'] ?? null, detail: detailOf(r) || null, raw },
+        })
+        applied++
+      }
     } else if (confidence === 'review') review++
     else none++
   }
-  console.log(JSON.stringify({ total: recs.length, comEscolaridade: strong + review + none, strong, review, none, applied }))
+  console.log(JSON.stringify({
+    total: recs.length, comEscolaridade: strong + review + none, strong, review, none, applied,
+    preservadosPorSeremManuais: preservados.length,
+  }))
+  if (preservados.length) {
+    console.log('PRESERVADOS (editados à mão na tela /escolaridade — a planilha NÃO os sobrescreve):')
+    for (const n of preservados) console.log('  ' + n)
+  }
 }
 main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

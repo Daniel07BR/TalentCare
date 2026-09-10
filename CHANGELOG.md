@@ -1,5 +1,74 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-10 (2) — A escolaridade das 6 pendentes, e o import que a apagaria
+
+O dono mandou a lista do RH para as 6 pessoas ativas sem formação registrada.
+**5 entraram; 1 ficou de fora de propósito.**
+
+| pessoa | setor | nível | curso |
+|---|---|---|---|
+| Cynthia Hora | Fiscal | Ensino Médio | |
+| Gabriel Costa | Financeiro | Ensino Médio | |
+| Laryssa Oliveira | Fiscal | Ensino Médio | |
+| Tabata Vieira | Pessoal | Superior (cursando) | Gestão de Recursos Humanos — último semestre |
+| Yasmin Ensinas | Fiscal | Superior (cursando) | Relações Internacionais |
+
+⚠️ **A Bruna Costa não entrou.** O RH escreveu *"Superior Incompleto **?**
+(Direito)"* — a interrogação é de quem informou. Este campo alimenta o donut de
+escolaridade e a ficha de uma pessoa real; gravar uma dúvida como fato é o que
+ninguém revisa depois, porque o valor fica plausível. Entra quando o RH
+confirmar.
+
+### ⚠️⚠️ E o import de escolaridade apagaria tudo isso, em silêncio
+
+`run-education-import.mjs` fazia `update: { level, sexo, detail, raw }` **sem
+olhar o `source`**. Toda escolaridade digitada na tela `/escolaridade` seria
+sobrescrita na próxima carga do RH — e justamente a das pessoas que estão nessa
+tela por NÃO virem completas na planilha. Havia **2 registros `manual`** já
+expostos a isso antes desta sessão.
+
+É a lição da conta `Sistema`: escrever à mão um campo que um import reescreve é
+combinar com o import quem ganha, e quem roda por último ganha. Agora ele
+**preserva o `manual`** e imprime a lista de quem pulou — pendência visível, não
+silêncio.
+
+⚠️ **Casamento por LOGIN, nunca por nome.** Os três pares perigosos existem todos
+nesta casa: **Bruna Costa × Bruna Cunha**, **Gabriel Costa × Gabriel Santana**,
+**Yasmin Ensinas × Yasmin Barroso**. A lista do RH vem com nomes soltos
+("Cynthia").
+
+⚠️ `scripts/semear-escolaridade.ts` usa a **mesma lib do editor**
+(`deriveLevelAndDetail`), não um `level` digitado: senão a linha semeada
+apareceria diferente da que a tela produz para a mesma formação, e o donut
+passaria a ter duas gramáticas. Ele também **não sobrescreve quem já tem** nível
+registrado.
+
+### ⚠️⚠️ O botão "Vincular" da tela está armado para gravar na PESSOA ERRADA
+
+Achado ao conferir o print. A linha "A revisar" mostra **FABIANA RODRIGUES
+SOARES · Ensino Fundamental** e sugere vincular a **Fabiana Higa · Imóveis**.
+
+Mas **existe uma Fabiana Rodrigues Soares de verdade** no sistema — Limpeza,
+`fabiana.rodrigues.soares`, nome batendo exato. Ela está **inativa**, e quase
+certamente foi cadastrada DEPOIS de o import rodar: por isso a sugestão caiu na
+única "Fabiana" que existia na época.
+
+Clicar em "Vincular" com a sugestão padrão gravaria **Ensino Fundamental na ficha
+da Fabiana Higa**, que hoje tem **Superior (cursando)** — rebaixando a formação de
+uma pessoa por um dado que é de outra. A pessoa certa **está no dropdown** (a
+lista de opções não filtra inativos), então dá para corrigir na hora.
+
+Nada foi feito aqui: é decisão do dono, com a tela na frente.
+
+### A conta que fecha
+
+A tela mostra **86** e o banco tem **95** no mesmo recorte — a diferença são as
+**9 pessoas da Diretoria**, que `isHiddenDept` esconde de propósito. Das 6
+pendências, resta **1** (a Bruna). ⚠️ E entre as 9 ocultas há duplicatas
+evidentes — *Eunice Kohatsu2*, *Sergio2 Kohatsu*, *Helena M Chibana Kohastsu* ×
+*Helena Michiko* —, o mesmo padrão da Ísis Mossinato registrado no `FONTES.md`.
+Não incomodam nenhuma tela hoje por estarem ocultas.
+
 ## 2026-09-10 — O histórico REAL de suspensões entrou, e ele desmentiu uma advertência
 
 O DP mandou a planilha de suspensões (4 abas, 52 registros, 2020→2026). O
