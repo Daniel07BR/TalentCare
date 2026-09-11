@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { X } from 'lucide-react'
 import { RecorteDoSetor, type SetorRecorte } from '@/lib/ui/recorte-setor'
 import { usePeriod } from '@/lib/ui/period'
+import EsqueletoResumo from '../../EsqueletoResumo'
 
 /* ============================================================
    A JANELA DE DETALHE de um sistema, dentro do relatório do setor.
@@ -25,19 +26,40 @@ import { usePeriod } from '@/lib/ui/period'
    URL a janela que a pessoa estava lendo sumiria na volta.
    ============================================================ */
 
-const carregando = () => <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '24px 4px' }}>Carregando…</div>
+/* ⚠️ Enquanto o código do resumo baixa, o MESMO esqueleto de quando os números
+   ainda não chegaram — a janela não troca de cara duas vezes. */
+const carregando = () => <EsqueletoResumo />
+
+/* Os módulos de cada resumo, à parte do `dynamic`, para poder PRÉ-CARREGAR ao
+   passar o mouse no sistema: quando o clique chega, o código já está aqui. */
+const MODULOS = {
+  whatsapp: () => import('../../whatsapp/Resumo'),
+  chat: () => import('../../chat/Resumo'),
+  helpdesk: () => import('../../helpdesk/Resumo'),
+  classroom: () => import('../../classroom/Resumo'),
+  gerencia: () => import('../../gerencia/Resumo'),
+  consultoria: () => import('../../consultoria/Resumo'),
+  cide: () => import('../../cide/Resumo'),
+  radio: () => import('../../radio/Resumo'),
+  assiduidade: () => import('../../assiduidade/Resumo'),
+  turnover: () => import('../../turnover/Resumo'),
+}
 
 export const DETALHES = {
-  whatsapp: { titulo: 'Painel de Atendimento · WhatsApp', C: dynamic(() => import('../../whatsapp/Resumo'), { loading: carregando }) },
-  chat: { titulo: 'Chat Interno', C: dynamic(() => import('../../chat/Resumo'), { loading: carregando }) },
-  helpdesk: { titulo: 'HelpDesk', C: dynamic(() => import('../../helpdesk/Resumo'), { loading: carregando }) },
-  classroom: { titulo: 'ClassRoom', C: dynamic(() => import('../../classroom/Resumo'), { loading: carregando }) },
-  gerencia: { titulo: 'Gerência · mensageria', C: dynamic(() => import('../../gerencia/Resumo'), { loading: carregando }) },
-  consultoria: { titulo: 'Consultoria Plus', C: dynamic(() => import('../../consultoria/Resumo'), { loading: carregando }) },
-  cide: { titulo: 'CIDE', C: dynamic(() => import('../../cide/Resumo'), { loading: carregando }) },
-  radio: { titulo: 'Rádio Itamarathy', C: dynamic(() => import('../../radio/Resumo'), { loading: carregando }) },
-  assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(() => import('../../assiduidade/Resumo'), { loading: carregando }) },
-  turnover: { titulo: 'Turnover e movimentação', C: dynamic(() => import('../../turnover/Resumo'), { loading: carregando }) },
+  whatsapp: { titulo: 'Painel de Atendimento · WhatsApp', C: dynamic(MODULOS.whatsapp, { loading: carregando }) },
+  chat: { titulo: 'Chat Interno', C: dynamic(MODULOS.chat, { loading: carregando }) },
+  helpdesk: { titulo: 'HelpDesk', C: dynamic(MODULOS.helpdesk, { loading: carregando }) },
+  classroom: { titulo: 'ClassRoom', C: dynamic(MODULOS.classroom, { loading: carregando }) },
+  gerencia: { titulo: 'Gerência · mensageria', C: dynamic(MODULOS.gerencia, { loading: carregando }) },
+  consultoria: { titulo: 'Consultoria Plus', C: dynamic(MODULOS.consultoria, { loading: carregando }) },
+  cide: { titulo: 'CIDE', C: dynamic(MODULOS.cide, { loading: carregando }) },
+  radio: { titulo: 'Rádio Itamarathy', C: dynamic(MODULOS.radio, { loading: carregando }) },
+  assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(MODULOS.assiduidade, { loading: carregando }) },
+  turnover: { titulo: 'Turnover e movimentação', C: dynamic(MODULOS.turnover, { loading: carregando }) },
+}
+/** Começa a baixar o código do resumo — chame no `onMouseEnter`/`onFocus` do sistema. */
+export function precarregarDetalhe(chave: keyof typeof MODULOS) {
+  void MODULOS[chave]().catch(() => {})
 }
 export type ChaveDetalhe = keyof typeof DETALHES
 const ehChave = (s: string | null): s is ChaveDetalhe => !!s && s in DETALHES
@@ -82,8 +104,11 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
     <div onClick={onFechar}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'min(3vh, 24px) min(2vw, 24px)', zIndex: 60 }}>
       <div ref={painel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="detalhe-titulo"
-        onClick={(e) => e.stopPropagation()} className="cpop"
-        style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-2)', width: 'min(1500px, 100%)', maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', outline: 'none' }}>
+        onClick={(e) => e.stopPropagation()} className="janela-detalhe"
+        /* ⚠️ ALTURA FIXA desde o primeiro quadro: a janela nascia do tamanho de
+           "Carregando…" e saltava para o tamanho da página — era o "pisca" que o
+           dono leu como erro. Agora ela abre inteira e o conteúdo entra dentro. */
+        style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-2)', width: 'min(1500px, 100%)', height: 'min(88vh, 980px)', maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', outline: 'none' }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '18px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0 }}>
@@ -108,7 +133,9 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
 
         <div style={{ overflowY: 'auto', padding: 24 }}>
           <RecorteDoSetor setor={setor} incluiDesligados={chave === 'turnover'}>
-            <C />
+            {/* `entrada`: cada seção do resumo sobe um pouco depois da de cima
+                (globals.css) — a página se monta de cima para baixo. */}
+            <div className="entrada"><C /></div>
           </RecorteDoSetor>
         </div>
       </div>
@@ -117,9 +144,10 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
 }
 
 /** O botão que abre a janela — o mesmo em todos os cartões, no mesmo lugar. */
-export function BotaoDetalhe({ onClick }: { onClick: () => void }) {
+export function BotaoDetalhe({ onClick, chave }: { onClick: () => void; chave?: ChaveDetalhe }) {
   return (
     <button type="button" onClick={onClick} className="tc-btn"
+      onMouseEnter={chave ? () => precarregarDetalhe(chave) : undefined} onFocus={chave ? () => precarregarDetalhe(chave) : undefined}
       title="Abrir o resumo completo deste sistema, só com este setor"
       style={{ marginLeft: 'auto', flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, height: 28, padding: '0 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
       Ver detalhes <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>›</span>

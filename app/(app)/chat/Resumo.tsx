@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { chatVM, fmtDurUtil, type ChatPerson, type ChatSetor } from '@/lib/mock/chat'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 const ChatIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -24,7 +25,7 @@ export default function ChatResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map, setores: todosSetores, desde } = useChatPeriod()
+  const { map, setores: todosSetores, desde, loading } = useChatPeriod()
   /* ⚠️ Os chamados vêm POR SETOR (`chat_dept_daily`, pela função gravada no
      chamado), não por pessoa — o recorte do diretório não os alcança. Sem este
      filtro, a janela do Legal mostraria os chamados da casa inteira nos KPIs. */
@@ -42,6 +43,11 @@ export default function ChatResumo() {
     { label: 'Chamados concluídos', value: num(vm.totaisSetor.recebidosConcluidos), color: 'var(--success)', desc: `${num(vm.totaisSetor.recebidosCancelados)} cancelados à parte` },
     { label: 'Tempo médio de atendimento', value: vm.tempoMedioSetor, color: 'var(--chart-4)', desc: 'Só o expediente · 8h–18h, seg a sex' },
   ]
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

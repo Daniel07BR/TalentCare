@@ -9,6 +9,7 @@ import Avatar from '../Avatar'
 import Donut from '../Donut'
 import CoursesByDeptCard from './CoursesByDeptCard'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 export default function ClassroomResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
@@ -17,7 +18,7 @@ export default function ClassroomResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useClassroomPeriod()
+  const { map, loading } = useClassroomPeriod()
   const vm = classroomVM(data, map ?? undefined)
 
 
@@ -28,6 +29,11 @@ export default function ClassroomResumo() {
     // Num setor só, "setores ativos" seria sempre 1.
     ...(setor ? [] : [{ label: 'Setores ativos', value: vm.deptCount, color: 'var(--text)' }]),
   ]
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

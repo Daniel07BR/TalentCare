@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { consultoriaVM, type ConsultoriaPerson } from '@/lib/mock/consultoria'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 const CPIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -32,8 +33,13 @@ export default function ConsultoriaResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useConsultoriaPeriod()
+  const { map, loading } = useConsultoriaPeriod()
   const vm = consultoriaVM(data, map ?? undefined)
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

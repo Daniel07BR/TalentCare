@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { cideVM, type CidePerson } from '@/lib/mock/cide'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 const CideIcon = ({ size = 17, color = 'var(--chart-5)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -22,7 +23,7 @@ export default function CideResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useCidePeriod()
+  const { map, loading } = useCidePeriod()
   const vm = cideVM(data, map ?? undefined)
   const max = Math.max(1, ...vm.deptBars.map((d) => d.atividades))
 
@@ -32,6 +33,11 @@ export default function CideResumo() {
     // Num setor só, seria sempre 1.
     ...(setor ? [] : [{ label: 'Setores com atividade', value: vm.deptCount, color: 'var(--info)' }]),
   ]
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

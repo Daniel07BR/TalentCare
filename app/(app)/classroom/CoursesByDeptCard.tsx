@@ -92,7 +92,10 @@ export default function CoursesByDeptCard() {
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{setor ? 'Clique no funcionário para ver os cursos que ele gravou' : 'Clique no setor para ver quem gravou e quantos; clique no funcionário para ver os cursos'}</div>
 
       {loading && courses.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Carregando…</div>
+        // Esqueleto, e não "Carregando…": dentro da janela do setor o resto já entrou.
+        <div aria-busy="true" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[0, 1, 2].map((i) => <div key={i} className="esqueleto" style={{ height: 30 }} />)}
+        </div>
       ) : groups.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Nenhum curso criado no período.</div>
       ) : (

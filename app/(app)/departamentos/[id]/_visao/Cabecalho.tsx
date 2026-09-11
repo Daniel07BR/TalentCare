@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Building2, ChevronRight, Truck, Upload, Columns2 } from 'lucide-react'
+import { Building2, ChevronRight, Truck, Upload } from 'lucide-react'
 import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 import type { SecaoProps } from './tipos'
 
@@ -32,11 +32,9 @@ export function Cabecalho({ m }: SecaoProps) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* O relatório de antes, com o que esta visão não traz (tabela de pessoas
-            com nota e busca, avaliação por critério, tendência). */}
-        <button type="button" style={botao} onClick={() => router.push(`/departamentos/${m.setor.id}/completo`)} title="Tabela de pessoas com nota e busca, avaliação por critério, tendência e os cartões de cada sistema">
-          <Columns2 size={15} /> Relatório completo
-        </button>
+        {/* ⚠️ Sem atalho para o relatório de antes (`./completo`): o dono, em
+            11/09/2026 — "a página para a qual ele leva é a que substituímos".
+            A rota segue existindo por endereço, sem porta na tela. */}
         {m.setor.id === ENTREGAS_DEPT_ID && (
           <button type="button" style={botao} onClick={() => router.push('/entregas')}><Truck size={15} /> Área da mensageria</button>
         )}

@@ -9,6 +9,7 @@ import { scoreColor } from '@/lib/mock/data'
 import { AlarmClock } from 'lucide-react'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 export default function AssiduidadeResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
@@ -36,6 +37,11 @@ export default function AssiduidadeResumo() {
     { label: 'Atrasos abonados', value: vm.totalAbonados.toLocaleString('pt-BR'), color: 'var(--text-mute)' },
     { label: 'Pessoas c/ ocorrência', value: vm.pessoas.toLocaleString('pt-BR'), color: 'var(--info)' },
   ]
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && assid.loading && !assid.map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

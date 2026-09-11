@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { helpdeskVM, type HelpdeskPerson } from '@/lib/mock/helpdesk'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 const HdIcon = ({ size = 17, color = 'var(--chart-4)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -22,7 +23,7 @@ export default function HelpdeskResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useHelpdeskPeriod()
+  const { map, loading } = useHelpdeskPeriod()
   const vm = helpdeskVM(data, map ?? undefined)
 
   const kpis = [
@@ -31,6 +32,11 @@ export default function HelpdeskResumo() {
     { label: 'Tempo médio de resolução', value: vm.tempoMedioGeral, color: 'var(--chart-4)', desc: 'Da abertura ao fechamento' },
     { label: 'Pessoas com atividade', value: vm.ativos.toLocaleString('pt-BR'), color: 'var(--text)', desc: 'Solicitantes + responsáveis' },
   ]
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>

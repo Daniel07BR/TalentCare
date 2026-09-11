@@ -1,5 +1,39 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (12) — A janela do sistema abre inteira, sem piscar; sai o "relatório completo"
+
+Dois pedidos do dono:
+
+**1. "Ver relatório completo" não precisa existir** — *"a página para qual ele leva é a
+que substituímos"*. Saem o botão da faixa "Sistemas e produtividade" e o
+"Relatório completo" do cabeçalho (mesmo destino). A rota `/departamentos/<id>/completo`
+segue existindo por endereço, sem porta na tela.
+
+**2. A janela "Ver detalhes" piscava.** Ela nascia do tamanho de "Carregando…",
+piscava e só então virava a janela cheia — *"parece para quem clica que existe um
+erro"*. E por baixo havia um defeito de número: enquanto o período não chegava, cada
+resumo calculava com o **acumulado de toda a história** e trocava em seguida — um
+número errado aparecia por um instante. Agora:
+- a janela abre **no tamanho final** desde o primeiro quadro (`height: min(88vh, 980px)`);
+- no lugar de "Carregando…", um **esqueleto** com a forma da página (números, cartões,
+  linhas) e brilho suave (`EsqueletoResumo.tsx`, `.esqueleto` em `globals.css`) — o
+  mesmo enquanto o código baixa e enquanto os números chegam, então nada troca de cara
+  duas vezes;
+- os nove resumos, **dentro da janela**, só aparecem com os números do período
+  (`if (setor && loading && !map) return <EsqueletoResumo />`) — o acumulado não
+  pisca mais;
+- quando chegam, as seções **entram de cima para baixo**, uma depois da outra
+  (`.entrada`), respeitando quem pediu menos movimento no sistema;
+- **passar o mouse** num sistema já começa a baixar o código do resumo
+  (`precarregarDetalhe`), para o clique esperar menos.
+
+⚠️ Nas páginas normais dos sistemas o comportamento é o de antes — o esqueleto vale só
+na janela do setor.
+
+**Arquivos:** `EsqueletoResumo.tsx` (novo), `globals.css`, `departamentos/[id]/Detalhe.tsx`,
+`_visao/Sistemas.tsx`, `_visao/Cabecalho.tsx`, os nove `Resumo.tsx`,
+`classroom/CoursesByDeptCard.tsx`.
+
 ## 2026-09-11 (11) — Suspensão em ROXO, e no ranking do setor
 
 Dois pedidos do dono, olhando o Fiscal em agosto:

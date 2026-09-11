@@ -1,8 +1,8 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { Activity, FileSpreadsheet, MessageCircle, MessageSquareText, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Activity, FileSpreadsheet, MessageCircle, MessageSquareText, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
-import type { ChaveDetalhe } from '../Detalhe'
+import { precarregarDetalhe, type ChaveDetalhe } from '../Detalhe'
 import { Cartao, forte, suave } from './ui'
 import { dur, num } from './derivar'
 import s from './novo.module.css'
@@ -48,16 +48,12 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
   const com = todos.filter((x) => x.tem)
   const sem = todos.filter((x) => !x.tem).map((x) => x.nome)
   return (
-    <Cartao titulo="Sistemas e produtividade" Icone={Activity} sub={`Uso dos sistemas no período · ${m.label} · clique num sistema para o detalhe`}
-      acao={
-        <button type="button" onClick={() => router.push(`/departamentos/${m.setor.id}/completo`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 34, padding: '0 12px', background: 'var(--n-card)', border: '1px solid var(--n-blue)', color: 'var(--n-blue)', borderRadius: 10, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          Ver relatório completo <ArrowRight size={14} />
-        </button>
-      }>
+    <Cartao titulo="Sistemas e produtividade" Icone={Activity} sub={`Uso dos sistemas no período · ${m.label} · clique num sistema para o detalhe`}>
       <div className={s.sistemas}>
         {com.map((x) => (
           <button key={x.chave} type="button"
+            onMouseEnter={x.chave !== 'servicos' ? () => precarregarDetalhe(x.chave as ChaveDetalhe) : undefined}
+            onFocus={x.chave !== 'servicos' ? () => precarregarDetalhe(x.chave as ChaveDetalhe) : undefined}
             onClick={() => (x.chave === 'servicos' ? router.push(`/servicos?setor=${m.setor.id}`) : abrir(x.chave))}
             title={x.chave === 'servicos' ? 'Abrir a planilha de serviços do setor' : `Abrir o resumo de ${x.nome} só com este setor`}
             style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>

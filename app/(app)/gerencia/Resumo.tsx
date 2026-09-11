@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { gerenciaVM, type GerenciaPerson, type GerenciaDeptBar } from '@/lib/mock/gerencia'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 const COR_EXEC = 'var(--chart-2)'
 const COR_ESCR = 'var(--info)'
@@ -91,11 +92,16 @@ export default function GerenciaResumo() {
   const setor = useRecorteSetor()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map } = useGerenciaPeriod()
+  const { map, loading } = useGerenciaPeriod()
   const vm = gerenciaVM(data, map ?? undefined)
   const t = vm.totais
 
   const card = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }
+
+  /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
+     não chega (o número errado aparecia por um instante e trocava): o
+     esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
+  if (setor && loading && !map) return <EsqueletoResumo />
 
   return (
     <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>
