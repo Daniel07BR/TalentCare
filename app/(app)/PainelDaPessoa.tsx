@@ -96,6 +96,7 @@ function Painel({ sistema, id, onFechar }: { sistema: Sistema; id: string; onFec
             : d.semConta ? <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Sem conta no Nexus — não há como casar esta pessoa com o {NOME_DO_SISTEMA[sistema]}.</div>
             : comItens.length === 0 ? <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Nenhum registro de {e?.nome.split(' ')[0] ?? 'da pessoa'} neste sistema no período.</div>
             : comItens.map((g) => <GrupoDaPessoa key={g.chave} g={g} />)}
+          {d?.aviso && <div style={{ fontSize: 11.5, color: 'var(--warning)', marginBottom: 12, lineHeight: 1.5 }}>{d.aviso}</div>}
           {d && !d.erro && comItens.length > 0 && vazios.length > 0 && (
             <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 6 }}>Sem registro no período: {vazios.join(', ').toLowerCase()}.</div>
           )}
@@ -103,9 +104,11 @@ function Painel({ sistema, id, onFechar }: { sistema: Sistema; id: string; onFec
 
         <footer style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.45 }}>
-            {!d ? '' : d.aoVivo
+            {!d ? '' : sistema === 'chat'
+              ? 'Chamados ao vivo do Chat; mensagens só como contagem por dia — o texto das conversas não sai do Chat.'
+              : d.aoVivo
               ? 'Lista ao vivo do sistema. O número ao lado do nome é atualizado de hora em hora — hoje a lista pode ter um item a mais.'
-              : sistema === 'chat' || sistema === 'whatsapp'
+              : sistema === 'whatsapp'
                 ? 'Dia a dia, do espelho do TalentCare. Este sistema envia só contagens — nenhum assunto nem texto de conversa — por decisão de privacidade.'
                 : 'Dia a dia, do espelho do TalentCare.'}
           </div>

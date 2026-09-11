@@ -12,12 +12,12 @@ import { prisma } from '@/lib/db/prisma'
      rota diária que alimenta o número ao lado do nome — conferido 1:1 contra o
      espelho em 11/09/2026. No dia de hoje a lista pode ter um item a mais: o
      espelho sincroniza de hora em hora.
-   - DO ESPELHO, dia a dia (Chat, WhatsApp, Rádio, Assiduidade):
-     ⚠️⚠️ o Chat NÃO manda conteúdo ao TalentCare, por decisão escrita no código
-       dele ("nenhum texto de mensagem, nenhum assunto de chamado, nenhum nome de
-       canal atravessa esta porta") — então aqui é contagem por dia, e não a
-       lista de chamados;
-     ⚠️ o WhatsApp é conversa com CLIENTE (nome e telefone de terceiros) — idem;
+   - CHAT, misto: os CHAMADOS vêm ao vivo (`talent-pessoa` do Chat, liberado
+     pelo dono em 11/09/2026: "pode mostrar os chamados do chat também"); as
+     MENSAGENS continuam só como contagem por dia, do espelho — o texto das
+     conversas não sai do Chat, e isso não mudou.
+   - DO ESPELHO, dia a dia (WhatsApp, Rádio, Assiduidade):
+     ⚠️ o WhatsApp é conversa com CLIENTE (nome e telefone de terceiros);
      Rádio e Assiduidade já estão inteiros no espelho.
    ============================================================ */
 
@@ -35,6 +35,8 @@ const EXTERNOS: Record<string, { base?: string; key?: string; header: string; ca
   cide: { base: process.env.CIDE_BASE_URL, key: process.env.CIDE_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   consultoria: { base: process.env.CONSULTORIA_BASE_URL, key: process.env.CONSULTORIA_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   gerencia: { base: process.env.GERENCIA_BASE_URL, key: process.env.GERENCIA_API_KEY, header: 'x-api-key', caminho: '/integrations/talent-pessoa' },
+  // ⚠️ Fora de `detalheDaPessoa`'s "externos": o Chat é MISTO — ver `doChat`.
+  chat: { base: process.env.CHAT_BASE_URL, key: process.env.CHAT_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   classroom: { base: process.env.CLASSROOM_BASE_URL, key: process.env.CLASSROOM_INTEGRATION_KEY, header: 'x-integration-key', caminho: '/api/integrations/talent-user-learning' },
 }
 
@@ -76,7 +78,7 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
   const dia = { gte: de, lte: ate }
   const desc = { day: 'desc' as const }
   if (sistema === 'chat') {
-    if (!p.nexusUserId) return { grupos: [], aoVivo: false }
+    if (!p.nexusUserId) return { grupos: [], aoVivo: false, semConta: true }
     const rs = await prisma.chatDaily.findMany({ where: { nexusUserId: p.nexusUserId, day: dia }, orderBy: desc })
     const ch = rs.filter((r) => r.chamadosAbertos + r.chamadosAssumidos + r.chamadosConcluidos > 0)
     const ms = rs.filter((r) => r.msgCanais + r.msgDiretas + r.msgChamados > 0)
@@ -119,7 +121,22 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
   ] }
 }
 
+/**
+ * CHAT: chamados AO VIVO (a lista, com assunto) + mensagens do ESPELHO (por dia).
+ * ⚠️ Se o Chat não responder, os chamados caem para o dia a dia do espelho, com
+ * aviso — um painel vazio se leria "não abriu chamado nenhum".
+ */
+async function doChat(p: Pessoa, de: string, ate: string): Promise<Detalhe> {
+  const espelho = await doEspelho('chat', p, de, ate)
+  if (!p.nexusUserId) return espelho
+  const vivo = await aoVivo('chat', p.nexusUserId, de, ate)
+  const mensagens = espelho.grupos.filter((g) => g.chave === 'mensagens')
+  if (vivo.erro) return { ...espelho, aviso: `${vivo.erro} — os chamados abaixo são a contagem por dia do espelho.` }
+  return { aoVivo: true, grupos: [...vivo.grupos, ...mensagens] }
+}
+
 export async function detalheDaPessoa(sistema: Sistema, p: Pessoa, de: string, ate: string): Promise<Detalhe> {
+  if (sistema === 'chat') return doChat(p, de, ate)
   if (sistema in EXTERNOS) {
     // Sem conta no Nexus não há como casar com o sistema — não é "não fez nada".
     if (!p.nexusUserId) return { grupos: [], aoVivo: true, semConta: true }

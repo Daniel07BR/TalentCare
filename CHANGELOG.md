@@ -1,5 +1,42 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (10) — O painel da pessoa mostra os chamados do Chat
+
+Decisão do dono: *"pode mostrar os chamados do chat também"*. No painel da pessoa, o
+Chat passou de "contagem por dia" para a **lista dos chamados** que ela abriu,
+assumiu e concluiu — número, assunto, de que setor para qual (ou "melhoria no
+<sistema>"), situação e, nos concluídos, o tempo em horas de expediente.
+
+- Rota nova no Chat Interno, `GET /api/integrations/talent-pessoa` (commit `e08caca`
+  no chat-interno, nos dois espelhos, no ar no .69), com as **mesmas regras** do
+  `talent-daily`: aberto = quem pediu (created_at); assumido = responsável
+  (assigned_at); concluído = crédito de quem assumiu (closed_at); ensaios
+  (`hidden_at`) fora.
+- ⚠️ Continua sem atravessar: texto de mensagem, anexo, nome de canal, conversa
+  direta, anotação. As **mensagens** seguem como contagem por dia, do espelho. O
+  `talent-daily` (o espelho) segue só com contagem — a lista é sob demanda, uma
+  pessoa por vez, e o TalentCare não a grava.
+- Se o Chat não responder, os chamados caem para a contagem por dia, com aviso.
+
+### ⚠️ O espelho do Chat também estava defasado — chamado que muda de dono
+
+Conferindo a lista contra o número: 11 de 12 pessoas iguais, e o **Daniel com 9 na
+lista e 16 no espelho**. Em 04/09 ele assumiu 8 chamados e passou 6 adiante; a fonte
+passou a dizer 2 naquele dia, mas o sincronizador de hora em hora não volta a dias
+passados. `run-chat-sync.mjs` ganhou `--completo` (histórico inteiro), que:
+- **zera** (não apaga) a linha que a fonte não devolveu mais — quem passou o único
+  chamado do dia adiante nem aparece na resposta, e só atualizar deixaria o número
+  velho para sempre;
+- tem **freio**: se a fonte devolver menos da metade das linhas do espelho, não zera
+  nada e diz por quê no log.
+
+Rodou uma vez (27 linhas mudaram: −7 assumidos, +76 mensagens que tinham chegado com
+data antiga) e entrou no cron às **03:30**. Cópia de antes em
+`chat_daily_bkp_20260911` / `chat_dept_daily_bkp_20260911`.
+
+**Arquivos:** `lib/pessoa-sistema.ts`, `lib/pessoa-sistema-tipos.ts` (`aviso`),
+`app/(app)/PainelDaPessoa.tsx`, `run-chat-sync.mjs`.
+
 ## 2026-09-11 (9) — O painel da pessoa: o que ela fez em cada sistema
 
 Pedido do dono, depois do ClassRoom: *"faça o mesmo nos outros sistemas ao clicar na
