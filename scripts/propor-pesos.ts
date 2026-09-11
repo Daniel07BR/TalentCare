@@ -34,6 +34,7 @@
 import { prisma } from '../lib/db/prisma'
 import { montar } from '../lib/servicos/calcular-mes'
 import { competenciaValida } from '../lib/servicos/pontuacao'
+import { pesosDoAtraso, PARAMETROS_DE_09_09 } from '../lib/servicos/regra-geral'
 
 const LEGAL = 'cmq6vajf5000nnw4i1tko93pz'
 
@@ -146,23 +147,14 @@ async function main() {
        como foram semeados. Mexer no atraso e deixar a falta grave para trás
        daria, no Contábil, atraso −5 ao lado de suspensão −300: a mesma escala
        em dois mundos. */
-    const advertencia = Math.round(atraso * 1.5)
-    const itens: Record<string, number> = {
-      atraso: -atraso,
-      atraso_abonado: 0,
-      advertencia: -advertencia,
-      mes_sem_ocorrencia: atraso * 2,
-      /* ⚠️⚠️ SUSPENSÃO POR ATRASO = 2× a advertência (decisão do dono,
-         10/09/2026, ao entrar o histórico real do DP). Ela nasce AQUI, e não
-         num INSERT à parte, pelo mesmo motivo dos pesos de LGPD: a proposta e a
-         aplicação têm de sair da MESMA conta, senão divergem no dia em que
-         alguém recalibrar o atraso — e o que está em jogo é a nota de aumento.
-         Fica entre a advertência (1,5× o atraso) e a advertência por vazamento
-         de dado (3×), que é outra natureza. */
-      suspensao: -(advertencia * 2),
-      lgpd_advertencia: -(atraso * 3),
-      lgpd_suspensao: -(atraso * 6),
-    }
+    /* ⚠️⚠️ A FÓRMULA MORA EM `lib/servicos/regra-geral.ts` desde 11/09/2026 — a
+       mesma que a régua geral de Configurações usa. Os multiplicadores são os
+       aprovados (advertência 1,5×, mês limpo 2×, suspensão 2× a advertência,
+       LGPD 3× e 6×). ⚠️ E a régua agora se altera em Configurações: este script
+       fica como ENSAIO por linha de comando. */
+    const itensTodos = pesosDoAtraso(PARAMETROS_DE_09_09, atraso)
+    const { atraso_abonado: _ab, servico_concluido: _sv, ...semFixos } = itensTodos
+    const itens: Record<string, number> = { ...semFixos, atraso_abonado: 0 }
     console.log(
       s.name.padEnd(14), String(c.n).padStart(7), String(c.mediana).padStart(8),
       String(-atraso).padStart(7), String(itens.advertencia).padStart(7), String(itens.mes_sem_ocorrencia).padStart(10),

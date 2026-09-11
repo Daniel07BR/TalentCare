@@ -873,6 +873,63 @@ model PontuacaoRegra {
 }
 
 /**
+ * A RÉGUA GERAL de pontuação — UMA para a casa inteira (11/09/2026, decisão do dono).
+ *
+ * ⚠️⚠️ Ela não é uma tabela de pontos: é a REGRA de que saem os pontos de cada
+ * setor. Com os mesmos números em todos os setores (atraso −50 no Imóveis e no
+ * Legal), medido em 08/09/2026, 32 de 95 pessoas ficariam com nota NEGATIVA —
+ * −50 é 7% da nota de quem soma 700 e a nota inteira de quem soma 150. Então a
+ * regra universal diz QUANTO UMA FALTA CUSTA EM PROPORÇÃO do que o setor costuma
+ * pontuar (a mediana de crédito dele), e as outras faltas são múltiplos do atraso.
+ *
+ * ⚠️ Salvar uma versão GERA a `PontuacaoRegra` de cada setor com a mesma
+ * vigência (`lib/servicos/regra-geral-servidor.ts`) — o cálculo do mês continua
+ * lendo a régua do setor, e a do setor passa a ser só o que esta regra produziu.
+ * O gestor não edita mais nada disso; edita o tempo médio das tarefas.
+ *
+ * Quem altera: ADMIN (o dono e a Diretoria). Nunca se reescreve: versão nova com
+ * vigência a partir do mês corrente.
+ */
+model PontuacaoRegraGeral {
+  id                    String   @id @default(cuid())
+  vigenteDesde          String   @unique @map("vigente_desde") @db.VarChar(7)
+  /** Pontos com que todo mundo começa o mês. */
+  base                  Int      @default(0)
+  /** Pontos por minuto da duração média de cada tipo de serviço/atividade. */
+  fatorPorMinuto        Float    @default(0.1) @map("fator_por_minuto")
+  /** Quanto UM atraso custa, em fração da mediana de crédito do setor (0,0714 = 7,1%). */
+  fracaoAtraso          Float    @map("fracao_atraso")
+  /** Advertência = atraso × isto. */
+  multAdvertencia       Float    @default(1.5) @map("mult_advertencia")
+  /** Bônus de mês sem ocorrência = atraso × isto. */
+  multMesLimpo          Float    @default(2) @map("mult_mes_limpo")
+  /** Suspensão por atraso = ADVERTÊNCIA × isto (decisão do dono, 10/09/2026). */
+  multSuspensao         Float    @default(2) @map("mult_suspensao")
+  /** Advertência por vazamento (LGPD) = atraso × isto. */
+  multLgpdAdvertencia   Float    @default(3) @map("mult_lgpd_advertencia")
+  /** Suspensão por vazamento (LGPD) = atraso × isto. */
+  multLgpdSuspensao     Float    @default(6) @map("mult_lgpd_suspensao")
+  /** Pontos por atraso abonado (absoluto — hoje 0). */
+  pontosAbonado         Int      @default(0) @map("pontos_abonado")
+  /** Pontos por serviço concluído na planilha (absoluto — hoje 0; o serviço já vale pelos minutos). */
+  pontosServico         Int      @default(0) @map("pontos_servico")
+  /**
+   * A competência cuja mediana gerou os pesos dos setores — CONGELADA ao salvar.
+   * ⚠️ A mediana muda sozinha quando um espelho é corrigido (em 10/09 a do
+   * Entregas subiu e o atraso saltou de −62 para −65); sem congelar, a régua de
+   * aumento mexeria de carona.
+   */
+  competenciaReferencia String   @map("competencia_referencia") @db.VarChar(7)
+  /** A mediana de cada setor usada ao salvar: { departmentId: pontos }. É o que prova a conta. */
+  medianas              Json?
+  criadoPor             String   @map("criado_por")
+  criadoEm              DateTime @default(now()) @map("criado_em")
+  motivo                String?
+
+  @@map("pontuacao_regra_geral")
+}
+
+/**
  * Uma linha da régua: que evento vale quantos pontos.
  * `evento` hoje: 'atraso' · 'atraso_abonado' · 'advertencia' ·
  * 'mes_sem_ocorrencia' · 'servico_concluido'. `pontos` é assinado — o Legal

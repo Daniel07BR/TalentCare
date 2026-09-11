@@ -460,7 +460,11 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
               )
             })}
 
-            {isOwner && (
+            {/* ⚠️ Para TODA a Diretoria desde 11/09/2026 (era só o dono): a régua geral
+                de pontuação mora em Configurações e a Diretoria também a altera. As
+                abas que são só do dono (usuários, equipe, ponto…) a própria página
+                esconde de quem não é dono. */}
+            {!soMeuSetor && (
               <>
                 <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '.7px', textTransform: 'uppercase', color: 'var(--text-mute)', padding: '16px 12px 6px' }}>Administração</div>
                 {NAV_ADMIN.map((it) => {

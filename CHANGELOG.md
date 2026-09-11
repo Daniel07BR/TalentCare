@@ -1,5 +1,49 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (21) — A régua de pontuação vira GERAL, em Configurações
+
+Pedido do dono: *"cada departamento consegue subir a planilha e regular o tempo médio para o
+sistema dar o ponto que vale a tarefa, mas a regra geral — quanto vale o minuto, penalidade
+etc. — gostaria de levar para Configurações, e que ela fosse universal, valesse para todos os
+departamentos, e só eu e a Diretoria pudéssemos fazer alterações"*.
+
+⚠️⚠️ **A pergunta que veio antes de construir:** as réguas dos setores NÃO eram iguais — o
+ponto por minuto (0,1) e a base (0) sim, mas o atraso ia de −1 (Imóveis) a −62 (Entregas),
+proporcional ao volume de cada setor, por decisão do dono em 09/09 (com o peso do Legal em
+todos, 32 de 95 pessoas ficavam com nota negativa). Perguntado se "universal" era o mesmo
+número ou a mesma regra, o dono escolheu **a mesma regra, com peso proporcional**.
+
+**Como ficou:**
+- **Configurações → Régua de pontuação** (aba nova, para o dono e a Diretoria): ponto por
+  minuto, base, serviço concluído; **atraso = % do mês típico do setor** (a mediana de crédito
+  de quem recebe nota); advertência, mês limpo, suspensão (× a advertência) e LGPD como
+  múltiplos do atraso; abonado fixo. **Salvar exige ver a prévia** com os mesmos números — a
+  tabela de cada setor, com o que muda em relação a hoje —, e cria uma **versão** com vigência
+  a partir do mês corrente; mês já pontuado não muda.
+- Salvar **gera a régua de cada setor** com a mesma vigência, numa transação, e **grava a
+  mediana usada** (congelada: a mediana anda sozinha quando um espelho é corrigido).
+- Setor **sem ninguém com nota** usa a mediana da **casa** (antes ficava com a cópia do Legal,
+  "errada para eles").
+- O gestor **não edita mais a régua**: `/servicos` mostra a régua do setor só para leitura, de
+  onde ela vem e o link "Alterar a régua geral" para quem pode; `POST /api/servicos/regra` → 410.
+- **Configurações saiu do grupo `(admin)`** (só dono) para a Diretoria entrar; a Diretoria vê
+  a Régua e as Fontes, e as abas de cadastro seguem só do dono. Menu de Administração para
+  toda a Diretoria.
+- A fórmula mora em `lib/servicos/regra-geral.ts`; `propor-pesos.ts` passou a importá-la.
+
+**A primeira versão registra a regra de 09/09 sem mexer em número nenhum**
+(`scripts/semear-regra-geral.ts`): vigência 2026-08, atraso = 50 ÷ 700 = 7,1% do mês típico.
+O ensaio (`scripts/ensaio-regua-geral.ts`) prova que a régua de hoje de **cada um dos 16
+setores** segue a fórmula: **153 conferências, 0 divergências** (com o acesso: dono e
+Diretoria leem e gravam; gestor 403; gravação por setor 410; Diretoria sem as abas de
+cadastro). Informativo: salvar a MESMA regra hoje mudaria o Entregas (−62 → −65, a mediana
+subiu) e os 6 setores sem ninguém com nota (−50 → −15, a mediana da casa).
+
+⚠️ **`prisma db push` queria DROPAR** `chat_daily_bkp_20260911` (11.068 linhas) e
+`chat_dept_daily_bkp_20260911` — os backups do Chat de 11/09. Recusado: a tabela nova entrou
+por SQL gerado pelo `prisma migrate diff`, filtrado para só o `CREATE`. **Enquanto esses
+backups existirem, `db push` puro não serve neste banco.**
+
 ## 2026-09-11 (20) — Configurações vira a área administrativa inteira; saem três blocos de ficção
 
 Pedido do dono: *"painel configurações não configura nada de score, isso já é feito por cada

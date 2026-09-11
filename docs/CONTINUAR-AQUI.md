@@ -180,7 +180,9 @@ prévia compara o setor de destino com o setor das pessoas reconhecidas e abre
 faixa vermelha quando divergem.
 
 ⚠️⚠️ **A régua de pontuação tem VERSÃO, autor, data e vigência**, e a vigência não
-pode ser anterior ao mês corrente. Quem a edita é o **gestor do próprio time**
+pode ser anterior ao mês corrente. ~~Quem a edita é o **gestor do próprio time**~~
+**Desde 11/09/2026 a régua é GERAL** (Configurações → Régua de pontuação; só o dono e a
+Diretoria alteram) e a de cada setor é gerada por ela — ver §8. Antes: gestor do time
 (decisão do dono) — o registro é o que separa "mudamos o critério" de "mudei a
 nota dele". Pelo mesmo motivo, o **mínimo e o máximo por tarefa mostram quantos
 serviços cada um tirou da conta**: o mínimo só sobe a média (e os pontos), o
@@ -282,8 +284,21 @@ nas duas o código parecia certo.
 ## 8. A PONTUAÇÃO UNIFICADA (sessão de 08/09/2026) — leia se for mexer em nota
 
 A pontuação mensal de uma pessoa (`pontuacao_mes`) passou a somar **três
-metades**, e é o número que decide aumento. Cada setor tem a sua régua, editada
-pelo gestor na tela `/servicos?setor=<id>` (decisão do dono):
+metades**, e é o número que decide aumento.
+
+> ⚠️⚠️ **DESDE 11/09/2026 A RÉGUA É GERAL** (decisão do dono): mora em **Configurações →
+> Régua de pontuação**, e só o dono e a Diretoria alteram (`/api/regra-geral`). É UMA regra
+> com **peso proporcional**: ponto por minuto e base iguais em todo setor; o atraso custa
+> uma fração da **mediana de crédito do setor** (hoje 7,1% = 50 ÷ 700 do Legal), e as outras
+> faltas são múltiplos do atraso (advertência 1,5×, mês limpo 2×, suspensão 2× a advertência,
+> LGPD 3× e 6×). Salvar gera a `pontuacao_regra` de CADA setor com a mesma vigência, e grava
+> a mediana usada (`pontuacao_regra_geral.medianas`). A fórmula mora em
+> `lib/servicos/regra-geral.ts` (a mesma de `propor-pesos.ts`). O gestor NÃO edita mais a
+> régua (`POST /api/servicos/regra` → 410); ele segue com a planilha e o tempo médio das
+> tarefas. Prova: `scripts/ensaio-regua-geral.ts`. O que segue abaixo é o desenho anterior.
+
+Antes de 11/09, cada setor tinha a sua régua, editada pelo gestor na tela
+`/servicos?setor=<id>` (decisão do dono):
 
 1. **Disciplina** — base + atraso + advertência + bônus de mês sem ocorrência
    (`pontuacao_regra` + `pontuacao_regra_item`). O Legal: base **0**, atraso

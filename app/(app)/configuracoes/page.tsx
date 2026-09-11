@@ -1,11 +1,16 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
+import { isOwnerEmail } from '@/lib/nexus'
+import { quemEh } from '@/lib/avaliacoes/regua'
 import FontesDeDados from './Fontes'
-import UsuariosSecao from '../usuarios/Secao'
-import EquipeSecao from '../equipe/Secao'
-import EscolaridadeSecao from '../escolaridade/Secao'
-import PontoSecao from '../ponto/Secao'
-import AvaliadoresPage from '../../avaliadores/page'
+import ReguaGeral from './Regua'
+import UsuariosSecao from '../(admin)/usuarios/Secao'
+import EquipeSecao from '../(admin)/equipe/Secao'
+import EscolaridadeSecao from '../(admin)/escolaridade/Secao'
+import PontoSecao from '../(admin)/ponto/Secao'
+import AvaliadoresPage from '../avaliadores/page'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,24 +32,38 @@ export const dynamic = 'force-dynamic'
    - "Sistemas conectados": "Sync há 8 min" escrito à mão; virou "Fontes de dados".
    - "Gestão de acesso": perfis e contagens de membros escritos à mão.
 
-   Só o DONO entra (o `(admin)/layout.tsx`).
+   ⚠️⚠️ QUEM ENTRA (11/09/2026): saiu do grupo `(admin)` — que é só do DONO —
+   porque a RÉGUA GERAL DE PONTUAÇÃO mora aqui e a Diretoria também a altera
+   (pedido do dono: "só eu e a Diretoria"). A Diretoria vê a Régua e as Fontes;
+   as abas de cadastro (usuários, equipe, escolaridade, ponto, quem avalia)
+   continuam só do dono — a página as esconde E não as renderiza para quem não é.
    ============================================================ */
 
 const ABAS = [
-  { chave: 'fontes', rotulo: 'Fontes de dados' },
-  { chave: 'usuarios', rotulo: 'Usuários' },
-  { chave: 'equipe', rotulo: 'Equipe interna' },
-  { chave: 'escolaridade', rotulo: 'Escolaridade' },
-  { chave: 'ponto', rotulo: 'Casar ponto' },
-  { chave: 'avaliadores', rotulo: 'Quem avalia' },
+  { chave: 'regua', rotulo: 'Régua de pontuação', soDono: false },
+  { chave: 'fontes', rotulo: 'Fontes de dados', soDono: false },
+  { chave: 'usuarios', rotulo: 'Usuários', soDono: true },
+  { chave: 'equipe', rotulo: 'Equipe interna', soDono: true },
+  { chave: 'escolaridade', rotulo: 'Escolaridade', soDono: true },
+  { chave: 'ponto', rotulo: 'Casar ponto', soDono: true },
+  { chave: 'avaliadores', rotulo: 'Quem avalia', soDono: true },
 ] as const
 type Aba = (typeof ABAS)[number]['chave']
 
 export default async function Configuracoes({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
+  /* A trava: Diretoria (ADMIN) entra; o `proxy.ts` já barra o resto, e isto é a
+     segunda porta. Dono = allowlist `TALENTCARE_ADMIN_EMAILS`. */
+  const session = await auth()
+  const uid = (session?.user as { id?: string } | undefined)?.id
+  const quem = uid ? await quemEh(uid) : null
+  if (!quem || quem.role !== 'ADMIN') redirect('/dashboard')
+  const dono = isOwnerEmail(session?.user?.email)
+  const visiveis = ABAS.filter((a) => dono || !a.soDono)
+
   const { aba } = await searchParams
-  const atual: Aba = ABAS.some((a) => a.chave === aba) ? (aba as Aba) : 'fontes'
+  const atual: Aba = visiveis.some((a) => a.chave === aba) ? (aba as Aba) : 'regua'
   /* O que pede atenção, dito na própria aba: nomes do ponto esperando vínculo. */
-  const pontoPendente = await prisma.pontoStaging.count({ where: { status: 'pending' } })
+  const pontoPendente = dono ? await prisma.pontoStaging.count({ where: { status: 'pending' } }) : 0
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -55,7 +74,7 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
       </div>
 
       <nav aria-label="Áreas da administração" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-        {ABAS.map((a) => {
+        {visiveis.map((a) => {
           const ativa = a.chave === atual
           return (
             <Link key={a.chave} href={`/configuracoes?aba=${a.chave}`} aria-current={ativa ? 'page' : undefined} className="tc-btn"
@@ -76,6 +95,7 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
         })}
       </nav>
 
+      {atual === 'regua' && <ReguaGeral />}
       {atual === 'fontes' && <FontesDeDados />}
       {atual === 'usuarios' && <UsuariosSecao />}
       {atual === 'equipe' && <EquipeSecao />}
