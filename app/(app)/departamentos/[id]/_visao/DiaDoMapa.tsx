@@ -3,8 +3,8 @@ import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import Avatar from '../../../Avatar'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
-import { Chip } from './ui'
-import s from './novo.module.css'
+import { Chip } from '../../../_visao/ui'
+import s from '../../../_visao/visao.module.css'
 
 /** Uma linha do dia, já com nome e foto (vindos de `quemDoMapa`). */
 export type Linha = NonNullable<DeptMetrics['assiduidade']['quemNoDia']>[number]
@@ -17,8 +17,14 @@ const diaLongo = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateStrin
 /* O que o quadro do mapa escondia: QUEM chegou tarde naquele dia, e quanto.
    Abre embaixo do calendário, e não num modal — o calendário continua à vista
    para clicar no dia seguinte sem fechar nada. */
-export function DiaDoMapa({ dia, linhas, onFechar }: { dia: string; linhas: Linha[]; onFechar: () => void }) {
+export function DiaDoMapa({ dia, linhas, onFechar, aoClicar }: {
+  dia: string; linhas: Linha[]; onFechar: () => void
+  /** O que o clique na pessoa faz. Sem ele, a ficha (o relatório do setor); o
+   *  painel principal passa o painel da pessoa (assiduidade). */
+  aoClicar?: (id: string) => void
+}) {
   const router = useRouter()
+  const vai = (id: string) => (aoClicar ? aoClicar(id) : router.push(`/funcionarios/${id}`))
   const minutos = linhas.reduce((a, l) => a + l.minutos, 0)
   return (
     <div role="region" aria-label={`Atrasos de ${diaLongo(dia)}`}
@@ -37,7 +43,7 @@ export function DiaDoMapa({ dia, linhas, onFechar }: { dia: string; linhas: Linh
       </div>
       {linhas.map((l) => (
         <div key={l.id} role="button" tabIndex={0} className={s.linhaClicavel}
-          onClick={() => router.push(`/funcionarios/${l.id}`)} onKeyDown={(e) => { if (e.key === 'Enter') router.push(`/funcionarios/${l.id}`) }}
+          onClick={() => vai(l.id)} onKeyDown={(e) => { if (e.key === 'Enter') vai(l.id) }}
           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px', minHeight: 44 }}>
           <Avatar id={l.id} hasAvatar={l.hasAvatar} initials={iniciais(l.nome)} color="var(--n-amber)" size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>

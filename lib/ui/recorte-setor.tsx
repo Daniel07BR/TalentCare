@@ -30,6 +30,27 @@ export function useRecorteSetor(): SetorRecorte | null {
   return useContext(Ctx)
 }
 
+/* ============================================================
+   "ESTOU NUMA JANELA" — separado de "estou num setor" (11/09/2026).
+
+   ⚠️⚠️ O painel principal abre o resumo de um sistema numa janela SEM setor (a
+   casa inteira). Até aqui o resumo usava `useRecorteSetor() !== null` para duas
+   perguntas diferentes: "escondo o meu cabeçalho?" (a janela já tem título) e
+   "escondo a comparação entre setores?" (com um setor só, é uma barra de 100%).
+   Na casa inteira as respostas se separam: o cabeçalho sai, e a comparação entre
+   setores FICA — ela é justamente o conteúdo. Por isso dois sinais.
+   ============================================================ */
+const JanelaCtx = createContext(false)
+
+/** `true` quando o resumo está dentro de uma janela (com ou sem setor). */
+export function useEmJanela(): boolean {
+  return useContext(JanelaCtx)
+}
+
+export function EmJanela({ children }: { children: React.ReactNode }) {
+  return <JanelaCtx.Provider value={true}>{children}</JanelaCtx.Provider>
+}
+
 export function RecorteDoSetor({ setor, incluiDesligados = false, children }: {
   setor: SetorRecorte
   /**
@@ -51,7 +72,9 @@ export function RecorteDoSetor({ setor, incluiDesligados = false, children }: {
   }), [data, setor.id, incluiDesligados])
   return (
     <Ctx.Provider value={setor}>
-      <TalentDataProvider value={recortado}>{children}</TalentDataProvider>
+      <JanelaCtx.Provider value={true}>
+        <TalentDataProvider value={recortado}>{children}</TalentDataProvider>
+      </JanelaCtx.Provider>
     </Ctx.Provider>
   )
 }

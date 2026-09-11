@@ -1,0 +1,96 @@
+/* ============================================================
+   PAINEL PRINCIPAL NOVO — as grades (11/09/2026, prévia).
+
+   A paleta NÃO mora aqui: é a mesma do relatório do setor
+   (`app/(app)/_visao/visao.module.css`, a `.raiz` e os tokens `--n-*`). Aqui
+   só o que é do desenho do painel: as linhas da imagem conceito.
+
+   Mobile primeiro: tudo numa coluna; abre com a tela.
+   ============================================================ */
+
+.painel { container-type: inline-size; container-name: painel; }
+
+/* ⚠️⚠️ AS GRADES RESPONDEM À LARGURA DO CONTEÚDO, não à da tela (achado do
+   crítico, 11/09/2026). Com `@media`, numa tela de 1366 px o painel já pulava
+   para 5 indicadores e 4 sistemas por linha — mas o menu lateral come 240 px, e
+   sobravam ~200 px por cartão: a coluna do setor nas tabelas ia a ZERO (números
+   sem dizer de que setor são) e o selo do indicador transbordava no vizinho. Os
+   degraus abaixo saem do que cada cartão precisa para caber inteiro. */
+.kpis, .linha2, .linha3, .sistemas, .assid { display: grid; gap: 14px; margin-bottom: 14px; grid-template-columns: minmax(0, 1fr); }
+
+@container painel (min-width: 520px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container painel (min-width: 720px) {
+  .linha3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sistemas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dois { grid-column: span 2; }
+}
+@container painel (min-width: 820px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container painel (min-width: 900px) {
+  .linha2 { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+  .assid { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); }
+}
+@container painel (min-width: 1170px) {
+  .sistemas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dois { grid-column: span 3; }
+}
+@container painel (min-width: 1200px) {
+  .linha3 { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); }
+}
+@container painel (min-width: 1340px) {
+  .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@container painel (min-width: 1550px) {
+  .sistemas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dois { grid-column: span 2; }
+}
+
+/* O cartão de KPI: azulejo à esquerda, número e contexto à direita. */
+.kpi { position: relative; display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px; min-height: 118px; }
+
+/* Gênero: título à esquerda, a barra e os dois painéis à direita. */
+.genero { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.generoPaineis { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@container painel (min-width: 640px) {
+  .generoPaineis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container painel (min-width: 900px) {
+  .genero { grid-template-columns: 260px minmax(0, 1fr); }
+}
+
+/* A linha de um setor num cartão de sistema — botão quando abre a janela. */
+.linhaSetor {
+  /* ⚠️ Número em coluna FIXA: cada linha é uma grade própria, e com `auto` a ponta
+     das barras ficava desalinhada de uma linha para a outra. */
+  display: grid; grid-template-columns: 92px minmax(0, 1fr) 62px; gap: 10px; align-items: center;
+  /* ⚠️ Sem margem negativa: com um `overflow: auto` em volta, ela desenha uma
+     barra de rolagem horizontal fantasma (armadilha paga no relatório do setor). */
+  width: 100%; min-height: 26px; padding: 2px 6px; box-sizing: border-box;
+  background: none; border: none; border-radius: 8px; font: inherit; color: inherit; text-align: left;
+}
+button.linhaSetor { cursor: pointer; }
+button.linhaSetor:hover { background: var(--n-card-2); }
+button.linhaSetor:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 1px; }
+
+/* A linha de uma tabela por setor (Consultoria, HelpDesk, Chat). */
+.linhaTabela {
+  display: grid; gap: 6px; align-items: center; width: 100%; box-sizing: border-box;
+  padding: 6px 6px; background: none; border: none; border-bottom: 1px solid var(--n-border-2);
+  font: inherit; color: inherit; text-align: left;
+}
+button.linhaTabela { cursor: pointer; border-radius: 6px; }
+button.linhaTabela:hover { background: var(--n-card-2); }
+button.linhaTabela:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 1px; }
+
+/* O cabeçalho clicável de um cartão de sistema (abre a casa inteira). */
+.cabecaBotao { display: flex; align-items: flex-start; gap: 10px; width: 100%; background: none; border: none; padding: 0; margin-bottom: 14px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cabecaBotao:hover .verResumo { text-decoration: underline; }
+.cabecaBotao:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 3px; border-radius: 6px; }
+.verResumo { flex: none; font-size: 12px; font-weight: 600; color: var(--n-blue); white-space: nowrap; }
+
+/* Enquanto o filtro troca: o conteúdo de antes fica, apagado, até o novo chegar.
+   ⚠️ Não some e não pisca — o dono já leu aviso que nasce e morre como erro. */
+.recarregando { opacity: .45; transition: opacity .15s; pointer-events: none; }

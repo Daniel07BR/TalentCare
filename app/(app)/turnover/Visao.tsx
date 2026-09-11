@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Avatar from '../Avatar'
 import type { turnoverVM } from '@/lib/mock/turnover'
 import type { SetorRecorte } from '@/lib/ui/recorte-setor'
 
@@ -27,7 +28,7 @@ export function TurnoverVisao({ vm, setor = null, taxa }: {
     { label: 'Entradas (12m)', value: vm.totalEnt, color: 'var(--success)' },
     { label: 'Saídas (12m)', value: taxa.saidas, color: 'var(--danger)' },
   ] : [
-    { label: 'Taxa de turnover', value: vm.rate + '%', color: 'var(--danger)' },
+    { label: 'Taxa de turnover (12m)', value: vm.rate + '%', color: 'var(--danger)' },
     { label: 'Headcount ativo', value: vm.headcount, color: 'var(--text)' },
     { label: 'Entradas (12m)', value: vm.totalEnt, color: 'var(--success)' },
     { label: 'Saldo líquido', value: vm.net, color: vm.netColor },
@@ -121,11 +122,16 @@ export function TurnoverVisao({ vm, setor = null, taxa }: {
             ))}
             {vm.leavers.map((p) => (
               <div key={p.id} style={{ display: 'contents' }}>
-                <Link href={`/funcionarios/${p.id}`} style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text)' }}>{p.nome}</Link>
-                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', color: 'var(--text-dim)' }}>{p.dept}</div>
-                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right' }}>{p.admissao}</div>
-                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: 'var(--danger)', fontWeight: 600 }}>{p.saida}</div>
-                <div style={{ padding: '10px 0', borderTop: '1px solid var(--border-soft)', textAlign: 'right', color: 'var(--text-dim)' }}>{p.tempo}</div>
+                {/* A foto ao lado do nome (pedido do dono, 11/09/2026): numa lista de
+                    quem saiu, o rosto é o que faz a pessoa ser reconhecida. */}
+                <Link href={`/funcionarios/${p.id}`} style={{ padding: '7px 0', borderTop: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={30} />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
+                </Link>
+                <div style={{ padding: '7px 0', borderTop: '1px solid var(--border-soft)', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}>{p.dept}</div>
+                <div style={{ padding: '7px 0', borderTop: '1px solid var(--border-soft)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>{p.admissao}</div>
+                <div style={{ padding: '7px 0', borderTop: '1px solid var(--border-soft)', color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>{p.saida}</div>
+                <div style={{ padding: '7px 0', borderTop: '1px solid var(--border-soft)', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>{p.tempo}</div>
               </div>
             ))}
           </div>

@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { X } from 'lucide-react'
-import { RecorteDoSetor, type SetorRecorte } from '@/lib/ui/recorte-setor'
+import { RecorteDoSetor, EmJanela, type SetorRecorte } from '@/lib/ui/recorte-setor'
 import { usePeriod } from '@/lib/ui/period'
-import EsqueletoResumo from '../../EsqueletoResumo'
+import { useTalentData } from '@/lib/ui/data'
+import EsqueletoResumo from '../EsqueletoResumo'
 
 /* ============================================================
-   A JANELA DE DETALHE de um sistema, dentro do relatório do setor.
+   A JANELA DE DETALHE de um sistema — no relatório do setor (recortada) e no
+   painel principal (a casa inteira, ou um setor pela barra dele).
 
    ⚠️⚠️ Pedido do dono (11/09/2026): gestor e sub só alcançam o relatório do
    próprio setor, e as páginas de resumo dos sistemas têm muito mais do que o
@@ -33,16 +35,17 @@ const carregando = () => <EsqueletoResumo />
 /* Os módulos de cada resumo, à parte do `dynamic`, para poder PRÉ-CARREGAR ao
    passar o mouse no sistema: quando o clique chega, o código já está aqui. */
 const MODULOS = {
-  whatsapp: () => import('../../whatsapp/Resumo'),
-  chat: () => import('../../chat/Resumo'),
-  helpdesk: () => import('../../helpdesk/Resumo'),
-  classroom: () => import('../../classroom/Resumo'),
-  gerencia: () => import('../../gerencia/Resumo'),
-  consultoria: () => import('../../consultoria/Resumo'),
-  cide: () => import('../../cide/Resumo'),
-  radio: () => import('../../radio/Resumo'),
-  assiduidade: () => import('../../assiduidade/Resumo'),
-  turnover: () => import('../../turnover/Resumo'),
+  whatsapp: () => import('../whatsapp/Resumo'),
+  chat: () => import('../chat/Resumo'),
+  helpdesk: () => import('../helpdesk/Resumo'),
+  classroom: () => import('../classroom/Resumo'),
+  gerencia: () => import('../gerencia/Resumo'),
+  consultoria: () => import('../consultoria/Resumo'),
+  cide: () => import('../cide/Resumo'),
+  radio: () => import('../radio/Resumo'),
+  assiduidade: () => import('../assiduidade/Resumo'),
+  turnover: () => import('../turnover/Resumo'),
+  formacao: () => import('../formacao/Resumo'),
 }
 
 export const DETALHES = {
@@ -56,6 +59,7 @@ export const DETALHES = {
   radio: { titulo: 'Rádio Itamarathy', C: dynamic(MODULOS.radio, { loading: carregando }) },
   assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(MODULOS.assiduidade, { loading: carregando }) },
   turnover: { titulo: 'Turnover e movimentação', C: dynamic(MODULOS.turnover, { loading: carregando }) },
+  formacao: { titulo: 'Escolaridade', C: dynamic(MODULOS.formacao, { loading: carregando }) },
 }
 /** Começa a baixar o código do resumo — chame no `onMouseEnter`/`onFocus` do sistema. */
 export function precarregarDetalhe(chave: keyof typeof MODULOS) {
@@ -64,33 +68,70 @@ export function precarregarDetalhe(chave: keyof typeof MODULOS) {
 export type ChaveDetalhe = keyof typeof DETALHES
 const ehChave = (s: string | null): s is ChaveDetalhe => !!s && s in DETALHES
 
-/** Qual janela está aberta — espelhado em `?detalhe=` na URL. */
+/** Qual janela está aberta — espelhado em `?detalhe=` (e `&detalheSetor=`) na URL.
+ *
+ *  ⚠️ O painel principal abre a MESMA janela de dois jeitos: a casa inteira (o
+ *  bloco do sistema) e um setor só (a barra daquele setor). O setor vai junto na
+ *  URL, senão voltar da ficha reabriria a janela da casa no lugar da do setor.
+ *  No relatório do setor o `setorId` é ignorado — o setor é o da página. */
 export function useDetalhe() {
-  const [aberto, setAberto] = useState<ChaveDetalhe | null>(null)
+  const [estado, setEstado] = useState<{ chave: ChaveDetalhe; setorId: string | null } | null>(null)
 
   // Ao chegar (inclusive voltando da ficha pelo histórico), reabre o que estava aberto.
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('detalhe')
-    if (ehChave(q)) setAberto(q)
+    const u = new URLSearchParams(window.location.search)
+    const q = u.get('detalhe')
+    if (ehChave(q)) setEstado({ chave: q, setorId: u.get('detalheSetor') })
   }, [])
 
   /* ⚠️ `replaceState`, não `pushState`: abrir uma janela não é uma página nova.
      Com push, o "voltar" do navegador fecharia a janela em vez de sair da tela,
      e cada abrir-e-fechar empilharia duas entradas no histórico. */
-  const escreve = (chave: ChaveDetalhe | null) => {
+  const escreve = (chave: ChaveDetalhe | null, setorId: string | null) => {
     const u = new URL(window.location.href)
     if (chave) u.searchParams.set('detalhe', chave); else u.searchParams.delete('detalhe')
+    if (chave && setorId) u.searchParams.set('detalheSetor', setorId); else u.searchParams.delete('detalheSetor')
     window.history.replaceState(null, '', u.pathname + u.search + u.hash)
   }
-  const abrir = useCallback((chave: ChaveDetalhe) => { setAberto(chave); escreve(chave) }, [])
-  const fechar = useCallback(() => { setAberto(null); escreve(null) }, [])
-  return { aberto, abrir, fechar }
+  const abrir = useCallback((chave: ChaveDetalhe, setorId: string | null = null) => {
+    setEstado({ chave, setorId }); escreve(chave, setorId)
+  }, [])
+  const fechar = useCallback(() => { setEstado(null); escreve(null, null) }, [])
+  return { aberto: estado?.chave ?? null, setorId: estado?.setorId ?? null, abrir, fechar }
 }
 
-export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe; setor: SetorRecorte; onFechar: () => void }) {
-  const { label } = usePeriod()
+/**
+ * ⚠️ `setor` OPCIONAL desde 11/09/2026: sem ele a janela é a CASA INTEIRA (o
+ * painel principal). O conteúdo é o mesmo resumo, com o dataset inteiro — os
+ * mesmos números da página do sistema —, e só o cabeçalho do resumo some.
+ */
+export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, onFechar }: {
+  chave: ChaveDetalhe; setor?: SetorRecorte | null
+  /**
+   * ⚠️⚠️ Inclui quem já SAIU do setor (painel principal, 11/09/2026). As barras
+   * por setor do painel somam a atividade de TODO mundo do setor no período —
+   * inclusive de quem saiu no meio dele —, e o relatório do setor soma só os
+   * ativos. Aberta pela barra do painel, a janela tem de ter a população da
+   * barra; senão o setor lê 12 na barra e 10 na janela.
+   */
+  comQuemSaiu?: boolean
+  onFechar: () => void
+}) {
+  const { label, fromDay } = usePeriod()
+  const data = useTalentData()
   const painel = useRef<HTMLDivElement>(null)
   const { titulo, C } = DETALHES[chave]
+  /* ⚠️⚠️ QUEM JÁ SAIU E ENTRA NA CONTA, pelo nome (achado do crítico, 11/09/2026).
+     Com `comQuemSaiu`, a janela soma gente que o relatório do setor não soma — em
+     "Ano", o CIDE da Recepção dava 105 aqui e 42 lá (63 de quem saiu) —, e as
+     listas dos resumos não marcam desligado. Dizer QUEM resolve a dúvida de quem
+     compara as duas telas. Só entra quem saiu depois do começo da janela: quem
+     saiu antes não tem atividade nela. */
+  const quemSaiu = setor && comQuemSaiu
+    ? data.employees
+        .filter((e) => e.dept === setor.id && e.status === 'Desligado' && !!e.leftISO && e.leftISO.slice(0, 10) >= fromDay)
+        .sort((a, b) => (a.leftISO ?? '').localeCompare(b.leftISO ?? ''))
+    : []
 
   // Esc fecha; o foco entra na janela, para o teclado (e o leitor de tela) saberem onde estão.
   useEffect(() => {
@@ -113,17 +154,35 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '18px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 3 }}>
-              Detalhe do sistema · <b style={{ color: 'var(--text)' }}>{setor.nome}</b>
+              Detalhe do sistema · <b style={{ color: 'var(--text)' }}>{setor ? setor.nome : 'Grupo Itamarathy'}</b>
             </div>
             <div id="detalhe-titulo" style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-.4px' }}>{titulo}</div>
             {/* ⚠️ Quem está dentro da conta, dito na cara: sem isto a janela parece
                 a página da empresa, e o gestor lê um total do setor como da casa. */}
             <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 4 }}>
               Período: <b style={{ color: 'var(--text-dim)' }}>{label}</b>
-              {' · '}{chave === 'turnover'
-                ? `todas as pessoas que passaram por ${setor.nome}, inclusive quem saiu`
-                : `só as pessoas ativas de ${setor.nome} — as mesmas do cartão`}
+              {' · '}{setor
+                ? (chave === 'turnover'
+                    ? `todas as pessoas que passaram por ${setor.nome}, inclusive quem saiu`
+                    : comQuemSaiu
+                      ? `as pessoas de ${setor.nome} no período, inclusive quem já saiu — as mesmas da barra do painel`
+                      : `só as pessoas ativas de ${setor.nome} — as mesmas do cartão`)
+                /* ⚠️⚠️ Na casa inteira, o Turnover é o de 12 MESES (saídas ÷ ativos) e
+                   o cartão do painel é o do PERÍODO. São dois números de turnover na
+                   mesma tela, e a janela tem de dizer qual é qual — não se cria uma
+                   terceira conta para "fazer bater". */
+                : chave === 'formacao'
+                  ? 'a casa inteira, com a Diretoria — retrato de hoje (o cartão do painel conta sem a Diretoria)'
+                : chave === 'turnover'
+                  ? 'tudo nesta janela é de 12 meses e não acompanha o filtro — a taxa do cartão do painel é a do período'
+                  : 'a casa inteira — os mesmos números da página do sistema'}
             </div>
+            {quemSaiu.length > 0 && (
+              <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 3 }}>
+                Inclui {quemSaiu.length === 1 ? 'quem já saiu' : `${quemSaiu.length} pessoas que já saíram`}:{' '}
+                {quemSaiu.map((e) => `${e.nome} (saiu em ${e.leftISO!.slice(0, 10).split('-').reverse().join('/')})`).join(', ')}.
+              </div>
+            )}
           </div>
           <button onClick={onFechar} aria-label="Fechar" title="Fechar (Esc)" className="tc-btn"
             style={{ flex: 'none', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer' }}>
@@ -132,11 +191,15 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
         </div>
 
         <div style={{ overflowY: 'auto', padding: 24 }}>
-          <RecorteDoSetor setor={setor} incluiDesligados={chave === 'turnover'}>
-            {/* `entrada`: cada seção do resumo sobe um pouco depois da de cima
-                (globals.css) — a página se monta de cima para baixo. */}
-            <div className="entrada"><C /></div>
-          </RecorteDoSetor>
+          {/* `entrada`: cada seção do resumo sobe um pouco depois da de cima
+              (globals.css) — a página se monta de cima para baixo. */}
+          {setor ? (
+            <RecorteDoSetor setor={setor} incluiDesligados={chave === 'turnover' || comQuemSaiu}>
+              <div className="entrada"><C /></div>
+            </RecorteDoSetor>
+          ) : (
+            <EmJanela><div className="entrada"><C /></div></EmJanela>
+          )}
         </div>
       </div>
     </div>

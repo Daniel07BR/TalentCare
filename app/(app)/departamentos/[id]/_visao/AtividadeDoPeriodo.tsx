@@ -1,6 +1,6 @@
 'use client'
 import { BarChart3 } from 'lucide-react'
-import { Cartao } from './ui'
+import { Cartao } from '../../../_visao/ui'
 import { num } from './derivar'
 import type { SecaoProps } from './tipos'
 

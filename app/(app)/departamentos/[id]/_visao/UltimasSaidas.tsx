@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
 import Avatar from '../../../Avatar'
-import { Cartao, LinkAcao } from './ui'
+import { Cartao, LinkAcao } from '../../../_visao/ui'
 import { dataLonga, ultimasSaidas } from './derivar'
 import type { ComDetalhe } from './tipos'
 

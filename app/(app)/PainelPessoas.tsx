@@ -32,7 +32,7 @@ export type PessoaDoPainel = {
    confere permissão por conta própria. O painel é o índice, não o destino.
    ============================================================ */
 
-export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoFechar, mostrarNumero = false }: {
+export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoFechar, mostrarNumero = false, aoClicar, rodape }: {
   titulo: string
   nota?: string
   /**
@@ -54,6 +54,14 @@ export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoF
    * dono pediu em 11/09/2026: "os funcionários e as quantidades".
    */
   mostrarNumero?: boolean
+  /**
+   * O que o clique na pessoa faz. Sem ele, leva à ficha (o de sempre). O painel
+   * principal novo passa o painel da pessoa (`usePainelDaPessoa`) nas listas de
+   * assiduidade: abre por cima desta lista, e fechar volta para ela.
+   */
+  aoClicar?: (id: string) => void
+  /** A frase do rodapé sobre o clique — acompanha o `aoClicar`. */
+  rodape?: string
 }) {
   const router = useRouter()
 
@@ -103,7 +111,7 @@ export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoF
           {pessoas.map((p) => (
             <button
               key={`${p.id}-${p.detalhe ?? ''}`}
-              onClick={() => router.push(`/funcionarios/${p.id}`)}
+              onClick={() => (aoClicar ? aoClicar(p.id) : router.push(`/funcionarios/${p.id}`))}
               className="tc-row"
               style={{
                 display: 'grid', gridTemplateColumns: '32px minmax(0,1fr) auto',
@@ -136,7 +144,7 @@ export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoF
 
         <div style={{ padding: '10px 18px 14px', borderTop: '1px solid var(--border-soft)', fontSize: 10.5, color: 'var(--text-mute)' }}>
           {comBarra ? `O número de cada linha é o total de ${sufixo} na janela. ` : ''}
-          Clique numa pessoa para abrir a ficha dela.
+          {rodape ?? 'Clique numa pessoa para abrir a ficha dela.'}
         </div>
       </div>
     </div>

@@ -69,9 +69,9 @@ function nivelPorMinuto(minutos: number, atrasos: number) {
  * atraso enorme de uma pessoa; o que o gestor lê num mapa de equipe é "quantos
  * chegaram tarde naquele dia", e essa pergunta tem escala própria.
  */
-function nivelPorPessoas(pessoas: number) {
+function nivelPorPessoas(pessoas: number, lim: [number, number, number] = [2, 3, 4]) {
   if (pessoas <= 0) return 0
-  return pessoas >= 4 ? 4 : pessoas === 3 ? 3 : pessoas === 2 ? 2 : 1
+  return pessoas >= lim[2] ? 4 : pessoas >= lim[1] ? 3 : pessoas >= lim[0] ? 2 : 1
 }
 
 const somaMes = (m: string) => {
@@ -80,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS, onDia, selecionado = null,
+  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites,
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -102,6 +102,12 @@ export default function CalendarioOcorrencias({
   onDia?: (iso: string) => void
   /** O dia aberto agora, para o quadro ficar marcado. */
   selecionado?: string | null
+  /**
+   * Onde começam os degraus 2, 3 e 4 na escala de PESSOAS. O padrão (2, 3, 4) é
+   * o do setor; a casa inteira passa os dela (`LIMITES_CASA`) — com a do setor,
+   * quase todo dia da empresa seria "4 ou mais".
+   */
+  limites?: [number, number, number]
 }) {
   if (!de || !ate || ate < de) return null
 
@@ -149,7 +155,7 @@ export default function CalendarioOcorrencias({
                   const semMedicao = !foraDoPeriodo && !futuro && !!pontoAte && iso > pontoAte
                   const oc = porIso.get(iso)
                   const lvl = foraDoPeriodo || futuro || semMedicao ? 0
-                    : escala === 'pessoas' ? nivelPorPessoas(oc?.pessoas ?? 0)
+                    : escala === 'pessoas' ? nivelPorPessoas(oc?.pessoas ?? 0, limites)
                     : nivelPorMinuto(oc?.minutos ?? 0, oc?.atrasos ?? 0)
 
                   const brDia = `${String(dia).padStart(2, '0')}/${String(m).padStart(2, '0')}`
@@ -218,7 +224,7 @@ export default function CalendarioOcorrencias({
         )}
         {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
         {paleta.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
-        {escala === 'pessoas' ? '4 ou mais pessoas' : 'mais minutos'}
+        {escala === 'pessoas' ? `${limites?.[2] ?? 4} ou mais pessoas` : 'mais minutos'}
       </div>
     </>
   )

@@ -2,10 +2,10 @@
 import { useRouter } from 'next/navigation'
 import { Activity, FileSpreadsheet, MessageCircle, MessageSquareText, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
-import { precarregarDetalhe, type ChaveDetalhe } from '../Detalhe'
-import { Cartao, forte, suave } from './ui'
+import { precarregarDetalhe, type ChaveDetalhe } from '../../../_visao/Detalhe'
+import { Cartao, forte, suave } from '../../../_visao/ui'
 import { dur, num } from './derivar'
-import s from './novo.module.css'
+import s from '../../../_visao/visao.module.css'
 import type { ComDetalhe, Tom } from './tipos'
 
 type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][] }

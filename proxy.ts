@@ -114,7 +114,11 @@ export default auth((req) => {
    * caem no setor DELES (decisão do dono, 03/09/2026); `/meu-setor` resolve qual
    * é, porque aqui não há banco para perguntar.
    */
-  if (role !== 'ADMIN' && (pathname === '/' || pathname === '/dashboard' || SO_DIRETORIA.includes(pathname) || pathname === '/login')) {
+  /* ⚠️⚠️ `/dashboard/…` também (11/09/2026). A comparação era `=== '/dashboard'`,
+     exata, e a prévia do painel novo (`/dashboard/novo`) passaria por baixo dela:
+     um gestor com o endereço abriria a empresa inteira. Subpágina do painel é
+     painel. */
+  if (role !== 'ADMIN' && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/') || SO_DIRETORIA.includes(pathname) || pathname === '/login')) {
     return NextResponse.redirect(new URL(role === 'COLABORADOR' ? '/minha-avaliacao' : '/meu-setor', req.url))
   }
   if (pathname === '/login') {

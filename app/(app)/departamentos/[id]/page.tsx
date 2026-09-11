@@ -2,8 +2,8 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useDeptPeriod } from '@/lib/ui/dept-period'
-import { useDetalhe, JanelaDetalhe } from './Detalhe'
-import s from './_visao/novo.module.css'
+import { useDetalhe, JanelaDetalhe } from '../../_visao/Detalhe'
+import s from '../../_visao/visao.module.css'
 import { Cabecalho } from './_visao/Cabecalho'
 import { Lideranca } from './_visao/Lideranca'
 import { Indicadores } from './_visao/Indicadores'
@@ -69,7 +69,7 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
         <Indicadores m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>
       <div className={s.linha2}>
-        <Escolaridade deptId={m.setor.id} />
+        <Escolaridade deptId={m.setor.id} abrir={detalhe.abrir} />
         <AtividadeDoPeriodo m={m} />
         <UltimasSaidas m={m} abrir={detalhe.abrir} />
       </div>

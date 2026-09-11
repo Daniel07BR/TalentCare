@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { usePeriod } from '@/lib/ui/period'
-import { useRecorteSetor } from '@/lib/ui/recorte-setor'
+import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
 import { assiduidadeVM, fmtMin, type AssidPerson } from '@/lib/mock/assiduidade'
 import { scoreColor } from '@/lib/mock/data'
 import { AlarmClock } from 'lucide-react'
@@ -15,6 +15,9 @@ export default function AssiduidadeResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
+  /* Numa janela (do setor OU da casa inteira, no painel principal) o cabeçalho
+     sai — a janela já tem título. A comparação entre setores só sai com setor. */
+  const emJanela = useEmJanela()
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
@@ -41,11 +44,11 @@ export default function AssiduidadeResumo() {
   /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
      não chega (o número errado aparecia por um instante e trocava): o
      esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
-  if (setor && assid.loading && !assid.map) return <EsqueletoResumo />
+  if (emJanela && assid.loading && !assid.map) return <EsqueletoResumo />
 
   return (
-    <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>
-      {!setor && (
+    <div className="tc-anim" style={emJanela ? undefined : { maxWidth: 1280, margin: '0 auto' }}>
+      {!emJanela && (
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Ponto eletrônico · atrasos no {label.toLowerCase()} · advertências acumuladas</div>

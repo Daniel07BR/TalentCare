@@ -5,6 +5,20 @@
 > [`RELATORIO-DO-SETOR.md`](RELATORIO-DO-SETOR.md) (o molde que você vai repetir) e
 > [`PERIODO-E-DEPLOY.md`](PERIODO-E-DEPLOY.md) (como publicar sem quebrar).
 
+> ## ✅ Estado em 11/09/2026 (noite): a PRÉVIA está no ar em `/dashboard/novo`
+>
+> Feita no molde abaixo; o registro completo está no `CHANGELOG` de 11/09 (15). O que
+> mudou em relação a este roteiro:
+> - as peças comuns **já saíram** para `app/(app)/_visao/` (`visao.module.css`, `ui.tsx`,
+>   `tipos.ts`, `Detalhe.tsx`) e a janela aceita a casa inteira (`useEmJanela()`);
+> - as contas de tela moram em `lib/painel/visao.ts`; a prova é
+>   `scripts/ensaio-painel-novo.ts` (tsx);
+> - decisões do dono: selos só em Atrasos/Advertências com a regra de dias medidos; sem
+>   "Score médio" no gênero; Chat Interno e Gerência ganharam cartão.
+> - ⚠️ **PENDENTE com o dono:** o que a barra do WhatsApp abre (a barra é a FILA, a janela
+>   do setor são as ATENDENTES — Recepção 127 × 246); e **quando trocar** `/dashboard`
+>   pela prévia.
+
 ---
 
 ## 1. O pedido do dono (Daniel)

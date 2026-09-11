@@ -309,8 +309,14 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
      de fora esconderia gente ENVOLVIDA numa lista que se propõe a mostrar os
      envolvidos. O `valor` é o total de medidas; o `detalhe` diz a composição, e
      o cartão continua contando só as suspensões — a nota do painel avisa. */
+  /* ⚠️⚠️ TODO MUNDO, e não só o quadro ativo (11/09/2026, achado do ensaio do
+     painel novo). O cartão soma as suspensões que a ROTA devolve — de quem quer
+     que tenha sido suspenso na janela, inclusive quem saiu depois —, e a lista
+     andava sobre `perf` (só ativos). Em "Ano corrente" o cartão dizia 11 e a
+     lista somava 9: faltava o Pedro Souza (Financeiro, 2 suspensões, desligado).
+     O clique tem de revelar o número clicado; quem já saiu entra, marcado. */
   const lgpdPessoas = assidMap
-    ? perf
+    ? data.employees
         .map((e) => {
           const a = assidMap.get(pk(e))
           const sa = a?.suspensoesAtraso ?? 0
@@ -320,6 +326,7 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
             sa ? `${sa} suspensão${sa === 1 ? '' : 'es'} por atraso` : '',
             s ? `${s} suspensão${s === 1 ? '' : 'es'} de LGPD` : '',
             adv ? `${adv} advertência${adv === 1 ? '' : 's'} de LGPD` : '',
+            e.status === 'Desligado' ? `já saiu${e.leftISO ? ` (${br2(e.leftISO)})` : ''}` : '',
           ].filter(Boolean)
           return { ...pessoaBase(e), valor: sa + s + adv, detalhe: partes.join(' · ') }
         })
@@ -512,6 +519,9 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
     kpis,
     turnoverLine: tg.line, turnoverArea: tg.area,
     turnoverWinRate: tser.rate, turnoverLabels: tser.labels,
+    /** A série crua (saídas por bucket) — o painel novo desenha os pontos e o
+     *  eixo em PESSOAS. É a mesma série das duas linhas acima. */
+    turnoverVals: tser.vals,
     turnoverSaidas: tser.saidas, turnoverDias: tser.dias,
     deptHighlights, headcountTotal: perf.length,
     /** O que o número do destaque é, para a tela poder dizer. */

@@ -1,7 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import Avatar from '../../Avatar'
-import { BotaoDetalhe } from './Detalhe'
+import { BotaoDetalhe } from '../../_visao/Detalhe'
 
 /* ============================================================
    O CARTÃO DE UMA FONTE: quem fez, à esquerda; quanto, à direita.

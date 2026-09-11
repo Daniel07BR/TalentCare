@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { CalendarCheck } from 'lucide-react'
 import CalendarioOcorrencias from '../../../CalendarioOcorrencias'
-import { Cartao, Mini, LinkAcao } from './ui'
+import { Cartao, Mini, LinkAcao } from '../../../_visao/ui'
 import { num } from './derivar'
 import { DiaDoMapa } from './DiaDoMapa'
 import { contagens, type ChavePainel } from './Paineis'

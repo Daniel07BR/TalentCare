@@ -58,6 +58,8 @@ export function turnoverVM(data: TalentData) {
     .filter((e) => e.status === 'Desligado' && e.leftISO)
     .map((e) => ({
       id: e.id, nome: e.nome, dept: data.deptMeta[e.dept] ?? e.dept,
+      // A foto na tabela de desligados (pedido do dono, 11/09/2026).
+      hasAvatar: e.hasAvatar, initials: e.initials, color: e.color,
       admissao: fmtD(e.hireISO), saida: fmtD(e.leftISO), leftISO: e.leftISO as string,
       tempo: fmtTempo(e.tempoMeses),
     }))

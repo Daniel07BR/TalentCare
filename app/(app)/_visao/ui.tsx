@@ -1,6 +1,6 @@
 'use client'
 import type { LucideIcon } from 'lucide-react'
-import s from './novo.module.css'
+import s from './visao.module.css'
 import type { Tom } from './tipos'
 
 /* As peças que todas as seções da prévia usam. Cor SEMPRE por token

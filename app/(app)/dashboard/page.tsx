@@ -1,5 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useEhDono } from '@/lib/ui/dono'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
@@ -22,6 +24,9 @@ import CideDeptCard from './CideDeptCard'
 export default function DashboardPage() {
   const { period, from, to, label: periodLabel } = usePeriod()
   const router = useRouter()
+  /* O atalho da prévia do painel novo (11/09/2026) — só para o dono, até ele
+     mandar trocar. A página nova é protegida pelo `proxy.ts` como esta. */
+  const ehDono = useEhDono()
   const { signals, loading: scoreLoading, erro: scoreErro } = useScoreSignals()
   /* Qual cartão está aberto. `null` = nenhum. Guarda o RÓTULO e não o objeto:
      ao trocar o filtro os KPIs são remontados, e um objeto congelado no estado
@@ -87,7 +92,14 @@ export default function DashboardPage() {
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Painel de</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
+            Painel de
+            {ehDono && (
+              <Link href="/dashboard/novo" style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--border)', borderRadius: 20, padding: '2px 9px' }}>
+                Prévia do layout novo ›
+              </Link>
+            )}
+          </div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Indicadores Grupo Itamarathy</h1>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.5 }}>

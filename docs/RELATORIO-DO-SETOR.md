@@ -34,7 +34,7 @@ Todas leem **a mesma** `/api/dept-metrics` — compara-se desenho, nunca número
 
 ## 3. A paleta nova (só nesta página, por enquanto)
 
-`[id]/_visao/novo.module.css`: tokens `--n-*` (claro = o do conceito; escuro = mesmas famílias,
+`app/(app)/_visao/visao.module.css` (era `[id]/_visao/novo.module.css`; comum ao painel principal desde 11/09): tokens `--n-*` (claro = o do conceito; escuro = mesmas famílias,
 superfícies azul-noite). ⚠️ Dentro da `.raiz`, os tokens do app (`--surface`, `--text`,
 `--accent`, `--chart-*`…) **apontam para a paleta nova** — é por isso que o que a página
 reaproveita (Avatar, calendário, PainelPessoas, a janela "Ver detalhes", o painel da pessoa)
@@ -63,7 +63,7 @@ pessoa). A cor diz a gravidade; o texto diz a natureza ("susp. atraso", "susp. L
 1. **Lista de quem está atrás do número** — `app/(app)/PainelPessoas.tsx` (modal) +
    `lib/ui/envolvidos-setor.ts` (as listas, num lugar só; o `Hero` do completo também usa).
    `mostrarNumero` mostra a quantidade mesmo quando todos são iguais.
-2. **Janela "Ver detalhes" de um sistema** — `[id]/Detalhe.tsx` (`useDetalhe`, `JanelaDetalhe`,
+2. **Janela "Ver detalhes" de um sistema** — `app/(app)/_visao/Detalhe.tsx` (era `[id]/Detalhe.tsx`; `useDetalhe`, `JanelaDetalhe`,
    `BotaoDetalhe`, `precarregarDetalhe`). Renderiza **a própria página do sistema**
    (`app/(app)/<sistema>/Resumo.tsx`) dentro de `RecorteDoSetor` (`lib/ui/recorte-setor.tsx`),
    um `TalentDataProvider` que só enxerga o setor. Na URL (`?detalhe=`), altura fixa, esqueleto

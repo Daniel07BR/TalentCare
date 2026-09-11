@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { BotaoDetalhe } from './Detalhe'
+import { BotaoDetalhe } from '../../_visao/Detalhe'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import { geomLine } from '@/lib/mock/data'
 import Avatar from '../../Avatar'

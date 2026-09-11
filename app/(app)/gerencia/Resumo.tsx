@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useGerenciaPeriod } from '@/lib/ui/gerencia-period'
 import { usePeriod } from '@/lib/ui/period'
-import { useRecorteSetor } from '@/lib/ui/recorte-setor'
+import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
 import { gerenciaVM, type GerenciaPerson, type GerenciaDeptBar } from '@/lib/mock/gerencia'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
@@ -90,6 +90,9 @@ export default function GerenciaResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
+  /* Numa janela (do setor OU da casa inteira, no painel principal) o cabeçalho
+     sai — a janela já tem título. A comparação entre setores só sai com setor. */
+  const emJanela = useEmJanela()
   const data = useTalentData()
   const { period, label } = usePeriod()
   const { map, loading } = useGerenciaPeriod()
@@ -101,11 +104,11 @@ export default function GerenciaResumo() {
   /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
      não chega (o número errado aparecia por um instante e trocava): o
      esqueleto tem a forma da página, e ela entra de cima para baixo depois. */
-  if (setor && loading && !map) return <EsqueletoResumo />
+  if (emJanela && loading && !map) return <EsqueletoResumo />
 
   return (
-    <div className="tc-anim" style={setor ? undefined : { maxWidth: 1280, margin: '0 auto' }}>
-      {!setor && (
+    <div className="tc-anim" style={emJanela ? undefined : { maxWidth: 1280, margin: '0 auto' }}>
+      {!emJanela && (
       <div style={{ marginBottom: 18 }}>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>

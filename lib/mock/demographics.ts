@@ -74,7 +74,7 @@ export function generationsVM(data: TalentData) {
 }
 
 /* -------- gênero (M × F) -------- */
-const gNorm = (g: string | null) => { const n = norm(g || ''); return n.startsWith('masc') ? 'M' : n.startsWith('fem') ? 'F' : '?' }
+export const gNorm = (g: string | null) => { const n = norm(g || ''); return n.startsWith('masc') ? 'M' : n.startsWith('fem') ? 'F' : '?' }
 
 function genderStats(emps: Employee[]) {
   const m = emps.filter((e) => gNorm(e.gender) === 'M')

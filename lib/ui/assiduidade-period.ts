@@ -53,12 +53,23 @@ const VAZIO: Omit<AssidPeriodo, 'loading'> = {
   lgpdSuspensoes: null, lgpdAdvertencias: null, suspensoesAtraso: null, erro: false,
 }
 
-export function useAssiduidadePeriod(): AssidPeriodo {
-  const { query } = usePeriod()
+/**
+ * @param outraJanela OPCIONAL (11/09/2026): lê uma janela que NÃO é a do filtro —
+ *   o selo de variação do painel principal compara com a janela anterior. Passe
+ *   `null` para não buscar nada (a comparação não se aplica). Sem o argumento, é
+ *   o filtro da barra, como sempre. ⚠️ É o MESMO gancho de propósito: a leitura
+ *   da resposta (o `null` que não vira 0) mora num lugar só.
+ */
+export function useAssiduidadePeriod(outraJanela?: { de: string; ate: string } | null): AssidPeriodo {
+  const { query: doFiltro } = usePeriod()
+  const query = outraJanela === undefined ? doFiltro
+    : outraJanela ? new URLSearchParams({ period: 'custom', from: outraJanela.de, to: outraJanela.ate }).toString()
+    : null
   const [st, setSt] = useState(VAZIO)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (query === null) { setSt(VAZIO); setLoading(false); return }
     let alive = true
     setLoading(true)
     fetch(`/api/assiduidade-metrics?${query}`, { cache: 'no-store' })

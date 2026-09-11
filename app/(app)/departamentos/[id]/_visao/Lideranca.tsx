@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { UserRound, ShieldCheck, Users2 } from 'lucide-react'
 import Avatar from '../../../Avatar'
-import { Cartao } from './ui'
+import { Cartao } from '../../../_visao/ui'
 import type { SecaoProps } from './tipos'
 
 const iniciais = (n: string) => n.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase()

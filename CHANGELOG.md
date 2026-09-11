@@ -1,5 +1,108 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (15) — Prévia: o painel principal no desenho da imagem conceito
+
+Pedido do dono: refazer a página principal (`/dashboard`, só da Diretoria) no molde do
+relatório do setor, com o desenho e as cores da imagem conceito, e interativa. *"Os
+números têm de ser OS MESMOS da página atual. Muda o desenho, não a conta."*
+
+**Onde:** `/dashboard/novo`. A atual segue intacta. Atalho "Prévia do layout novo" no
+cabeçalho da atual **só para o dono** (`TALENTCARE_ADMIN_EMAILS`, novo `lib/ui/dono.tsx`);
+na prévia, selo "Prévia do layout novo" e "Ver versão atual".
+
+**O desenho:** cabeçalho "Painel de Indicadores / Grupo Itamarathy"; cinco indicadores com
+azulejo de cor (Headcount azul, Turnover verde, Advertências laranja, Atrasos vermelho,
+Suspensões roxo); Atendimentos por departamento | Curva de turnover; Destaque |
+Escolaridade | Gerações; Comparativo por gênero; Sistemas e produtividade com sete cartões
+(ClassRoom, Rádio, Consultoria Plus, HelpDesk, CIDE, **Chat Interno** e **Gerência** — os
+dois últimos por decisão do dono, com os números das páginas deles). Paleta do relatório do
+setor, claro e escuro, grades de 5/4/3/2/1 colunas.
+
+**O que abre o quê:**
+- Headcount → quem entrou e quem saiu; Advertências, Atrasos, Suspensões → quem e quanto, e
+  o nome abre o **painel da pessoa** (assiduidade) por cima da lista; Turnover e a curva →
+  janela do Turnover da casa inteira.
+- Título de cada sistema → a janela do resumo da **casa inteira**; a **linha de um setor** →
+  a mesma janela só com aquele setor.
+- Fatia de escolaridade, segmento de geração, gênero → quem está no grupo (retrato de hoje).
+- Nome no Destaque → a ficha (a pontuação soma várias fontes, não é de um sistema só).
+
+**Onde o conceito foi seguido e onde não (decisões do dono, 11/09):**
+- **Selos de variação só em Atrasos e Advertências**, e só quando honestos. Quatro travas:
+  (1) dias **medidos** pelo ponto contra dias medidos ("30 dias" mede 28), a anterior recuada em
+  **semanas inteiras**, sem selo acima de 124 dias ou fora da cobertura do ponto; (2) o **mesmo
+  número de dias com expediente** dos dois lados — dia com algum registro de ponto na casa;
+  medido de out/2025 a set/2026, todo dia útil sem registro é feriado ou recesso (20/11, fim de
+  ano, Sexta Santa, 20–21/04, 1º/5, Corpus Christi, 9/7, 7/9), e o Carnaval tem registro; (3) as
+  **mesmas pessoas** dos dois lados — quem está no quadro hoje e já estava na casa no começo da
+  janela anterior; (4) base ≥ 10. A tela diz contra que datas e quantas pessoas. Hoje: 7 dias,
+  30 dias e agosto ficam **sem selo** (feriado de um lado); Trimestre ▲6% em atrasos. Headcount
+  mostra o **saldo** (−1), não "▲ 3%". Turnover e Suspensões sem selo.
+- **Curva de turnover em saídas**, eixo em pessoas a partir do zero — o conceito tinha 0–12%
+  por dia, e turnover de um dia não existe.
+- **"Score médio" do gênero saiu** (score não validado). **Destaque sem numeração** (a lista
+  é alfabética de propósito; número faria pódio entre setores).
+- Mini-gráficos só onde há série real (Headcount, Turnover, Atrasos).
+
+**⚠️⚠️ As barras do WhatsApp NÃO abrem a janela do setor.** A barra conta pela **fila** do
+atendimento (`whatsapp_daily.dept`); a janela de um setor conta pelas **atendentes** do setor.
+Medido em 30 dias: Recepção **127 × 246**, Pessoal 1.123 × 1.221, Financeiro 201 × 225.
+Decisão pendente com o dono.
+
+**⚠️ A janela aberta pela barra de um setor inclui quem já saiu** (`comQuemSaiu` em
+`JanelaDetalhe`): as barras do painel somam a atividade de todo mundo do setor no período,
+e a janela tem de ter a mesma população. A janela diz isso no título.
+
+**A janela sem setor (casa inteira).** `JanelaDetalhe` aceita `setor` opcional e guarda o
+setor na URL (`&detalheSetor=`). Novo sinal `useEmJanela()` (`lib/ui/recorte-setor.tsx`),
+separado de `useRecorteSetor()`: os nove resumos escondem o cabeçalho em qualquer janela e só
+escondem a comparação entre setores quando há setor. O Turnover da casa diz "Taxa de
+turnover (12m)" e a janela avisa que o cartão do painel é o do período.
+
+**Conserto que vale para as duas páginas:** a lista de **Suspensões** somava menos que o
+cartão em "Ano corrente" (9 × 11): o cartão conta as suspensões da janela de quem quer que
+seja, e a lista só olhava os ativos. Faltava o Pedro Souza (Financeiro, 2 suspensões, já
+desligado). Agora quem saiu entra, marcado "já saiu".
+
+**Segurança:** o `proxy.ts` comparava `pathname === '/dashboard'`, exato — `/dashboard/novo`
+escaparia da trava da Diretoria. Agora `/dashboard/…` também.
+
+**Organização:** a paleta (`visao.module.css`), as peças (`ui.tsx`), o tipo `Tom` e a janela
+(`Detalhe.tsx`) saíram de `departamentos/[id]/` para `app/(app)/_visao/`, comuns às duas
+páginas. As contas de tela do painel novo moram em `lib/painel/visao.ts` (sem React).
+
+**O agente crítico (rodada 1) achou, e foi consertado:** o selo contava o quadro de hoje nas
+duas janelas (quem entrou puxava para "piorou": Trimestre ▲9% → ▲6% com as mesmas pessoas); o
+feriado virava melhora (7 dias: ▼27% com 2 dias de expediente contra 3); o Destaque dizia
+"Ninguém pontuou" quando a leitura falhava; na troca de filtro os números da janela anterior
+ficavam em cor cheia; as grades respondiam à largura da TELA e não do conteúdo (com o menu de
+240 px, em 1366 as tabelas perdiam a coluna do setor) — viraram *container queries*; os sete
+ganchos de sistema viravam "nenhuma atividade" em queda de rede (ganharam `erro`); a janela do
+setor com quem saiu não dizia quem (agora lista pelo nome); "Headcount · hoje".
+
+**Pedidos do dono no meio da rodada:**
+- **Assiduidade e disciplina da casa**, com o **calendário interativo** do setor: números do
+  quadro ativo (clique → quem, nome → painel da pessoa) e o calendário de todo mundo fora da
+  Diretoria, inclusive quem saiu, com a escala da casa (1–4, 5–7, 8–10, 11+; a do setor saturava —
+  mediana de 7 pessoas por dia em 2026). Rota nova `/api/assiduidade-mapa`, `mapaDaCasa` em
+  `lib/painel/visao.ts`, prop `limites` em `CalendarioOcorrencias`, `aoClicar` em `DiaDoMapa`.
+- **Escolaridade clicável no relatório do setor:** `/formacao` virou `formacao/Resumo.tsx` e abre
+  na janela ("Ver detalhes", a rosca e cada formação) — pessoa por pessoa, com as formações. No
+  painel, o "ver ›" abre a mesma janela da casa.
+- **Foto das pessoas na tabela de Desligados** do Turnover (página, janela do setor e do painel).
+
+**Prova:** `scripts/ensaio-painel-novo.ts` (tsx, na produção) — 7 janelas (7d, 30d,
+Trimestre, Ano, jun, jul, ago): listas somam o cartão; linhas de cada cartão = as do cartão
+atual e somam o total; cada linha de setor = o total da janela do setor; selos (dias com
+expediente, mesmas pessoas, sem sobreposição); calendário da casa = `groupBy` direto no banco, e
+restrito ao quadro = cartão Atrasos; acesso (Diretoria 200, gestor → `/meu-setor`, anônimo →
+`/login`). **712 conferências, 0 divergências.** Os três ensaios do setor seguem limpos (acesso,
+576 números, 888 dias).
+
+```bash
+npx --yes tsx@4 --env-file=.env --tsconfig scripts/tsconfig.json scripts/ensaio-painel-novo.ts
+```
+
 ## 2026-09-11 (14) — Documentação da rodada e passagem para o próximo agente
 
 Pedido do dono: documentar o que foi feito e preparar a continuação com um novo agente,

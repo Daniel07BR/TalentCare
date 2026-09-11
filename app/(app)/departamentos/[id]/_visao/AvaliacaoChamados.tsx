@@ -2,8 +2,8 @@
 import { useRouter } from 'next/navigation'
 import { ClipboardCheck, ArrowLeftRight, ChevronRight } from 'lucide-react'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import s from './novo.module.css'
-import { Cartao, Mini } from './ui'
+import s from '../../../_visao/visao.module.css'
+import { Cartao, Mini } from '../../../_visao/ui'
 import { dur } from './derivar'
 import type { SecaoProps } from './tipos'
 

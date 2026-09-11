@@ -8,18 +8,23 @@ import type { ChatUsage, ChatSetor } from '@/lib/mock/chat'
 // `map` (por pessoa) e `setores` (por setor, nas duas faces do chamado).
 // `desde` é o dia mais antigo do espelho — a tela avisa, senão o filtro de Ano
 // parece bug (a mensagem tem história do Mattermost; o chamado, só desde 21/08).
-export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; desde: string | null; loading: boolean } {
+export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; desde: string | null; loading: boolean; erro: boolean } {
   const { period, query } = usePeriod()
   const [map, setMap] = useState<ChatUsage | null>(null)
   const [setores, setSetores] = useState<ChatSetor[]>([])
   const [desde, setDesde] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  /* ⚠️ A leitura FALHOU (11/09/2026). O `catch` segue pondo um mapa vazio, como
+     sempre, mas agora diz que foi erro: mapa vazio se lê "nenhuma atividade no
+     período", e uma queda de rede não é isso. O painel novo mostra o erro. */
+  const [erro, setErro] = useState(false)
 
   useEffect(() => {
     let alive = true
     setLoading(true)
+    setErro(false)
     fetch(`/api/chat-metrics?${query}`, { cache: 'no-store' })
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
       .then((d: { byUser: ({ nexusUserId: string } & Record<string, number>)[]; byDept: ChatSetor[]; desde: string | null }) => {
         if (!alive) return
         const m: ChatUsage = new Map()
@@ -36,6 +41,7 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
       })
       .catch(() => {
         if (!alive) return
+        setErro(true)
         setMap(new Map())
         setSetores([])
       })
@@ -45,5 +51,5 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
     }
   }, [query])
 
-  return { map, setores, desde, loading }
+  return { map, setores, desde, loading, erro }
 }
