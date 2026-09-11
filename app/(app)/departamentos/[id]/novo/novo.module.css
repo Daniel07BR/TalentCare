@@ -1,0 +1,100 @@
+/* ============================================================
+   RELATÓRIO DO SETOR — PRÉVIA DO LAYOUT NOVO (11/09/2026)
+
+   A paleta vem da imagem conceito que o dono mandou, e NÃO da do TalentCare:
+   fundo cinza-azulado, cartões brancos, azul como cor principal e um azulejo
+   de cor suave para cada tipo de indicador. Pedido explícito: "siga até as
+   novas cores, não se prenda na paleta atual".
+
+   ⚠️ Os tokens do app (--surface, --text, --accent…) são REDEFINIDOS dentro da
+   `.raiz`: assim o que esta página reaproveita — o Avatar, o calendário de
+   atrasos, a janela "Ver detalhes" com o resumo de cada sistema — herda a
+   paleta nova sem uma linha a mais neles.
+   ============================================================ */
+
+.raiz {
+  --n-bg: #f4f6fb;        --n-card: #ffffff;      --n-card-2: #f6f8fc;
+  --n-border: #e6eaf2;    --n-border-2: #eef1f6;
+  --n-text: #0f172a;      --n-text-2: #475569;    --n-text-3: #8a97ad;
+  --n-blue: #2563eb;      --n-blue-soft: #e8efff;
+  --n-red: #e5484d;       --n-red-soft: #fdecec;
+  --n-orange: #f97316;    --n-orange-soft: #fff0e3;
+  --n-amber: #f59e0b;     --n-amber-soft: #fff6e0;
+  --n-purple: #7c3aed;    --n-purple-soft: #f1ebff;
+  --n-green: #16a34a;     --n-green-soft: #e7f7ee;
+  --n-pink: #e11d48;      --n-pink-soft: #fde8ee;
+  --n-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 6px 18px rgba(15, 23, 42, .05);
+  /* os cinco degraus do mapa de atrasos (sem atraso → 4+ pessoas) */
+  --n-heat-0: #f1f4f9; --n-heat-1: #fde7c4; --n-heat-2: #fbc778; --n-heat-3: #f59e0b; --n-heat-4: #ea580c;
+
+  /* os tokens do app, apontados para a paleta nova */
+  --bg: var(--n-bg); --surface: var(--n-card); --surface-2: var(--n-card-2); --surface-3: #e9edf5;
+  --border: var(--n-border); --border-soft: var(--n-border-2);
+  --text: var(--n-text); --text-dim: var(--n-text-2); --text-mute: var(--n-text-3);
+  --accent: var(--n-blue); --info: var(--n-blue); --success: var(--n-green);
+  --warning: var(--n-amber); --danger: var(--n-red);
+  --chart-1: var(--n-green); --chart-2: var(--n-blue); --chart-3: var(--n-purple); --chart-4: var(--n-orange); --chart-5: var(--n-pink);
+
+  /* a página pinta o próprio fundo por baixo do respiro do <main> */
+  margin: -28px -32px -56px;
+  padding: 22px 28px 48px;
+  min-height: 100%;
+  background: var(--n-bg);
+  color: var(--n-text);
+}
+
+/* Tema escuro do app (<html data-theme="dark">): mesmas famílias de cor,
+   superfícies azul-noite. Os azulejos ficam translúcidos para não brilhar. */
+:global([data-theme="dark"]) .raiz {
+  --n-bg: #0b1020;        --n-card: #121a2b;      --n-card-2: #182238;
+  --n-border: #243049;    --n-border-2: #1d2740;
+  --n-text: #e6ebf5;      --n-text-2: #a8b4ca;    --n-text-3: #71809c;
+  --n-blue: #6b96ff;      --n-blue-soft: rgba(107, 150, 255, .14);
+  --n-red: #ff6b70;       --n-red-soft: rgba(255, 107, 112, .14);
+  --n-orange: #ff9447;    --n-orange-soft: rgba(255, 148, 71, .14);
+  --n-amber: #fbbf24;     --n-amber-soft: rgba(251, 191, 36, .14);
+  --n-purple: #a78bfa;    --n-purple-soft: rgba(167, 139, 250, .15);
+  --n-green: #34d399;     --n-green-soft: rgba(52, 211, 153, .13);
+  --n-pink: #fb7185;      --n-pink-soft: rgba(251, 113, 133, .14);
+  --n-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .3);
+  --n-heat-0: #1b2540; --n-heat-1: #4a3514; --n-heat-2: #8a5a12; --n-heat-3: #d98a0b; --n-heat-4: #f06a1a;
+  --surface-3: #22304d;
+}
+
+.cartao {
+  background: var(--n-card);
+  border: 1px solid var(--n-border);
+  border-radius: 14px;
+  box-shadow: var(--n-shadow);
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+/* ── As grades. Mobile primeiro: tudo numa coluna; abre com a tela. ───────── */
+.linha1, .linha2, .linha3 { display: grid; gap: 14px; margin-bottom: 14px; grid-template-columns: 1fr; }
+.indicadores { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sistemas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); }
+.pilha { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+@media (min-width: 768px) {
+  .indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .linha2, .linha3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .linha1 { grid-template-columns: minmax(300px, 3.1fr) minmax(0, 9fr); }
+  .linha2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr); }
+  .linha3 { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.25fr); }
+  /* 6 colunas: a Rotatividade ocupa duas linhas, como no conceito */
+  .indicadores { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .rot { grid-column: 2; grid-row: 1 / span 2; }
+  .largo { grid-column: span 2; }
+}
+
+/* Botão e linha clicável: alvo de toque de verdade, foco visível. */
+.acao { min-height: 36px; }
+.linhaClicavel { cursor: pointer; border-radius: 10px; }
+.linhaClicavel:hover { background: var(--n-card-2); }
+.cartao :focus-visible, .linhaClicavel:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .raiz * { animation: none !important; transition: none !important; } }

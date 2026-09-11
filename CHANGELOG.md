@@ -1,5 +1,53 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (5) — Prévia: o relatório do setor no desenho da imagem conceito
+
+Pedido do dono: uma página NOVA, em paralelo à atual, com o desenho de uma imagem
+conceito — seguindo até as cores dela, sem se prender à paleta do TalentCare —
+para comparar na prática.
+
+**Onde:** `/departamentos/<id>/novo`. A atual segue intacta em `/departamentos/<id>`.
+Uma leva à outra: "Prévia do layout novo" no cabeçalho da atual (só para a
+Diretoria — os gestores acabaram de entrar e não devem esbarrar numa tela em teste)
+e "Ver versão atual" na prévia, que também traz um selo "Prévia do layout novo".
+
+**O desenho, como no conceito:** cabeçalho com azulejo de ícone e trilha
+"Departamentos ›"; Liderança do setor com os rostos + nove indicadores em azulejos
+de cor suave (a Rotatividade ocupa duas linhas); Escolaridade em rosca, Atividade
+mês a mês em área azul com a variação contra o mês anterior, Últimas saídas;
+Ranking do mês com chips de ocorrência, Avaliação mensal + Chamados entre setores,
+Assiduidade com o mapa de atrasos em laranja; e a faixa "Sistemas e produtividade",
+um cartão por sistema com os 3 primeiros e dois números.
+
+**A paleta nova** mora em `novo.module.css`, em tokens (`--n-*`), com tema claro (o do
+conceito) e escuro (mesmas famílias de cor, superfícies azul-noite). ⚠️ Dentro da
+página os tokens do app (`--surface`, `--accent`…) apontam para ela: o avatar, o
+calendário e a janela "Ver detalhes" que a prévia reaproveita herdam as cores novas
+sem mudança. O calendário ganhou uma prop `paleta` opcional — o padrão é o de sempre.
+
+⚠️⚠️ **Mesmos dados da atual, de propósito.** A prévia lê a mesma `/api/dept-metrics`
+(mesma régua de acesso: gestor abre só o setor dele) e abre a mesma janela "Ver
+detalhes". Compara-se o desenho, não os números — duas telas do mesmo setor com
+números diferentes estragariam a comparação.
+
+⚠️ **Onde o conceito foi seguido e onde não:**
+- Os **dados de exemplo** da imagem (um "Coordenador", "Superior Incompleto", "↑ 12
+  pessoas") não existem: a tela mostra o que o setor tem.
+- Os **rostos da liderança** têm o mesmo tamanho, como no conceito (na atual o sub é
+  menor); o cargo embaixo marca a hierarquia.
+- O **"-47% vs. mês anterior"** compara os dois últimos meses FECHADOS (a série do
+  servidor já para no último fechado) e diz quais são ("ago/26 vs. jul/26").
+- O **Rádio** fica sem lista de pessoas, como no conceito e como na atual.
+- Onde o ponto não mediu a janela, atraso é **"—"**, não zero; faltas, "sem fonte".
+
+**Responsivo:** grades de 12/6 colunas no desktop, duas no tablet, uma no celular;
+alvos de toque de 44px nas linhas clicáveis.
+
+**Arquivos:** `app/(app)/departamentos/[id]/novo/` (15 arquivos: `page.tsx`,
+`novo.module.css`, `tipos.ts`, `derivar.ts`, `ui.tsx` e uma seção por arquivo),
+`app/(app)/departamentos/[id]/page.tsx` (o atalho), `app/(app)/CalendarioOcorrencias.tsx`
+(prop `paleta`).
+
 ## 2026-09-11 (4) — "Ver detalhes": o resumo de cada sistema dentro do relatório do setor
 
 Pedido do dono: gestor e sub só alcançam o relatório do próprio setor, e as páginas

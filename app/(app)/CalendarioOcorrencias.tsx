@@ -80,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, escala = 'minutos',
+  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS,
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -90,6 +90,9 @@ export default function CalendarioOcorrencias({
   pontoAte?: string | null
   /** `minutos` = a ficha de uma pessoa; `pessoas` = o mapa de um setor. */
   escala?: 'minutos' | 'pessoas'
+  /** Os cinco fundos, do "sem atraso" ao topo. Só a prévia do relatório novo
+   *  (`departamentos/[id]/novo`) troca — o padrão é o de sempre. */
+  paleta?: string[]
 }) {
   if (!de || !ate || ate < de) return null
 
@@ -155,7 +158,7 @@ export default function CalendarioOcorrencias({
 
                   const fundo = foraDoPeriodo || futuro ? 'transparent'
                     : semMedicao ? 'repeating-linear-gradient(45deg, var(--border) 0 2px, transparent 2px 5px)'
-                    : BGS[lvl]
+                    : paleta[lvl]
                   const cor = foraDoPeriodo || futuro || semMedicao ? 'var(--text-mute)'
                     : lvl >= 3 ? '#3a2a05' : 'var(--text-dim)'
 
@@ -197,7 +200,7 @@ export default function CalendarioOcorrencias({
           </span>
         )}
         {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
-        {BGS.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
+        {paleta.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
         {escala === 'pessoas' ? '4 ou mais pessoas' : 'mais minutos'}
       </div>
     </>

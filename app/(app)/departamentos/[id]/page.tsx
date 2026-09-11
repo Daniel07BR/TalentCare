@@ -165,6 +165,19 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
             planilha: a tela mora à parte e se chega a ela pelo resumo do setor a
             que ela se aplica. Item de menu ficaria aceso para os 16 setores e
             levaria 15 deles a uma tela que não é sobre eles. */}
+        {/* ⚠️ A PRÉVIA do layout novo (imagem conceito, 11/09/2026), em paralelo
+            para comparar. Só a Diretoria vê o atalho: os gestores acabaram de
+            ganhar acesso, e esbarrar numa tela em teste os faria perguntar qual
+            das duas vale. A rota em si segue a mesma régua de acesso. */}
+        {m?.ehAdmin && (
+          <button
+            onClick={() => router.push(`/departamentos/${m.setor.id}/novo`)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', background: 'var(--surface)', border: '1px dashed var(--accent)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+            title="Abrir este setor no desenho novo, para comparar"
+          >
+            Prévia do layout novo
+          </button>
+        )}
         {m?.setor.id === ENTREGAS_DEPT_ID && (
           <button
             onClick={() => router.push('/entregas')}
