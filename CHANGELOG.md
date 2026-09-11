@@ -1,5 +1,15 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (13) — Escolaridade ocupa o cartão
+
+Pedido do dono: *"adapte os dados ao tamanho dos cards"*. O cartão da Escolaridade
+estica até a altura da linha (o vizinho "Atividade no período" é mais alto), e a rosca
+de 160px e a legenda ficavam presas no alto, com um vão embaixo. Agora o cartão é uma
+coluna flexível: o conteúdo toma a altura que sobra e se centraliza nela; a rosca tem
+tamanho relativo (42% da largura do cartão, entre 150 e 230px); a legenda ficou maior
+e cada formação ganhou uma barra com a sua fatia, que usa a largura que sobrava e deixa
+comparar sem ler os números. Arquivo: `departamentos/[id]/_visao/Escolaridade.tsx`.
+
 ## 2026-09-11 (12) — A janela do sistema abre inteira, sem piscar; sai o "relatório completo"
 
 Dois pedidos do dono:
