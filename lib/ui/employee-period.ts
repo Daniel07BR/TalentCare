@@ -34,6 +34,9 @@ export type EmployeeMetrics = {
   /** Histórico de advertências COM motivo — vem daqui, e não do dataset do
    *  cliente, porque esta rota confere `podeVer`. */
   disciplina: { data: string; motivo: string | null; tipo: string; dias: number | null }[]
+  /** Quantas a pessoa tem em TODA a história — para "nenhuma no período" não
+   *  se ler como "nunca teve". A lista acima é só do período. */
+  disciplinaTotal: number
   assiduidade: {
     assid: number; atrasos: number; atrasosAbon: number; minutos: number; advertencias: number
     /** A gravidade do atraso, em contagem por faixa (a tela faz o percentual). */

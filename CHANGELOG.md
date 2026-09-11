@@ -1,5 +1,33 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (2) — As advertências da ficha seguem o período
+
+Pedido do dono: filtrou **agosto** na ficha do Marcos Gabriel e o calendário e a
+gravidade dos atrasos mudaram, mas a lista de advertências logo abaixo continuou
+mostrando julho, junho e o resto — ela vinha inteira, com o selo "histórico
+completo". O 5º atraso de 23/07 aparecia debaixo de um mês em que ele teve 3.
+
+Agora a lista obedece ao filtro, como os números ao lado dela (regra (b) da casa).
+Medido na rota com a mesma pessoa:
+
+| filtro | na lista | contador do período |
+|---|---|---|
+| agosto | 2 (06/08, 25/08) | 2 |
+| julho | 4 | 4 |
+| setembro | 0 | 0 |
+| ano | 21 | 21 |
+
+Antes, a lista dizia 21 em qualquer filtro, e o contador ao lado dizia outro número.
+
+⚠️ **O total de sempre continua visível** (`disciplinaTotal`): o título mostra
+"· 01 de ago. a 31 de ago. de 2026 · 21 no histórico completo", e o estado vazio diz
+"Nenhuma ocorrência **no período** — 21 em outros períodos, amplie o filtro". É a
+lição da planilha de serviços: recorte sem o todo ao lado faz perguntar onde foram
+parar os dados, e "nenhuma" não pode se ler como "nunca teve".
+
+**Arquivos:** `app/api/employee-metrics/route.ts`, `lib/ui/employee-period.ts`,
+`app/(app)/funcionarios/[id]/page.tsx`.
+
 ## 2026-09-11 — A ficha volta para onde você estava
 
 Pedido do dono: entrou na ficha do Lucas pelo **relatório do Legal**, e o botão dizia

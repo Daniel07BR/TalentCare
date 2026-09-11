@@ -466,8 +466,21 @@ export async function GET(req: NextRequest) {
         motivoSemPonto: motivoSemPonto(cobPonto, cobPonto.roster.has(personKey), janelaTemDado(cobPonto, fromDay, toDay)),
       }
     })(),
-    // Histórico completo de advertências (não é do período — é a ficha da pessoa).
-    disciplina: discLista.map((d) => ({ data: d.data, motivo: d.motivo, tipo: d.tipo, dias: d.dias })),
+    /* ⚠️⚠️ A LISTA OBEDECE AO FILTRO (pedido do dono, 11/09/2026). Ela vinha
+       inteira, com o selo "histórico completo", logo abaixo do calendário e da
+       gravidade que já seguiam o período: filtrar "agosto" mostrava o mapa de
+       agosto e, embaixo, advertências de julho — o 5º atraso de 23/07 aparecia
+       ao lado de um mês em que a pessoa teve 3. Regra (b) da casa: número ao
+       lado do filtro obedece ao filtro.
+       ⚠️ O TOTAL de sempre vai junto (`disciplinaTotal`), pela lição da planilha
+       de serviços: recorte sem o todo ao lado faz perguntar onde foram parar os
+       dados, e "nenhuma no período" não pode se ler como "nunca teve".
+       Filtra-se aqui e não na query porque o total precisa da lista inteira, e
+       ela é pequena (a pessoa mais advertida da casa tem poucas dezenas). */
+    disciplina: discLista
+      .filter((d) => d.data >= fromDay && d.data <= toDay)
+      .map((d) => ({ data: d.data, motivo: d.motivo, tipo: d.tipo, dias: d.dias })),
+    disciplinaTotal: discLista.length,
 
     /* SERVIÇOS do setor, no período. ⚠️ `temFonte` distingue "este setor não
        manda planilha" de "esta pessoa não fez nada": sem ele, todo mundo dos

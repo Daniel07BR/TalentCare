@@ -568,7 +568,13 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                         da direita — movido, não copiado. Ele aparecia em dois
                         lugares nesta página; um terceiro seria repetição. */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· histórico completo</span></div>
+                    {/* ⚠️ Segue o FILTRO desde 11/09/2026 — o rótulo diz o período e o total
+                        de sempre, para o recorte não se passar pelo todo. */}
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                      Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· {periodo}
+                        {m && m.disciplinaTotal > m.disciplina.length && <> · {m.disciplinaTotal} no histórico completo</>}
+                      </span>
+                    </div>
                     {/* ⚠️⚠️ A RESSALVA VEM UMA VEZ, AQUI — e não repetida em cada
                         linha. Ela estava no `motivo` de todas as advertências, e
                         sete linhas com a mesma frase longa não informam nada:
@@ -585,7 +591,12 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     {(m?.disciplina.length ?? 0) === 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 96, textAlign: 'center', gap: 6 }}>
                         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(63,178,85,.13)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✓</div>
-                        <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Nenhuma ocorrência registrada</span>
+                        {/* ⚠️ "no período", nunca "registrada": quem tem 7 em julho
+                            e filtra agosto não pode ler que nunca levou nenhuma. */}
+                        <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Nenhuma ocorrência no período</span>
+                        {(m?.disciplinaTotal ?? 0) > 0 && (
+                          <span style={{ fontSize: 11, color: 'var(--text-mute)' }}>{m!.disciplinaTotal} em outros períodos — amplie o filtro para ver</span>
+                        )}
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
