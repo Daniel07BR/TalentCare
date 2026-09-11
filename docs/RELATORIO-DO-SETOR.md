@@ -135,3 +135,15 @@ ssh talentcare@192.168.0.78 'cd /var/www/talentcare && node --env-file=.env scri
 - **Comparar com o período anterior** mistura fontes que ainda não existiam: +2756% no Legal.
 - **Página montada no servidor** (Turnover) não entra num modal: o corpo sem hooks vai para um
   componente que serve aos dois lados (`turnover/Visao.tsx`).
+
+## 10. O que mudou no setor em 11/09/2026 (noite)
+
+- **Escolaridade** clicável (rosca, cada formação, "Ver detalhes") → janela `formacao` só com o
+  setor, pessoa por pessoa (`app/(app)/formacao/Resumo.tsx`).
+- **Avaliação mensal** → `/avaliacoes?setor=<id>&competencia=…`: a lista e os números do setor.
+- **Planilha**: o botão diz "Enviar/Atualizar planilha do Gestta"; é a ÚNICA porta (saiu do menu
+  e o `/servicos` perdeu o seletor de setor).
+- **Régua de pontuação** do setor: só leitura, gerada pela régua geral de Configurações.
+- **Turnover**: foto na tabela de desligados. **Calendário**: hachura os dias antes do ponto.
+- As peças comuns (paleta, `ui.tsx`, `Detalhe.tsx`) moram em `app/(app)/_visao/` desde 11/09.
+

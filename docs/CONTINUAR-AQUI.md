@@ -1,5 +1,40 @@
 # Continuar daqui — passagem de bastão
 
+> ## ⚠️⚠️ ESTADO EM 11/09/2026 (NOITE) — leia isto primeiro
+>
+> **O próximo trabalho é o MENU:** [`PROXIMO-MENU.md`](PROXIMO-MENU.md) — tirar o menu
+> lateral e trocar por um botão que abre uma janela de cartões. Leia antes de mexer.
+>
+> O que mudou na tarde/noite de 11/09 (detalhe e porquês no `CHANGELOG`, entradas **(15) a
+> (24)**; commits `e29280d` … `98596da`, todos publicados no `.78`):
+> - **Painel principal novo = `/dashboard`** (imagem conceito, tudo clicável; o antigo em
+>   `/dashboard/anterior`). Selo de variação só em Atrasos, com dias de expediente e pessoas
+>   iguais dos dois lados. Assiduidade da casa com calendário. Barra do WhatsApp abre a janela
+>   da FILA. Ver [`PROXIMO-DASHBOARD.md`](PROXIMO-DASHBOARD.md) (estado no topo).
+> - **Saíram do sistema:** `/ranking` e `/relatorios` (redirecionam ao painel). **Saíram do
+>   menu lateral:** Serviços do setor, Avaliações, Meu desempenho, Casar ponto, Quem avalia,
+>   Usuários, Equipe interna, Escolaridade (as cinco últimas viraram abas de Configurações).
+> - **Configurações** = a área administrativa inteira, em abas; saiu a ficção (pesos do score,
+>   "sync há 8 min", contagens de acesso escritas à mão). A Diretoria entra (vê Régua e Fontes);
+>   o dono vê tudo.
+> - ⚠️⚠️ **A RÉGUA DE PONTUAÇÃO É GERAL** (Configurações → Régua; só dono e Diretoria alteram;
+>   peso proporcional ao mês típico do setor). O gestor não edita mais régua; os pontos por
+>   atividade saem sempre da média. Ver §8 abaixo e a memória `talentcare-regua-geral`.
+> - **A planilha de serviços** se sobe só dentro do setor ("Enviar planilha do Gestta"); só
+>   Gestta é aceito. **As avaliações** abrem dentro do setor (`/avaliacoes?setor=`).
+> - **A busca do topo funciona** (pessoas e setores; `lib/ui/busca.ts`).
+> - ⚠️ **`prisma db push` no `.78` quer DROPAR os backups do Chat** (`chat_*_bkp_20260911`) —
+>   nunca aceite; use `prisma migrate diff --script`, filtre só o novo e aplique com psql.
+> - **Pendentes com o dono:** travar também os pontos da tabela de SERVIÇOS (1 caso zerado à
+>   mão no Legal); mostrar no painel as avaliações pendentes (o selo saiu com o item do menu);
+>   o setor oculto Diretoria diria "9 a avaliar" se aberto por endereço.
+>
+> **Os ensaios** (rode depois de mexer; todos limpos em 11/09 à noite):
+> `ensaio-painel-novo.ts` (785) · `ensaio-regua-geral.ts` (171) · `ensaio-busca.ts` (136) — com
+> `npx --yes tsx@4 --env-file=.env --tsconfig scripts/tsconfig.json scripts/<nome>.ts` — e os
+> três `.mjs` do setor (`ensaio-acesso-gestao`, `ensaio-detalhe-setor`,
+> `ensaio-quem-atras-do-numero`) com `node --env-file=.env`.
+
 > **⚠️ Atualizado em 11/09/2026.** Depois deste documento vieram duas rodadas grandes —
 > a chefia entrou no sistema e o relatório do setor foi refeito (visão nova, janelas,
 > painel da pessoa, integrações "pessoa" em seis sistemas). Leia também:
