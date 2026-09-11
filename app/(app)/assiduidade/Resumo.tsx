@@ -8,6 +8,7 @@ import { assiduidadeVM, fmtMin, type AssidPerson } from '@/lib/mock/assiduidade'
 import { scoreColor } from '@/lib/mock/data'
 import { AlarmClock } from 'lucide-react'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 export default function AssiduidadeResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
@@ -148,6 +149,7 @@ export default function AssiduidadeResumo() {
 }
 
 function Leaderboard({ title, subtitle, people, metric, color, router }: { title: string; subtitle: string; people: AssidPerson[]; metric: 'atrasos' | 'advertencias'; color: string; router: ReturnType<typeof useRouter> }) {
+  const abrirPessoa = usePainelDaPessoa()
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{title}</div>
@@ -157,7 +159,7 @@ function Leaderboard({ title, subtitle, people, metric, color, router }: { title
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {people.map((p, i) => (
-            <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+            <div key={p.id} className="tc-row" onClick={() => abrirPessoa('assiduidade', p.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
               <span style={{ width: 18, fontSize: 12, fontWeight: 800, color: i === 0 ? color : 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>
               <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={30} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -177,8 +179,9 @@ function Leaderboard({ title, subtitle, people, metric, color, router }: { title
 }
 
 function UserRow({ p, rank, router }: { p: AssidPerson; rank?: number; router: ReturnType<typeof useRouter> }) {
+  const abrirPessoa = usePainelDaPessoa()
   return (
-    <div className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+    <div className="tc-row" onClick={() => abrirPessoa('assiduidade', p.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
       {rank != null && <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{rank}</span>}
       <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
       <div style={{ flex: 1, minWidth: 0 }}>

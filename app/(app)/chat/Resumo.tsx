@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { chatVM, fmtDurUtil, type ChatPerson, type ChatSetor } from '@/lib/mock/chat'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 const ChatIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -16,6 +17,7 @@ const ChatIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; colo
 const num = (n: number) => n.toLocaleString('pt-BR')
 
 export default function ChatResumo() {
+  const abrirPessoa = usePainelDaPessoa()
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
@@ -124,7 +126,7 @@ export default function ChatResumo() {
         {vm.conversa.length === 0 && vm.chamados.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
         ) : (
-          <UserTable rows={vm.pessoas.filter((p) => p.mensagens > 0 || p.chamados > 0 || p.stat.chamadosAssumidos > 0).sort((a, b) => b.mensagens - a.mensagens)} totais={vm.totais} onRow={(id) => router.push(`/funcionarios/${id}`)} />
+          <UserTable rows={vm.pessoas.filter((p) => p.mensagens > 0 || p.chamados > 0 || p.stat.chamadosAssumidos > 0).sort((a, b) => b.mensagens - a.mensagens)} totais={vm.totais} onRow={(id) => abrirPessoa('chat', id)} />
         )}
       </div>
     </div>
@@ -135,6 +137,7 @@ function Leaderboard({ title, sub, color, rows, valor, router }: {
   title: string; sub: string; color: string; rows: ChatPerson[]
   valor: (p: ChatPerson) => number; router: ReturnType<typeof useRouter>
 }) {
+  const abrirPessoa = usePainelDaPessoa()
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -146,7 +149,7 @@ function Leaderboard({ title, sub, color, rows, valor, router }: {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rows.map((p, i) => (
-            <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+            <div key={p.id} className="tc-row" onClick={() => abrirPessoa('chat', p.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
               <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>
               <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>

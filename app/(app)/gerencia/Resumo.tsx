@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { gerenciaVM, type GerenciaPerson, type GerenciaDeptBar } from '@/lib/mock/gerencia'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 const COR_EXEC = 'var(--chart-2)'
 const COR_ESCR = 'var(--info)'
@@ -50,9 +51,10 @@ function Barras({ bars, color, sufixo }: { bars: GerenciaDeptBar[]; color: strin
 }
 
 function Linha({ p, cols }: { p: GerenciaPerson; cols: { label: string; v: number; destaque?: boolean }[] }) {
+  const abrirPessoa = usePainelDaPessoa()
   const router = useRouter()
   return (
-    <div className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)}
+    <div className="tc-row" onClick={() => abrirPessoa('gerencia', p.id)}
       style={{ display: 'grid', gridTemplateColumns: `minmax(0,1.6fr) repeat(${cols.length}, 74px)`, alignItems: 'center', gap: 10, padding: '9px 6px', borderBottom: '1px solid var(--border-soft)', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={30} />

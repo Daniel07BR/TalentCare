@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { deptName } from '@/lib/mock/employee'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 type Att = { dept: string; name: string; abertos: number }
 type Overview = {
@@ -32,6 +33,7 @@ function fmtDur(sec: number): string {
 const dayLabel = (d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)
 
 export default function WhatsappResumo() {
+  const abrirPessoa = usePainelDaPessoa()
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
@@ -193,8 +195,8 @@ export default function WhatsappResumo() {
                     <div
                       key={a.name}
                       className={emp ? 'tc-row' : undefined}
-                      onClick={emp ? () => router.push(`/funcionarios/${emp.id}`) : undefined}
-                      title={emp ? 'Ver perfil' : 'Atendente sem ficha no TalentCare'}
+                      onClick={emp ? () => abrirPessoa('whatsapp', emp.id) : undefined}
+                      title={emp ? 'Ver o dia a dia de atendimento' : 'Atendente sem ficha no TalentCare'}
                       style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: emp ? 'pointer' : 'default', borderRadius: 8, padding: '3px 6px', margin: '-3px -6px' }}
                     >
                       <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>

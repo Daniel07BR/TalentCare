@@ -1,5 +1,67 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (9) — O painel da pessoa: o que ela fez em cada sistema
+
+Pedido do dono, depois do ClassRoom: *"faça o mesmo nos outros sistemas ao clicar na
+pessoa"*. Nos nove resumos (página do sistema e janela "Ver detalhes" do setor),
+clicar no nome abre um **painel lateral** com o que a pessoa fez naquele sistema, no
+período do filtro. A ficha fica no link "Abrir a ficha ›" do painel.
+
+⚠️ **Painel lateral, e não lista embaixo da linha** (como a 1ª versão do ClassRoom):
+são dezenas de linhas diferentes nos nove resumos — rankings, tabelas, pódios — e o
+painel deixa todas iguais, trocando só o clique. O ClassRoom passou a usar o mesmo
+painel; `AprendizadoDaPessoa.tsx` e `/api/classroom-pessoa` saíram.
+
+### Ao vivo, pelas regras de quem gera o número
+
+Cinco sistemas ganharam uma rota `talent-pessoa` (o ClassRoom já tinha a
+`talent-user-learning`), todas no **mesmo formato** e com as **mesmas regras** da
+rota diária que alimenta o número ao lado do nome — conferidas 1:1 contra o espelho:
+
+| Sistema | O que mostra | Conferido |
+|---|---|---|
+| HelpDesk (.77, `edc956a`) | chamados que abriu, resolveu e formalizou | Enzo 407 resolvidos no ano |
+| CIDE (.74, `12a7167`) | empresas atendidas, uma por dia, com as alterações | Joice 304, Lucas 168 até 10/09 |
+| Consultoria Plus (.68, `d48f5d5`) | estudos, chamados, mensagens e comentários (agrupados, sem texto) | Adriana 16 / 24 |
+| Gerência (.72, `f5fb8aa`) | serviços entregues, saídas, protocolos abertos/aprovados, serviços criados | Elton 1.191 serviços no ano |
+
+No dia de hoje a lista pode ter um item a mais que o número: ela é ao vivo, e o
+espelho sincroniza de hora em hora. O painel diz isso.
+
+### Do espelho, dia a dia — por decisão, não por falta
+
+- ⚠️⚠️ **Chat Interno**: a rota diária dele diz, no código, que *"nenhum texto de
+  mensagem, nenhum assunto de chamado, nenhum nome de canal atravessa esta porta"*.
+  O painel mostra chamados e mensagens **por dia**, e não a lista de chamados —
+  mudar isso é decisão do dono, não deste recurso.
+- **WhatsApp**: conversa com cliente (nome e telefone de terceiros) — mesmo caminho.
+- **Rádio** e **Assiduidade** (atrasos por dia + advertências e suspensões com o
+  motivo) já estão inteiros no espelho.
+
+A régua é a da ficha (`podeVer`): o Evandro abre o Legal e leva 403 na Luana
+(Contábil).
+
+### ⚠️ O espelho da Consultoria estava defasado — e a lista mostrou
+
+A Marina Kazue tinha **204 estudos na fonte e 202 no espelho**: estudos cadastrados
+com data antiga (30/07, 03/09) depois de o sincronizador ter passado por aqueles dias
+— o incremental só puxa "desde a última passagem − 1 dia". `run-consultoria-sync.mjs`
+ganhou `--completo`, que rodou uma vez (113 dias corrigidos) e entrou no cron às
+**03:20**, como a Gerência já faz às 03:10.
+
+### ⚠️ Incidente no CIDE durante o deploy
+
+O build do CIDE falhou 3× com `EACCES` no `.next`: o build anterior fora feito pelo
+Yuri e 3.433 arquivos eram dele. O `next build` apaga o `.next` antes de falhar — o
+CIDE ficou servindo de um diretório pela metade (`/login` ainda 200). Corrigido com
+`chown` do `.next` para `suporte` (o dono do serviço) e build completo; o CIDE voltou
+inteiro, com a rota nova.
+
+**Arquivos (TalentCare):** `lib/pessoa-sistema.ts`, `lib/pessoa-sistema-tipos.ts`,
+`app/api/pessoa-sistema/route.ts`, `app/(app)/PainelDaPessoa.tsx` (novos);
+`AppShell.tsx` e `departamentos/[id]/page.tsx` (o provedor); os nove `Resumo.tsx`;
+`run-consultoria-sync.mjs`.
+
 ## 2026-09-11 (8) — ClassRoom: o que a pessoa estudou, a janela centrada e a barra fantasma
 
 Três pedidos do dono, a partir da janela "Ver detalhes":

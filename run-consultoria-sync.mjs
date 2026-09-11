@@ -1,5 +1,11 @@
 // Sync incremental do espelho diário do Consultoria Plus → TalentCare (CLI p/ cron).
-// Rode: node --env-file=.env run-consultoria-sync.mjs
+// Rode: node --env-file=.env run-consultoria-sync.mjs [--completo]
+//
+// ⚠️⚠️ `--completo` repassa o HISTÓRICO INTEIRO. O incremental puxa desde a última
+// passagem − 1 dia, e um estudo cadastrado com data ANTIGA nunca entra: em
+// 11/09/2026 o espelho da Marina Kazue tinha 202 estudos e a fonte, 204 (dias
+// 30/07 e 03/09) — achado ao pôr a lista da pessoa ao lado do número. O upsert é
+// SET por pessoa×dia, então repassar é idempotente: só corrige.
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -17,7 +23,8 @@ function startOfDayMinusOne(d) {
 async function main() {
   const now = new Date()
   const wm = await prisma.syncWatermark.findUnique({ where: { source: SOURCE } })
-  const from = wm ? startOfDayMinusOne(wm.lastSyncedAt) : null
+  const completo = process.argv.includes('--completo')
+  const from = wm && !completo ? startOfDayMinusOne(wm.lastSyncedAt) : null
 
   const qs = new URLSearchParams({ to: now.toISOString() })
   if (from) qs.set('from', from.toISOString())

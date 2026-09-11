@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { cideVM, type CidePerson } from '@/lib/mock/cide'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 const CideIcon = ({ size = 17, color = 'var(--chart-5)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -14,6 +15,7 @@ const CideIcon = ({ size = 17, color = 'var(--chart-5)' }: { size?: number; colo
 )
 
 export default function CideResumo() {
+  const abrirPessoa = usePainelDaPessoa()
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
@@ -58,7 +60,7 @@ export default function CideResumo() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${vm.top5.length}, 1fr)`, gap: 12 }}>
             {vm.top5.map((p, i) => (
-              <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)}
+              <div key={p.id} className="tc-row" onClick={() => abrirPessoa('cide', p.id)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', cursor: 'pointer', padding: '14px 8px', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', background: i === 0 ? 'rgba(241,120,138,.08)' : 'transparent' }}>
                 <div style={{ position: 'relative' }}>
                   <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={52} />
@@ -132,8 +134,9 @@ export default function CideResumo() {
 }
 
 function UserRow({ p, rank, router }: { p: CidePerson; rank?: number; router: ReturnType<typeof useRouter> }) {
+  const abrirPessoa = usePainelDaPessoa()
   return (
-    <div className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+    <div className="tc-row" onClick={() => abrirPessoa('cide', p.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
       {rank != null && <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{rank}</span>}
       <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
       <div style={{ flex: 1, minWidth: 0 }}>

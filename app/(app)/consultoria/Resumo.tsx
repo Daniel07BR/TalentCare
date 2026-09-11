@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import { consultoriaVM, type ConsultoriaPerson } from '@/lib/mock/consultoria'
 import Avatar from '../Avatar'
+import { usePainelDaPessoa } from '../PainelDaPessoa'
 
 const CPIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -24,6 +25,7 @@ const METRICS: { key: MetricKey; label: string; short: string; color: string; de
 ]
 
 export default function ConsultoriaResumo() {
+  const abrirPessoa = usePainelDaPessoa()
   /* Aberto de dentro do relatório de um setor? Então some o que compara
      setores entre si — com um setor só, é uma barra de 100%. */
   const setor = useRecorteSetor()
@@ -73,7 +75,7 @@ export default function ConsultoriaResumo() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {rows.map((p) => (
-                    <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', borderRadius: 8, padding: 4, margin: '-1px -4px' }}>
+                    <div key={p.id} className="tc-row" onClick={() => abrirPessoa('consultoria', p.id)} style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', borderRadius: 8, padding: 4, margin: '-1px -4px' }}>
                       <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={26} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</div>
@@ -114,7 +116,7 @@ export default function ConsultoriaResumo() {
         {vm.byUser.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
         ) : (
-          <UserMetricTable rows={vm.byUser} totals={vm.totals} onRow={(id) => router.push(`/funcionarios/${id}`)} />
+          <UserMetricTable rows={vm.byUser} totals={vm.totals} onRow={(id) => abrirPessoa('consultoria', id)} />
         )}
       </div>
     </div>

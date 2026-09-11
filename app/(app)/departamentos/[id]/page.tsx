@@ -15,6 +15,7 @@ import { AvaliacaoChamados } from './_visao/AvaliacaoChamados'
 import { Assiduidade } from './_visao/Assiduidade'
 import { Sistemas } from './_visao/Sistemas'
 import { PainelDoIndicador, type ChavePainel } from './_visao/Paineis'
+import { PainelDaPessoaProvider } from '../../PainelDaPessoa'
 
 /* ============================================================
    O RELATÓRIO DO SETOR — a visão geral, no desenho da imagem conceito.
@@ -58,6 +59,10 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
 
   return (
     <div className={`tc-anim ${s.raiz}`}>
+      {/* ⚠️ Um segundo provedor AQUI DENTRO da `.raiz`: o painel da pessoa, aberto
+          da janela "Ver detalhes", nasce dentro da paleta nova em vez de sair com
+          as cores antigas por cima da janela azul. */}
+      <PainelDaPessoaProvider>
       <Cabecalho m={m} />
       <div className={s.linha1}>
         <Lideranca m={m} />
@@ -79,6 +84,7 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       {detalhe.aberto && (
         <JanelaDetalhe chave={detalhe.aberto} setor={{ id: m.setor.id, nome: m.setor.nome }} onFechar={detalhe.fechar} />
       )}
+      </PainelDaPessoaProvider>
     </div>
   )
 }
