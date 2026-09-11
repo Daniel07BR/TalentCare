@@ -1,5 +1,23 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (24) — A busca do topo passa a funcionar
+
+Pedido do dono: *"dê uma funcionalidade real ao campo de busca — hoje, se escrevemos o nome de
+um departamento ele não entrega nada, e o de uma pessoa também não"*. O campo existia desde o
+primeiro desenho e só guardava o que se digitava.
+
+- Ao digitar, abre uma lista com **Departamentos** (até 5; clique → relatório do setor) e
+  **Pessoas** (até 8, com foto, cargo e setor; clique → ficha). Quem já saiu aparece por último,
+  marcado "já saiu". Setas, Enter e Esc funcionam; clicar fora fecha.
+- **Sem acento e sem maiúscula** ("joao" acha "João"); cada palavra tem de estar no nome, em
+  qualquer ordem ("silva ana" acha "Ana Silva"); quem começa com o que foi digitado vem antes.
+- Busca no dataset que a sessão já recebeu, que passou pela régua de alcance — quem busca só
+  encontra quem já podia ver. Nenhuma rota nova.
+- A conta mora em `lib/ui/busca.ts` (pura); tela em `app/(app)/BuscaGlobal.tsx`.
+- Prova: `scripts/ensaio-busca.ts` — com o dataset real da Diretoria, o nome de cada um dos 15
+  setores e de cada uma das 117 pessoas acha o registro certo; sem acento e fora de ordem
+  também; lixo não acha nada. **136 conferências, 0 divergências.**
+
 ## 2026-09-11 (23) — Avaliações dentro do setor; "Avaliações" e "Meu desempenho" fora do menu lateral
 
 Pedidos do dono: *"a área de avaliações é acessada dentro de cada departamento também"* e

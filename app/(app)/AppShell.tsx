@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, TrendingUp, GraduationCap,
-  SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Radio, MessageCircle,
+  SlidersHorizontal, Bell, ChevronRight, ChevronDown, Sun, Moon, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, AlarmClock, Boxes, Truck, MessageSquareText,
   CalendarDays, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
@@ -13,6 +13,7 @@ import { PeriodProvider, usePeriod } from '@/lib/ui/period'
 import { TalentDataProvider } from '@/lib/ui/data'
 import { OrigemProvider } from '@/lib/ui/origem'
 import { PainelDaPessoaProvider } from './PainelDaPessoa'
+import BuscaGlobal from './BuscaGlobal'
 import Logo from './Logo'
 import Avatar from './Avatar'
 import type { Period } from '@/lib/mock/dashboard'
@@ -139,7 +140,6 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
   const hojeISO = new Date().toISOString().slice(0, 10)
   const pathname = usePathname()
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
-  const [search, setSearch] = useState('')
 
   // O tema vive no <html data-theme> (aplicado antes da pintura pelo script inline).
   // Aqui só sincronizamos o estado do ícone com o que já está no DOM.
@@ -205,13 +205,9 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
       )}
 
       <div style={{ position: 'relative', flex: soMeuSetor ? 'none' : 1, maxWidth: 420, display: soMeuSetor ? 'none' : 'block' }}>
-        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-mute)', display: 'flex' }}><Search size={16} /></span>
-        <input
-          placeholder="Buscar funcionários, departamentos…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', height: 38, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0 12px 0 38px', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
-        />
+        {/* A busca de verdade (11/09/2026): pessoas e departamentos — ver BuscaGlobal.tsx.
+            Era um campo que só guardava o que se digitava. */}
+        <BuscaGlobal />
       </div>
       <div style={{ flex: 1 }} />
 
