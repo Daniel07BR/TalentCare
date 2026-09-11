@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Building2, TrendingUp, GraduationCap,
   SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, AlarmClock, Boxes, Truck, MessageSquareText,
-  ClipboardCheck, UserCircle, CalendarDays, PanelLeftClose, PanelLeftOpen,
+  CalendarDays, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
@@ -26,18 +26,15 @@ const NAV_MAIN = [
   /* ⚠️ "Ranking" SAIU do menu (11/09/2026, pedido do dono): com cada setor pontuando
      pela própria régua, um ranking da casa inteira compara números que não se
      comparam. O endereço redireciona para o painel. */
-  // A fila de avaliações do mês. O selo ao lado traz "quantas faltam" — ver
-  // useFaltamAvaliar: é DERIVADO da fila, nunca um contador gravado.
-  { href: '/avaliacoes', label: 'Avaliações', icon: ClipboardCheck },
+  /* ⚠️ "Avaliações" e "Meu desempenho" SAÍRAM do menu lateral (11/09/2026, pedido do
+     dono): as avaliações se acessam DENTRO de cada setor (o cartão "Avaliação
+     mensal" do relatório abre a lista só daquele setor), e as duas seguem na
+     barra de cima, que aparece ao recolher o menu. */
   // A planilha que cada setor sobe + a régua de pontuação dele. Fica junto das
   // avaliações porque é a outra metade da mesma pergunta: o que a pessoa
   // entregou, e por qual critério isso vira nota.
   /* ⚠️ "Serviços do setor" SAIU do menu (11/09/2026, pedido do dono): a planilha do
      Gestta se sobe só dentro do relatório de cada setor, com o setor na URL. */
-  // A página da própria pessoa. Fica no topo de propósito: é a única do sistema
-  // que TODO funcionário alcança, e escondê-la num menu faria o colaborador
-  // entrar e achar que não há nada para ele.
-  { href: '/minha-avaliacao', label: 'Meu desempenho', icon: UserCircle },
 ]
 // Resumos dos sistemas integrados (Turnover p/ baixo) ficam dentro do grupo "Sistemas".
 const NAV_SYSTEMS = [
@@ -100,28 +97,6 @@ function mesesDoCard(hoje = new Date()): { chave: string; label: string; from: s
   return out
 }
 
-/**
- * Quantas pessoas AINDA não têm avaliação publicada na competência corrente,
- * no alcance de quem está logado.
- *
- * ⚠️⚠️ Vem da fila, que é DERIVADA (avaliáveis menos publicadas). Não há — e não
- * pode haver — um contador gravado: um número desses só é escrito por um
- * caminho, e no dia em que alguém trocar de setor ou for admitido no meio do
- * mês o selo fica aceso para sempre. Selo que mente uma vez é ignorado para
- * sempre depois.
- */
-function useFaltamAvaliar(): number {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    let vivo = true
-    fetch('/api/avaliacoes', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { faltam?: number } | null) => { if (vivo && j) setN(j.faltam ?? 0) })
-      .catch(() => {})
-    return () => { vivo = false }
-  }, [])
-  return n
-}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/funcionarios') return pathname.startsWith('/funcionarios')
@@ -353,7 +328,6 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
   meusSetores?: { id: string; name: string }[]
   me: { id: string; cargo: string | null; hasAvatar: boolean }; data: TalentData; children: React.ReactNode
 }) {
-  const faltam = useFaltamAvaliar()
 
   /*
    * RECOLHER O MENU — e, com ele, ver a tela como o gestor vê.
@@ -427,15 +401,10 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
             <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '.7px', textTransform: 'uppercase', color: 'var(--text-mute)', padding: '12px 12px 6px' }}>Visão geral</div>
             {NAV_MAIN.map((it) => {
               const Icon = it.icon
-              const selo = it.href === '/avaliacoes' && faltam > 0 ? faltam : null
               return (
                 <Link key={it.href} href={it.href} className={'tc-nav' + (isActive(pathname, it.href) ? ' on' : '')} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', fontSize: 13, fontWeight: 500, padding: '9px 12px', borderRadius: 8, color: 'var(--text-dim)' }}>
                   <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}><Icon size={18} /></span>
                   <span style={{ flex: 1, textAlign: 'left' }}>{it.label}</span>
-                  {selo != null && (
-                    <span title={`${selo} ${selo === 1 ? 'pessoa ainda não avaliada' : 'pessoas ainda não avaliadas'} neste mês`}
-                      style={{ fontSize: 10.5, fontWeight: 700, background: 'var(--warning)', color: '#fff', borderRadius: 20, padding: '1px 7px', minWidth: 18, textAlign: 'center' }}>{selo}</span>
-                  )}
                 </Link>
               )
             })}

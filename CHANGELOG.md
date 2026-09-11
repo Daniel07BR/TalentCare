@@ -1,5 +1,26 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (23) — Avaliações dentro do setor; "Avaliações" e "Meu desempenho" fora do menu lateral
+
+Pedidos do dono: *"a área de avaliações é acessada dentro de cada departamento também"* e
+*"Meu desempenho pode tirar também da aba lateral, ele já está na aba superior ao fechar a
+barra lateral"*.
+
+- **Avaliações** e **Meu desempenho** saíram do menu lateral (seguem na barra de cima, que
+  aparece ao recolher o menu). Saiu junto o selo de "faltam avaliar" do item (`useFaltamAvaliar`).
+- **A lista de avaliações abre dentro do setor:** o cartão "Avaliação mensal" do relatório do
+  setor leva a `/avaliacoes?setor=<id>&competencia=…` — só as pessoas daquele setor, com
+  "‹ Voltar ao relatório de <setor>". Os números do topo passam a ser do setor: **"Faltam
+  avaliar" é tudo o que falta nele** (o mesmo número do cartão) e embaixo diz quantas cabem a
+  quem está olhando. O detalhe de uma avaliação volta para a lista do mesmo setor. Sem o
+  parâmetro, `/avaliacoes` segue sendo a fila de tudo o que a pessoa alcança.
+- Prova: `ensaio-regua-geral` compara, setor por setor, o cartão do relatório com a lista do
+  setor — **171 conferências, 0 divergências** (15 setores visíveis).
+
+⚠️ **Pendência antiga, achada nesta prova:** o setor oculto **Diretoria**, se aberto por
+endereço, diria "9 a avaliar" no cartão — a `dept-metrics` conta os diretores como avaliáveis,
+e a fila não (ninguém da Diretoria é avaliado). Não aparece em lista nenhuma; fica anotado.
+
 ## 2026-09-11 (22) — O crítico na régua geral; atividades sem ponto digitado; a planilha só no setor
 
 **O agente crítico reprovou a régua geral por dois defeitos de conta — consertados:**

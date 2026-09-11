@@ -80,7 +80,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="tc-anim" style={{ maxWidth: 980, margin: '0 auto' }}>
-      <button onClick={() => router.push(`/avaliacoes?competencia=${competencia}`)} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar às avaliações</button>
+      {/* A volta leva o SETOR de onde se veio — a lista abre dentro do setor (11/09/2026). */}
+      <button onClick={() => router.push(`/avaliacoes?competencia=${competencia}${sp.get('setor') ? `&setor=${sp.get('setor')}` : ''}`)} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar às avaliações</button>
 
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22, marginBottom: 16, display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
         <Avatar id={d.pessoa.id} hasAvatar={d.pessoa.hasAvatar} initials={d.pessoa.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={60} radius={16} />

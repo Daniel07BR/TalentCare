@@ -18,7 +18,7 @@ export function AvaliacaoChamados({ m }: SecaoProps) {
       <Cartao titulo="Avaliação mensal" Icone={ClipboardCheck}
         sub={`Competência de ${competenciaLabel(a.competencia)} · a avaliação é mensal e não acompanha o filtro`}
         acao={
-          <button type="button" onClick={() => router.push('/avaliacoes')} title="Abrir a fila de avaliações"
+          <button type="button" onClick={() => router.push(`/avaliacoes?setor=${m.setor.id}&competencia=${a.competencia}`)} title="Abrir as avaliações deste setor"
             style={{ display: 'flex', alignItems: 'center', gap: 10, background: faltam ? 'var(--n-amber-soft)' : 'var(--n-green-soft)', border: 'none', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
             <span style={{ textAlign: 'left' }}>
               <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-2)' }}>{faltam ? 'Faltam avaliar' : 'Todos avaliados'}</span>

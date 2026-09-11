@@ -21,6 +21,7 @@ import { prisma } from '../lib/db/prisma'
 import { competenciaAtual, regraDaCompetencia } from '../lib/servicos/pontuacao'
 import { pesosDoAtraso, pesosDoSetor, type ParametrosGerais } from '../lib/servicos/regra-geral'
 import { catalogoAtividades } from '../lib/servicos/catalogo-atividades'
+import { isHiddenDept } from '../lib/hidden-depts'
 
 const BASE = 'http://127.0.0.1:8082'
 const cookie = async (u: { id: string; role: string; email?: string | null }) => `authjs.session-token=${await encode({
@@ -107,6 +108,22 @@ async function main() {
   confere('/servicos do setor diz que só aceita Gestta', [comSetor.status, comSetor.texto.includes('apenas a planilha exportada do Gestta')], [200, true])
   const painel = await ver('/dashboard', dono)
   confere('menu sem "Serviços do setor"', painel.texto.includes('href="/servicos"'), false)
+  /* As avaliações se acessam DENTRO do setor (11/09/2026): o cartão "Avaliação mensal"
+     do relatório e a lista aberta com `?setor=` têm de dar o mesmo "faltam" e o mesmo
+     "avaliados" — conferido setor por setor, com a visão da Diretoria. */
+  const fila = JSON.parse((await ver('/api/avaliacoes', dono)).texto) as { competencia: string; linhas: { departmentId: string | null; status: string }[] }
+  /* ⚠️ Fora os setores OCULTOS (Diretoria, Sistemas): não aparecem em lista nenhuma e
+     ninguém ali é avaliado. Pendência antiga, anotada no CHANGELOG de 11/09 (23): o
+     cartão do setor Diretoria, aberto por endereço, diria "9 a avaliar". */
+  for (const st of setores.filter((x) => !isHiddenDept(x.name))) {
+    const dm = await ver(`/api/dept-metrics?id=${st.id}&period=30d`, dono)
+    if (dm.status !== 200) continue
+    const av = (JSON.parse(dm.texto) as { avaliacao?: { avaliaveis: number; publicadas: number; competencia: string } }).avaliacao
+    if (!av || av.competencia !== fila.competencia) continue
+    const doSetor = fila.linhas.filter((l) => l.departmentId === st.id)
+    confere(`${st.name}: avaliações — cartão do setor × lista do setor`,
+      [av.avaliaveis, av.publicadas], [doSetor.length, doSetor.filter((l) => l.status === 'publicada').length])
+  }
   const cfgGestor = await ver('/configuracoes', gestor)
   confere('gestor fora de Configurações', cfgGestor.status === 200, false)
 

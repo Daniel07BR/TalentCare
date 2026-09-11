@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import { ancoraDe } from '@/lib/avaliacoes/criterios'
 import Avatar from '../Avatar'
@@ -28,7 +28,13 @@ const Icon = ({ size = 22, color = 'var(--accent)' }: { size?: number; color?: s
 
 export default function AvaliacoesPage() {
   const router = useRouter()
-  const [comp, setComp] = useState<string | null>(null)
+  /* ⚠️⚠️ AS AVALIAÇÕES SE ACESSAM DENTRO DO SETOR (11/09/2026, pedido do dono): saiu
+     do menu lateral, e o cartão "Avaliação mensal" do relatório do setor abre esta
+     tela com `?setor=` — a lista só daquele setor. Sem o parâmetro, é a fila de
+     tudo o que a pessoa alcança, como antes. */
+  const sp = useSearchParams()
+  const setorUrl = sp.get('setor')
+  const [comp, setComp] = useState<string | null>(sp.get('competencia'))
   const [d, setD] = useState<Fila | null>(null)
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'todos' | 'falta' | 'feitos'>('todos')
@@ -47,24 +53,46 @@ export default function AvaliacoesPage() {
   if (loading && !d) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Carregando…</div>
   if (!d) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Não foi possível carregar as avaliações.</div>
 
-  const visiveis = d.linhas
+  const base = setorUrl ? d.linhas.filter((l) => l.departmentId === setorUrl) : d.linhas
+  const setorNome = setorUrl ? (base[0]?.setor ?? null) : null
+  /* No setor, os números são DO SETOR: "Faltam avaliar" é tudo o que falta nele — o
+     mesmo número do cartão do relatório —, e a parte que cabe a quem está olhando
+     vai escrita embaixo. Sem setor, é a fila de sempre (o que EU posso fazer). */
+  const kpi = setorUrl
+    ? {
+        total: base.length,
+        publicadas: base.filter((l) => l.status === 'publicada').length,
+        faltam: base.filter((l) => l.status !== 'publicada').length,
+        meus: base.filter((l) => l.status !== 'publicada' && l.posso).length,
+        orfaos: base.filter((l) => l.setorSemAvaliador).length,
+      }
+    : { total: d.total, publicadas: d.publicadas, faltam: d.faltam, meus: d.faltam, orfaos: d.orfaos }
+  const qsSetor = setorUrl ? `&setor=${setorUrl}` : ''
+
+  const visiveis = base
     // ⚠️ "Faltam" mostra o que EU posso fazer. Listar a pendência da casa
     // inteira num filtro chamado "faltam" faria o gestor procurar gente que ele
     // não avalia — e desconfiar da lista toda.
     .filter((l) => (filtro === 'todos' ? true : filtro === 'falta' ? l.status !== 'publicada' && l.posso : l.status === 'publicada'))
     .filter((l) => !busca || l.nome.toLowerCase().includes(busca.toLowerCase()) || l.setor.toLowerCase().includes(busca.toLowerCase()))
 
-  const pct = d.total ? Math.round((d.publicadas / d.total) * 100) : 0
+  const pct = kpi.total ? Math.round((kpi.publicadas / kpi.total) * 100) : 0
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      {setorUrl && (
+        <button onClick={() => router.push(`/departamentos/${setorUrl}`)} className="tc-btn"
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>
+          ‹ Voltar ao relatório{setorNome ? ` de ${setorNome}` : ' do setor'}
+        </button>
+      )}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>
             Avaliação mensal · competência de {competenciaLabel(d.competencia)}
           </div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon /> Avaliações
+            <Icon /> Avaliações{setorNome ? ` — ${setorNome}` : ''}
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -92,19 +120,21 @@ export default function AvaliacoesPage() {
         reação de quem recebe alerta eterno é parar de olhar o alerta.
       */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px,1fr))', gap: 14, marginBottom: 16 }}>
-        <Kpi label="Avaliados" value={`${d.publicadas}`} sub={`de ${d.total} pessoas`} color="var(--success)" />
-        <Kpi label="Faltam avaliar" value={`${d.faltam}`} sub={d.faltam === 0 ? 'mês em dia' : 'ainda sem nota publicada'} color={d.faltam > 0 ? 'var(--warning)' : 'var(--text-mute)'} />
+        <Kpi label="Avaliados" value={`${kpi.publicadas}`} sub={`de ${kpi.total} pessoas${setorUrl ? ' do setor' : ''}`} color="var(--success)" />
+        <Kpi label="Faltam avaliar" value={`${kpi.faltam}`}
+          sub={kpi.faltam === 0 ? 'mês em dia' : setorUrl ? (kpi.meus ? `destas, ${kpi.meus} cabem a você` : 'nenhuma cabe a você') : 'ainda sem nota publicada'}
+          color={kpi.faltam > 0 ? 'var(--warning)' : 'var(--text-mute)'} />
         <Kpi label="Progresso" value={`${pct}%`} sub="da competência" color="var(--accent)" bar={pct} />
-        {d.orfaos > 0 && (
-          <Kpi label="Sem quem avalie" value={`${d.orfaos}`} sub="ninguém definido para avaliá-las" color="var(--danger)" />
+        {kpi.orfaos > 0 && (
+          <Kpi label="Sem quem avalie" value={`${kpi.orfaos}`} sub="ninguém definido para avaliá-las" color="var(--danger)" />
         )}
       </div>
 
-      {d.orfaos > 0 && (
+      {kpi.orfaos > 0 && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderLeft: '3px solid var(--danger)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.55 }}>
           <span style={{ color: 'var(--danger)', flex: 'none' }}>⚠</span>
           <span>
-            <b>{d.orfaos} pessoas ainda não têm ninguém definido para avaliá-las.</b> Todas têm
+            <b>{kpi.orfaos} pessoas ainda não têm ninguém definido para avaliá-las.</b> Todas têm
             setor — o que falta é dizer <i>quem</i>, no setor delas, faz a avaliação. Enquanto isso
             não for definido elas nunca serão avaliadas, e nada no sistema vai reclamar: avaliação
             que ninguém deve não aparece como atrasada.
@@ -134,7 +164,7 @@ export default function AvaliacoesPage() {
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: 22, textAlign: 'center' }}>Ninguém nesta lista.</div>
         ) : visiveis.map((l) => (
           <div key={l.id} className="tc-row"
-            onClick={() => router.push(`/avaliacoes/${l.id}?competencia=${d.competencia}`)}
+            onClick={() => router.push(`/avaliacoes/${l.id}?competencia=${d.competencia}${qsSetor}`)}
             style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 140px 110px 70px', gap: 12, alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid var(--border-soft)', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
               <Avatar id={l.id} hasAvatar={l.hasAvatar} initials={l.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={32} />
