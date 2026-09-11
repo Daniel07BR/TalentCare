@@ -134,6 +134,29 @@ export async function GET(req: NextRequest) {
     _count: { _all: true },
     orderBy: { day: 'asc' },
   })
+  /* ⚠️⚠️ QUEM está atrás de cada quadro do mapa (pedido do dono, 11/09/2026:
+     "clicar no calendário e ele revelar as pessoas daquele dia e o tempo de
+     atraso"). As MESMAS linhas que o `groupBy` acima conta — então a lista de
+     um dia tem exatamente o número de pessoas que a cor daquele dia diz. Uma
+     consulta à parte, com outra régua de população, faria o quadro dizer "3
+     pessoas" e a lista mostrar 2. Inclui quem saiu, como o mapa. */
+  const quemPorChave = new Map(pessoas.map((p) => [p.nexusUserId ?? p.id, p]))
+  const linhasDoMapa = await prisma.assiduidadeDaily.findMany({
+    where: { personKey: { in: [...quemPorChave.keys()] }, day: { gte: fromDay, lte: toDay } },
+    select: { personKey: true, day: true, atrasos: true, atrasosAbon: true, minutosAtraso: true },
+    orderBy: [{ day: 'asc' }, { minutosAtraso: 'desc' }],
+  })
+  /* ⚠️ Linha só com id e números; nome, cargo e foto vão UMA vez em
+     `quemDoMapa`. Com tudo repetido por linha, o ano do Contábil levava 59 kB
+     só nisto (365 linhas) — e o nginx da casa não comprime JSON. */
+  const quemNoDia = linhasDoMapa.flatMap((l) => {
+    const p = quemPorChave.get(l.personKey)
+    return p ? [{ day: l.day, id: p.id, atrasos: l.atrasos, abonados: l.atrasosAbon, minutos: l.minutosAtraso }] : []
+  })
+  const quemDoMapa = Object.fromEntries([...new Set(quemNoDia.map((l) => l.id))].map((id) => {
+    const p = pessoas.find((x) => x.id === id)!
+    return [id, { nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl, saiu: !p.active }]
+  }))
   const nx = ativos.map((p) => p.nexusUserId).filter((v): v is string => !!v)
   // personKey da assiduidade = nexus_user_id ?? id (cobre STAFF sem Nexus).
   const chaves = ativos.map((p) => p.nexusUserId ?? p.id)
@@ -776,6 +799,8 @@ export async function GET(req: NextRequest) {
         ate30: d._sum.atrasosAte30 ?? 0,
         mais30: d._sum.atrasosMais30 ?? 0,
       })),
+      quemNoDia,
+      quemDoMapa,
       pontoAte: cobPonto.ultimoDia,
     },
     /* SERVIÇOS da planilha do setor. ⚠️ `temFonte` distingue "este setor não

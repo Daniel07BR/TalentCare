@@ -1,5 +1,66 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (6) — A visão nova virou o relatório do setor, e o número clicado mostra quem
+
+O dono aprovou a prévia: *"ficou ótimo, pode trocar a atual por essa — mas antes,
+deixe ela ainda mais interativa"*. Os três exemplos dele: clicar em Advertências e
+ver quem recebeu e quantas; clicar em Atrasos e ver quem se atrasou e quantas vezes;
+clicar num dia do calendário e ver quem chegou tarde e quanto.
+
+### O que o clique revela
+
+- **Advertências, Atrasos, Minutos de atraso e Suspensões** (no topo e nos números
+  da Assiduidade) abrem a lista de quem está atrás do número, com a quantidade de
+  cada um — cada linha leva à ficha. A **Rotatividade** abre o Turnover do setor
+  (quem saiu e a movimentação mês a mês). O azulejo só vira botão se houver quem
+  mostrar: um clique que abre lista vazia ensina a não clicar mais.
+- **O dia do mapa de atrasos** abre, embaixo do calendário (não num modal — o
+  calendário segue à vista para clicar no dia seguinte), quem se atrasou naquele
+  dia, quantos minutos, se foi abonado e se a pessoa já saiu. "Atraso sem minuto
+  medido" diz isso, e não "0 min".
+
+⚠️⚠️ **O que o clique mostra soma o número clicado — conferido.** A lista do dia
+vem das MESMAS linhas que o `groupBy` do mapa conta (`quemNoDia` em
+`/api/dept-metrics`, mesma população, inclui quem saiu), e as listas dos
+indicadores saem de `m.pessoas`, a mesma base dos totais.
+`scripts/ensaio-quem-atras-do-numero.mjs`: **888 dias, 16 setores, agosto e ano,
+0 divergências** — dia a dia (pessoas e minutos) e os totais de atrasos, minutos e
+advertências.
+
+⚠️ **As listas moram num lugar só**: `lib/ui/envolvidos-setor.ts`. Nasceram dentro
+do `Hero` do relatório anterior; a visão nova precisou das mesmas, e o `Hero` passou
+a usá-las em vez de ter uma cópia.
+
+⚠️ **O painel escondia a quantidade quando todos tinham o mesmo valor** — feito para
+a lista de admissões do dashboard, onde cada linha vale 1. Numa lista de atrasos em
+que todos têm 1, o "1" é a informação. `PainelPessoas` ganhou `mostrarNumero`
+(padrão desligado, o dashboard segue igual).
+
+⚠️ **Peso**: nome, cargo e foto de quem aparece no mapa vão uma vez só
+(`quemDoMapa`), e cada linha leva só id e números. Com tudo repetido, o ano do
+Contábil saía com 95 kB (59 kB só da lista); agora, 70 kB. O nginx da casa não
+comprime JSON, então isso viaja cru a cada troca de filtro.
+
+### A troca
+
+- `/departamentos/<id>` é a visão nova. As seções moram em `[id]/_visao/` (o `_`
+  tira a pasta das rotas).
+- O relatório de antes virou **`/departamentos/<id>/completo`** — ele tem o que a
+  visão não traz (tabela de pessoas com nota e busca, avaliação por critério,
+  tendência, os cartões de cada sistema). "Relatório completo", no cabeçalho, e
+  "Ver relatório completo", na faixa de sistemas, levam a ele; o "Voltar" dele volta
+  para a visão geral.
+- `/departamentos/<id>/novo` redireciona — o endereço da prévia não vira 404.
+- A faixa de sistemas ganhou o cartão **Serviços do setor** (a planilha), que a
+  prévia não tinha: o Legal tem 1.508 serviços e a visão não os mostrava.
+
+**Arquivos:** `app/(app)/departamentos/[id]/page.tsx` (a visão), `[id]/_visao/`
+(+`Paineis.tsx`, `DiaDoMapa.tsx`), `[id]/completo/page.tsx` (o relatório de antes),
+`[id]/novo/page.tsx` (redireciona); `lib/ui/envolvidos-setor.ts` (novo);
+`app/(app)/PainelPessoas.tsx`, `CalendarioOcorrencias.tsx` (`onDia`, `selecionado`),
+`departamentos/[id]/Hero.tsx`; `app/api/dept-metrics/route.ts` + `lib/ui/dept-period.ts`
+(`quemNoDia`, `quemDoMapa`); `scripts/ensaio-quem-atras-do-numero.mjs` (novo).
+
 ## 2026-09-11 (5) — Prévia: o relatório do setor no desenho da imagem conceito
 
 Pedido do dono: uma página NOVA, em paralelo à atual, com o desenho de uma imagem

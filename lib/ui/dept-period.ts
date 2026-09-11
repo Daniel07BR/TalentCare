@@ -87,6 +87,10 @@ export type DeptMetrics = {
     suspensoesAtraso: number | null
     /** Os dias com ocorrência do setor DENTRO do filtro — alimentam o calendário. */
     dias?: { day: string; atrasos: number; abonados: number; minutos: number; pessoas: number; ate5: number; ate30: number; mais30: number }[]
+    /** Quem está atrás de cada dia do mapa — as mesmas linhas que `dias` conta. */
+    quemNoDia?: { day: string; id: string; atrasos: number; abonados: number; minutos: number }[]
+    /** Nome, cargo e foto de quem aparece em `quemNoDia` — uma vez por pessoa. */
+    quemDoMapa?: Record<string, { nome: string; cargo: string; hasAvatar: boolean; saiu: boolean }>
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
     pontoAte?: string | null
     /** A janela pedida foi coberta pelo import do ponto? Ver `lib/ponto-cobertura.ts`.

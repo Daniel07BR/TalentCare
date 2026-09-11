@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import { AlarmClock, AlertTriangle, ShieldAlert, LogOut, Users2, GraduationCap, FileSpreadsheet, Cake, CalendarClock, UsersRound, UserMinus } from 'lucide-react'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import Avatar from '../../Avatar'
-import { PainelPessoas, type PessoaDoPainel } from '../../PainelPessoas'
+import { PainelPessoas } from '../../PainelPessoas'
+import { envolvidosDoSetor } from '@/lib/ui/envolvidos-setor'
 
 /* ============================================================
    O TOPO DA PÁGINA — quem responde pelo setor, e o que está aceso.
@@ -35,43 +36,12 @@ export function Hero({ m }: { m: DeptMetrics }) {
      segunda origem para "os envolvidos" seria uma segunda régua de conteúdo.
      ⚠️ Corta os zeros: uma lista de "quem se atrasou" com o setor inteiro em
      zero acusaria 20 pessoas para mostrar 3. */
-  const base = (p: DeptMetrics['pessoas'][number]): Omit<PessoaDoPainel, 'valor' | 'detalhe'> =>
-    ({ id: p.id, nome: p.nome, cargo: p.cargo, setor: m.setor.nome, hasAvatar: p.hasAvatar })
-  const pessoasAtraso: PessoaDoPainel[] = m.pessoas
-    .filter((p) => p.atrasos > 0)
-    .map((p) => ({ ...base(p), valor: p.atrasos, detalhe: p.minutosAtraso ? `${p.minutosAtraso} min somados` : '' }))
-    .sort((a, b) => b.valor - a.valor)
-  const pessoasAdvert: PessoaDoPainel[] = m.pessoas
-    .filter((p) => p.advertencias > 0)
-    .map((p) => ({ ...base(p), valor: p.advertencias }))
-    .sort((a, b) => b.valor - a.valor)
-  /* ⚠️ Inclui quem levou ADVERTÊNCIA de LGPD sem suspensão: mesma natureza
-     (medida assinada por vazamento), e deixá-la de fora esconderia gente
-     envolvida numa lista que se propõe a mostrar os envolvidos. O cartão conta
-     só as suspensões; o painel avisa. */
-  /* ⚠️⚠️ A suspensão por ATRASO entrou nesta lista em 10/09/2026, com o
-     histórico real do DP. Ela é ato assinado pelo encarregado (6º atraso do
-     mês, ou 4º acima de 10 min) — natureza diferente da medida de LGPD, que é
-     por vazamento de dado pessoal. Ficam no MESMO cartão porque a pergunta de
-     quem lê é "quem foi suspenso neste setor", e um cartão que respondesse só
-     metade dela mostraria 0 num mês em que houve suspensão de verdade.
-     ⚠️ Mas o `detalhe` de cada linha diz de QUE tipo é cada uma: somar sem
-     dizer faria "2 suspensões" que ninguém sabe de quê — e as duas levam a
-     conversas diferentes com a pessoa. */
-  const pessoasLgpd: PessoaDoPainel[] = m.pessoas
-    .map((p) => {
-      const sa = p.suspensoesAtraso ?? 0
-      const s = p.lgpdSuspensoes ?? 0
-      const a = p.lgpdAdvertencias ?? 0
-      const partes = [
-        sa ? `${sa} suspensão${sa === 1 ? '' : 'es'} por atraso` : '',
-        s ? `${s} suspensão${s === 1 ? '' : 'es'} de LGPD` : '',
-        a ? `${a} advertência${a === 1 ? '' : 's'} de LGPD` : '',
-      ].filter(Boolean)
-      return { ...base(p), valor: sa + s + a, detalhe: partes.join(' · ') }
-    })
-    .filter((p) => p.valor > 0)
-    .sort((a, b) => b.valor - a.valor)
+  /* ⚠️ As listas moram em `lib/ui/envolvidos-setor.ts` desde 11/09/2026 — a
+     visão geral nova usa as mesmas, e duas cópias divergiriam. */
+  const env = envolvidosDoSetor(m)
+  const pessoasAtraso = env.atrasos
+  const pessoasAdvert = env.advertencias
+  const pessoasLgpd = env.suspensoes
   const gestores = m.chefia.filter((c) => c.nivel === 'gestor')
   const subs = m.chefia.filter((c) => c.nivel !== 'gestor')
   const d = m.demografia

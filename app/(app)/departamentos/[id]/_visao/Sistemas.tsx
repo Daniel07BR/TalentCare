@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { Activity, MessageCircle, MessageSquareText, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Activity, FileSpreadsheet, MessageCircle, MessageSquareText, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, ArrowRight, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
 import type { ChaveDetalhe } from '../Detalhe'
 import { Cartao, forte, suave } from './ui'
@@ -8,13 +8,19 @@ import { dur, num } from './derivar'
 import s from './novo.module.css'
 import type { ComDetalhe, Tom } from './tipos'
 
-type Sis = { chave: ChaveDetalhe; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][] }
+type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][] }
 
 /* Um cartão por sistema COM registro no período — a mesma regra do relatório
    atual (fonte sem nada do setor fica fora, e a tela diz quais). */
 function sistemas(m: DeptMetrics): Sis[] {
   const r = m.rankings, t = (...v: number[]) => v.some((x) => x > 0)
+  const sv = m.servicos
   return [
+    /* ⚠️ A PLANILHA DO SETOR vem primeiro quando existe — é a fonte que o setor
+       mantém à mão e reconhece. Não tem janela de detalhe: o clique leva à tela
+       dela, onde também se atualiza o arquivo. */
+    { chave: 'servicos', nome: 'Serviços do setor', Icone: FileSpreadsheet, tom: 'blue', tem: !!sv?.temFonte, gente: r.servicos?.gente ?? [],
+      stats: [[num(sv?.concluidos ?? 0), 'Concluídos'], [num(sv?.abertos ?? 0), 'Em aberto']] },
     { chave: 'whatsapp', nome: 'Painel de Atendimento', Icone: MessageCircle, tom: 'green', tem: t(m.whatsapp.abertos, m.whatsapp.finalizados), gente: r.whatsapp.gente,
       stats: [[num(m.whatsapp.abertos), 'Atendimentos'], [m.whatsapp.finalizados ? dur(Math.round(m.whatsapp.handleSum / m.whatsapp.finalizados)) : '—', 'Tempo médio']] },
     { chave: 'chat', nome: 'Chat Interno', Icone: MessageSquareText, tom: 'purple', tem: t(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos), gente: r.chat.gente,
@@ -44,14 +50,16 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
   return (
     <Cartao titulo="Sistemas e produtividade" Icone={Activity} sub={`Uso dos sistemas no período · ${m.label} · clique num sistema para o detalhe`}
       acao={
-        <button type="button" onClick={() => router.push(`/departamentos/${m.setor.id}`)}
+        <button type="button" onClick={() => router.push(`/departamentos/${m.setor.id}/completo`)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 34, padding: '0 12px', background: 'var(--n-card)', border: '1px solid var(--n-blue)', color: 'var(--n-blue)', borderRadius: 10, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           Ver relatório completo <ArrowRight size={14} />
         </button>
       }>
       <div className={s.sistemas}>
         {com.map((x) => (
-          <button key={x.chave} type="button" onClick={() => abrir(x.chave)} title={`Abrir o resumo de ${x.nome} só com este setor`}
+          <button key={x.chave} type="button"
+            onClick={() => (x.chave === 'servicos' ? router.push(`/servicos?setor=${m.setor.id}`) : abrir(x.chave))}
+            title={x.chave === 'servicos' ? 'Abrir a planilha de serviços do setor' : `Abrir o resumo de ${x.nome} só com este setor`}
             style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 28, height: 28, borderRadius: 8, background: suave(x.tom), color: forte(x.tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><x.Icone size={15} /></span>

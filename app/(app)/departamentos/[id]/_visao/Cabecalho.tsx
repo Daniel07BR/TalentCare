@@ -32,13 +32,10 @@ export function Cabecalho({ m }: SecaoProps) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* ⚠️ É uma PRÉVIA, lado a lado com o relatório de hoje — o selo e o
-            atalho de volta existem para ninguém confundir as duas telas. */}
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--n-purple)', background: 'var(--n-purple-soft)', padding: '5px 10px', borderRadius: 999 }}>
-          Prévia do layout novo
-        </span>
-        <button type="button" style={botao} onClick={() => router.push(`/departamentos/${m.setor.id}`)} title="Abrir o relatório como ele é hoje, para comparar">
-          <Columns2 size={15} /> Ver versão atual
+        {/* O relatório de antes, com o que esta visão não traz (tabela de pessoas
+            com nota e busca, avaliação por critério, tendência). */}
+        <button type="button" style={botao} onClick={() => router.push(`/departamentos/${m.setor.id}/completo`)} title="Tabela de pessoas com nota e busca, avaliação por critério, tendência e os cartões de cada sistema">
+          <Columns2 size={15} /> Relatório completo
         </button>
         {m.setor.id === ENTREGAS_DEPT_ID && (
           <button type="button" style={botao} onClick={() => router.push('/entregas')}><Truck size={15} /> Área da mensageria</button>

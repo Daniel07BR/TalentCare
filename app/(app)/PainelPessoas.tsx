@@ -32,7 +32,7 @@ export type PessoaDoPainel = {
    confere permissão por conta própria. O painel é o índice, não o destino.
    ============================================================ */
 
-export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoFechar }: {
+export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoFechar, mostrarNumero = false }: {
   titulo: string
   nota?: string
   /**
@@ -47,6 +47,13 @@ export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoF
   /** "atrasos", "advertências" — o que o número de cada linha significa. */
   sufixo: string
   aoFechar: () => void
+  /**
+   * Mostra o número de cada linha MESMO quando todos são iguais. O padrão
+   * esconde (a lista de admissões do dashboard vale 1 em toda linha), mas numa
+   * lista de atrasos em que todo mundo tem 1 o "1" É a informação — foi o que o
+   * dono pediu em 11/09/2026: "os funcionários e as quantidades".
+   */
+  mostrarNumero?: boolean
 }) {
   const router = useRouter()
 
@@ -118,7 +125,7 @@ export function PainelPessoas({ titulo, nota, periodo, pessoas, cor, sufixo, aoF
                   </div>
                 )}
               </div>
-              {comBarra && (
+              {(comBarra || mostrarNumero) && (
                 <span className="cnum" style={{ fontSize: 14, fontWeight: 800, color: cor, letterSpacing: '-.3px' }}>
                   {p.valor}
                 </span>

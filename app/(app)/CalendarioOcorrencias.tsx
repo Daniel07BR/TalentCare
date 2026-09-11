@@ -80,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS,
+  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS, onDia, selecionado = null,
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -93,6 +93,15 @@ export default function CalendarioOcorrencias({
   /** Os cinco fundos, do "sem atraso" ao topo. Só a prévia do relatório novo
    *  (`departamentos/[id]/novo`) troca — o padrão é o de sempre. */
   paleta?: string[]
+  /**
+   * Torna CLICÁVEL o dia que tem ocorrência — e só ele: clicar num dia limpo não
+   * teria o que mostrar. Sem esta função o calendário é só leitura, como sempre.
+   * Pedido do dono (11/09/2026): "clicar no calendário e ele revelar as pessoas
+   * daquele dia e o tempo de atraso".
+   */
+  onDia?: (iso: string) => void
+  /** O dia aberto agora, para o quadro ficar marcado. */
+  selecionado?: string | null
 }) {
   if (!de || !ate || ate < de) return null
 
@@ -162,11 +171,19 @@ export default function CalendarioOcorrencias({
                   const cor = foraDoPeriodo || futuro || semMedicao ? 'var(--text-mute)'
                     : lvl >= 3 ? '#3a2a05' : 'var(--text-dim)'
 
+                  const clicavel = !!onDia && lvl > 0 && !!oc
+                  const marcado = clicavel && selecionado === iso
                   return (
-                    <div key={iso} title={titulo}
+                    <div key={iso} title={clicavel ? `${titulo} — clique para ver quem` : titulo}
+                      role={clicavel ? 'button' : undefined} tabIndex={clicavel ? 0 : undefined}
+                      aria-pressed={clicavel ? marcado : undefined}
+                      onClick={clicavel ? () => onDia!(iso) : undefined}
+                      onKeyDown={clicavel ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDia!(iso) } } : undefined}
                       style={{
                         height: lado, display: 'grid', placeItems: 'center', borderRadius: n === 1 ? 5 : 3,
                         background: fundo,
+                        cursor: clicavel ? 'pointer' : undefined,
+                        outline: marcado ? '2px solid var(--accent)' : undefined, outlineOffset: marcado ? 1 : undefined,
                         border: foraDoPeriodo || futuro ? '1px dashed var(--border)' : 'none',
                         opacity: futuro ? 0.3 : foraDoPeriodo ? 0.5 : 1,
                         fontSize: fonte, fontWeight: lvl > 0 ? 700 : 500,

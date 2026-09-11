@@ -1,5 +1,5 @@
 /* ============================================================
-   RELATÓRIO DO SETOR — PRÉVIA DO LAYOUT NOVO (11/09/2026)
+   RELATÓRIO DO SETOR — a visão geral (prévia em 11/09/2026, aprovada no mesmo dia)
 
    A paleta vem da imagem conceito que o dono mandou, e NÃO da do TalentCare:
    fundo cinza-azulado, cartões brancos, azul como cor principal e um azulejo
@@ -98,3 +98,12 @@
 .cartao :focus-visible, .linhaClicavel:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) { .raiz * { animation: none !important; transition: none !important; } }
+
+/* ── O que abre "quem está atrás" (11/09/2026) ──────────────────────────────
+   Botão com cara de cartão: sem as marcas de botão do navegador, e com uma
+   pista de que se clica — borda azul, um degrau de sombra e o "ver quem ›". */
+.clicavel { font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.clicavel:hover { border-color: var(--n-blue) !important; box-shadow: 0 0 0 3px var(--n-blue-soft); transform: translateY(-1px); }
+.verQuem { position: absolute; right: 12px; bottom: 9px; font-size: 10.5px; font-weight: 600; color: var(--n-blue); opacity: 0; transition: opacity .15s; }
+.clicavel:hover .verQuem, .clicavel:focus-visible .verQuem { opacity: 1; }
+@media (hover: none) { .verQuem { opacity: .85; } }
