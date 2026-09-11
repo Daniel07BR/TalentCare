@@ -54,6 +54,13 @@ export type TipoAtividade = {
 }
 
 /**
+ * ⚠️⚠️ O RÓTULO E A DESCRIÇÃO dizem O QUE A ORIGEM CONTA e QUEM RECEBE O CRÉDITO
+ * (revisados em 11/09/2026 lendo o endpoint de cada sistema, a pedido do dono:
+ * "descreva melhor cada tarefa para os gestores saberem do que se trata"). Antes,
+ * "Ticket" da Consultoria dizia "ticket atendido" e conta a dúvida que a pessoa
+ * ABRIU; "Chamado aberto" do HelpDesk dizia "que a pessoa abriu" e credita quem
+ * PEDIU ajuda, mesmo quando outro abriu por ela. Mudou a origem, mude aqui.
+ *
  * ⚠️ A ORDEM E OS CAMPOS batem com `activityOf()`. Se mexer num, mexa no outro
  * — senão o score (que soma isto) e a "atividade" da lista (que soma aquele)
  * passam a divergir em silêncio, e ninguém sabe qual acreditar.
@@ -65,12 +72,12 @@ export type TipoAtividade = {
    uma coisa e leria outra. É a divergência que o crítico pegou em 08/09/2026. */
 export const TIPOS_ATIVIDADE: TipoAtividade[] = [
   // ── ClassRoom ──
-  { chave: 'cls_curso', label: 'Curso concluído', sistema: 'ClassRoom', descricao: 'cada curso que a pessoa concluiu', fonte: { modelo: 'classroomDaily', campos: ['courses'] } },
-  { chave: 'cls_video', label: 'Vídeo assistido', sistema: 'ClassRoom', descricao: 'cada vídeo-aula assistido', fonte: { modelo: 'classroomDaily', campos: ['videos'] } },
-  { chave: 'cls_criado', label: 'Curso criado', sistema: 'ClassRoom', descricao: 'cada curso que a pessoa criou (instrutor)', fonte: { modelo: 'classroomDaily', campos: ['created'] } },
+  { chave: 'cls_curso', label: 'Curso concluído', sistema: 'ClassRoom', descricao: 'Cada curso do ClassRoom que a pessoa terminou — todos os vídeos e materiais, e o questionário quando há.', fonte: { modelo: 'classroomDaily', campos: ['courses'] } },
+  { chave: 'cls_video', label: 'Vídeo assistido', sistema: 'ClassRoom', descricao: 'Cada vídeo-aula que a pessoa marcou como assistido no ClassRoom (o botão “Marcar como assistido”).', fonte: { modelo: 'classroomDaily', campos: ['videos'] } },
+  { chave: 'cls_criado', label: 'Curso criado', sistema: 'ClassRoom', descricao: 'Cada curso publicado em que a pessoa aparece como criadora do conteúdo — conta no dia da publicação.', fonte: { modelo: 'classroomDaily', campos: ['created'] } },
   // ── HelpDesk ──
-  { chave: 'hd_aberto', label: 'Chamado aberto', sistema: 'HelpDesk', descricao: 'cada chamado que a pessoa abriu', fonte: { modelo: 'helpdeskDaily', campos: ['opened'] } },
-  { chave: 'hd_resolvido', label: 'Chamado resolvido', sistema: 'HelpDesk', descricao: 'cada chamado resolvido', fonte: { modelo: 'helpdeskDaily', campos: ['resolved'] } },
+  { chave: 'hd_aberto', label: 'Pedido de suporte à T.I', sistema: 'HelpDesk', descricao: 'Cada chamado de T.I aberto em nome da pessoa: é ela quem pede ajuda, mesmo quando um colega abriu por ela (entram também os que o ClassRoom abre sozinho quando um curso é aprovado).', fonte: { modelo: 'helpdeskDaily', campos: ['opened'] } },
+  { chave: 'hd_resolvido', label: 'Chamado de T.I resolvido', sistema: 'HelpDesk', descricao: 'Cada chamado de T.I que a pessoa concluiu como responsável.', fonte: { modelo: 'helpdeskDaily', campos: ['resolved'] } },
   // ── CIDE ──
   /* ⚠️⚠️ CONTA EMPRESAS TOCADAS, NÃO LINHAS DA TRILHA (08/09/2026).
      `cide_daily.atividades` é a trilha de auditoria do CIDE: salvar o cadastro
@@ -82,23 +89,23 @@ export const TIPOS_ATIVIDADE: TipoAtividade[] = [
      trilha mais infla.
      ⚠️ A MÉDIA EM MINUTOS PRECISA SER REDECIDIDA pelo gestor: 15 min era o
      tempo de uma linha da trilha; agora a unidade é a empresa atendida. */
-  { chave: 'cide_alteracao', label: 'Empresa atendida', sistema: 'CIDE', descricao: 'cada empresa cujo cadastro a pessoa mexeu no dia', fonte: { modelo: 'cideDaily', campos: ['empresas'] } },
+  { chave: 'cide_alteracao', label: 'Empresa com cadastro alterado', sistema: 'CIDE', descricao: 'Cada empresa cujo cadastro a pessoa alterou no CIDE no dia — 1 por empresa por dia, não importa quantos campos (documento, sócio, acesso, eSocial…).', fonte: { modelo: 'cideDaily', campos: ['empresas'] } },
   // ── Consultoria Plus ──
-  { chave: 'cons_estudo', label: 'Estudo', sistema: 'Consultoria', descricao: 'cada estudo/parecer', fonte: { modelo: 'consultoriaDaily', campos: ['studies'] } },
-  { chave: 'cons_ticket', label: 'Ticket', sistema: 'Consultoria', descricao: 'cada ticket atendido', fonte: { modelo: 'consultoriaDaily', campos: ['tickets'] } },
-  { chave: 'cons_msg', label: 'Mensagem', sistema: 'Consultoria', descricao: 'cada mensagem de acompanhamento', fonte: { modelo: 'consultoriaDaily', campos: ['messages'] } },
-  { chave: 'cons_comentario', label: 'Comentário', sistema: 'Consultoria', descricao: 'cada comentário', fonte: { modelo: 'consultoriaDaily', campos: ['comments'] } },
+  { chave: 'cons_estudo', label: 'Estudo publicado', sistema: 'Consultoria', descricao: 'Cada estudo que a pessoa publicou no feed da Consultoria (inclui o Feed de Gestão).', fonte: { modelo: 'consultoriaDaily', campos: ['studies'] } },
+  { chave: 'cons_ticket', label: 'Dúvida levada à Consultoria', sistema: 'Consultoria', descricao: 'Cada ticket que a pessoa abriu com uma dúvida para a Consultoria — conta quem pergunta, não o consultor que responde.', fonte: { modelo: 'consultoriaDaily', campos: ['tickets'] } },
+  { chave: 'cons_msg', label: 'Mensagem em ticket', sistema: 'Consultoria', descricao: 'Cada mensagem que a pessoa escreveu num ticket da Consultoria, perguntando ou respondendo.', fonte: { modelo: 'consultoriaDaily', campos: ['messages'] } },
+  { chave: 'cons_comentario', label: 'Comentário em estudo', sistema: 'Consultoria', descricao: 'Cada comentário ou pergunta da pessoa num estudo da Consultoria.', fonte: { modelo: 'consultoriaDaily', campos: ['comments'] } },
   // ── WhatsApp (Painel de Atendimento) ── casa por NOME
-  { chave: 'wpp_finalizado', label: 'Atendimento finalizado', sistema: 'WhatsApp', descricao: 'cada atendimento que a pessoa finalizou', fonte: { modelo: 'whatsappAttendantDaily', campos: ['finalizados'] } },
+  { chave: 'wpp_finalizado', label: 'Atendimento finalizado', sistema: 'WhatsApp', descricao: 'Cada atendimento de WhatsApp encerrado com a pessoa como responsável — quem só repassou o atendimento não recebe.', fonte: { modelo: 'whatsappAttendantDaily', campos: ['finalizados'] } },
   // ── Gerência (app motoboy) ──
-  { chave: 'ger_servico', label: 'Serviço entregue', sistema: 'Gerência', descricao: 'cada serviço concluído na rua', fonte: { modelo: 'gerenciaDaily', campos: ['servicos'] } },
-  { chave: 'ger_prot_aberto', label: 'Protocolo aberto', sistema: 'Gerência', descricao: 'cada protocolo que a pessoa abriu', fonte: { modelo: 'gerenciaDaily', campos: ['protAbertos'] } },
-  { chave: 'ger_prot_aprovado', label: 'Protocolo aprovado', sistema: 'Gerência', descricao: 'cada protocolo aprovado', fonte: { modelo: 'gerenciaDaily', campos: ['protAprovados'] } },
-  { chave: 'ger_serv_criado', label: 'Serviço criado', sistema: 'Gerência', descricao: 'cada serviço que a pessoa criou', fonte: { modelo: 'gerenciaDaily', campos: ['servCriados'] } },
-  { chave: 'ger_data_alterada', label: 'Data alterada', sistema: 'Gerência', descricao: 'cada alteração de data de protocolo', fonte: { modelo: 'gerenciaDaily', campos: ['datasAlteradas'] } },
+  { chave: 'ger_servico', label: 'Serviço de rua concluído', sistema: 'Gerência', descricao: 'Cada visita ou serviço de rua que a pessoa concluiu como mensageiro.', fonte: { modelo: 'gerenciaDaily', campos: ['servicos'] } },
+  { chave: 'ger_prot_aberto', label: 'Protocolo lançado', sistema: 'Gerência', descricao: 'Cada protocolo que a pessoa lançou para a mensageria.', fonte: { modelo: 'gerenciaDaily', campos: ['protAbertos'] } },
+  { chave: 'ger_prot_aprovado', label: 'Protocolo aprovado', sistema: 'Gerência', descricao: 'Cada protocolo urgente que a pessoa aprovou.', fonte: { modelo: 'gerenciaDaily', campos: ['protAprovados'] } },
+  { chave: 'ger_serv_criado', label: 'Serviço criado', sistema: 'Gerência', descricao: 'Cada serviço de rua criado em nome da pessoa — à mão, ou gerado sozinho pelo protocolo com data limite que ela lançou.', fonte: { modelo: 'gerenciaDaily', campos: ['servCriados'] } },
+  { chave: 'ger_data_alterada', label: 'Data de serviço alterada', sistema: 'Gerência', descricao: 'Cada troca de data de um serviço de rua feita pela pessoa, com justificativa.', fonte: { modelo: 'gerenciaDaily', campos: ['datasAlteradas'] } },
   // ── Chat Interno ── só CHAMADO (mensagem é vitrine, fica fora)
-  { chave: 'chat_cham_aberto', label: 'Chamado aberto (Chat)', sistema: 'Chat Interno', descricao: 'cada chamado interno que a pessoa abriu', fonte: { modelo: 'chatDaily', campos: ['chamadosAbertos'] } },
-  { chave: 'chat_cham_concluido', label: 'Chamado concluído (Chat)', sistema: 'Chat Interno', descricao: 'cada chamado interno que a pessoa concluiu', fonte: { modelo: 'chatDaily', campos: ['chamadosConcluidos'] } },
+  { chave: 'chat_cham_aberto', label: 'Pedido a outro setor', sistema: 'Chat Interno', descricao: 'Cada pedido que a pessoa fez a outro setor pelo Chat Interno.', fonte: { modelo: 'chatDaily', campos: ['chamadosAbertos'] } },
+  { chave: 'chat_cham_concluido', label: 'Pedido de outro setor atendido', sistema: 'Chat Interno', descricao: 'Cada pedido de outro setor que a pessoa assumiu e atendeu até o fim (conta quando quem pediu confirma).', fonte: { modelo: 'chatDaily', campos: ['chamadosConcluidos'] } },
 ]
 
 export const TIPO_ATIVIDADE_POR_CHAVE = new Map(TIPOS_ATIVIDADE.map((t) => [t.chave, t]))

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Activity, RotateCcw, Check } from 'lucide-react'
+import { SISTEMAS_ATIVIDADE } from '@/lib/servicos/sistemas-atividade'
 
 /* ============================================================
    A RÉGUA DE ATIVIDADES — média de minutos × fator, como os serviços.
@@ -22,6 +23,16 @@ type Ativ = {
 const dataBr = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 const dur = (m: number | null) => (m == null ? '—' : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}`)
 const COLS = 'minmax(0,1fr) 72px 96px 90px 30px 30px'
+
+/* ⚠️⚠️ O QUE O "TEMPO MEDIDO" É, tarefa por tarefa (conferido na origem, 11/09/2026).
+   WhatsApp, HelpDesk e Chat medem da ABERTURA ao FECHAMENTO — com fila, noite e a
+   espera de quem pediu; não é tempo de trabalho. A Gerência é outra conta: a
+   jornada do dia dividida pelos serviços — o deslocamento, para o mensageiro, É o
+   trabalho (achado do crítico: dizer "com espera" ali levaria o gestor a cortar um
+   tempo que está certo). */
+const DECORRIDO = new Set(['wpp_finalizado', 'hd_resolvido', 'chat_cham_concluido'])
+const comoMede = (chave: string) =>
+  DECORRIDO.has(chave) ? 'tempo decorrido, da abertura ao fechamento, com espera' : 'jornada do dia ÷ serviços do dia, com o deslocamento'
 
 export default function AtividadesEditor({ departmentId, setorNome }: { departmentId: string; setorNome: string }) {
   const [ativs, setAtivs] = useState<Ativ[]>([])
@@ -60,6 +71,18 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
 
   if (!carregando && !ativs.length) return null
   const semMedia = ativs.filter((a) => a.mediaEmUso == null).length
+  /* ⚠️ A tela diz que o tempo decorrido não é tempo de trabalho — então a linha que
+     ainda o usa (ninguém informou a média) é PENDENTE, como a "sem média". Não muda
+     conta nenhuma; só não deixa passar calado (achado do crítico: "Chamado de T.I
+     resolvido" usa 181 min em todo setor = 18 pontos por chamado). */
+  const noDecorrido = ativs.filter((a) => a.mediaAjustada == null && a.mediaMedida != null && DECORRIDO.has(a.chave)).length
+  // Os sistemas na ordem da lista; dentro de cada um, a tarefa mais feita primeiro.
+  const grupos = SISTEMAS_ATIVIDADE
+    .map((sis) => ({ ...sis, itens: ativs.filter((a) => a.sistema === sis.sistema) }))
+    .filter((g) => g.itens.length > 0)
+  // ⚠️ Um sistema novo em `atividades.ts` sem título aqui NÃO pode sumir da tela.
+  const semGrupo = ativs.filter((a) => !SISTEMAS_ATIVIDADE.some((sis) => sis.sistema === a.sistema))
+  if (semGrupo.length) grupos.push({ sistema: '—', titulo: 'Outros sistemas', oque: '', itens: semGrupo })
 
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
@@ -68,10 +91,19 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
         <div style={{ fontSize: 14, fontWeight: 600 }}>Pontos por atividade — {setorNome}</div>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
-        Cada atividade vale <b>{fator} ponto por minuto</b> da média — a mesma conta dos serviços. Onde o sistema mede o
-        tempo (WhatsApp, HelpDesk, Chat), a média vem da <b>mediana medida</b>; nas outras, informe a média.
+        Cada tarefa vale <b>{fator} ponto por minuto</b> do tempo médio que o setor informar — a mesma conta dos serviços.
         {' '}<b>Os pontos não se digitam: saem sozinhos da média</b> (o ponto por minuto é o da régua geral, em Configurações).
+        {/* ⚠️⚠️ O "tempo medido" é DECORRIDO, não de trabalho (conferido na origem em
+            11/09/2026): WhatsApp e HelpDesk medem da abertura ao fechamento (fila, noite,
+            espera do cliente); o Chat, em horário de expediente, da abertura à confirmação
+            de quem pediu (4h28 medido × ~51 min entre assumir e concluir). Um gestor que lê
+            "o sistema mede 4h28" como o tempo de trabalho dá 27 pontos a um chamado. */}
+        {' '}Onde aparece “tempo decorrido”, o sistema mediu da <b>abertura ao fechamento</b> — com fila e espera, não só o
+        trabalho: use como referência e informe o tempo real de trabalho.
+        {' '}“Feitas (total)” é tudo o que as pessoas ativas hoje no setor já fizeram, desde que cada sistema começou a
+        mandar dados (uns têm anos de histórico, outros meses) — não acompanha o período do topo.
         {semMedia > 0 && <> · <b style={{ color: 'var(--warning)' }}>{semMedia} sem média — valem o piso de 1</b></>}
+        {noDecorrido > 0 && <> · <b style={{ color: 'var(--warning)' }}>{noDecorrido} usando o tempo decorrido — informe o tempo de trabalho</b></>}
       </div>
 
       {msg && <div style={{ fontSize: 12.5, color: 'var(--danger)', marginBottom: 12 }}>{msg}</div>}
@@ -81,26 +113,44 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, padding: '0 6px 8px', borderBottom: '1px solid var(--border)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--text-mute)' }}>
-            <span>Atividade</span>
-            <span style={{ textAlign: 'right' }}>Feitas</span>
+            <span>Tarefa</span>
+            {/* ⚠️ Regra (b): este número NÃO obedece ao filtro de período do topo — é a
+                vida inteira do setor (a média é característica da tarefa, não do mês).
+                A tela diz isso no cabeçalho, e não só no `title`. */}
+            <span style={{ textAlign: 'right' }} title="Desde o início do espelho, por todo o setor — não acompanha o período do topo">Feitas (total)</span>
             <span style={{ textAlign: 'right' }}>Média (min)</span>
             <span style={{ textAlign: 'right' }}>Pontos</span>
             <span /><span />
           </div>
+          {/* ⚠️ POR SISTEMA (pedido do dono, 11/09/2026): "divida pelos sistemas, com um
+              título e as tarefas abaixo" — o mesmo nome de tarefa ("Chamado aberto")
+              existe em mais de um sistema e quer dizer coisas diferentes em cada um. */}
+          {grupos.map((g) => (
+          <section key={g.sistema} style={{ marginTop: 14 }}>
+            <div style={{ padding: '0 6px 6px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{g.titulo}</div>
+              {g.oque && <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 1, lineHeight: 1.45 }}>{g.oque}</div>}
+            </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {ativs.map((a) => {
+            {g.itens.map((a) => {
               const rMedia = rascunho[a.chave]?.media ?? (a.mediaEmUso != null ? String(a.mediaEmUso) : '')
               const previstos = Math.max(1, Math.round((parseInt(rMedia || '0', 10) || 0) * fator))
               const mostrarPontos = rascunho[a.chave]?.media != null ? String(previstos) : String(a.pontos)
               return (
                 <div key={a.chave} style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '9px 6px', borderBottom: '1px solid var(--border)', opacity: salvando[a.chave] ? 0.55 : 1, transition: 'opacity .12s' }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.descricao}>{a.label}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>
-                      {a.sistema}
-                      {a.mediaMedida != null && <> · sistema mede <b style={{ color: 'var(--text-dim)' }}>{dur(a.mediaMedida)}</b> (mediana)</>}
-                      {a.mediaMedida == null && a.mediaEmUso == null && <> · <span style={{ color: 'var(--warning)' }}>sem tempo — vale 1</span></>}
-                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600 }}>{a.label}</div>
+                    {/* A descrição À VISTA (pedido do dono): o gestor precisa saber o que a
+                        tarefa conta e quem recebe o crédito antes de dar o tempo médio. */}
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.45, marginTop: 1 }}>{a.descricao}</div>
+                    {(a.mediaMedida != null || a.mediaEmUso == null) && (
+                      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 2 }}>
+                        {a.mediaMedida != null && DECORRIDO.has(a.chave) && <>tempo decorrido medido: <b style={{ color: 'var(--text-dim)' }}>{dur(a.mediaMedida)}</b> (mediana, com espera)</>}
+                        {a.mediaMedida != null && !DECORRIDO.has(a.chave) && <>o sistema calcula <b style={{ color: 'var(--text-dim)' }}>{dur(a.mediaMedida)}</b> (jornada do dia ÷ serviços, com o deslocamento)</>}
+                        {a.mediaAjustada == null && a.mediaMedida != null && DECORRIDO.has(a.chave) && <> · <span style={{ color: 'var(--warning)' }}>em uso até alguém informar</span></>}
+                        {a.mediaMedida == null && a.mediaEmUso == null && <span style={{ color: 'var(--warning)' }}>sem tempo — vale 1</span>}
+                      </div>
+                    )}
                   </div>
                   <span style={{ textAlign: 'right', fontSize: 12, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }} title={`${a.pessoas} ${a.pessoas === 1 ? 'pessoa' : 'pessoas'} · vida inteira`}>
                     {a.volume.toLocaleString('pt-BR')}
@@ -109,7 +159,11 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
                     onChange={(e) => setRascunho((x) => ({ ...x, [a.chave]: { ...x[a.chave], media: e.target.value, pontos: undefined } }))}
                     onBlur={() => { const v = rMedia === '' ? null : parseInt(rMedia, 10); if (v !== (a.mediaAjustada ?? null)) salvar(a, v == null ? 'limpar' : 'media', v) }}
                     onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                    title={a.mediaAjustada != null ? `Lançado por ${a.ajustadoPor} em ${dataBr(a.ajustadoEm)}.${a.mediaMedida != null ? `\nO sistema mede ${a.mediaMedida} min.` : ''}` : a.mediaMedida != null ? `Mediana medida pelo sistema (${a.mediaMedida} min). Pode sobrescrever.` : 'O sistema não mede o tempo desta atividade — informe a média.'}
+                    title={a.mediaAjustada != null
+                      /* ⚠️ Média gravada SEM autor = valor-padrão igual em todos os setores
+                         (225 de 241, achado do crítico) — dizia "Lançado por null em —". */
+                      ? (a.ajustadoPor ? `Lançado por ${a.ajustadoPor} em ${dataBr(a.ajustadoEm)}.` : 'Valor-padrão, gravado igual para todos os setores — ninguém do setor lançou nem conferiu.') + (a.mediaMedida != null ? `\nO sistema calcula ${a.mediaMedida} min (${comoMede(a.chave)}).` : '')
+                      : a.mediaMedida != null ? `O sistema calcula ${a.mediaMedida} min (${comoMede(a.chave)}).${DECORRIDO.has(a.chave) ? ' Informe o tempo real de trabalho.' : ''}` : 'O sistema não mede o tempo desta tarefa — informe a média.'}
                     style={{ height: 30, width: '100%', textAlign: 'right', padding: '0 8px', background: 'var(--surface-2)', border: `1px solid ${a.mediaAjustada != null ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums' }}
                   />
                   {/* ⚠️ SÓ LEITURA (pedido do dono, 11/09/2026): média × ponto por minuto, com
@@ -132,6 +186,8 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
               )
             })}
           </div>
+          </section>
+          ))}
         </>
       )}
     </div>

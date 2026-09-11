@@ -1,5 +1,51 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (26) — Pontos por atividade: por sistema, e cada tarefa dizendo o que conta
+
+Pedido do dono: *"cada departamento pode determinar o tempo médio de cada tarefa já monitorada
+pelo Nexus; verifique se essa lista está correta, descreva melhor cada tarefa para os gestores
+saberem bem do que se trata, e divida ela pelos sistemas, colocando um título e as tarefas
+abaixo"*.
+
+- **A lista foi auditada no código de cada sistema de origem** (o endpoint de integração de cada
+  um, e o banco). Os números da tela batem com o espelho e com a origem — nada inflado no sync.
+  O que estava errado era o SIGNIFICADO escrito.
+- **Dividida por sistema** (WhatsApp, HelpDesk, Chat Interno, ClassRoom, Consultoria Plus, CIDE,
+  Gerência), com título e uma linha do que é cada um (`lib/servicos/sistemas-atividade.ts`).
+- **Rótulo e descrição reescritos, com quem recebe o crédito, à vista sob o nome.** Os que
+  enganavam: "Ticket" (dizia "ticket atendido"; conta a dúvida que a pessoa ABRIU) → "Dúvida
+  levada à Consultoria"; "Chamado aberto" do HelpDesk (dizia "que a pessoa abriu"; credita quem
+  PEDE ajuda, mesmo aberto por colega) → "Pedido de suporte à T.I"; "Empresa atendida" (conta
+  qualquer cadastro alterado) → "Empresa com cadastro alterado"; os do Chat viraram "Pedido a
+  outro setor" e "Pedido de outro setor atendido". Nenhuma chave mudou; nada da nota mudou.
+- **O "tempo medido" diz o que é:** WhatsApp, HelpDesk e Chat medem o tempo DECORRIDO, da
+  abertura ao fechamento, com fila e espera (Chat: 268 min medidos contra ~51 entre assumir e
+  concluir; HelpDesk: 181 contra ~34). A Gerência é a jornada do dia ÷ serviços. A tela avisa, e
+  conta como pendente a linha que ainda usa o tempo decorrido sem média informada.
+- **"Feitas (total)"** diz que é a vida inteira das pessoas ativas hoje no setor, e que não
+  acompanha o período do topo.
+- Valor-padrão sem autor (225 das 241 médias gravadas são iguais em todos os setores) dizia
+  "Lançado por null em —"; agora diz que ninguém do setor lançou nem conferiu.
+- O crítico conferiu as descrições contra a origem (Chat, Consultoria, Gerência) e o agrupamento.
+
+⚠️⚠️ **DECISÕES DO DONO — a auditoria achou, a tela só descreve, a nota NÃO foi mexida:**
+1. **Tempo decorrido na nota.** Onde ninguém informou média, entra o decorrido: "Chamado de T.I
+   resolvido" usa 181 min em todo setor (18 pontos por chamado); no Contábil o "Pedido de outro
+   setor atendido" foi lançado a 268 min em 11/09 às 18:50 — é o próprio decorrido — e vale 27
+   pontos, contra 3 de um atendimento de WhatsApp. O Chat já tem `assigned_at`/`done_at` (o
+   tempo de trabalho de verdade); dá para medir por ali.
+2. **O mesmo ato contado duas vezes:** "Serviço criado" repete o "Protocolo lançado" (201 de 210
+   nascem sozinhos do protocolo); "Curso concluído" e "Vídeo assistido" são a mesma aula (554 de
+   792 cursos têm um vídeo só; o vídeo é o clique "Marcar como assistido").
+3. **Cinco tarefas pontuam quem PEDE ajuda**, não quem trabalha: pedido de suporte à T.I (inclui
+   234 abertos por outra pessoa e 82 automáticos do ClassRoom), pedido a outro setor, dúvida
+   levada à Consultoria e as mensagens do lado de quem pergunta.
+4. **Faltam:** os chamados FORMALIZADOS do HelpDesk (trabalho de T.I que não pontua; a Karen tem
+   28) e o ticket ASSUMIDO/fechado pelo consultor (o trabalho central da Consultoria só aparece
+   como "mensagem"). Reagendados e cancelados da Gerência chegam e ficam fora sem motivo escrito.
+5. Menores: o estudo inclui o Feed de Gestão; a mensagem inclui as apagadas; ClassRoom, HelpDesk,
+   CIDE e WhatsApp recebem a janela em meia-noite UTC (o `.78` roda em UTC).
+
 ## 2026-09-11 (25) — Sai o menu lateral; entra a janela de cartões
 
 Pedido do dono: *"quero tirar o menu lateral. Hoje, com ele recolhido, incluir o campo de
