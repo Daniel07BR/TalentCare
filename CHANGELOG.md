@@ -1,5 +1,22 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (19) — Casar ponto, Relatórios e Quem avalia saem do menu
+
+Pedido do dono: *"estas seções foram criadas para eu definir funções dentro do sistema que
+hoje já estão bem estabelecidas"*.
+
+- **Relatórios** saiu de vez: nunca passou do "Em breve". `/relatorios` redireciona ao painel;
+  `EmBreve.tsx` (só ela usava) foi removido.
+- **Casar ponto** (`/ponto`) e **Quem avalia** (`/avaliadores`) saíram do MENU, mas seguem por
+  endereço, porque ainda têm trabalho a fazer:
+  - o ponto é **import à mão**, e cada dump novo pode trazer nomes que não casam sozinhos —
+    `/ponto` é onde se vinculam (área do dono);
+  - promoção e gestor novo **não mudam o vínculo de quem avalia sozinhos** — `/avaliadores`
+    segue com as portas da tela de Avaliações ("Quem avalia" e "Definir quem avalia", que
+    aparece quando um setor fica sem avaliador).
+- Ensaio do painel: **775 conferências, 0 divergências** (acesso: `/relatorios` → painel;
+  `/ponto` e `/avaliadores` abrem para o dono; gestor fora dos dois). `ensaio-acesso-gestao` limpo.
+
 ## 2026-09-11 (18) — O Ranking da casa sai do sistema
 
 Pedido do dono: *"a página ranking não faz mais sentido, uma vez que temos todos os

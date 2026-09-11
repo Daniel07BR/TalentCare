@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { FileSpreadsheet,
   LayoutDashboard, Users, Building2, TrendingUp, GraduationCap, ScrollText,
-  FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
+  SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck, MessageSquareText,
   ClipboardCheck, UserCircle, CalendarDays, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
@@ -55,11 +55,17 @@ const NAV_SYSTEMS = [
 const NAV_ADMIN = [
   { href: '/equipe', label: 'Equipe interna', icon: UserPlus },
   { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
-  { href: '/ponto', label: 'Casar ponto', icon: AlarmClock },
-  { href: '/relatorios', label: 'Relatórios', icon: FileText },
   { href: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal },
   { href: '/usuarios', label: 'Usuários', icon: UserCog },
-  { href: '/avaliadores', label: 'Quem avalia', icon: ClipboardCheck },
+  /* ⚠️ SAÍRAM do menu (11/09/2026, pedido do dono: "foram criadas para eu definir
+     funções que hoje já estão bem estabelecidas"):
+     - Relatórios — nunca saiu do "Em breve"; o endereço leva ao painel.
+     - Casar ponto (`/ponto`) — segue por ENDEREÇO: o ponto é import à mão, e cada
+       dump novo pode trazer nomes que não casam sozinhos. É lá que se vinculam.
+     - Quem avalia (`/avaliadores`) — segue por endereço e pelas portas da tela de
+       Avaliações ("Quem avalia" e "Definir quem avalia", que aparece quando um
+       setor fica sem avaliador): promoção e gestor novo não mudam o vínculo
+       sozinhos. */
 ]
 // ⚠️ `custom` NÃO entra aqui: ele nasce de escolher datas no calendário. Um
 // botão "custom" que não abre nada seria um botão que não faz nada.

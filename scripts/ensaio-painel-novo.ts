@@ -49,8 +49,8 @@ const JANELAS: { nome: string; period: Period; from?: string; to?: string }[] = 
   { nome: 'ago/26', period: 'custom', from: '2026-08-01', to: '2026-08-31' },
 ]
 
-const cookie = async (u: { id: string; role: string }) => `authjs.session-token=${await encode({
-  token: { sub: u.id, role: u.role, checadoEm: Date.now() }, secret: process.env.AUTH_SECRET!, salt: 'authjs.session-token',
+const cookie = async (u: { id: string; role: string; email?: string | null }) => `authjs.session-token=${await encode({
+  token: { sub: u.id, role: u.role, email: u.email ?? undefined, checadoEm: Date.now() }, secret: process.env.AUTH_SECRET!, salt: 'authjs.session-token',
 })}`
 
 let conferidos = 0, falhas = 0
@@ -279,6 +279,16 @@ async function main() {
   const a5 = ckG ? await ver('/dashboard/anterior', ckG) : 'sem gestor'
   // O ranking da casa saiu (11/09/2026): o endereço leva ao painel.
   const a6 = await ver('/ranking', ck)
+  // Saíram do MENU (11/09/2026): Relatórios leva ao painel; Casar ponto e Quem avalia
+  // seguem por endereço (são ferramentas do import do ponto e das promoções).
+  const a7 = await ver('/relatorios', ck)
+  // ⚠️ `/ponto` mora na área de ADMINISTRAÇÃO, que é do DONO (allowlist
+  // `TALENTCARE_ADMIN_EMAILS`), não de toda a Diretoria — o teste entra como um dono.
+  const emailsDono = (process.env.TALENTCARE_ADMIN_EMAILS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+  const dono = await prisma.user.findFirst({ where: { email: { in: emailsDono }, active: true }, select: { id: true, role: true, email: true } })
+  const ckDono = dono ? await cookie(dono) : ck
+  const a8 = await ver('/ponto', ckDono), a9 = await ver('/avaliadores', ckDono)
+  const a10 = ckG ? await ver('/ponto', ckG) : 'sem gestor', a11 = ckG ? await ver('/avaliadores', ckG) : 'sem gestor'
   console.log(`\n── acesso ao painel`)
   console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3} · /novo: ${a4} · /anterior p/ gestor: ${a5} · /ranking: ${a6}`)
   confere('acesso', 'Diretoria abre', a1, '200')
@@ -287,6 +297,12 @@ async function main() {
   confere('acesso', '/dashboard/novo leva ao painel', a4.includes('/dashboard'), true)
   confere('acesso', '/dashboard/anterior fechado ao gestor', a5.startsWith('307 → /meu-setor'), true)
   confere('acesso', '/ranking leva ao painel', a6.includes('/dashboard'), true)
+  console.log(`   /relatorios: ${a7} · /ponto: ${a8} · /avaliadores: ${a9} · gestor em /ponto: ${a10} · em /avaliadores: ${a11}`)
+  confere('acesso', '/relatorios leva ao painel', a7.includes('/dashboard'), true)
+  confere('acesso', 'Casar ponto segue por endereço (para o dono)', a8, '200')
+  confere('acesso', 'Quem avalia segue por endereço', a9, '200')
+  confere('acesso', 'gestor fora do Casar ponto', a10.startsWith('200'), false)
+  confere('acesso', 'gestor fora do Quem avalia', a11.startsWith('200'), false)
 
   if (erros.length) { console.log('\n❌ divergências:'); for (const e of erros) console.log(`   ${e}`) }
   console.log(`\n${falhas === 0 ? '✅' : '❌'} ${conferidos} conferências, ${falhas} divergências`)

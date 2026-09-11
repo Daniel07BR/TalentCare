@@ -134,7 +134,7 @@ Daniel, não sua.
 
 O Daniel estava seguindo por **telas e relatórios**. Pendências conhecidas:
 
-- **`/relatorios`** nunca saiu do "Em breve".
+- ~~**`/relatorios`** nunca saiu do "Em breve".~~ Saiu do sistema em 11/09/2026 (pedido do dono); o endereço leva ao painel. **Casar ponto** e **Quem avalia** saíram do menu no mesmo dia, mas seguem por endereço (`/ponto` depois de cada import do ponto; `/avaliadores` também pela tela de Avaliações).
 - ✅ O **dashboard** e o **`/ranking`** passaram pela revisão em 03/09/2026 (noite),
   e com eles os deltas literais, as quatro sparklines inventadas, o "Atualizado há
   12 min" e o turnover `rnd` do card de `/departamentos`. Ver o `CHANGELOG` e a
