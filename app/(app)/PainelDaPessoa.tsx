@@ -137,13 +137,13 @@ function GrupoDaPessoa({ g }: { g: Grupo }) {
         const aberto = abertos.has(it.id)
         const tem = !!it.filhos?.length
         return (
-          <div key={it.id} style={{ borderTop: '1px solid var(--border-soft)' }}>
+          <div key={it.id} style={{ borderTop: '1px solid var(--border-soft)', ...(it.destaque === 'grave' ? { borderLeft: '3px solid var(--chart-3)', paddingLeft: 8, background: 'color-mix(in srgb, var(--chart-3) 10%, transparent)' } : {}) }}>
             <div role={tem ? 'button' : undefined} tabIndex={tem ? 0 : undefined} aria-expanded={tem ? aberto : undefined}
               onClick={tem ? () => setAbertos((s) => { const n = new Set(s); n.has(it.id) ? n.delete(it.id) : n.add(it.id); return n }) : undefined}
               style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', cursor: tem ? 'pointer' : undefined }}>
               {tem && <ChevronRight size={13} style={{ flex: 'none', marginTop: 2, color: 'var(--text-mute)', transform: aberto ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.35 }}>{it.titulo}</div>
+                <div style={{ fontSize: 12.5, fontWeight: it.destaque === 'grave' ? 800 : 600, lineHeight: 1.35, color: it.destaque === 'grave' ? 'var(--chart-3)' : undefined }}>{it.titulo}</div>
                 {it.sub && <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 1 }}>{it.sub}</div>}
               </div>
               <span style={{ flex: 'none', fontSize: 11, color: 'var(--text-mute)', fontVariantNumeric: 'tabular-nums' }}>{dd(it.dia)}</span>

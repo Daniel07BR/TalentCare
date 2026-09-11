@@ -14,7 +14,8 @@ export function suspensoes(m: DeptMetrics): number | null {
 /** A comparação do mês pela pontuação — quem não pontua fica no fim, não some. */
 export function rankingDoMes(m: DeptMetrics) {
   return [...m.pessoas]
-    .filter((p) => p.pontuacao !== null || p.atrasos > 0 || p.advertencias > 0)
+    // Quem só levou suspensão também entra — sem ocorrência nenhuma e sem ponto, não.
+    .filter((p) => p.pontuacao !== null || p.atrasos > 0 || p.advertencias > 0 || (p.suspensoesAtraso ?? 0) + (p.lgpdSuspensoes ?? 0) > 0)
     .sort((x, y) => (y.pontuacao ?? -1) - (x.pontuacao ?? -1) || x.nome.localeCompare(y.nome))
 }
 

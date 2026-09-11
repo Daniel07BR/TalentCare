@@ -1,6 +1,10 @@
 /* Tipos do "o que a pessoa fez num sistema" — separados de `lib/pessoa-sistema.ts`
    porque aquele é `server-only` e o painel (cliente) também precisa deles. */
-export type Item = { id: string; titulo: string; sub?: string; dia: string; valor?: number; filhos?: { titulo: string; dia: string }[] }
+export type Item = {
+  id: string; titulo: string; sub?: string; dia: string; valor?: number; filhos?: { titulo: string; dia: string }[]
+  /** `grave` = suspensão: sai em ROXO, a cor de suspensão em todo o sistema. */
+  destaque?: 'grave'
+}
 export type Grupo = { chave: string; titulo: string; itens: Item[]; resumo?: string }
 export type Detalhe = {
   grupos: Grupo[]; aoVivo: boolean; erro?: string; semConta?: boolean

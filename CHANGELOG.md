@@ -1,5 +1,29 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (11) — Suspensão em ROXO, e no ranking do setor
+
+Dois pedidos do dono, olhando o Fiscal em agosto:
+
+1. **O ranking do mês não mostrava as suspensões.** O topo acendia "Suspensões 2" e as
+   linhas da Maria Fonsêca e da Raissa Leal mostravam só "4 adv · 6 atr". Agora a
+   coluna de ocorrências abre com **"1 susp"**, em roxo (o `title` diz se foi por
+   atraso ou de LGPD). Quem só tem suspensão também entra na lista.
+2. **Na ficha, a suspensão era o mesmo cartão rosado da advertência**, com o nome
+   trocado. Agora ela sai em **roxo**, com barra à esquerda, fundo mais forte e o selo
+   "SUSPENSÃO · N DIAS"; o bloco passa a se chamar "Advertências e suspensões" quando há
+   alguma no período.
+
+⚠️ **Roxo é a cor de suspensão em todo o sistema**: o azulejo "Suspensões" da visão do
+setor, o selo do ranking, os selos da tabela do relatório completo (que eram um âmbar
+e um vermelho — agora os dois roxos, com o texto dizendo a natureza: "susp. atraso",
+"susp. LGPD"), a ficha e o painel da pessoa na Assiduidade. A cor diz a gravidade; o
+texto diz a natureza. Texto sobre o roxo usa a cor da superfície, para ler bem nos
+dois temas.
+
+**Arquivos:** `departamentos/[id]/_visao/RankingMes.tsx`, `_visao/derivar.ts`,
+`departamentos/[id]/Pessoas.tsx`, `funcionarios/[id]/page.tsx`, `PainelDaPessoa.tsx`,
+`lib/pessoa-sistema.ts`, `lib/pessoa-sistema-tipos.ts`.
+
 ## 2026-09-11 (10) — O painel da pessoa mostra os chamados do Chat
 
 Decisão do dono: *"pode mostrar os chamados do chat também"*. No painel da pessoa, o

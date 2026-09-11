@@ -117,7 +117,7 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
   return { aoVivo: false, grupos: [
     { chave: 'atrasos', titulo: 'Atrasos, dia a dia', resumo: `${at.reduce((a, r) => a + r.atrasos, 0)} atrasos · ${at.reduce((a, r) => a + r.minutosAtraso, 0)} min`,
       itens: at.map((r) => ({ id: r.day, dia: r.day, titulo: r.atrasos ? `${plural(r.atrasos, 'atraso', 'atrasos')}${r.minutosAtraso ? ` · ${r.minutosAtraso} min` : ' · sem minuto medido'}` : 'só abonado', sub: r.atrasosAbon ? plural(r.atrasosAbon, 'abonado', 'abonados') : undefined })) },
-    { chave: 'disciplina', titulo: 'Advertências e suspensões', itens: disc.map((d) => ({ id: d.id, dia: d.data, titulo: ROT[d.tipo] ?? d.tipo, sub: [d.motivo, d.dias ? plural(d.dias, 'dia', 'dias') : ''].filter(Boolean).join(' · ') || undefined })) },
+    { chave: 'disciplina', titulo: 'Advertências e suspensões', itens: disc.map((d) => ({ id: d.id, dia: d.data, titulo: ROT[d.tipo] ?? d.tipo, sub: [d.motivo, d.dias ? plural(d.dias, 'dia', 'dias') : ''].filter(Boolean).join(' · ') || undefined, destaque: d.tipo === 'suspensao' || d.tipo === 'lgpd_suspensao' ? ('grave' as const) : undefined })) },
   ] }
 }
 

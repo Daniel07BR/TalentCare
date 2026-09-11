@@ -282,17 +282,20 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
                     pelo mesmo motivo do comentário acima: o cabeçalho passou a
                     acender "Suspensões 2" no Fiscal e a linha de quem levou não
                     diria nada. Selo distinto do de LGPD porque são naturezas
-                    diferentes — e o `title` diz qual é. */}
+                    diferentes — e o `title` diz qual é.
+                    ⚠️ Os dois em ROXO desde 11/09/2026: roxo é a cor de SUSPENSÃO em
+                    todo o sistema (pedido do dono: "destacar que é algo mais grave").
+                    O texto do selo diz a natureza; a cor diz a gravidade. */}
                 {(p.suspensoesAtraso ?? 0) > 0 && (
                   <span title={`${p.suspensoesAtraso} suspensão(ões) por atraso — 6º atraso do mês, ou 4º acima de 10 min`}
-                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--warn)', borderRadius: 20, padding: '2px 8px' }}>
+                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--chart-3)', borderRadius: 20, padding: '2px 8px' }}>
                     {p.suspensoesAtraso} susp. atraso
                   </span>
                 )}
                 {(p.lgpdSuspensoes ?? 0) > 0 && (
                   <span title={`${p.lgpdSuspensoes} suspensão(ões) por vazamento de dados (LGPD)`}
-                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--danger)', borderRadius: 20, padding: '2px 8px' }}>
-                    {p.lgpdSuspensoes} susp
+                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--surface)', background: 'var(--chart-3)', borderRadius: 20, padding: '2px 8px' }}>
+                    {p.lgpdSuspensoes} susp. LGPD
                   </span>
                 )}
                 {(p.lgpdAdvertencias ?? 0) > 0 && (

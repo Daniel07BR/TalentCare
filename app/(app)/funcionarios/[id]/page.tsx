@@ -571,7 +571,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     {/* ⚠️ Segue o FILTRO desde 11/09/2026 — o rótulo diz o período e o total
                         de sempre, para o recorte não se passar pelo todo. */}
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                      Advertências <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· {periodo}
+                      {(m?.disciplina ?? []).some((d) => d.tipo === 'suspensao' || d.tipo === 'lgpd_suspensao') ? 'Advertências e suspensões' : 'Advertências'} <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· {periodo}
                         {m && m.disciplinaTotal > m.disciplina.length && <> · {m.disciplinaTotal} no histórico completo</>}
                       </span>
                     </div>
@@ -600,14 +600,28 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                        {(m?.disciplina ?? []).map((d, i) => (
-                          <div key={i} className="cpop" style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'color-mix(in srgb, var(--danger) 9%, var(--surface-2))', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger)', flex: 'none' }} />
+                        {(m?.disciplina ?? []).map((d, i) => {
+                          /* ⚠️⚠️ SUSPENSÃO EM ROXO, com barra e selo (pedido do dono,
+                             11/09/2026: "outra cor para suspensões, para destacar que é
+                             algo mais grave"). Roxo é a cor de suspensão em todo o
+                             sistema — o azulejo da visão do setor, o ranking, o
+                             relatório completo. Na lista, ela era o mesmo cartão rosado
+                             da advertência derivada, com o nome trocado. */
+                          const grave = d.tipo === 'suspensao' || d.tipo === 'lgpd_suspensao'
+                          const cor = grave ? 'var(--chart-3)' : 'var(--danger)'
+                          return (
+                          <div key={i} className="cpop" style={{ display: 'flex', alignItems: 'center', gap: 11, background: `color-mix(in srgb, ${cor} ${grave ? 16 : 9}%, var(--surface-2))`, borderLeft: grave ? `4px solid ${cor}` : undefined, borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: cor, flex: 'none' }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               {/* ⚠️ O `tipo` é a chave do banco (`advertencia`, sem
                                   acento). Capitalizar a chave crua põe "Advertencia"
                                   na cara de quem lê a ficha de uma pessoa real. */}
-                              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--danger)' }}>
+                              <div style={{ fontSize: 12.5, fontWeight: grave ? 800 : 600, color: cor, display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                                {grave && (
+                                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.5px', color: 'var(--surface)', background: cor, borderRadius: 4, padding: '1px 6px' }}>
+                                    SUSPENSÃO{d.dias ? ` · ${d.dias} ${d.dias === 1 ? 'DIA' : 'DIAS'}` : ''}
+                                  </span>
+                                )}
                                 {d.tipo === 'advertencia' ? 'Advertência'
                                   /* ⚠️ FALTA GRAVE. Vem do Controle da LGPD do
                                      Nexus, é medida ASSINADA por vazamento de
@@ -634,7 +648,8 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                               {new Date(`${d.data}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })}
                             </span>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
