@@ -250,9 +250,8 @@ export const ESC_ORDER = [
 export const PALETTE = [
   'var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)',
 ]
-// Sistemas que aparecem na barra "Atividade por sistema" da ficha e na tela de
-// Configurações. ⚠️ Entrar aqui exige três coisas juntas: cor em `sysColor`,
-// descrição em `SYS_INFO` (lib/mock/config.ts) e um valor REAL em `realBySystem`
+// Sistemas que aparecem na barra "Atividade por sistema" da ficha. ⚠️ Entrar aqui
+// exige duas coisas juntas: cor em `sysColor` e um valor REAL em `realBySystem`
 // na ficha — faltando qualquer uma, o sistema aparece com barra inventada.
 // ⚠️ A GERÊNCIA faltava: `realBySystem` na ficha a calculava e jogava fora,
 // porque o map é sobre `SYSTEMS`. O mensageiro que entregou 266 serviços no

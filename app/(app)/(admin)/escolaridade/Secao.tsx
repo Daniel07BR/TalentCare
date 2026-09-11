@@ -4,7 +4,7 @@ import EducationLinker from './EducationLinker'
 import EducationManual, { type ManualPerson } from './EducationManual'
 import SemSexo from './SemSexo'
 
-export const dynamic = 'force-dynamic'
+
 
 export default async function EscolaridadePage() {
   const [staging, emps, edu] = await Promise.all([

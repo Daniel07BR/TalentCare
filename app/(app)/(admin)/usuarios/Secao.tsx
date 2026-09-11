@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { isHiddenDept } from '@/lib/hidden-depts'
 import SyncButton from './SyncButton'
 
-export const dynamic = 'force-dynamic'
+
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')

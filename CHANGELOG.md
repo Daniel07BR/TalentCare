@@ -1,5 +1,30 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (20) — Configurações vira a área administrativa inteira; saem três blocos de ficção
+
+Pedido do dono: *"painel configurações não configura nada de score, isso já é feito por cada
+departamento dentro da área deles. Em configurações, junte todas as opções do painel
+administração, assim deixamos numa página só tudo que for área administrativa"*.
+
+**Saiu, por ser FICÇÃO (regra (d) da casa)** — a página inteira era:
+- **Pesos do score de performance**: os controles não gravavam nada (o estado morria no
+  navegador) e a "pré-visualização" media um score que ninguém calculava com aqueles pesos.
+- **Sistemas conectados**: "Sync há 8 min", "há 1 h"… escritos à mão; o liga/desliga não
+  desligava nada.
+- **Gestão de acesso**: perfis e contagens de membros escritos à mão.
+- `lib/mock/config.ts` (só essa página o usava) removido.
+
+**Configurações = uma página com abas** (`/configuracoes?aba=`): **Fontes de dados** (nova e
+real — o último dia com dado em cada espelho, a mesma conta da frase do canto do painel, agora
+em `lib/frescor.ts`), **Usuários**, **Equipe interna**, **Escolaridade**, **Casar ponto** (com
+o número de nomes esperando vínculo) e **Quem avalia**. Cada aba é a própria tela de antes
+(`<área>/Secao.tsx`); `/usuarios`, `/equipe`, `/escolaridade` e `/ponto` levam à aba certa;
+`/avaliadores` segue também sozinho (a tela de Avaliações leva até ele e a Diretoria o usa).
+O menu de Administração ficou com uma entrada só: **Configurações**.
+
+Ensaio do painel: **785 conferências, 0 divergências** (as seis abas abrem para o dono com a
+tela delas; os endereços antigos levam à aba; gestor fora). `ensaio-acesso-gestao` limpo.
+
 ## 2026-09-11 (19) — Casar ponto, Relatórios e Quem avalia saem do menu
 
 Pedido do dono: *"estas seções foram criadas para eu definir funções dentro do sistema que

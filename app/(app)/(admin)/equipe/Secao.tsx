@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma'
 import EquipeClient from './EquipeClient'
 
-export const dynamic = 'force-dynamic'
+
 
 // Cadastro de colaboradores STAFF (sem usuário no Nexus): motoboy, cozinha,
 // limpeza etc. Admin-only (a área (app) já exige sessão; rotas checam ADMIN).

@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db/prisma'
 import { isHiddenDept } from '@/lib/hidden-depts'
 import PontoLinker, { type PontoRow, type PontoOption } from './PontoLinker'
 
-export const dynamic = 'force-dynamic'
+
 
 export default async function PontoPage() {
   const [staging, emps] = await Promise.all([

@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { FileSpreadsheet,
-  LayoutDashboard, Users, Building2, TrendingUp, GraduationCap, ScrollText,
-  SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
-  MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck, MessageSquareText,
+  LayoutDashboard, Users, Building2, TrendingUp, GraduationCap,
+  SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Radio, MessageCircle,
+  MessagesSquare, LifeBuoy, Landmark, AlarmClock, Boxes, Truck, MessageSquareText,
   ClipboardCheck, UserCircle, CalendarDays, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
@@ -53,10 +53,9 @@ const NAV_SYSTEMS = [
 ]
 // Administração: visível apenas para o dono/admin que mantém o sistema.
 const NAV_ADMIN = [
-  { href: '/equipe', label: 'Equipe interna', icon: UserPlus },
-  { href: '/escolaridade', label: 'Escolaridade', icon: ScrollText },
+  /* ⚠️ UMA entrada só (11/09/2026, pedido do dono): Usuários, Equipe interna,
+     Escolaridade, Casar ponto e Quem avalia viraram ABAS de Configurações. */
   { href: '/configuracoes', label: 'Configurações', icon: SlidersHorizontal },
-  { href: '/usuarios', label: 'Usuários', icon: UserCog },
   /* ⚠️ SAÍRAM do menu (11/09/2026, pedido do dono: "foram criadas para eu definir
      funções que hoje já estão bem estabelecidas"):
      - Relatórios — nunca saiu do "Em breve"; o endereço leva ao painel.

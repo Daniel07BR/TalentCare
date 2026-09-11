@@ -288,6 +288,23 @@ async function main() {
   const dono = await prisma.user.findFirst({ where: { email: { in: emailsDono }, active: true }, select: { id: true, role: true, email: true } })
   const ckDono = dono ? await cookie(dono) : ck
   const a8 = await ver('/ponto', ckDono), a9 = await ver('/avaliadores', ckDono)
+  // A administração virou UMA página (11/09/2026): cada aba abre para o dono, com o
+  // conteúdo da tela de antes; os endereços antigos levam à aba.
+  const abas: [string, string][] = [
+    ['fontes', 'Fontes de dados'], ['usuarios', 'Usuários'], ['equipe', 'Equipe'],
+    ['escolaridade', 'scolaridade'], ['ponto', 'Casar pessoas do ponto'], ['avaliadores', 'Quem avalia'],
+  ]
+  for (const [aba, texto] of abas) {
+    const r = await fetch(`${BASE}/configuracoes?aba=${aba}`, { headers: { cookie: ckDono }, redirect: 'manual' })
+    const html = r.status === 200 ? await r.text() : ''
+    confere('acesso', `Configurações · aba ${aba} abre com a tela dela`, [r.status, html.includes(texto)], [200, true])
+  }
+  for (const antigo of ['/usuarios', '/equipe', '/escolaridade']) {
+    const r = await ver(antigo, ckDono)
+    confere('acesso', `${antigo} leva à aba de Configurações`, r.includes('/configuracoes'), true)
+  }
+  const a12 = ckG ? await ver('/configuracoes', ckG) : 'sem gestor'
+  confere('acesso', 'gestor fora de Configurações', a12.startsWith('200'), false)
   const a10 = ckG ? await ver('/ponto', ckG) : 'sem gestor', a11 = ckG ? await ver('/avaliadores', ckG) : 'sem gestor'
   console.log(`\n── acesso ao painel`)
   console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3} · /novo: ${a4} · /anterior p/ gestor: ${a5} · /ranking: ${a6}`)
@@ -299,7 +316,7 @@ async function main() {
   confere('acesso', '/ranking leva ao painel', a6.includes('/dashboard'), true)
   console.log(`   /relatorios: ${a7} · /ponto: ${a8} · /avaliadores: ${a9} · gestor em /ponto: ${a10} · em /avaliadores: ${a11}`)
   confere('acesso', '/relatorios leva ao painel', a7.includes('/dashboard'), true)
-  confere('acesso', 'Casar ponto segue por endereço (para o dono)', a8, '200')
+  confere('acesso', '/ponto leva à aba Casar ponto', a8.includes('/configuracoes'), true)
   confere('acesso', 'Quem avalia segue por endereço', a9, '200')
   confere('acesso', 'gestor fora do Casar ponto', a10.startsWith('200'), false)
   confere('acesso', 'gestor fora do Quem avalia', a11.startsWith('200'), false)

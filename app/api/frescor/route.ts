@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { prisma } from '@/lib/db/prisma'
+import { frescorDasFontes } from '@/lib/frescor'
 
 /* ============================================================
    ATÉ QUANDO CADA ESPELHO FOI ALIMENTADO.
@@ -26,39 +26,7 @@ export async function GET() {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  const [cls, radio, wpp, cide, hd, cons, ger, chat, ponto, disc] = await Promise.all([
-    prisma.classroomDaily.aggregate({ _max: { day: true } }),
-    prisma.radioDaily.aggregate({ _max: { day: true } }),
-    prisma.whatsappDaily.aggregate({ _max: { day: true } }),
-    prisma.cideDaily.aggregate({ _max: { day: true } }),
-    prisma.helpdeskDaily.aggregate({ _max: { day: true } }),
-    prisma.consultoriaDaily.aggregate({ _max: { day: true } }),
-    prisma.gerenciaDaily.aggregate({ _max: { day: true } }),
-    prisma.chatDaily.aggregate({ _max: { day: true } }),
-    prisma.assiduidadeDaily.aggregate({ _max: { day: true } }),
-    /* ⚠️ Só o que veio do ponto: esta tela diz até quando cada FONTE mediu, e
-       uma medida de LGPD registrada hoje faria o dump do ponto — que é import à
-       mão e pode estar semanas atrás — parecer fresco. "Watermark recente não
-       prova frescor", e aqui seria o watermark de outra fonte. */
-    prisma.disciplinaEvento.aggregate({ where: { source: 'nexo' }, _max: { data: true } }),
-  ])
-
-  const fontes = [
-    { nome: 'ClassRoom', ate: cls._max.day },
-    { nome: 'Rádio', ate: radio._max.day },
-    { nome: 'Painel de Atendimento', ate: wpp._max.day },
-    { nome: 'CIDE', ate: cide._max.day },
-    { nome: 'HelpDesk', ate: hd._max.day },
-    { nome: 'Consultoria Plus', ate: cons._max.day },
-    { nome: 'Gerência', ate: ger._max.day },
-    { nome: 'Chat Interno', ate: chat._max.day },
-    // ⚠️ As duas sem cron: entram por import à mão, e é sempre uma delas que
-    // atrasa. ⚠️⚠️ E são DUAS linhas, não uma: a disciplina termina em 11/06 e o
-    // ponto em 25/06 — anunciar só o ponto daria o painel por 14 dias mais fresco
-    // do que ele é, que é exatamente o erro do "Atualizado há 12 min".
-    { nome: 'Ponto', ate: ponto._max.day },
-    { nome: 'Disciplina', ate: disc._max.data },
-  ]
+  const fontes = await frescorDasFontes()
 
   const comDado = fontes.filter((f): f is { nome: string; ate: string } => !!f.ate)
   const maisAtrasada = comDado.length
