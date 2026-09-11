@@ -145,7 +145,10 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
   me?: { id: string; cargo: string | null; hasAvatar: boolean }
   initials?: string
 }) {
-  const { period, setPeriod, from, to, setRange, label } = usePeriod()
+  const { period, setPeriod, from, to, setRange, label, fromDay, toDay, datas } = usePeriod()
+  // O que os campos de data mostram: o intervalo manual, ou o período em vigor.
+  const deDia = period === 'custom' ? from : fromDay
+  const ateDia = period === 'custom' ? to : toDay
   const [calOpen, setCalOpen] = useState(false)
   // Nada de data futura: atividade de amanhã não existe, e o campo aberto até
   // 2099 convida a um intervalo que sempre volta vazio.
@@ -267,7 +270,10 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
           style={{ fontSize: 12, padding: '6px 9px', display: 'flex', alignItems: 'center', gap: 5 }}
         >
           <CalendarDays size={14} />
-          {period === 'custom' ? label : 'Período'}
+          {/* ⚠️ As DATAS em qualquer período — não só no intervalo escolhido à
+              mão. Em 7d/30d/Trimestre/Ano o botão dizia só "Período", e não havia
+              onde ler de que dia a que dia os números falavam. */}
+          {datas}
         </button>
       </div>
 
@@ -277,12 +283,15 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <label style={{ flex: 1, fontSize: 11, color: 'var(--text-dim)' }}>
               De
-              <input type="date" value={from} max={to || hojeISO} onChange={(e) => setRange(e.target.value, to)}
+              {/* ⚠️ Fora do intervalo manual, os campos mostram o período EM VIGOR
+                  (e não o último intervalo escolhido, que fica guardado): mexer
+                  numa ponta parte do que está na tela. */}
+              <input type="date" value={deDia} max={ateDia || hojeISO} onChange={(e) => setRange(e.target.value, ateDia)}
                 style={inputData} />
             </label>
             <label style={{ flex: 1, fontSize: 11, color: 'var(--text-dim)' }}>
               Até
-              <input type="date" value={to} min={from} max={hojeISO} onChange={(e) => setRange(from, e.target.value)}
+              <input type="date" value={ateDia} min={deDia} max={hojeISO} onChange={(e) => setRange(deDia, e.target.value)}
                 style={inputData} />
             </label>
           </div>
@@ -298,7 +307,7 @@ function Topbar({ soMeuSetor = false, podeVoltar = false, onVoltar, meusSetores 
           </div>
           {/* ⚠️ Só uma ponta escolhida ainda não é intervalo — a tela diz isso em
               vez de mostrar 30 dias calada. */}
-          {(!from || !to) && (
+          {period === 'custom' && (!from || !to) && (
             <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 9, lineHeight: 1.5 }}>
               Escolha as duas datas. Enquanto faltar uma, vale o período selecionado acima.
             </div>

@@ -69,6 +69,16 @@ export function rotuloDoIntervalo(period: Period, fromDay: string, toDay: string
   if (period !== 'custom') {
     return ({ '7d': 'Últimos 7 dias', '30d': 'Últimos 30 dias', Trimestre: 'Trimestre atual', Ano: 'Ano corrente' } as Record<string, string>)[period] ?? period
   }
+  return datasDoIntervalo(fromDay, toDay)
+}
+
+/**
+ * As DATAS de um intervalo, sempre ("01 de jul. a 31 de jul. de 2026") — para
+ * qualquer período, não só o do calendário. O botão do calendário mostrava
+ * "Período" em 7d/30d/Trimestre/Ano, e quem olhava não sabia de que dia a que
+ * dia os números falavam (pedido do dono, 11/09/2026).
+ */
+export function datasDoIntervalo(fromDay: string, toDay: string): string {
   const f = new Date(`${fromDay}T12:00:00Z`)
   const t = new Date(`${toDay}T12:00:00Z`)
   const op: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', timeZone: 'UTC' }

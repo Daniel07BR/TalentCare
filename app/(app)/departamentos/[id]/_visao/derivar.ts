@@ -1,30 +1,8 @@
 import type { DeptMetrics } from '@/lib/ui/dept-period'
-import type { Variacao } from './tipos'
 
 /* Contas puras da prévia — sem React, sem rede. Tudo aqui sai de `DeptMetrics`,
    a mesma resposta do relatório atual: as duas telas não podem dar números
    diferentes para o mesmo setor no mesmo filtro. */
-
-const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-
-/** "2026-08" → "ago/26". */
-export function mesCurto(aaaamm: string): string {
-  const [a, m] = aaaamm.split('-')
-  return `${MESES[Number(m) - 1]}/${a.slice(2)}`
-}
-
-/**
- * O último mês contra o anterior. ⚠️ A série do servidor já para no último mês
- * FECHADO — então não há mês pela metade aqui, e o "-47%" do conceito, se
- * aparecer, é de dois meses inteiros. Sem base (anterior zero), não há
- * percentual: dividir por zero não é "+100%".
- */
-export function variacaoMensal(serie: DeptMetrics['serie']): Variacao {
-  if (serie.length < 2) return null
-  const u = serie[serie.length - 1], a = serie[serie.length - 2]
-  if (a.atividade <= 0) return null
-  return { pct: Math.round(((u.atividade - a.atividade) / a.atividade) * 100), mes: mesCurto(u.mes), anterior: mesCurto(a.mes) }
-}
 
 /** Suspensões do período: por atraso (assinada pelo encarregado) + de LGPD. */
 export function suspensoes(m: DeptMetrics): number | null {

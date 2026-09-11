@@ -7,6 +7,7 @@ import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
+import { baldes, janelaAnterior } from '@/lib/serie-periodo'
 
 /* ============================================================
    O RELATÓRIO DE UM DEPARTAMENTO, no período pedido.
@@ -359,6 +360,70 @@ export async function GET(req: NextRequest) {
       const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       serie.push({ mes: k, atividade: bruto.get(k) ?? 0 })
     }
+  }
+
+  /* ── A ATIVIDADE DO PERÍODO — a série que OBEDECE ao filtro ─────────────────
+   * ⚠️⚠️ Pedido do dono (11/09/2026): "atividade não está reagindo conforme o
+   * período". A série acima é sempre os últimos meses fechados (o relatório
+   * completo a usa assim). Esta é a do FILTRO, por dia/semana/mês conforme o
+   * tamanho da janela (`lib/serie-periodo.ts`), com as MESMAS fontes e pesos da
+   * série mensal — a mesma "atividade", só em outro recorte.
+   *
+   * ⚠️⚠️ A comparação é com a janela ANTERIOR DE MESMO TAMANHO, e DE IGUAL PARA
+   * IGUAL: só entram as fontes que já registravam atividade do setor no começo
+   * da janela anterior. A primeira versão só olhava o 1º registro do SETOR, e o
+   * Legal no filtro "Ano" deu **+2756%** — o setor tinha ClassRoom desde 2024,
+   * mas Gerência, Chat e Consultoria só entraram em 2026, e o número comparava
+   * o que existe hoje com um ano em que essas fontes não existiam. Os chamados
+   * do Chat (desde 21/08/2026) faziam o mesmo, menor, nos 30 dias. As fontes
+   * que ficam de fora vão na resposta, e a tela as nomeia.
+   */
+  const hojeIso = new Date().toISOString().slice(0, 10)
+  const ant = janelaAnterior(fromDay, toDay)
+  const [diario, primeiros] = nx.length
+    ? await Promise.all([
+      prisma.$queryRaw<{ fonte: string; day: string; atividade: bigint }[]>`
+        SELECT 'ClassRoom' AS fonte, day, SUM(courses + created)::bigint AS atividade FROM classroom_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
+        UNION ALL SELECT 'HelpDesk', day, SUM(opened + resolved + formalized)::bigint FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
+        UNION ALL SELECT 'CIDE', day, SUM(empresas)::bigint FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
+        UNION ALL SELECT 'Consultoria', day, SUM(studies + tickets + messages + comments)::bigint FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
+        UNION ALL SELECT 'Gerência', day, SUM(servicos + prot_abertos + prot_aprovados + serv_criados)::bigint FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
+        UNION ALL SELECT 'Chat', day, SUM(chamados_abertos + chamados_concluidos)::bigint FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2`,
+      prisma.$queryRaw<{ fonte: string; primeiro: string | null }[]>`
+        SELECT 'ClassRoom' AS fonte, MIN(day) AS primeiro FROM classroom_daily WHERE nexus_user_id = ANY(${nx}) AND (courses + created) > 0
+        UNION ALL SELECT 'HelpDesk', MIN(day) FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND (opened + resolved + formalized) > 0
+        UNION ALL SELECT 'CIDE', MIN(day) FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND empresas > 0
+        UNION ALL SELECT 'Consultoria', MIN(day) FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND (studies + tickets + messages + comments) > 0
+        UNION ALL SELECT 'Gerência', MIN(day) FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND (servicos + prot_abertos + prot_aprovados + serv_criados) > 0
+        UNION ALL SELECT 'Chat', MIN(day) FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND (chamados_abertos + chamados_concluidos) > 0`,
+    ])
+    : [[], []]
+  const inicioDa = new Map(primeiros.filter((r) => r.primeiro).map((r) => [r.fonte, r.primeiro as string]))
+  // Fonte comparável = já registrava atividade do setor no 1º dia da janela anterior.
+  const comparaveis = new Set([...inicioDa].filter(([, d]) => d <= ant.de).map(([f]) => f))
+  const somaEntre = (de: string, ate: string, so?: Set<string>) =>
+    diario.reduce((s, r) => (r.day >= de && r.day <= ate && (!so || so.has(r.fonte)) ? s + Number(r.atividade) : s), 0)
+  const { granularidade, baldes: bs } = baldes(fromDay, toDay, hojeIso)
+  const noPeriodo = new Set(diario.filter((r) => r.day >= fromDay && Number(r.atividade) > 0).map((r) => r.fonte))
+  const atividadeDoPeriodo = {
+    granularidade,
+    pontos: bs.map((b) => ({ ...b, atividade: somaEntre(b.de, b.ate) })),
+    total: somaEntre(fromDay, toDay),
+    anterior: {
+      ...ant,
+      /** Os dois totais DE IGUAL PARA IGUAL — só as fontes comparáveis. */
+      atual: somaEntre(fromDay, toDay, comparaveis),
+      total: somaEntre(ant.de, ant.ate, comparaveis),
+      /* ⚠️⚠️ Janela LONGA (por mês, > 4 meses) não compara. Mesmo de igual para
+         igual, o Legal em "Ano" deu +1402%: a Gerência tem registros de 2025 (do
+         import do sistema antigo), mas a autoria por pessoa só existe desde
+         2026 — a janela anterior de uma janela longa sempre cai na época em que
+         as fontes estavam nascendo. Aí a tela mostra a forma, não um percentual. */
+      comparavel: granularidade !== 'mes' && comparaveis.size > 0,
+      motivo: granularidade === 'mes' ? 'janela-longa' : comparaveis.size === 0 ? 'sem-fonte' : null,
+      /** Fontes com atividade agora que ainda não existiam no início da janela anterior. */
+      fora: [...noPeriodo].filter((f) => !comparaveis.has(f)).map((f) => ({ fonte: f, desde: inicioDa.get(f) ?? null })),
+    },
   }
 
   // ── Demografia (não é do período: é o retrato de hoje) ─────────────────────
@@ -735,6 +800,7 @@ export async function GET(req: NextRequest) {
     ehAdmin: quem.escopo.tipo === 'tudo',
     turnover,
     serie,
+    atividadeDoPeriodo,
     period, fromDay, toDay, dias, label: rotuloDoIntervalo(period, fromDay, toDay),
     equipe: { ativos: ativos.length, total: pessoas.length, comNexus: nx.length },
 

@@ -57,6 +57,15 @@ export type DeptMetrics = {
   }
   /** Atividade real mês a mês, do primeiro mês COM registro. */
   serie: { mes: string; atividade: number }[]
+  /** A atividade DENTRO do filtro, por dia/semana/mês (ver `lib/serie-periodo.ts`). */
+  atividadeDoPeriodo?: {
+    granularidade: 'dia' | 'semana' | 'mes'
+    pontos: { de: string; ate: string; rotulo: string; parcial: boolean; atividade: number }[]
+    total: number
+    /** Comparação DE IGUAL PARA IGUAL: `atual` e `total` só com as fontes que já
+     *  registravam no início da janela anterior; `fora` são as que ficaram de fora. */
+    anterior: { de: string; ate: string; atual: number; total: number; comparavel: boolean; motivo: 'janela-longa' | 'sem-fonte' | null; fora: { fonte: string; desde: string | null }[] }
+  }
   period: string; fromDay: string; toDay: string; dias: number; label: string
   equipe: { ativos: number; total: number; comNexus: number }
   classroom: { criados: number; assistidos: number; videos: number }

@@ -8,7 +8,7 @@ import { Cabecalho } from './_visao/Cabecalho'
 import { Lideranca } from './_visao/Lideranca'
 import { Indicadores } from './_visao/Indicadores'
 import { Escolaridade } from './_visao/Escolaridade'
-import { AtividadeMensal } from './_visao/AtividadeMensal'
+import { AtividadeDoPeriodo } from './_visao/AtividadeDoPeriodo'
 import { UltimasSaidas } from './_visao/UltimasSaidas'
 import { RankingMes } from './_visao/RankingMes'
 import { AvaliacaoChamados } from './_visao/AvaliacaoChamados'
@@ -65,7 +65,7 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       </div>
       <div className={s.linha2}>
         <Escolaridade deptId={m.setor.id} />
-        <AtividadeMensal m={m} />
+        <AtividadeDoPeriodo m={m} />
         <UltimasSaidas m={m} abrir={detalhe.abrir} />
       </div>
       <div className={s.linha3}>

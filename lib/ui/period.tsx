@@ -1,7 +1,7 @@
 'use client'
 import { createContext, useContext, useMemo, useState } from 'react'
 import type { Period } from '@/lib/mock/dashboard'
-import { periodDays, rotuloDoIntervalo } from '@/lib/period-range'
+import { periodDays, rotuloDoIntervalo, datasDoIntervalo } from '@/lib/period-range'
 
 type Ctx = {
   period: Period
@@ -24,12 +24,17 @@ type Ctx = {
   query: string
   /** Rótulo humano do que está selecionado ("1 a 15 de ago de 2026"). */
   label: string
+  /** O intervalo EFETIVO, em qualquer período (em `7d`, os últimos 7 dias). */
+  fromDay: string
+  toDay: string
+  /** As datas desse intervalo, sempre ("04 de set. a 11 de set. de 2026"). */
+  datas: string
 }
 
 const PeriodCtx = createContext<Ctx>({
   period: '30d', from: '', to: '',
   setPeriod: () => {}, setRange: () => {},
-  query: 'period=30d', label: 'Últimos 30 dias',
+  query: 'period=30d', label: 'Últimos 30 dias', fromDay: '', toDay: '', datas: '',
 })
 
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
@@ -52,6 +57,7 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
       },
       query: qs.toString(),
       label: rotuloDoIntervalo(period, fromDay, toDay),
+      fromDay, toDay, datas: datasDoIntervalo(fromDay, toDay),
     }
   }, [period, from, to])
 

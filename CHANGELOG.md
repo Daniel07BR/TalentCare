@@ -1,5 +1,49 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (7) — O botão do calendário mostra as datas, e a atividade obedece ao filtro
+
+Dois pedidos do dono:
+
+### 1. O botão do calendário sempre diz de que dia a que dia
+
+Em 7d / 30d / Trimestre / Ano ele dizia só **"Período"** — as datas só apareciam ao
+escolher um mês ou um intervalo. Agora mostra sempre o intervalo em vigor ("12 de
+ago. a 11 de set. de 2026"). E os campos "De" / "Até" do calendário abrem com essas
+datas, e não com o último intervalo escolhido à mão (que ficava guardado e aparecia
+fora de contexto). O contexto do período (`lib/ui/period.tsx`) passou a expor
+`fromDay`, `toDay` e `datas`; a formatação saiu para `datasDoIntervalo` em
+`lib/period-range.ts`, que o rótulo do intervalo também usa.
+
+### 2. "Atividade mês a mês" virou "Atividade no período"
+
+Era sempre os últimos meses FECHADOS, qualquer que fosse o filtro. Agora é a janela
+do filtro (`atividadeDoPeriodo` em `/api/dept-metrics`), com o ponto do tamanho da
+janela (`lib/serie-periodo.ts`): **até 45 dias, por dia · até 4 meses, por semana ·
+acima, por mês**. O ponto incompleto (hoje, a semana curta, o mês corrente) sai
+vazado e tracejado — é pedaço, não queda.
+
+Mesmas fontes e pesos da série mensal: julho e agosto inteiros dão **exatamente** o
+número que a série mensal dá para eles (Legal 311 e 511, Contábil 158 e 83), e a
+soma dos pontos fecha com o total em todo filtro.
+
+⚠️⚠️ **A comparação é com a janela anterior de mesmo tamanho, DE IGUAL PARA IGUAL.**
+Duas tentativas mostraram por quê:
+- Olhando só o 1º registro do setor, o Legal em "Ano" deu **+2756%**: Gerência, Chat
+  e Consultoria não existiam na janela anterior. Agora entram na conta só as fontes
+  que já registravam no início da janela anterior, e a tela nomeia as que ficaram
+  fora ("Chat, desde 25/08").
+- Mesmo assim o "Ano" deu **+1402%**: sobrou a Gerência, que tem registros de 2025 do
+  import do sistema antigo — mas a autoria por pessoa só existe desde 2026. Janela
+  LONGA (por mês) não compara: mostra o total e a forma, e diz por quê.
+
+A série mensal fixa continua no relatório completo, onde a pergunta é "como o setor
+anda no ano".
+
+**Arquivos:** `lib/period-range.ts`, `lib/ui/period.tsx`, `app/(app)/AppShell.tsx`;
+`lib/serie-periodo.ts` (novo); `app/api/dept-metrics/route.ts`, `lib/ui/dept-period.ts`;
+`departamentos/[id]/_visao/AtividadeDoPeriodo.tsx` (era `AtividadeMensal.tsx`),
+`derivar.ts`, `tipos.ts`, `[id]/page.tsx`.
+
 ## 2026-09-11 (6) — A visão nova virou o relatório do setor, e o número clicado mostra quem
 
 O dono aprovou a prévia: *"ficou ótimo, pode trocar a atual por essa — mas antes,
