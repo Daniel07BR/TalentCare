@@ -7,6 +7,7 @@ import { useTalentData } from '@/lib/ui/data'
 import { type EmployeeMetrics, useEmployeePeriod } from '@/lib/ui/employee-period'
 import { useEmployeeTimeline, type EstadoTimeline } from '@/lib/ui/employee-timeline'
 import { usePeriod } from '@/lib/ui/period'
+import { useVoltar } from '@/lib/ui/origem'
 import { buildEmployeeVM, type EmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../Avatar'
 import ClassroomStats from '../../ClassroomStats'
@@ -37,7 +38,6 @@ const formCor = (label: string, i: number) => FORM_COR[normLbl(label)] ?? FORM_P
 
 export default function FichaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const router = useRouter()
   const [editando, setEditando] = useState(false)
   /* ⚠️ Sem `withRealScores`/`useScoreSignals`: eles disparavam mais um fetch a
      `/api/score-metrics` — que devolve a atividade da EMPRESA INTEIRA — em toda
@@ -48,11 +48,14 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const { m } = useEmployeePeriod(id)
   const { events: timeline, estado: estadoTimeline } = useEmployeeTimeline(id)
   const vm = buildEmployeeVM(data, id)
+  // ⚠️ Volta para onde a pessoa ESTAVA (relatório do setor, ranking, avaliação…),
+  // e só na falta disso para o diretório. Ver `lib/ui/origem.tsx`.
+  const voltar = useVoltar({ href: '/funcionarios', label: 'Voltar ao diretório' })
 
   if (!vm) {
     return (
       <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <button onClick={() => router.push('/funcionarios')} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar ao diretório</button>
+        <button onClick={voltar.ir} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ {voltar.label}</button>
         <div className="empty">Funcionário não encontrado.</div>
       </div>
     )
@@ -151,7 +154,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
        empurrar conteúdo para fora. As demais telas seguem em 1280 até o dono
        decidir se quer a casa toda assim. */
     <div className="tc-anim" style={{ maxWidth: 'min(1600px, 100%)', margin: '0 auto' }}>
-      <button onClick={() => router.push('/funcionarios')} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar ao diretório</button>
+      <button onClick={voltar.ir} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ {voltar.label}</button>
 
       {/* Cabeçalho: identidade. O gauge e os fatores saíram — ver abaixo. */}
       {/*

@@ -11,6 +11,7 @@ import { FileSpreadsheet,
 import { signOut } from 'next-auth/react'
 import { PeriodProvider, usePeriod } from '@/lib/ui/period'
 import { TalentDataProvider } from '@/lib/ui/data'
+import { OrigemProvider } from '@/lib/ui/origem'
 import Logo from './Logo'
 import Avatar from './Avatar'
 import type { Period } from '@/lib/mock/dashboard'
@@ -379,6 +380,9 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
   return (
     <PeriodProvider>
      <TalentDataProvider value={data}>
+     {/* O rastro de onde a pessoa veio — o "voltar" das telas de detalhe. Os
+         nomes das telas saem do MENU, para não haver uma segunda lista. */}
+     <OrigemProvider rotulos={[...NAV_MAIN, ...NAV_SYSTEMS, ...NAV_ADMIN]}>
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
 {!semLateral && (
         <aside style={{ width: 240, flex: 'none', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
@@ -471,6 +475,7 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
           <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px 56px' }}>{children}</main>
         </div>
       </div>
+     </OrigemProvider>
      </TalentDataProvider>
     </PeriodProvider>
   )

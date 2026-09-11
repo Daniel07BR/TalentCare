@@ -1,5 +1,33 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 — A ficha volta para onde você estava
+
+Pedido do dono: entrou na ficha do Lucas pelo **relatório do Legal**, e o botão dizia
+"‹ Voltar ao diretório" — uma tela que ele não visitou. Voltar por ali perdia o setor,
+a busca digitada e a aba ("Pontuação") que ele estava olhando.
+
+Agora o botão diz **para onde vai** e vai para lá: "‹ Voltar ao relatório de Legal",
+"‹ Voltar à avaliação de Lucas", "‹ Voltar para Ranking", "‹ Voltar à área da
+mensageria"… Volta pelo **histórico** (`history.back()`), e não abrindo a rota de
+novo, para a tela reaparecer como estava — rolagem, busca e aba inclusas.
+
+⚠️ Sem de onde ter vindo (abriu por um link, recarregou a ficha), continua "Voltar ao
+diretório". Nesse caso `back()` tiraria a pessoa do sistema, ou não faria nada numa
+aba nova.
+
+⚠️⚠️ **Um RASTRO no layout, e não `?de=` em cada link.** A ficha tem ~35 portas de
+entrada (relatório de setor, ranking, avaliação, entregas, cada painel de sistema).
+Marcar a origem em cada uma seria 35 lugares para lembrar, e a porta nº 36 nasceria
+com o botão errado sem nada acusar. O `OrigemProvider` (`lib/ui/origem.tsx`) guarda a
+rota anterior no `AppShell` e cobre todas — inclusive as que ainda não existem. Os
+nomes das telas saem do **menu**, não de uma segunda lista.
+
+⚠️ O rastro é atualizado **durante a renderização**, não num `useEffect`: com efeito,
+a ficha pintaria "Voltar ao diretório" e trocaria o texto um instante depois.
+
+**Arquivos:** `lib/ui/origem.tsx` (novo), `app/(app)/AppShell.tsx`,
+`app/(app)/funcionarios/[id]/page.tsx`.
+
 ## 2026-09-10 (3) — A chefia inteira entrou: 16 gestores, cada um na sua área
 
 Pedido do dono: *"os gestores e sub-encarregado do Legal já conseguem acessar e ver o
