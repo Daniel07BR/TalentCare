@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useClassroomPeriod } from '@/lib/ui/classroom-period'
@@ -8,6 +9,7 @@ import { classroomVM } from '@/lib/mock/classroom'
 import Avatar from '../Avatar'
 import Donut from '../Donut'
 import CoursesByDeptCard from './CoursesByDeptCard'
+import AprendizadoDaPessoa from './AprendizadoDaPessoa'
 
 export default function ClassroomResumo() {
   /* Aberto de dentro do relatório de um setor? Então some o que compara
@@ -96,6 +98,8 @@ function PeopleCard({ title, sub, unit, people, router }: {
   people: { id: string; nome: string; cargo: string; dept: string; initials: string; color: string; hasAvatar: boolean; value: number }[]
   router: ReturnType<typeof useRouter>
 }) {
+  // Uma pessoa aberta por vez: duas listas longas abertas empurram o resto da tela.
+  const [aberto, setAberto] = useState<string | null>(null)
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{title}</div>
@@ -104,8 +108,17 @@ function PeopleCard({ title, sub, unit, people, router }: {
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem dados ainda.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          {/* ⚠️ O clique no nome ABRE o que a pessoa estudou (pedido do dono,
+              11/09/2026), em vez de sair para a ficha — a ficha fica a um link
+              dentro do quadro aberto. Abre embaixo da linha, não num modal: esta
+              lista também vive dentro da janela "Ver detalhes" do setor. */}
           {people.map((p, i) => (
-            <div key={p.id} className="tc-row" onClick={() => router.push(`/funcionarios/${p.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
+            <div key={p.id}>
+            <div className="tc-row" role="button" tabIndex={0} aria-expanded={aberto === p.id}
+              onClick={() => setAberto((a) => (a === p.id ? null : p.id))}
+              onKeyDown={(e) => { if (e.key === 'Enter') setAberto((a) => (a === p.id ? null : p.id)) }}
+              title="Ver os cursos concluídos e os vídeos assistidos no período"
+              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px', background: aberto === p.id ? 'var(--surface-2)' : undefined }}>
               <span style={{ width: 18, fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textAlign: 'center' }}>{i + 1}</span>
               <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={p.initials} color={p.color} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -113,6 +126,8 @@ function PeopleCard({ title, sub, unit, people, router }: {
                 <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.cargo} · {p.dept}</div>
               </div>
               <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{p.value} <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>{unit}</span></span>
+            </div>
+            {aberto === p.id && <AprendizadoDaPessoa id={p.id} />}
             </div>
           ))}
         </div>

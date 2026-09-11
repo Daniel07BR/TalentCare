@@ -80,7 +80,7 @@ export function JanelaDetalhe({ chave, setor, onFechar }: { chave: ChaveDetalhe;
 
   return (
     <div onClick={onFechar}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: 'min(3vh, 24px) min(2vw, 24px)', zIndex: 60 }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'min(3vh, 24px) min(2vw, 24px)', zIndex: 60 }}>
       <div ref={painel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="detalhe-titulo"
         onClick={(e) => e.stopPropagation()} className="cpop"
         style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-2)', width: 'min(1500px, 100%)', maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', outline: 'none' }}>

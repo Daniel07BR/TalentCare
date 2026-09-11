@@ -118,7 +118,10 @@ export default function CideResumo() {
           {vm.byUser.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 520, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 520, overflowY: 'auto', overflowX: 'hidden', padding: '1px 5px', margin: '0 -5px' }}>
+              {/* ⚠️ `overflowX: hidden` + o respiro de 5px: as linhas têm margem negativa
+                (o realce passa da borda do texto), e com `overflowY: auto` o navegador
+                rola o OUTRO eixo também — os 5px viravam uma barra horizontal. */}
               {vm.byUser.map((p, i) => <UserRow key={p.id} p={p} rank={i + 1} router={router} />)}
             </div>
           )}

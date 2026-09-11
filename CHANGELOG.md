@@ -1,5 +1,40 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (8) — ClassRoom: o que a pessoa estudou, a janela centrada e a barra fantasma
+
+Três pedidos do dono, a partir da janela "Ver detalhes":
+
+**1. A janela abre no centro da tela.** Estava presa ao topo (`alignItems:
+flex-start`); agora centraliza e continua rolando por dentro quando é alta.
+
+**2. Clicar numa pessoa do ClassRoom mostra o que ela concluiu e assistiu.** Nos
+rankings "Maiores criadores" e "Maiores concluintes", o clique no nome abre embaixo
+da linha — não num modal, porque essa lista também vive dentro da janela do setor —:
+os **cursos concluídos** com a data e os **vídeos assistidos agrupados por curso**
+(clique no curso para ver cada vídeo), no período do filtro. A ficha fica no link
+"Abrir a ficha ›".
+
+- O ClassRoom não mandava isso: o TalentCare só recebia contagens por dia. Rota nova
+  lá, `GET /api/integrations/talent-user-learning` (commit `300a056` no ClassRoom,
+  branch `feat/nexus-alertas-aprovacao`, que é o que roda no .71), com as **mesmas
+  definições** do `talent-metrics-daily`: vídeo = `video_progress.watched` no dia de
+  `watched_at`; curso = matrícula `completed` no dia de `completed_at`; dia de São
+  Paulo. Conferido contra o espelho: Joice 170 vídeos / 65 cursos no ano, Marcos
+  Gabriel 106 / 46, Lucas Souza 6 / 5 — **iguais**.
+- Aqui, `/api/classroom-pessoa` busca ao vivo com a **régua da ficha** (`podeVer`): o
+  Evandro abre a Joice (Legal) e leva **403** na Luana (Contábil).
+- ClassRoom fora do ar aparece como erro, não como lista vazia — vazio se leria "não
+  estudou nada", que é justamente o que não se sabe.
+
+**3. A barra de rolagem horizontal do Rádio.** As linhas das listas têm margem
+negativa (o realce passa da borda do texto), e com `overflowY: auto` o navegador rola
+o outro eixo também — os 5px viravam uma barra. Mesma coisa no CIDE e na
+Assiduidade; as três ganharam `overflowX: hidden` e o respiro de volta.
+
+**Arquivos:** `departamentos/[id]/Detalhe.tsx`; `classroom/Resumo.tsx`,
+`classroom/AprendizadoDaPessoa.tsx` (novo); `app/api/classroom-pessoa/route.ts`
+(novo); `radio/`, `cide/`, `assiduidade/Resumo.tsx`.
+
 ## 2026-09-11 (7) — O botão do calendário mostra as datas, e a atividade obedece ao filtro
 
 Dois pedidos do dono:
