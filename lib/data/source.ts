@@ -300,5 +300,30 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
     }
   })
 
-  return assembleData(identities)
+  const data = assembleData(identities)
+
+  /* A CHEFIA de cada setor, pelo VÍNCULO gravado — a mesma origem e a mesma
+     ordem do topo do relatório (`/api/dept-metrics`). ⚠️ Os chefes vêm de
+     `usersRaw`, sem o filtro de setor oculto: quem responde por um setor pode
+     sentar em outro (Entregas ← Legal), e o card precisa do rosto dele mesmo que
+     o leitor não alcance o setor de origem — nome e foto são diretório. */
+  const [vinculos, marcados] = await Promise.all([
+    prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true, nivel: true } }),
+    prisma.department.findMany({ where: { avaliadoPelaDiretoria: true }, select: { id: true } }),
+  ])
+  const porId = new Map(usersRaw.map((u) => [u.id, u]))
+  const pelaDiretoria = new Set(marcados.map((d) => d.id))
+  for (const d of data.departments) {
+    d.pelaDiretoria = pelaDiretoria.has(d.id)
+    d.chefia = vinculos
+      .filter((v) => v.departmentId === d.id)
+      .map((v) => ({ v, u: porId.get(v.userId) }))
+      .filter((x): x is { v: typeof x.v; u: NonNullable<typeof x.u> } => !!x.u && !x.u.leftAt)
+      .map(({ v, u }) => ({
+        id: u.id, nome: u.name, cargo: u.jobTitle ?? 'Colaborador', hasAvatar: !!u.avatarUrl,
+        nivel: v.nivel, deOutroSetor: u.departmentId !== d.id,
+      }))
+      .sort((a, b) => (a.nivel === 'gestor' ? 0 : 1) - (b.nivel === 'gestor' ? 0 : 1) || a.nome.localeCompare(b.nome))
+  }
+  return data
 }

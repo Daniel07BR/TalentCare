@@ -10,14 +10,23 @@ export function deptListVM(data: TalentData) {
      no último. Não existe série mensal de score (ele é percentil por janela), e
      um gráfico inventado embaixo de um número certo empresta credibilidade ao
      que não a tem. */
-  const cards = [...data.departments].sort((a, b) => b.score - a.score).map((d) => ({
-    id: d.id, nome: d.nome, score: d.score, scoreColor: scoreColor(d.score), headcount: d.headcount,
-    turnover: d.turnover, saidas12m: d.saidas12m, lider: d.lider, color: d.color,
+  /* ⚠️⚠️ SEM SCORE (pedido do dono, 11/09/2026) — pela mesma régua que o tirou
+     do topo do relatório do setor em 03/09: ele não foi validado e não vale, e
+     um número grande no card é lido como o veredito do setor. No lugar entra o
+     ROSTO de quem responde por ele. Pela mesma razão a ordem deixou de ser o
+     score e virou alfabética: ordenar por um número que não se mostra é
+     classificar os setores às escondidas. */
+  const cards = [...data.departments].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((d) => ({
+    id: d.id, nome: d.nome, headcount: d.headcount,
+    turnover: d.turnover, saidas12m: d.saidas12m,
+    gestores: d.chefia.filter((c) => c.nivel === 'gestor'),
+    subs: d.chefia.filter((c) => c.nivel !== 'gestor'),
+    pelaDiretoria: d.pelaDiretoria,
   }))
   // Totais consideram só ativos (headcount do dept já é ativo).
   const totalHc = data.departments.reduce((a, d) => a + d.headcount, 0)
-  const avgScore = totalHc ? Math.round(data.departments.reduce((a, d) => a + d.score * d.headcount, 0) / totalHc) : 0
-  return { cards, totalHc, avgScore, n: data.departments.length }
+  const semChefia = cards.filter((c) => c.gestores.length + c.subs.length === 0 && !c.pelaDiretoria).length
+  return { cards, totalHc, semChefia, n: data.departments.length }
 }
 
 export function deptDetailVM(data: TalentData, deptId: string) {

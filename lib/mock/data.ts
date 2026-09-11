@@ -139,7 +139,19 @@ export type Department = {
   /** Saídas nos últimos 12 meses — o numerador, para a tela poder mostrá-lo. */
   saidas12m: number
   color: string
-  lider: string
+  /**
+   * QUEM RESPONDE PELO SETOR — do vínculo gravado em `setor_avaliador`, a mesma
+   * origem do topo do relatório do setor.
+   *
+   * ⚠️⚠️ Substituiu o `lider`, que era ADIVINHADO: o primeiro cargo que casasse
+   * com /Coorden|Gerente|Gestor|Tech…/ ou, na falta, a pessoa de maior score. O
+   * card das Entregas mostrava o Gilberto (mensageiro) e o do TI, o Yuri —
+   * enquanto quem responde pelos dois é o Evandro/Joice e o Daniel. Nasce vazio
+   * aqui e é preenchido por `getTalentData`, que tem o banco.
+   */
+  chefia: ChefeDoSetor[]
+  /** Setor sem chefia própria que responde à Diretoria (decisão gravada). */
+  pelaDiretoria: boolean
   classroom: ClassroomStat
   radioHoras: number    // soma de horas de rádio do depto (REAL)
   radioSessoes: number  // soma de sessões de rádio do depto (REAL)
@@ -148,6 +160,17 @@ export type Department = {
   cide: CideStat // soma da atividade do CIDE do depto (REAL)
   gerencia: GerenciaStat // soma da atividade da Gerência do depto (REAL)
   chat: ChatStat // soma da atividade do Chat Interno do depto (REAL)
+}
+
+export type ChefeDoSetor = {
+  id: string
+  nome: string
+  cargo: string
+  hasAvatar: boolean
+  /** 'gestor' | 'sub' — do vínculo, não do cargo (a Rosemeire é `Colaborador`). */
+  nivel: string
+  /** A pessoa senta em outro setor (Entregas ← Evandro e Joice, do Legal). */
+  deOutroSetor: boolean
 }
 
 export type TalentData = {
@@ -749,7 +772,7 @@ export function assembleData(identities: Identity[]): TalentData {
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, saidas12m, color: PALETTE[dseed % 6],
         radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia, chat,
-        lider: (base.find((e) => /Coorden|Gerente|Gestor|Tech|Tesour|Diretor|Coordenadora|Contador/.test(e.cargo)) || base.slice().sort((a, b) => b.score - a.score)[0]).nome,
+        chefia: [] as ChefeDoSetor[], pelaDiretoria: false,
         classroom,
       }
     })

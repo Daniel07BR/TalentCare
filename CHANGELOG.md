@@ -1,5 +1,44 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (3) — Departamentos: a tela inteira, e o rosto de quem responde
+
+Pedido do dono: *"melhore o design desta página, aproveite a extensão inteira da tela,
+apresente ao invés da pontuação a foto do encarregado e sub — isso já ocorre quando
+acessamos ela"*.
+
+- **Largura total.** A grade era 3 colunas cravadas em 1280px, com faixas cinzas dos
+  lados. Agora é `auto-fill` com mínimo de 300px: 5 colunas num monitor largo, 3 no
+  notebook, 1 no celular — sem regra por tela.
+- **O rosto no lugar do score.** Gestor maior, sub menor — a mesma hierarquia do topo
+  do relatório, que espelha a da avaliação. Clicar na foto abre a ficha da pessoa;
+  clicar no card, o relatório do setor.
+- **O score saiu, e a "Score médio" do cabeçalho junto**, pela régua de 03/09: não foi
+  validado e não vale. No lugar: Setores, Headcount total e — só quando há — "Sem
+  chefia definida". A ordem deixou de ser o score e virou **alfabética**: ordenar por
+  um número que não se mostra é classificar os setores às escondidas.
+
+⚠️⚠️ **O "líder" do card era ADIVINHADO, e errava.** Saía do primeiro cargo que
+casasse com `/Coorden|Gerente|Gestor|Tech…/` ou, na falta, da pessoa de maior score:
+o card das **Entregas mostrava o Gilberto** (mensageiro) e o do **TI, o Yuri** —
+enquanto quem responde pelos dois é Evandro/Joice e o Daniel. O `lider` foi
+**apagado** do tipo `Department` e trocado por `chefia`, preenchida em `getTalentData`
+pelo vínculo gravado em `setor_avaliador` — a mesma origem e a mesma ordem do
+relatório do setor. Um só lugar diz quem chefia o quê.
+
+⚠️ Setor sem chefia não ganha rosto genérico: **Consultoria e Pousada** mostram
+"Responde à Diretoria" em tom neutro (é decisão gravada, `avaliadoPelaDiretoria`); só
+a FALTA de chefia sai em alerta. Hoje não há nenhum setor nessa situação.
+
+⚠️ Saiu também o `useScoreSignals` da página: ele buscava `/api/score-metrics` — a
+atividade da empresa inteira — só para calcular o número que a tela deixou de mostrar.
+
+**Conferido** com sessão forjada: Diretoria (16 cards, 2 "pela Diretoria", nenhum
+"/100 score", o Gilberto não aparece mais como líder) e Priscila Araújo, gestora do
+Contábil (200, com Débora e Liliane como sub).
+
+**Arquivos:** `app/(app)/departamentos/page.tsx`, `lib/mock/departments.ts`,
+`lib/mock/data.ts` (`ChefeDoSetor`, sai o `lider`), `lib/data/source.ts`.
+
 ## 2026-09-11 (2) — As advertências da ficha seguem o período
 
 Pedido do dono: filtrou **agosto** na ficha do Marcos Gabriel e o calendário e a
