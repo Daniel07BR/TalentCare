@@ -13,12 +13,16 @@ import { Acao, Cabeca, Esqueleto, Vazio, num } from './pecas'
    LINHA 3 e GÊNERO — Destaque por departamento, Escolaridade, Gerações e o
    comparativo por gênero.
 
-   ⚠️ Escolaridade, Gerações e Gênero são RETRATO DE HOJE e não acompanham o
-   filtro — a tela diz isso em cada cartão (regra (b) da casa). O clique num
+   ⚠️ Escolaridade é RETRATO DE HOJE e não acompanha o filtro (a formação não tem
+   data). Gerações e Gênero são o retrato do ÚLTIMO DIA do período — quem estava na
+   casa naquele dia, com a idade daquele dia (decisão do dono, 11/09/2026). Cada
+   cartão diz qual é (regra (b) da casa). O clique num
    grupo abre quem está nele; o "ver ›" leva à página de sempre.
    ============================================================ */
 
 const RETRATO = 'retrato de hoje · não acompanha o filtro'
+/** "quem estava na casa hoje" ou "quem estava na casa em 31/08/2026" (fim do período). */
+const retratoDoFim = (r: string) => (r === 'hoje' ? 'quem está na casa hoje' : `quem estava na casa ${r} · fim do período`)
 
 export function Destaque({ lista, info, carregando, recarregando = false, erro = false }: {
   lista: DeptHighlight[]
@@ -118,14 +122,16 @@ export function Escolaridade({ total, grupos, fatias, topPct, topRotulo, abrir, 
   )
 }
 
-export function Geracoes({ media, grupos, pcts, idades, abrir }: {
+export function Geracoes({ media, grupos, pcts, idades, abrir, retrato = 'hoje' }: {
   media: number | null; grupos: Grupo[]; pcts: Record<string, number>; idades: Record<string, string>
   abrir: (g: Grupo) => void
+  /** "hoje" ou "em 31/08/2026" — `rotuloDoRetrato` de `lib/quadro.ts`. */
+  retrato?: string
 }) {
   const router = useRouter()
   return (
     <section className={v.cartao}>
-      <Cabeca Icone={Users} titulo="Gerações" sub={<>Idade média: <b style={{ color: 'var(--n-text)' }}>{media ?? '—'}</b> anos · {RETRATO}</>}
+      <Cabeca Icone={Users} titulo="Gerações" sub={<>Idade média: <b style={{ color: 'var(--n-text)' }}>{media ?? '—'}</b> anos · {retratoDoFim(retrato)}</>}
         acao={<Acao onClick={() => router.push('/geracoes')} dica="Abrir a página de gerações">ver ›</Acao>} />
       <div style={{ display: 'flex', height: 12, borderRadius: 20, overflow: 'hidden', background: 'var(--n-card-2)', margin: '4px 0 14px' }}>
         {grupos.map((g) => (
@@ -143,9 +149,10 @@ export function Geracoes({ media, grupos, pcts, idades, abrir }: {
   )
 }
 
-export function Genero({ grupos, pcts, idades, abrir }: {
+export function Genero({ grupos, pcts, idades, abrir, retrato = 'hoje' }: {
   grupos: Grupo[]; pcts: { M: number; F: number }; idades: { M: number | null; F: number | null }
   abrir: (g: Grupo) => void
+  retrato?: string
 }) {
   const router = useRouter()
   const [m, f, ni] = grupos
@@ -153,7 +160,7 @@ export function Genero({ grupos, pcts, idades, abrir }: {
     <section className={v.cartao} style={{ marginBottom: 14 }}>
       <div className={p.genero}>
         <Cabeca Icone={UsersRound} cor="var(--n-purple)" titulo="Comparativo por gênero"
-          sub={<>Quadro ativo · {m.quantos + f.quantos} com gênero informado{ni.quantos ? ` · ${ni.quantos} sem informação` : ''}<br />{RETRATO}</>} />
+          sub={<>{m.quantos + f.quantos} com gênero informado{ni.quantos ? ` · ${ni.quantos} sem informação` : ''}<br />{retratoDoFim(retrato)}</>} />
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ flex: 1, display: 'flex', height: 12, borderRadius: 20, overflow: 'hidden', background: 'var(--n-card-2)' }}>

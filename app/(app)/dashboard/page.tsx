@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { rotuloDoRetrato } from '@/lib/quadro'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
@@ -99,8 +100,11 @@ function Conteudo() {
     competenciaPontuacao: signals?.competenciaPontuacao,
     estadoPontuacao: signals?.estadoPontuacao,
   })
-  const gen = generationsVM(data).overall
-  const gend = genderVM(data).overall
+  /* ⚠️ Gerações e Gênero: quem estava na casa no ÚLTIMO DIA do período (decisão do
+     dono, 11/09/2026). Escolaridade segue como retrato de hoje — a formação não tem
+     data, e a tela diz isso. */
+  const gen = generationsVM(data, toDay).overall
+  const gend = genderVM(data, toDay).overall
 
   /* ── O selo de Atrasos (decisão do dono, 11/09/2026) ─────────────────────
      Três travas, cada uma nascida de um número que mentia:
@@ -135,8 +139,8 @@ function Conteudo() {
 
   /* ── Demografia (retrato de hoje) ──────────────────────────────────────── */
   const gEsc = gruposEscolaridade(data, vm.escSegments)
-  const gGer = gruposGeracao(data, gen.segs)
-  const gGen = gruposGenero(data)
+  const gGer = gruposGeracao(data, gen.segs, toDay)
+  const gGen = gruposGenero(data, toDay)
 
   /* A lista aberta. Guarda a CHAVE e não a lista: trocar o filtro remonta os
      números, e uma lista congelada ficaria debaixo do título da janela nova.
@@ -218,7 +222,7 @@ function Conteudo() {
             existe — esqueleto, e não o destaque de outra competência. */}
         <Destaque lista={vm.deptHighlights} info={vm.pontuacaoInfo} carregando={scoreLoading && !signals} recarregando={scoreLoading && !!signals} erro={scoreErro && !signals} />
         <Escolaridade total={vm.headcountTotal} grupos={gEsc} fatias={vm.escSegments} topPct={vm.escTopPct} topRotulo={vm.escTopLabel} abrir={abrirGrupo('esc')} abrirDetalhe={() => detalhe.abrir('formacao')} />
-        <Geracoes media={gen.avg} grupos={gGer}
+        <Geracoes retrato={rotuloDoRetrato(toDay)} media={gen.avg} grupos={gGer}
           pcts={Object.fromEntries(gen.segs.map((s) => [s.key, s.pct]))}
           idades={Object.fromEntries(gen.segs.map((s) => [s.key, s.ages]))} abrir={abrirGrupo('ger')} />
       </div>
@@ -237,7 +241,7 @@ function Conteudo() {
         )
       })()}
 
-      <Genero grupos={gGen} pcts={{ M: gend.mPct, F: gend.fPct }} idades={{ M: gend.avgM, F: gend.avgF }} abrir={abrirGrupo('gen')} />
+      <Genero retrato={rotuloDoRetrato(toDay)} grupos={gGen} pcts={{ M: gend.mPct, F: gend.fPct }} idades={{ M: gend.avgM, F: gend.avgF }} abrir={abrirGrupo('gen')} />
 
       <Sistemas periodo={periodo} abrir={detalhe.abrir} />
       </div>

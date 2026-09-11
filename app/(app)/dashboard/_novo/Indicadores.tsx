@@ -72,7 +72,7 @@ export function Indicadores({ kpis, selos, esperandoPonto, recarregandoPonto = f
                   {k.label}
                   {/* ⚠️ O número grande do Headcount é o quadro de HOJE, em qualquer
                       filtro (o saldo ao lado é que é do período). Achado do crítico. */}
-                  {k.label === 'Headcount' && <span style={{ fontWeight: 500, color: 'var(--n-text-3)' }}> · hoje</span>}
+                  {k.label === 'Headcount' && <span style={{ fontWeight: 500, color: 'var(--n-text-3)' }}> · {k.retrato ?? 'hoje'}</span>}
                 </span>
                 {/* O selo: no Headcount é o SALDO (entradas − saídas, em pessoas);
                     em Atrasos e Advertências, a variação contra a janela anterior

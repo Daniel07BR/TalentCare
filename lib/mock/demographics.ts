@@ -3,6 +3,7 @@
    Considera o quadro ATUAL: ativos e SEM a Diretoria.
    ============================================================ */
 import type { Employee, TalentData } from './data'
+import { noQuadroEm } from '@/lib/quadro'
 import { deptName } from './employee'
 
 const NOW_YEAR = new Date().getFullYear()
@@ -12,9 +13,22 @@ export function workforce(data: TalentData): Employee[] {
   return data.employees.filter((e) => e.status !== 'Desligado' && !norm(data.deptMeta[e.dept] || '').includes('diretoria'))
 }
 
-export function ageOf(birthISO: string | null): number | null {
+/**
+ * ⚠️⚠️ O QUADRO NUM DIA (decisão do dono, 11/09/2026): quem estava na casa (sem a
+ * Diretoria) ao fim de `dia` — entrou até ele e não tinha saído. É o retrato que
+ * Gerações e Gênero do painel mostram para o último dia do período. `workforce()`
+ * continua sendo "ativo hoje", que é o que as contas de assiduidade precisam.
+ * A régua do "estar no quadro" mora em `lib/quadro.ts`.
+ */
+export function quadroEm(data: TalentData, dia: string): Employee[] {
+  return data.employees.filter((e) => !norm(data.deptMeta[e.dept] || '').includes('diretoria')
+    && noQuadroEm({ entrada: e.hireISO ?? null, saida: e.leftISO ?? null }, dia))
+}
+
+/** Idade completa — hoje, ou em `dia` (AAAA-MM-DD). */
+export function ageOf(birthISO: string | null, dia?: string): number | null {
   if (!birthISO) return null
-  const b = new Date(birthISO), t = new Date()
+  const b = new Date(birthISO), t = dia ? new Date(`${dia}T12:00:00`) : new Date()
   return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0)
 }
 
@@ -40,47 +54,48 @@ export function genRange(g: Gen): string {
 
 export type GenSeg = { key: string; label: string; count: number; pct: number; color: string; desc: string; ages: string }
 
-function genDist(emps: Employee[]): { segs: GenSeg[]; total: number; withDob: number; avg: number | null } {
+function genDist(emps: Employee[], dia?: string): { segs: GenSeg[]; total: number; withDob: number; avg: number | null } {
   const order = [...GENERATIONS, NI]
   const total = emps.length || 1
   const segs: GenSeg[] = order.map((g) => {
     const count = emps.filter((e) => genOf(e.birthDate).key === g.key).length
     return { key: g.key, label: g.label, count, pct: Math.round((count / total) * 100), color: g.color, desc: g.key === 'ni' ? 'Sem data de nascimento' : genRange(g as Gen), ages: g.key === 'ni' ? '' : `${NOW_YEAR - (g as Gen).to}–${NOW_YEAR - (g as Gen).from}` }
   }).filter((s) => s.count > 0)
-  const ages = emps.map((e) => ageOf(e.birthDate)).filter((a): a is number => a != null)
+  const ages = emps.map((e) => ageOf(e.birthDate, dia)).filter((a): a is number => a != null)
   const avg = ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : null
   return { segs, total: emps.length, withDob: ages.length, avg }
 }
 
 export type GenPerson = { id: string; nome: string; username: string | null; dept: string; initials: string; color: string; hasAvatar: boolean; gen: string; genColor: string; age: number | null; nasc: string | null }
-function genPeople(data: TalentData, emps: Employee[]): GenPerson[] {
+function genPeople(data: TalentData, emps: Employee[], dia?: string): GenPerson[] {
   return [...emps]
-    .sort((a, b) => (ageOf(b.birthDate) ?? -1) - (ageOf(a.birthDate) ?? -1) || a.nome.localeCompare(b.nome))
+    .sort((a, b) => (ageOf(b.birthDate, dia) ?? -1) - (ageOf(a.birthDate, dia) ?? -1) || a.nome.localeCompare(b.nome))
     .map((e) => {
       const g = genOf(e.birthDate)
-      return { id: e.id, nome: e.nome, username: e.username, dept: deptName(data, e.dept), initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, gen: g.label, genColor: g.color, age: ageOf(e.birthDate), nasc: e.birthDate ? new Date(e.birthDate).toLocaleDateString('pt-BR') : null }
+      return { id: e.id, nome: e.nome, username: e.username, dept: deptName(data, e.dept), initials: e.initials, color: e.color, hasAvatar: e.hasAvatar, gen: g.label, genColor: g.color, age: ageOf(e.birthDate, dia), nasc: e.birthDate ? new Date(e.birthDate).toLocaleDateString('pt-BR') : null }
     })
 }
 
-export function generationsVM(data: TalentData) {
-  const emps = workforce(data)
-  const overall = genDist(emps)
+/** `dia`: o retrato do fim do período (sem ele, hoje — as páginas /geracoes e /genero). */
+export function generationsVM(data: TalentData, dia?: string) {
+  const emps = dia ? quadroEm(data, dia) : workforce(data)
+  const overall = genDist(emps, dia)
   const byDept = [...data.departments]
     .map((d) => ({ id: d.id, nome: d.nome, emps: emps.filter((e) => e.dept === d.id) }))
     .filter((d) => d.emps.length > 0)
     .sort((a, b) => b.emps.length - a.emps.length)
-    .map((d) => { const dist = genDist(d.emps); return { id: d.id, nome: d.nome, total: dist.total, avg: dist.avg, withDob: dist.withDob, segs: dist.segs, people: genPeople(data, d.emps) } })
+    .map((d) => { const dist = genDist(d.emps, dia); return { id: d.id, nome: d.nome, total: dist.total, avg: dist.avg, withDob: dist.withDob, segs: dist.segs, people: genPeople(data, d.emps, dia) } })
   return { overall, byDept }
 }
 
 /* -------- gênero (M × F) -------- */
 export const gNorm = (g: string | null) => { const n = norm(g || ''); return n.startsWith('masc') ? 'M' : n.startsWith('fem') ? 'F' : '?' }
 
-function genderStats(emps: Employee[]) {
+function genderStats(emps: Employee[], dia?: string) {
   const m = emps.filter((e) => gNorm(e.gender) === 'M')
   const f = emps.filter((e) => gNorm(e.gender) === 'F')
   const ni = emps.filter((e) => gNorm(e.gender) === '?')
-  const avg = (list: Employee[]) => { const a = list.map((e) => ageOf(e.birthDate)).filter((x): x is number => x != null); return a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : null }
+  const avg = (list: Employee[]) => { const a = list.map((e) => ageOf(e.birthDate, dia)).filter((x): x is number => x != null); return a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : null }
   /* ⚠️⚠️ `null`, NUNCA 0, quando ninguém do grupo tem score aplicável. Zero num
      cartão chamado "Score médio" se lê como "esse grupo é péssimo", e o que
      houve foi ninguém ser medido — é a regra do `null` da casa, e este era o
@@ -96,13 +111,13 @@ function genderStats(emps: Employee[]) {
   }
 }
 
-export function genderVM(data: TalentData) {
-  const emps = workforce(data)
-  const overall = genderStats(emps)
+export function genderVM(data: TalentData, dia?: string) {
+  const emps = dia ? quadroEm(data, dia) : workforce(data)
+  const overall = genderStats(emps, dia)
   const byDept = [...data.departments]
     .map((d) => ({ id: d.id, nome: d.nome, emps: emps.filter((e) => e.dept === d.id) }))
     .filter((d) => d.emps.length > 0)
     .sort((a, b) => b.emps.length - a.emps.length)
-    .map((d) => ({ id: d.id, nome: d.nome, ...genderStats(d.emps), total: d.emps.length }))
+    .map((d) => ({ id: d.id, nome: d.nome, ...genderStats(d.emps, dia), total: d.emps.length }))
   return { overall, byDept }
 }

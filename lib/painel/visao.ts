@@ -14,7 +14,7 @@
    ============================================================ */
 import type { TalentData, Employee } from '@/lib/mock/data'
 import type { KpiPessoa } from '@/lib/mock/dashboard'
-import { workforce, genOf, gNorm, ageOf, type GenSeg } from '@/lib/mock/demographics'
+import { workforce, quadroEm, genOf, gNorm, ageOf, type GenSeg } from '@/lib/mock/demographics'
 import { personLevels } from '@/lib/education-edit'
 import { diasEntre } from '@/lib/serie-periodo'
 
@@ -65,7 +65,7 @@ function pessoaDe(data: TalentData, e: Employee, detalhe?: string): KpiPessoa {
   }
 }
 const porNome = (a: KpiPessoa, b: KpiPessoa) => a.nome.localeCompare(b.nome)
-const idade = (e: Employee) => { const a = ageOf(e.birthDate); return a != null ? `${a} anos` : 'sem data de nascimento' }
+const idade = (e: Employee, dia?: string) => { const a = ageOf(e.birthDate, dia); return a != null ? `${a} anos` : 'sem data de nascimento' }
 
 /**
  * Escolaridade: as fatias da rosca (de `buildDashboard`) com quem está em cada.
@@ -80,22 +80,23 @@ export function gruposEscolaridade(data: TalentData, fatias: { label: string; co
   }))
 }
 
-/** Gerações: os segmentos de `generationsVM` com quem está em cada, mais velho primeiro. */
-export function gruposGeracao(data: TalentData, segs: GenSeg[]): Grupo[] {
-  const perf = workforce(data)
+/** Gerações: os segmentos de `generationsVM` com quem está em cada, mais velho primeiro.
+ *  `dia`: o retrato do fim do período (o mesmo `dia` passado a `generationsVM`). */
+export function gruposGeracao(data: TalentData, segs: GenSeg[], dia?: string): Grupo[] {
+  const perf = dia ? quadroEm(data, dia) : workforce(data)
   return segs.map((s) => ({
     chave: s.key, rotulo: s.label, cor: s.color, quantos: s.count,
     pessoas: perf.filter((e) => genOf(e.birthDate).key === s.key)
-      .sort((a, b) => (ageOf(b.birthDate) ?? -1) - (ageOf(a.birthDate) ?? -1) || a.nome.localeCompare(b.nome))
-      .map((e) => pessoaDe(data, e, idade(e))),
+      .sort((a, b) => (ageOf(b.birthDate, dia) ?? -1) - (ageOf(a.birthDate, dia) ?? -1) || a.nome.localeCompare(b.nome))
+      .map((e) => pessoaDe(data, e, idade(e, dia))),
   }))
 }
 
 /** Gênero: masculino, feminino e — se houver — não informado. */
-export function gruposGenero(data: TalentData): Grupo[] {
-  const perf = workforce(data)
+export function gruposGenero(data: TalentData, dia?: string): Grupo[] {
+  const perf = dia ? quadroEm(data, dia) : workforce(data)
   const g = (chave: 'M' | 'F' | '?', rotulo: string, cor: string): Grupo => {
-    const pessoas = perf.filter((e) => gNorm(e.gender) === chave).map((e) => pessoaDe(data, e, idade(e))).sort(porNome)
+    const pessoas = perf.filter((e) => gNorm(e.gender) === chave).map((e) => pessoaDe(data, e, idade(e, dia))).sort(porNome)
     return { chave, rotulo, cor, quantos: pessoas.length, pessoas }
   }
   return [g('M', 'Masculino', 'var(--n-blue)'), g('F', 'Feminino', 'var(--n-pink)'), g('?', 'Não informado', 'var(--n-text-3)')]

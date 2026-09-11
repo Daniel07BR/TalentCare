@@ -87,6 +87,16 @@ for (const g of gestores) {
   const rDash = await bate('/dashboard', token)
   console.log('   ' + conta(rDash.status === 307 || rDash.status === 302, `/dashboard: HTTP ${rDash.status} → ${rDash.headers.get('location') ?? '(sem redirect)'}`))
 
+  // 6. (11/09/2026) O POUSO: quem entra pelo portal cai em /dashboard (o callback do
+  //    SSO); o proxy manda o gestor a /meu-setor, e /meu-setor ao setor que ele
+  //    avalia. Sem esta prova, "tem acesso" não diz ONDE a pessoa aterrissa.
+  const rPouso = await bate('/meu-setor', token)
+  const destino = rPouso.headers.get('location') ?? ''
+  console.log('   ' + conta((rPouso.status === 307 || rPouso.status === 302) && meus.some((x) => destino.endsWith(`/departamentos/${x.id}`)),
+    `entrada → /meu-setor → ${destino.replace(/^https?:\/\/[^/]+/, '') || '(sem redirect)'} (esperado o setor dele)`))
+  const rDashDestino = rDash.headers.get('location') ?? ''
+  console.log('   ' + conta(rDashDestino.endsWith('/meu-setor'), `/dashboard (callback do SSO) → ${rDashDestino.replace(/^https?:\/\/[^/]+/, '') || '(nada)'}`))
+
   // 5. (11/09/2026) Sem menu lateral: a página do setor dele chega SEM o botão da
   //    janela e SEM os cartões da Diretoria — nem escondidos, nem nos dados da página.
   if (meus[0]) {

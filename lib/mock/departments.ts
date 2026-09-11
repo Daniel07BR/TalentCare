@@ -2,9 +2,18 @@
    TalentCare — Departamentos (lista + detalhe). Puro em função de data.
    ============================================================ */
 import { geomSpark, geomLine, scoreColor, type TalentData } from './data'
+import { noQuadroEm, rotatividadeDoPeriodo } from '@/lib/quadro'
 import { heatmapFor } from './employee'
 
-export function deptListVM(data: TalentData) {
+/**
+ * ⚠️⚠️ `fromDay`/`toDay` (decisão do dono, 11/09/2026): as pessoas de cada setor são as
+ * do ÚLTIMO DIA do período, e a rotatividade é a DO PERÍODO (saídas ÷ quadro médio,
+ * sem anualizar) — a mesma régua do relatório do setor e do painel (`lib/quadro.ts`).
+ * Era o quadro de hoje e a taxa de 12 meses.
+ */
+export function deptListVM(data: TalentData, fromDay: string, toDay: string) {
+  const passagem = (e: { hireISO: string | null; leftISO: string | null }) => ({ entrada: e.hireISO, saida: e.leftISO })
+  const doSetor = (id: string) => data.employees.filter((e) => e.dept === id).map(passagem)
   /* ⚠️ A sparkline do card SAIU junto com o turnover sorteado: ela era
      `rnd(dseed × 17 + m)`, um passeio aleatório de 12 pontos com o score real só
      no último. Não existe série mensal de score (ele é percentil por janela), e
@@ -17,14 +26,15 @@ export function deptListVM(data: TalentData) {
      score e virou alfabética: ordenar por um número que não se mostra é
      classificar os setores às escondidas. */
   const cards = [...data.departments].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((d) => ({
-    id: d.id, nome: d.nome, headcount: d.headcount,
-    turnover: d.turnover, saidas12m: d.saidas12m,
+    id: d.id, nome: d.nome,
+    headcount: doSetor(d.id).filter((p) => noQuadroEm(p, toDay)).length,
+    rotatividade: rotatividadeDoPeriodo(doSetor(d.id), fromDay, toDay),
     gestores: d.chefia.filter((c) => c.nivel === 'gestor'),
     subs: d.chefia.filter((c) => c.nivel !== 'gestor'),
     pelaDiretoria: d.pelaDiretoria,
   }))
-  // Totais consideram só ativos (headcount do dept já é ativo).
-  const totalHc = data.departments.reduce((a, d) => a + d.headcount, 0)
+  // O total é o do mesmo dia dos cards.
+  const totalHc = cards.reduce((a, d) => a + d.headcount, 0)
   const semChefia = cards.filter((c) => c.gestores.length + c.subs.length === 0 && !c.pelaDiretoria).length
   return { cards, totalHc, semChefia, n: data.departments.length }
 }

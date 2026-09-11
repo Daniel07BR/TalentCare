@@ -3,6 +3,8 @@ import { useRouter } from 'next/navigation'
 import { Users2, ShieldCheck } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptListVM } from '@/lib/mock/departments'
+import { usePeriod } from '@/lib/ui/period'
+import { rotuloDoRetrato } from '@/lib/quadro'
 import type { ChefeDoSetor } from '@/lib/mock/data'
 import Avatar from '../Avatar'
 
@@ -27,7 +29,9 @@ const iniciais = (nome: string) => nome.split(' ').map((x) => x[0]).slice(0, 2).
 
 export default function DepartamentosPage() {
   const router = useRouter()
-  const vm = deptListVM(useTalentData())
+  const { fromDay, toDay } = usePeriod()
+  const vm = deptListVM(useTalentData(), fromDay, toDay)
+  const retrato = rotuloDoRetrato(toDay)
 
   return (
     <div className="tc-anim" style={{ width: '100%' }}>
@@ -38,7 +42,7 @@ export default function DepartamentosPage() {
         </div>
         <div style={{ display: 'flex', gap: 28 }}>
           <Total rotulo="Setores" valor={vm.n} />
-          <Total rotulo="Headcount total" valor={vm.totalHc} />
+          <Total rotulo={`Pessoas · ${retrato}`} valor={vm.totalHc} />
           {/* ⚠️ Só aparece quando há o que fazer: um "0 sem chefia" permanente
               vira paisagem e ninguém mais olha para ele no dia em que virar 1. */}
           {vm.semChefia > 0 && <Total rotulo="Sem chefia definida" valor={vm.semChefia} cor="var(--warning)" />}
@@ -57,7 +61,7 @@ export default function DepartamentosPage() {
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-.2px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.nome}</div>
                 <div style={{ fontSize: 11.5, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                  <b style={{ color: 'var(--text)', fontWeight: 700 }}>{d.headcount}</b> {d.headcount === 1 ? 'pessoa' : 'pessoas'}
+                  <b style={{ color: 'var(--text)', fontWeight: 700 }}>{d.headcount}</b> {d.headcount === 1 ? 'pessoa' : 'pessoas'} · {retrato}
                 </div>
               </div>
 
@@ -84,13 +88,15 @@ export default function DepartamentosPage() {
                 )}
               </div>
 
-              {/* ⚠️⚠️ O turnover deste card era `3.5 + rnd(seed) × 13`. Agora é a
-                  MESMA conta do relatório do setor, e o card diz o numerador — 0%
-                  de um setor de 2 pessoas e 0% de um de 21 não são a mesma notícia. */}
+              {/* ⚠️⚠️ O turnover deste card era `3.5 + rnd(seed) × 13`. Depois virou a
+                  taxa de 12 meses; desde 11/09/2026 é a DO PERÍODO, a mesma régua do
+                  relatório do setor e do painel (`lib/quadro.ts`). O card diz o
+                  numerador — 0% de um setor de 2 pessoas e de um de 21 não são a mesma
+                  notícia. Sem o vermelho de "≥ 20%": aquele corte era de 12 meses. */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Turnover 12 meses</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: d.turnover >= 20 ? 'var(--danger)' : d.turnover > 0 ? 'var(--warning)' : 'var(--text-mute)' }}>
-                  {d.turnover}% <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-mute)' }}>· {d.saidas12m} {d.saidas12m === 1 ? 'saída' : 'saídas'}</span>
+                <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Rotatividade no período</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: d.rotatividade.saidas > 0 ? 'var(--warning)' : 'var(--text-mute)' }}>
+                  {d.rotatividade.taxa.toLocaleString('pt-BR')}% <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-mute)' }}>· {d.rotatividade.saidas} {d.rotatividade.saidas === 1 ? 'saída' : 'saídas'}</span>
                 </div>
               </div>
             </div>

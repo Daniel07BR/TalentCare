@@ -49,6 +49,9 @@ export type DeptMetrics = {
   chefia: { id: string; nome: string; cargo: string; hasAvatar: boolean; nivel: string; deOutroSetor: boolean }[]
   /** Turnover REAL. `taxa12m` não acompanha o filtro — taxa só diz algo em 12 meses. */
   turnover: {
+    /** A rotatividade DO PERÍODO (saídas ÷ quadro médio, sem anualizar) — `lib/quadro.ts`. */
+    periodo: import('@/lib/quadro').Rotatividade
+    /** ⚠️ 12 meses: só o relatório antigo (`/completo`) usa, e diz "em 12 meses". */
     saidasNoPeriodo: number; saidas12m: number; taxa12m: number
     /** Quem saiu DENTRO do filtro. */
     noPeriodo: { id: string; nome: string; cargo: string; hasAvatar: boolean; quando: string | null }[]
@@ -67,7 +70,13 @@ export type DeptMetrics = {
     anterior: { de: string; ate: string; atual: number; total: number; comparavel: boolean; motivo: 'janela-longa' | 'sem-fonte' | null; fora: { fonte: string; desde: string | null }[] }
   }
   period: string; fromDay: string; toDay: string; dias: number; label: string
-  equipe: { ativos: number; total: number; comNexus: number }
+  equipe: {
+    ativos: number; total: number; comNexus: number
+    /** Quem estava no setor ao fim do período (o cartão "Pessoas"). */
+    noFim: number
+    /** "hoje" ou "em 31/08/2026" — o dia do retrato. */
+    retrato: string
+  }
   classroom: { criados: number; assistidos: number; videos: number }
   helpdesk: { abertos: number; resolvidos: number; segundos: number; resolvidosNormais: number }
   cide: { atividades: number }

@@ -1,5 +1,34 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (30) — Pessoas, idade, casa e gênero do FIM do período; rotatividade do período em todas as telas
+
+Pergunta do dono: *"pessoas na equipe, rotatividade, mulheres/homens, idade média não deveriam se
+adaptar ao período selecionado? Isso já acontece em todo sistema?"* — não acontecia (era o retrato de
+hoje, e a tela do setor nem dizia "hoje"; a rotatividade era de 12 meses no setor e "saídas ÷ quadro
+de hoje" no painel). Decisões do dono:
+- **Pessoas, idade média, tempo de casa e mulheres/homens = retrato do ÚLTIMO DIA do período**: em
+  "Agosto", quem estava em 31/08, com a idade e o tempo de casa daquele dia; em 30 dias ou "Atual",
+  hoje. Cada cartão diz o dia ("hoje" / "em 31/08/2026"). Vale no relatório do setor, no painel
+  principal (Headcount, Gerações, Gênero) e na lista de Departamentos.
+- **Rotatividade = a do período, em todas as telas**: saídas no período ÷ quadro médio (o do dia
+  anterior ao início e o do último dia), sem anualizar. O cartão mostra a conta. Saiu o vermelho de
+  "≥ 20%" (era corte de 12 meses). A análise de 12 meses segue no resumo do sistema Turnover e no
+  relatório antigo (`/completo`), que dizem "12 meses".
+- **A régua mora em `lib/quadro.ts`** e chega por dois caminhos (servidor: `/api/dept-metrics`;
+  navegador: painel e lista, do dataset). Escolaridade segue como retrato de hoje (a formação não
+  tem data), e a tela diz.
+- Limites, medidos: os 95 ativos têm admissão e as 31 saídas têm data; quem saiu antes de out/2023
+  não está na base; 6 admissões são o carimbo da conta no AD; o setor é o de hoje.
+- Prova: `scripts/ensaio-quadro-periodo.ts` (novo) — 15 setores × 4 janelas (30 dias, agosto, junho,
+  o ano): o setor e a lista dão o MESMO quadro no fim e a MESMA rotatividade; na janela que termina
+  hoje o quadro é o de ativos e diz "hoje". **180 conferências, 0 divergências.** Os de antes, limpos.
+
+**Acesso do Contábil (pedido do dono, para a demonstração à gestora e às sub-encarregadas):**
+Priscila Araújo (Gestora), Débora Santos e Liliane Pereira (Sub-encarregadas) são `GESTOR`, ativas,
+com vínculo só no Contábil. O `ensaio-acesso-gestao` ganhou a 6ª pergunta — o POUSO: pelo portal (o
+callback do SSO é `/dashboard`) → `/meu-setor` → o setor que a pessoa avalia. As três caem no Contábil;
+o painel da casa e o setor vizinho seguem fechados.
+
 ## 2026-09-11 (29) — Tema escuro legível; seletor de setor nas avaliações; setembro do WhatsApp refeito
 
 - **Tema escuro: nomes pretos no fundo escuro.** Toda linha clicável sem cor própria (a lista de

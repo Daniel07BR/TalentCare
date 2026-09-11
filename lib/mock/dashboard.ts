@@ -2,6 +2,7 @@
    TalentCare — view-model do Dashboard (puro em função de data + período).
    ============================================================ */
 import { geomSpark, geomLine, scoreColor, type TalentData, type Employee } from './data'
+import { noQuadroEm, rotatividadeDoPeriodo, rotuloDoRetrato } from '@/lib/quadro'
 import { periodDays, diasNoIntervalo } from '../period-range'
 import { ESC_RANK, ESC_COLOR, personLevels } from '../education-edit'
 import type { PeriodAssid } from './assiduidade'
@@ -31,7 +32,6 @@ export const PERIOD_LABEL: Record<Period, string> = {
  * outro período em vez de ser um caso à parte que alguém esquece.
  */
 function turnoverSeries(emps: Employee[], period: Period, from?: string | null, to?: string | null) {
-  const headcount = emps.filter((e) => e.status !== 'Desligado').length
   const { fromDay, toDay } = periodDays(period, from, to)
   const inicio = new Date(`${fromDay}T00:00:00`)
   const fim = new Date(`${toDay}T00:00:00`); fim.setDate(fim.getDate() + 1) // fim exclusivo
@@ -70,14 +70,18 @@ function turnoverSeries(emps: Employee[], period: Period, from?: string | null, 
     const d = new Date(e.leftISO)
     return d >= inicio && d < fim
   }).length
-  const rate = headcount ? +((exitsWin / headcount) * 100).toFixed(1) : 0
+  /* ⚠️⚠️ SAÍDAS ÷ QUADRO MÉDIO DO PERÍODO (decisão do dono, 11/09/2026) — a mesma
+     régua do relatório do setor, pela mesma função (`lib/quadro.ts`). Era saídas ÷
+     quadro de HOJE, e o setor usava 12 meses: a mesma palavra com duas réguas. */
+  const rot = rotatividadeDoPeriodo(emps.map((e) => ({ entrada: e.hireISO ?? null, saida: e.leftISO ?? null })), fromDay, toDay)
+  const rate = rot.taxa
   const labels = buckets.length <= 6
     ? buckets.map((b) => b.label)
     : [0, 0.25, 0.5, 0.75, 1].map((f) => buckets[Math.round(f * (buckets.length - 1))].label)
   // O último dia de cada bucket — o headcount é medido nesses pontos, para as
   // duas curvas do painel falarem exatamente do mesmo intervalo.
   const bucketFins = buckets.map((b) => { const d = new Date(b.end); d.setDate(d.getDate() - 1); return d })
-  return { vals, rate, labels, saidas: exitsWin, dias, bucketFins }
+  return { vals, rate, labels, saidas: exitsWin, dias, bucketFins, quadroMedio: rot.quadroMedio, quadroInicio: rot.quadroInicio, quadroFim: rot.quadroFim }
 }
 
 export type Kpi = {
@@ -86,6 +90,8 @@ export type Kpi = {
   /** A legenda que explica de que janela o número fala, ou por que ele é "—". */
   nota: string
   color: string
+  /** "hoje" ou "em 31/08/2026" — o dia do retrato (Headcount). */
+  retrato?: string
   /** `null` = não há série real para desenhar. Melhor cartão sem gráfico do que
    *  gráfico sem dado — era daí que vinham as quatro sparklines sorteadas. */
   spark: string | null
@@ -344,7 +350,11 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
 
   const kdef: (Omit<Kpi, 'spark' | 'sparkColor' | 'deltaColor' | 'deltaArrow'> & { vals: number[]; up: boolean | null; pessoas: KpiPessoa[] | null; pessoasNota?: string; pessoasSufixo?: string })[] = [
     {
-      label: 'Headcount', value: perf.length, unit: '', color: 'var(--info)',
+      /* ⚠️ O QUADRO DO ÚLTIMO DIA do período (decisão do dono, 11/09/2026): em
+         "Agosto", quem estava em 31/08; em 30 dias ou "Atual", hoje. Era sempre o de
+         hoje ("· hoje"). A curva (`hcSerie`) já media o fim de cada balde assim. */
+      label: 'Headcount', value: nonDir.filter((e) => noQuadroEm({ entrada: e.hireISO ?? null, saida: e.leftISO ?? null }, toDay)).length, unit: '', color: 'var(--info)',
+      retrato: rotuloDoRetrato(toDay),
       delta: saldoHc === 0 ? '0' : (saldoHc > 0 ? '+' : '') + saldoHc, up: saldoHc >= 0,
       nota: `${admitidos} ${admitidos === 1 ? 'entrada' : 'entradas'} · ${saidas} ${saidas === 1 ? 'saída' : 'saídas'} no período`,
       vals: hcSerie,
@@ -359,7 +369,7 @@ export function buildDashboard(data: TalentData, period: Period, opts: OpcoesDas
          mesma casa dava 1,1% em 7d, 5,7% em 30d e 29,9% em Ano — e "turnover" se
          lê como taxa anual, então quem abrisse em 7 dias veria uma empresa
          saudável. O rótulo do cartão passa a dizer de que janela ele fala. */
-      nota: `${tser.saidas} ${tser.saidas === 1 ? 'saída' : 'saídas'} em ${tser.dias} dias · não anualizado`,
+      nota: `${tser.saidas} ${tser.saidas === 1 ? 'saída' : 'saídas'} ÷ quadro médio de ${tser.quadroMedio.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} · ${tser.dias} dias, não anualizado`,
       vals: tser.vals.length > 1 ? tser.vals : [0, 0],
       /* ⚠️ NÃO abre, de propósito: quem saiu já é uma TELA inteira (`/turnover`,
          com motivo, tempo de casa e a curva). Um painel de oito linhas ao lado

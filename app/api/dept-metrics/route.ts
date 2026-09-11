@@ -8,6 +8,7 @@ import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cob
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { baldes, janelaAnterior } from '@/lib/serie-periodo'
+import { noQuadroEm, idadeEm, mesesDeCasaEm, rotatividadeDoPeriodo, rotuloDoRetrato } from '@/lib/quadro'
 
 /* ============================================================
    O RELATÓRIO DE UM DEPARTAMENTO, no período pedido.
@@ -289,7 +290,15 @@ export async function GET(req: NextRequest) {
       hasAvatar: !!p.avatarUrl,
       quando: p.leftAt ? p.leftAt.toISOString().slice(0, 10) : null,
     }))
+  /* ⚠️⚠️ A ROTATIVIDADE DO PERÍODO (decisão do dono, 11/09/2026): saídas no período
+     ÷ quadro médio do período, sem anualizar — a mesma do painel principal, pela
+     mesma função (`lib/quadro.ts`). A de 12 meses segue abaixo só para o relatório
+     antigo (`/completo`), que diz "em 12 meses". */
+  const passagem = (p: { entryDate: Date | null; leftAt: Date | null }) => ({
+    entrada: p.entryDate ? p.entryDate.toISOString() : null, saida: p.leftAt ? p.leftAt.toISOString() : null,
+  })
   const turnover = {
+    periodo: rotatividadeDoPeriodo(pessoas.map(passagem), fromDay, toDay),
     saidasNoPeriodo: saidasNoPeriodo.length,
     noPeriodo: quemSaiu(saidasNoPeriodo),
     em12m: quemSaiu(lista12m),
@@ -429,15 +438,20 @@ export async function GET(req: NextRequest) {
     },
   }
 
-  // ── Demografia (não é do período: é o retrato de hoje) ─────────────────────
-  const hoje = hojeRef
-  const idades = ativos
-    .map((p) => p.birthDate ? Math.floor((hoje.getTime() - p.birthDate.getTime()) / 31557600000) : null)
-    .filter((v): v is number => v != null && v > 14 && v < 90)
-  const meses = ativos
-    .map((p) => p.entryDate ? (hoje.getTime() - p.entryDate.getTime()) / 2629800000 : null)
+  /* ── Demografia: o RETRATO DO ÚLTIMO DIA do período ────────────────────────
+     ⚠️⚠️ Decisão do dono (11/09/2026): pessoas, idade, tempo de casa e gênero de
+     quem estava no setor ao FIM do período (em "Agosto", 31/08), com a idade e o
+     tempo de casa daquele dia. Era sempre o retrato de hoje, e a tela do setor não
+     dizia — quem escolhia "Agosto" lia as 18 de hoje como as de agosto. */
+  const noFim = pessoas.filter((p) => noQuadroEm(passagem(p), toDay))
+  const iso = (d: Date | null) => (d ? d.toISOString() : null)
+  const idades = noFim
+    .map((p) => idadeEm(iso(p.birthDate), toDay))
+    .filter((v): v is number => v != null)
+  const meses = noFim
+    .map((p) => mesesDeCasaEm(iso(p.entryDate), toDay))
     .filter((v): v is number => v != null && v >= 0)
-  const generos = ativos.reduce<Record<string, number>>((a, p) => {
+  const generos = noFim.reduce<Record<string, number>>((a, p) => {
     const g = (p.gender ?? '').toLowerCase().startsWith('f') ? 'F' : (p.gender ?? '').toLowerCase().startsWith('m') ? 'M' : '?'
     a[g] = (a[g] ?? 0) + 1
     return a
@@ -805,7 +819,13 @@ export async function GET(req: NextRequest) {
     serie,
     atividadeDoPeriodo,
     period, fromDay, toDay, dias, label: rotuloDoIntervalo(period, fromDay, toDay),
-    equipe: { ativos: ativos.length, total: pessoas.length, comNexus: nx.length },
+    equipe: {
+      ativos: ativos.length, total: pessoas.length, comNexus: nx.length,
+      /** Quem estava no setor ao fim do período — o número do cartão "Pessoas". */
+      noFim: noFim.length,
+      /** "hoje" ou "em 31/08/2026" — o dia do retrato (pessoas, idade, casa, gênero). */
+      retrato: rotuloDoRetrato(toDay),
+    },
 
     classroom: { criados: n(cls._sum.created), assistidos: n(cls._sum.courses), videos: n(cls._sum.videos) },
     helpdesk: {
