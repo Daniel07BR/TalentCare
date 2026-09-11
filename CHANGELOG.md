@@ -29,6 +29,15 @@ com vínculo só no Contábil. O `ensaio-acesso-gestao` ganhou a 6ª pergunta �
 callback do SSO é `/dashboard`) → `/meu-setor` → o setor que a pessoa avalia. As três caem no Contábil;
 o painel da casa e o setor vizinho seguem fechados.
 
+**O crítico** refez o Contábil de junho à mão (2 saídas, quadro 21 → 20, médio 20,5, **9,8%**; 20
+pessoas no fim; 15 mulheres e 5 homens) e bateu. Consertado do que ele achou:
+- **Borda do cartão Turnover do painel:** a taxa contava as saídas pela DATA e o texto e a curva
+  pela hora LOCAL — 14 das 33 saídas estão gravadas às 00:00 UTC, que no navegador em SP é 21:00 do
+  dia anterior. Em "30 dias" a partir de 12/09, o texto diria 2 saídas a menos que a própria taxa.
+  Agora tudo pelo dia (`AAAA-MM-DD`); o `ensaio-painel-novo` roda limpo também com `TZ=America/Sao_Paulo`.
+- A janela do Turnover (aberta pela rotatividade do setor) diz que é a análise de 12 MESES; as
+  páginas `/geracoes` e `/genero` (o "ver ›") dizem "quadro de hoje · não acompanha o período".
+
 ## 2026-09-11 (29) — Tema escuro legível; seletor de setor nas avaliações; setembro do WhatsApp refeito
 
 - **Tema escuro: nomes pretos no fundo escuro.** Toda linha clicável sem cor própria (a lista de

@@ -14,7 +14,7 @@ export default function GeneroPage() {
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Demografia · quadro ativo</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Demografia · quadro de hoje · não acompanha o período</div>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Comparativo por gênero</h1>
       </div>
 

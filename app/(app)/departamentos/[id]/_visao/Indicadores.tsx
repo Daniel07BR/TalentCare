@@ -36,7 +36,7 @@ export function Indicadores({ m, abrir, abrirPainel }: ComDetalhe & { abrirPaine
   return (
     <div className={s.indicadores}>
       <Tile Icone={Users} tom="blue" valor={num(m.equipe.noFim)} rotulo="Pessoas no setor" nota={retrato} />
-      <Tile className={s.rot} alto onClick={() => abrir('turnover')} dica="ver quem saiu e a movimentação dos últimos 12 meses" Icone={TrendingUp} tom={tomRot} valor={`${r.taxa.toLocaleString('pt-BR')}%`} rotulo="Rotatividade no período"
+      <Tile className={s.rot} alto onClick={() => abrir('turnover')} dica="abrir a análise de 12 meses: quem saiu e a movimentação mês a mês" Icone={TrendingUp} tom={tomRot} valor={`${r.taxa.toLocaleString('pt-BR')}%`} rotulo="Rotatividade no período"
         nota={<>
           <b style={{ color: 'var(--n-text-2)' }}>{r.saidas} {r.saidas === 1 ? 'saída' : 'saídas'} no período</b><br />
           ÷ quadro médio de {qm} ({r.quadroInicio} no início, {r.quadroFim} no fim) · não anualizado

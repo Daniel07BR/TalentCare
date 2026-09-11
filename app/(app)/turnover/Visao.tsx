@@ -19,10 +19,11 @@ export function TurnoverVisao({ vm, setor = null, taxa }: {
   taxa?: { valor: number; saidas: number }
 }) {
   const kpis = setor && taxa ? [
-    /* ⚠️⚠️ No setor, a taxa é a do RELATÓRIO (saídas ÷ quem passou pelo setor),
-       e não a desta página (saídas ÷ ativos). As duas respondem perguntas
-       próximas com números diferentes — 11,1% × 12,5% no Legal em 11/09/2026 —,
-       e a janela abre por cima do cartão que mostra a primeira. */
+    /* ⚠️⚠️ ESTA JANELA É A ANÁLISE DE 12 MESES. Desde 11/09/2026 (decisão do dono) o
+       cartão do relatório do setor mostra a rotatividade DO PERÍODO (saídas ÷ quadro
+       médio, `lib/quadro.ts`); aqui segue a de 12 meses do setor (saídas ÷ quem passou
+       por ele), com as entradas e saídas mês a mês. O rótulo diz "12 meses" em cada
+       número — são duas perguntas, e a janela não finge que é a mesma. */
     { label: 'Rotatividade 12 meses', value: taxa.valor + '%', color: 'var(--danger)' },
     { label: 'Headcount ativo', value: vm.headcount, color: 'var(--text)' },
     { label: 'Entradas (12m)', value: vm.totalEnt, color: 'var(--success)' },

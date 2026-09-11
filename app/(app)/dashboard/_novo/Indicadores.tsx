@@ -70,8 +70,9 @@ export function Indicadores({ kpis, selos, esperandoPonto, recarregandoPonto = f
               <span style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--n-text-2)' }}>
                   {k.label}
-                  {/* ⚠️ O número grande do Headcount é o quadro de HOJE, em qualquer
-                      filtro (o saldo ao lado é que é do período). Achado do crítico. */}
+                  {/* ⚠️ O número grande do Headcount é o quadro do ÚLTIMO DIA do período
+                      ("hoje" quando a janela termina hoje) — decisão do dono, 11/09/2026;
+                      o saldo ao lado é o do período. */}
                   {k.label === 'Headcount' && <span style={{ fontWeight: 500, color: 'var(--n-text-3)' }}> · {k.retrato ?? 'hoje'}</span>}
                 </span>
                 {/* O selo: no Headcount é o SALDO (entradas − saídas, em pessoas);

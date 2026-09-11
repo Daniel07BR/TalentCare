@@ -60,16 +60,16 @@ function turnoverSeries(emps: Employee[], period: Period, from?: string | null, 
     }
   }
 
-  const vals = buckets.map((b) => emps.filter((e) => {
-    if (!e.leftISO) return false
-    const d = new Date(e.leftISO)
-    return d >= b.start && d < b.end
-  }).length)
-  const exitsWin = emps.filter((e) => {
-    if (!e.leftISO) return false
-    const d = new Date(e.leftISO)
-    return d >= inicio && d < fim
-  }).length
+  /* ⚠️⚠️ SAÍDA PELO DIA DA DATA (texto AAAA-MM-DD), como `lib/quadro.ts` (achado do
+     crítico, 11/09/2026). Com `new Date(leftISO)` contra a meia-noite LOCAL, as 14
+     saídas gravadas às 00:00 UTC viravam 21:00 do dia anterior no navegador de SP:
+     na borda da janela o texto do cartão contava 2 saídas a menos que a própria
+     taxa, e o Headcount ao lado discordava. Os baldes viram dias locais, que são os
+     mesmos dias do filtro. */
+  const diaLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const saiuEm = (e: Employee) => (e.leftISO ? e.leftISO.slice(0, 10) : null)
+  const vals = buckets.map((b) => { const de = diaLocal(b.start), ate = diaLocal(b.end); return emps.filter((e) => { const s = saiuEm(e); return !!s && s >= de && s < ate }).length })
+  const exitsWin = emps.filter((e) => { const s = saiuEm(e); return !!s && s >= fromDay && s <= toDay }).length
   /* ⚠️⚠️ SAÍDAS ÷ QUADRO MÉDIO DO PERÍODO (decisão do dono, 11/09/2026) — a mesma
      régua do relatório do setor, pela mesma função (`lib/quadro.ts`). Era saídas ÷
      quadro de HOJE, e o setor usava 12 meses: a mesma palavra com duas réguas. */
