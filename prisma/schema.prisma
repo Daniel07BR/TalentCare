@@ -300,6 +300,18 @@ model WhatsappAttendantDaily {
   abertos     Int      @default(0)
   finalizados Int      @default(0)
   handleSum   Int      @default(0) @map("handle_sum")
+  /// ⚠️⚠️ AVALIAÇÃO DO CLIENTE (11/09/2026, pedido do dono: "preciso desses dados para
+  /// mudar a cultura da empresa"). Vêm do Painel, que lê o detalhe de cada atendimento
+  /// finalizado no OneCode. NULO = o Painel ainda não conferiu aquele dia — e NÃO "não
+  /// pediu": zero aqui acusaria a pessoa (regra (a) da casa). `verificados` é quantos
+  /// finalizados foram conferidos; é o denominador do "pediu avaliação".
+  verificados Int?
+  /// Finalizados em que a mensagem de avaliação foi enviada ao cliente.
+  pedidos     Int?
+  /// Finalizados com nota do cliente.
+  avaliados   Int?
+  /// Soma das notas (escala 1–5); média = notaSum ÷ avaliados.
+  notaSum     Int?     @map("nota_sum")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([dept, name, day])

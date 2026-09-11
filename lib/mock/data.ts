@@ -257,7 +257,7 @@ export const PALETTE = [
 // porque o map é sobre `SYSTEMS`. O mensageiro que entregou 266 serviços no
 // período aparecia com seis barras rasas no gráfico que responde "onde essa
 // pessoa trabalha". É o 6º consumidor da checklist do `docs/FONTES.md`.
-export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'Painel de Atendimento', 'CIDE', 'Chat Interno', 'Gerência']
+export const SYSTEMS = ['HelpDesk', 'ClassRoom', 'Consultoria Plus', 'WhatsApp', 'CIDE', 'Chat Interno', 'Gerência']
 
 /** PRNG determinístico por seed (sin-based). */
 export function rnd(s: number): number {
@@ -309,7 +309,7 @@ export function fmtTempo(m: number): string {
 export function sysColor(s: string): string {
   return ({
     HelpDesk: 'var(--chart-4)', ClassRoom: 'var(--chart-2)', 'Consultoria Plus': 'var(--chart-3)',
-    'Painel de Atendimento': 'var(--chart-1)', CIDE: 'var(--chart-5)',
+    'WhatsApp': '#25D366', CIDE: 'var(--chart-5)',
     'Chat Interno': 'var(--chart-3)', 'Gerência': 'var(--chart-2)',
   } as Record<string, string>)[s]
 }

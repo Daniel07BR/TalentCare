@@ -36,7 +36,7 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
   return [
     { nome: 'ClassRoom', ate: cls._max.day },
     { nome: 'Rádio', ate: radio._max.day },
-    { nome: 'Painel de Atendimento', ate: wpp._max.day },
+    { nome: 'WhatsApp', ate: wpp._max.day },
     { nome: 'CIDE', ate: cide._max.day },
     { nome: 'HelpDesk', ate: hd._max.day },
     { nome: 'Consultoria Plus', ate: cons._max.day },

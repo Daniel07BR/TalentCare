@@ -239,7 +239,7 @@ export async function GET(req: NextRequest) {
       UNION ALL SELECT 'Rádio',
              (SELECT MAX(day) FROM radio_daily WHERE nexus_user_id = ${nx}),
              (SELECT MAX(day) FROM radio_daily)
-      UNION ALL SELECT 'Painel de Atendimento',
+      UNION ALL SELECT 'WhatsApp',
              (SELECT MAX(day) FROM whatsapp_attendant_daily
                WHERE lower(translate(name,'ÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç','AAAAEEIOOOUCaaaaeeioooucc'))
                    = lower(translate(${nome},'ÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç','AAAAEEIOOOUCaaaaeeioooucc'))),

@@ -15,5 +15,5 @@ export const SISTEMAS = ['classroom', 'helpdesk', 'cide', 'consultoria', 'gerenc
 export type Sistema = (typeof SISTEMAS)[number]
 export const NOME_DO_SISTEMA: Record<Sistema, string> = {
   classroom: 'ClassRoom', helpdesk: 'HelpDesk', cide: 'CIDE', consultoria: 'Consultoria Plus', gerencia: 'Gerência · mensageria',
-  chat: 'Chat Interno', whatsapp: 'Painel de Atendimento · WhatsApp', radio: 'Rádio Itamarathy', assiduidade: 'Assiduidade e disciplina',
+  chat: 'Chat Interno', whatsapp: 'WhatsApp', radio: 'Rádio Itamarathy', assiduidade: 'Assiduidade e disciplina',
 }

@@ -54,7 +54,7 @@ export const GRUPOS_TELAS: GrupoTelas[] = [
       { chave: 'assiduidade', href: '/assiduidade', label: 'Assiduidade', desc: 'Atrasos e advertências do ponto', tom: 'amber' },
       { chave: 'classroom', href: '/classroom', label: 'ClassRoom', desc: 'Cursos e vídeos criados e concluídos', tom: 'purple' },
       { chave: 'radio', href: '/radio', label: 'Rádio', desc: 'Ouvintes, sessões e horas ouvidas', tom: 'pink' },
-      { chave: 'whatsapp', href: '/whatsapp', label: 'WhatsApp', desc: 'Atendimentos do Painel de Atendimento', tom: 'green' },
+      { chave: 'whatsapp', href: '/whatsapp', label: 'WhatsApp', desc: 'Atendimentos a clientes pelo WhatsApp', tom: 'whats' },
       { chave: 'consultoria', href: '/consultoria', label: 'Consultoria Plus', desc: 'Chamados e estudos da consultoria', tom: 'blue' },
       { chave: 'helpdesk', href: '/helpdesk', label: 'HelpDesk', desc: 'Chamados abertos e resolvidos', tom: 'orange' },
       { chave: 'cide', href: '/cide', label: 'CIDE', desc: 'Atividades registradas no CIDE', tom: 'purple' },

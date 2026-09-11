@@ -126,7 +126,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const realBySystem: Record<string, number | null> = {
     HelpDesk: m ? m.helpdesk.opened + m.helpdesk.resolved : null,
     ClassRoom: m ? m.classroom.videos + m.classroom.courses + m.classroom.created : null,
-    'Painel de Atendimento': m ? m.whatsapp.abertos : null,
+    'WhatsApp': m ? m.whatsapp.abertos : null,
     'Consultoria Plus': m ? m.consultoria.total : null,
     CIDE: m ? m.cide.atividades : null,
     // Gerência = execução + demanda; o card abaixo separa as duas.

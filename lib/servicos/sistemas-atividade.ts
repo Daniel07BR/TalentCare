@@ -10,7 +10,7 @@
 export type SistemaAtividade = { sistema: string; titulo: string; oque: string }
 
 export const SISTEMAS_ATIVIDADE: SistemaAtividade[] = [
-  { sistema: 'WhatsApp', titulo: 'WhatsApp · Painel de Atendimento', oque: 'Atendimento a clientes pelo WhatsApp da empresa (OneCode).' },
+  { sistema: 'WhatsApp', titulo: 'WhatsApp', oque: 'Atendimento a clientes pelo WhatsApp da empresa (OneCode).' },
   { sistema: 'HelpDesk', titulo: 'HelpDesk', oque: 'Chamados de suporte ao T.I: quem pede ajuda e quem resolve.' },
   { sistema: 'Chat Interno', titulo: 'Chat Interno', oque: 'Pedidos entre setores feitos pelo Chat Interno: quem pede e quem atende.' },
   { sistema: 'ClassRoom', titulo: 'ClassRoom', oque: 'Treinamentos da casa: cursos e vídeo-aulas feitos, e cursos criados.' },

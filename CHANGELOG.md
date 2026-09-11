@@ -1,5 +1,63 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (27) — WhatsApp: a avaliação do cliente por pessoa (estrelas, pedidos, avaliados)
+
+Pedido do dono: *"no relatório do whats, coloque para a pessoa a pontuação da nota que ela
+recebeu em formato de estrela, mas vamos deixar exposto em cada usuário quantos atendimentos a
+pessoa fez, solicitou avaliação e quantos foram avaliados. Preciso desses dados para mudar a
+cultura da empresa."*
+
+- **Relatório do WhatsApp → bloco "Avaliação dos clientes"** (`app/(app)/whatsapp/AvaliacaoClientes.tsx`):
+  logo abaixo dos números do topo, TODAS as pessoas do período, cada uma com **Atendimentos**
+  (os finalizados conferidos um a um no OneCode, sem grupo), **Pediu avaliação** (quantos e %),
+  **Avaliados** (quantos e % dos pedidos) e a **Nota** em estrelas, com a média e o nº de notas.
+  No topo, o resumo do grupo. Ordena por mais atendimentos, por quem mais pede (mínimo de 10
+  atendimentos, para "1 em 1" não liderar) ou pela nota. Obedece ao período, às abas, ao setor e
+  à fila. **Histórico carregado desde 01/06/2026** — jun 5.010 conferidos / 518 pedidos / 72
+  notas (4,94); jul 5.275 / 506 / 101 (4,92); ago 4.439 / 591 / 106 (4,90); set 1.669 / 252 / 42.
+- **"Painel de Atendimento" virou "WhatsApp"** em todo o TalentCare (janela do sistema, cartão
+  do setor, ficha, linha do tempo, frescor, menu, régua de atividades), e as barras e destaques
+  do WhatsApp ganharam o verde do WhatsApp (tom novo `whats` na paleta, #25D366).
+- **De onde vem** (medido na API do OneCode em 11/09): a nota só está no DETALHE do atendimento
+  (`rate`, escala 5); o PEDIDO não tem campo — é a mensagem da empresa que contém a
+  `feedbackMessage` da conexão ("…avalie nosso atendimento."). O Painel de Atendimento (`.70`)
+  confere cada finalizado a cada 10 min (`run-avaliacao-onecode.mjs`) e entrega por atendente e
+  dia; aqui, 4 colunas em `whatsapp_attendant_daily` (aplicadas com ALTER, sem `db push`).
+- ⚠️⚠️ **Regra (a):** dia não conferido é "—", nunca "0 pedidos"; as colunas nascem nulas e o
+  sync grava `undefined` quando o campo não vem. O "% pediu" é sobre os CONFERIDOS (grupo não
+  entra — não se pede nota a grupo). A média mostra sempre de quantas notas saiu.
+- ⚠️⚠️ **Por que os três números e não só a estrela** (medido em jun–set, conferido pelo
+  crítico): o atendente pede avaliação em ~10% dos atendimentos (Pessoal 31%, Fiscal 5%, Contábil
+  3%, as demais filas 0) e o cliente responde a ~13–18% dos pedidos; 65 das 69 notas da amostra
+  eram 5. "Pediu" mede o ATENDENTE; "Avaliados" mede o CLIENTE; a estrela sozinha premiaria quem
+  pede pouco. **A nota NÃO entra na pontuação** — é vitrine, até a cobertura crescer.
+- ⚠️ **Os quatro números saem da mesma contagem** (a do OneCode), e não do `finalizados` do
+  espelho daqui, que perdeu 15–24% em jun–set (abaixo): com ele a linha diria "10 atendimentos,
+  pediu em 12 de 14". A carga do passado (`run-whatsapp-sync.mjs --so-avaliacao --desde`) só
+  acrescenta os quatro campos; onde o nome mudou de grafia desde o dia espelhado, cria a linha
+  SÓ com a avaliação e zero em abertos/finalizados (223 linhas) — nenhuma soma de atividade muda,
+  nada é apagado.
+
+**Dois defeitos achados no caminho, consertados na origem (Painel):**
+- **Quem pedia avaliação PERDIA o finalizado.** O Painel só relia atendimentos `open`/`pending`;
+  o finalizado com pedido passa por `feedback` (esperando a nota) e ficava preso assim até a
+  reconciliação de domingo — e o TalentCare, que só busca os últimos dias, nunca recebia a
+  correção. 83 presos em `feedback` e 84 em `bot` em 11/09 (40 de 40 da amostra já `closed` no
+  OneCode). Agora relê `status != closed`: **167 destravados**.
+- **O dia parcial apagava o dia cheio** (a armadilha da memória `espelho-diario-dia-parcial-apaga`,
+  aqui no WhatsApp): o `.78` roda em UTC, o sync pedia desde 00:00 UTC (21h de SP) e o Painel
+  devolvia o dia anterior só com as 3 últimas horas, que sobrescreviam a linha cheia a cada hora.
+  O Painel passou a recuar o `from` à meia-noite de SP (`lib/dia-sp.ts`, fuso pelo `Intl`).
+  Teste de rodar duas vezes: 09/09 foi de 122 para **173** finalizados e ficou.
+
+⚠️⚠️ **EM ABERTO — decisão do dono: o HISTÓRICO do espelho segue abaixo do Painel.** Medido em
+11/09: jun 4.728 × 5.010 (−6%), jul 4.332 × 5.276 (−18%), ago 3.769 × 4.441 (−15%), set 1.262 ×
+1.663 (−24%); quase tudo do lado "espelho a menos" (jul: 390 linhas abaixo, −902; 20 acima, +21).
+O conserto acima vale daqui para a frente. Refazer jun–set exige recarregar do Painel E apagar
+~130 linhas cujo nome mudou de grafia ("bruna cunha" × "Bruna Cunha", "Priscila Araújo Silva"),
+senão a recarga as contaria em dobro. Mexe na atividade de WhatsApp de agosto, que entra na
+pontuação já gravada do Legal (`conferir-mes.ts` depois).
+
 ## 2026-09-11 (26) — Pontos por atividade: por sistema, e cada tarefa dizendo o que conta
 
 Pedido do dono: *"cada departamento pode determinar o tempo médio de cada tarefa já monitorada

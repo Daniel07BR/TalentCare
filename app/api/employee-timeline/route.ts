@@ -144,8 +144,8 @@ export async function GET(req: NextRequest) {
     const fi = r._sum.finalizados ?? 0
     // ⚠️ "0 atendimentos · 5 finalizados" acontecia quando a pessoa só fechava
     // conversas abertas na véspera. A ação passa a dizer o que houve.
-    if (ab > 0) push('Painel de Atendimento', 'var(--chart-1)', r.day, `${plural(ab, 'atendimento', 'atendimentos')} no WhatsApp`, fi > 0 ? plural(fi, 'finalizado', 'finalizados') : 'abertos no dia')
-    else if (fi > 0) push('Painel de Atendimento', 'var(--chart-1)', r.day, `Finalizou ${plural(fi, 'atendimento', 'atendimentos')}`, 'abertos antes deste dia')
+    if (ab > 0) push('WhatsApp', '#25D366', r.day, `${plural(ab, 'atendimento', 'atendimentos')} no WhatsApp`, fi > 0 ? plural(fi, 'finalizado', 'finalizados') : 'abertos no dia')
+    else if (fi > 0) push('WhatsApp', '#25D366', r.day, `Finalizou ${plural(fi, 'atendimento', 'atendimentos')}`, 'abertos antes deste dia')
   }
   for (const r of radio) {
     const h = Math.round(r.seconds / 3600)

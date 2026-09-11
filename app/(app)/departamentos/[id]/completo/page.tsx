@@ -469,9 +469,9 @@ function Atividade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => v
       />)
   }
 
-  add('Painel de Atendimento', tem(m.whatsapp.abertos, m.whatsapp.finalizados),
+  add('WhatsApp', tem(m.whatsapp.abertos, m.whatsapp.finalizados),
     <CardFonte
-      titulo="Painel de Atendimento · WhatsApp" onDetalhe={() => abrir('whatsapp')} cor="var(--chart-1)" Icone={MessageCircle}
+      titulo="WhatsApp" onDetalhe={() => abrir('whatsapp')} cor="var(--chart-1)" Icone={MessageCircle}
       ranking={r.whatsapp.gente} unidade={r.whatsapp.rotulo || "mais finalizou atendimento"}
       numeros={[
         { label: 'Atendimentos abertos', valor: m.whatsapp.abertos, cor: 'var(--info)' },

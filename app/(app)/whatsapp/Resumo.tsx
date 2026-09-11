@@ -8,12 +8,15 @@ import { deptName } from '@/lib/mock/employee'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
 import EsqueletoResumo from '../EsqueletoResumo'
+import AvaliacaoClientes, { type LinhaAvaliacao } from './AvaliacaoClientes'
 
-type Att = { dept: string; name: string; abertos: number }
+type Att = LinhaAvaliacao
 type Overview = {
   kpis: { pendingNow: number; openNow: number; abertos: number; finalizados: number; avgHandleSeconds: number }
   series: { day: string; abertos: number }[]
   attendants: Att[]
+  /** Primeiro dia em que o Painel conferiu a avaliação no OneCode (`null` = nenhum). */
+  avaliacaoDesde?: string | null
 }
 
 const WppIcon = ({ size = 22 }: { size?: number }) => (
@@ -32,6 +35,8 @@ function fmtDur(sec: number): string {
   return `${m}min`
 }
 const dayLabel = (d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)
+/** O verde do WhatsApp (pedido do dono, 11/09/2026: "mude a cor para a cor do whats"). */
+const WPP = '#25D366'
 
 export default function WhatsappResumo() {
   const abrirPessoa = usePainelDaPessoa()
@@ -105,6 +110,7 @@ export default function WhatsappResumo() {
     return rows.filter((r) => r.abertos > 0).sort((a, b) => b.abertos - a.abertos).slice(0, 10)
   }, [nameTotals, empByName, activeTab])
   const maxAtt = Math.max(1, ...topList.map((a) => a.abertos))
+  const pessoaDe = useMemo(() => (nome: string) => empByName.get(norm(nome)), [empByName])
 
   const KPI = ({ label, value, accent }: { label: string; value: string | number; accent: string }) => (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 'var(--radius)', padding: '16px 18px' }}>
@@ -142,10 +148,22 @@ export default function WhatsappResumo() {
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${setor || fila ? 3 : 5},1fr)`, gap: 14, marginBottom: 16 }}>
             {!setor && !fila && <KPI label="Sem atendimento (agora)" value={kpis!.pendingNow} accent="var(--danger)" />}
             {!setor && !fila && <KPI label="Em andamento (agora)" value={kpis!.openNow} accent="var(--warning)" />}
-            <KPI label="Abertos no período" value={kpis!.abertos.toLocaleString('pt-BR')} accent="var(--accent)" />
+            <KPI label="Abertos no período" value={kpis!.abertos.toLocaleString('pt-BR')} accent={WPP} />
             <KPI label="Finalizados no período" value={kpis!.finalizados.toLocaleString('pt-BR')} accent="var(--success)" />
             <KPI label="Tempo médio" value={fmtDur(kpis!.avgHandleSeconds)} accent="var(--info)" />
           </div>
+
+          {/* ⚠️ A avaliação dos clientes, por pessoa (11/09/2026, pedido do dono) —
+              mesma janela, mesmo setor/fila e mesma aba do Top atendentes. Logo abaixo dos
+              números do topo: é o que o dono quer à vista ("não apresentou as estrelas"). */}
+          <AvaliacaoClientes
+            linhas={ov.attendants}
+            desde={ov.avaliacaoDesde ?? null}
+            pessoaDe={pessoaDe}
+            filtro={setor || fila || activeTab === 'Geral' ? null : activeTab}
+            onAbrir={(id) => abrirPessoa('whatsapp', id)}
+            subtitulo={setor ? `As pessoas de ${setor.nome}` : fila ? `Só o que passou pela fila de ${fila}` : activeTab === 'Geral' ? 'Todos os departamentos' : activeTab}
+          />
 
           {/* Série diária de abertos */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
@@ -157,7 +175,7 @@ export default function WhatsappResumo() {
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160 }}>
                 {ov.series.map((s) => (
                   <div key={s.day} title={`${dayLabel(s.day)}: ${s.abertos}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
-                    <div className="cbar" style={{ width: '100%', height: `${(s.abertos / maxBar) * 100}%`, minHeight: 2, background: 'var(--accent)', borderRadius: '3px 3px 0 0' }} />
+                    <div className="cbar" style={{ width: '100%', height: `${(s.abertos / maxBar) * 100}%`, minHeight: 2, background: WPP, borderRadius: '3px 3px 0 0' }} />
                   </div>
                 ))}
               </div>
@@ -195,7 +213,7 @@ export default function WhatsappResumo() {
                   style={{
                     fontFamily: 'inherit', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                     padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border)',
-                    background: t === activeTab ? 'var(--accent)' : 'var(--surface-2)',
+                    background: t === activeTab ? WPP : 'var(--surface-2)',
                     color: t === activeTab ? '#1a1205' : 'var(--text-dim)',
                   }}
                 >
@@ -226,7 +244,7 @@ export default function WhatsappResumo() {
                       )}
                       <div style={{ width: 150, flex: 'none', fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</div>
                       <div style={{ flex: 1, height: 10, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}>
-                        <div className="cbar" style={{ height: '100%', width: `${(a.abertos / maxAtt) * 100}%`, background: 'var(--accent)', borderRadius: 20 }} />
+                        <div className="cbar" style={{ height: '100%', width: `${(a.abertos / maxAtt) * 100}%`, background: WPP, borderRadius: 20 }} />
                       </div>
                       <div style={{ width: 44, flex: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{a.abertos}</div>
                     </div>
@@ -235,6 +253,7 @@ export default function WhatsappResumo() {
               </div>
             )}
           </div>
+
         </>
       )}
     </div>

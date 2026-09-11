@@ -9,6 +9,31 @@ import type { Period } from '@/lib/mock/dashboard'
 // "Visão geral" do WhatsApp montada do espelho LOCAL (não ao vivo): KPIs,
 // série diária de abertos e top atendentes, para o período selecionado. O
 // snapshot pendingNow/openNow é "agora" (do último sync).
+
+/* ⚠️⚠️ A AVALIAÇÃO DO CLIENTE por atendente (11/09/2026, pedido do dono). Vem na
+   MESMA linha e na MESMA janela dos finalizados — então obedece ao filtro de
+   período, ao setor e à fila sem conta à parte. Os quatro campos são NULOS nos
+   dias que o Painel ainda não conferiu no OneCode, e o `_sum` do Prisma ignora
+   nulo: `verificados` nulo na soma = nenhum dia conferido = a tela mostra "—",
+   não "0 pedidos" (regra (a) da casa). */
+const SOMA_ATENDENTE = { abertos: true, finalizados: true, verificados: true, pedidos: true, avaliados: true, notaSum: true } as const
+type SomaAtendente = { abertos: number | null; finalizados: number | null; verificados: number | null; pedidos: number | null; avaliados: number | null; notaSum: number | null }
+const linhaAtendente = (r: { dept: string; name: string; _sum: SomaAtendente }) => ({
+  dept: r.dept, name: r.name,
+  abertos: r._sum.abertos ?? 0,
+  finalizados: r._sum.finalizados ?? 0,
+  verificados: r._sum.verificados, pedidos: r._sum.pedidos, avaliados: r._sum.avaliados, notaSum: r._sum.notaSum,
+})
+/* Antes só entrava quem ABRIU no período; quem só finalizou (atendimento aberto
+   antes da janela) sumia da lista — e a avaliação é do finalizado. */
+const temAtendente = (a: { abertos: number; finalizados: number }) => a.abertos > 0 || a.finalizados > 0
+
+/** O primeiro dia que o Painel conferiu — "avaliação medida desde". */
+async function avaliacaoDesde(): Promise<string | null> {
+  const r = await prisma.whatsappAttendantDaily.findFirst({ where: { verificados: { not: null } }, orderBy: { day: 'asc' }, select: { day: true } })
+  return r?.day ?? null
+}
+
 export async function GET(req: NextRequest) {
   /* ⚠️⚠️ Devolvia a empresa inteira para qualquer sessão. Ver `lib/alcance.ts`. */
   const alcance = await alcanceDeQuemLe()
@@ -36,7 +61,7 @@ export async function GET(req: NextRequest) {
     const doSetor = { ...where, name: { in: nomes } }
     const [porDia, porAtendente] = await Promise.all([
       prisma.whatsappAttendantDaily.groupBy({ by: ['day'], where: doSetor, _sum: { abertos: true, finalizados: true, handleSum: true } }),
-      prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: doSetor, _sum: { abertos: true } }),
+      prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: doSetor, _sum: SOMA_ATENDENTE }),
     ])
     let ab = 0, fin = 0, hs = 0
     for (const r of porDia) { ab += r._sum.abertos ?? 0; fin += r._sum.finalizados ?? 0; hs += r._sum.handleSum ?? 0 }
@@ -46,8 +71,9 @@ export async function GET(req: NextRequest) {
       // setor — fica zerado e a tela não o mostra neste modo.
       kpis: { pendingNow: 0, openNow: 0, abertos: ab, finalizados: fin, avgHandleSeconds: fin ? Math.round(hs / fin) : 0 },
       series: porDia.map((r) => ({ day: r.day, abertos: r._sum.abertos ?? 0 })).filter((r) => r.abertos > 0).sort((a, b) => a.day.localeCompare(b.day)),
-      attendants: porAtendente.map((r) => ({ dept: r.dept, name: r.name, abertos: r._sum.abertos ?? 0 })).filter((a) => a.abertos > 0),
+      attendants: porAtendente.map(linhaAtendente).filter(temAtendente),
       snapshotAt: null,
+      avaliacaoDesde: await avaliacaoDesde(),
     })
   }
 
@@ -66,7 +92,7 @@ export async function GET(req: NextRequest) {
     }
     const [linhasDaFila, porAtendente] = await Promise.all([
       prisma.whatsappDaily.findMany({ where: { ...where, dept: fila }, select: { day: true, abertos: true, finalizados: true, handleSum: true } }),
-      prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, dept: fila, ...porNome(alcance) }, _sum: { abertos: true } }),
+      prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, dept: fila, ...porNome(alcance) }, _sum: SOMA_ATENDENTE }),
     ])
     let ab = 0, fin = 0, hs = 0
     const porDia = new Map<string, number>()
@@ -76,8 +102,9 @@ export async function GET(req: NextRequest) {
       // O "agora" é da casa inteira, sem fila — fica zerado e a tela não o mostra neste modo.
       kpis: { pendingNow: 0, openNow: 0, abertos: ab, finalizados: fin, avgHandleSeconds: fin ? Math.round(hs / fin) : 0 },
       series: [...porDia.entries()].map(([day, n]) => ({ day, abertos: n })).sort((a, b) => a.day.localeCompare(b.day)),
-      attendants: porAtendente.map((r) => ({ dept: r.dept, name: r.name, abertos: r._sum.abertos ?? 0 })).filter((x) => x.abertos > 0),
+      attendants: porAtendente.map(linhaAtendente).filter(temAtendente),
       snapshotAt: null,
+      avaliacaoDesde: await avaliacaoDesde(),
     })
   }
 
@@ -92,7 +119,7 @@ export async function GET(req: NextRequest) {
       where: meusSetores ? { ...where, dept: { in: meusSetores } } : where,
       select: { day: true, abertos: true, finalizados: true, handleSum: true },
     }),
-    prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, ...porNome(alcance) }, _sum: { abertos: true } }),
+    prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, ...porNome(alcance) }, _sum: SOMA_ATENDENTE }),
     /* ⚠️ O SNAPSHOT ("pendentes agora") é da casa inteira e não se recorta: ele
        não tem setor nem atendente, é um número só. Fica só para quem alcança
        tudo — meio-número seria pior que nenhum. */
@@ -110,8 +137,8 @@ export async function GET(req: NextRequest) {
   const series = [...byDay.entries()].map(([day, n]) => ({ day, abertos: n })).sort((a, b) => a.day.localeCompare(b.day))
   // Atendentes por (depto, nome) no período — a página monta o ranking geral e as abas.
   const attendants = attRows
-    .map((r) => ({ dept: r.dept, name: r.name, abertos: r._sum.abertos ?? 0 }))
-    .filter((a) => a.abertos > 0)
+    .map(linhaAtendente)
+    .filter(temAtendente)
 
   return NextResponse.json({
     period, fromDay, toDay,
@@ -125,5 +152,6 @@ export async function GET(req: NextRequest) {
     series,
     attendants,
     snapshotAt: snap?.updatedAt ?? null,
+    avaliacaoDesde: await avaliacaoDesde(),
   })
 }

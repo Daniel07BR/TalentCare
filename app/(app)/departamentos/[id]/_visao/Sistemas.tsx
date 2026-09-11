@@ -21,7 +21,7 @@ function sistemas(m: DeptMetrics): Sis[] {
        dela, onde também se atualiza o arquivo. */
     { chave: 'servicos', nome: 'Serviços do setor', Icone: FileSpreadsheet, tom: 'blue', tem: !!sv?.temFonte, gente: r.servicos?.gente ?? [],
       stats: [[num(sv?.concluidos ?? 0), 'Concluídos'], [num(sv?.abertos ?? 0), 'Em aberto']] },
-    { chave: 'whatsapp', nome: 'Painel de Atendimento', Icone: MessageCircle, tom: 'green', tem: t(m.whatsapp.abertos, m.whatsapp.finalizados), gente: r.whatsapp.gente,
+    { chave: 'whatsapp', nome: 'WhatsApp', Icone: MessageCircle, tom: 'whats', tem: t(m.whatsapp.abertos, m.whatsapp.finalizados), gente: r.whatsapp.gente,
       stats: [[num(m.whatsapp.abertos), 'Atendimentos'], [m.whatsapp.finalizados ? dur(Math.round(m.whatsapp.handleSum / m.whatsapp.finalizados)) : '—', 'Tempo médio']] },
     { chave: 'chat', nome: 'Chat Interno', Icone: MessageSquareText, tom: 'purple', tem: t(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos), gente: r.chat.gente,
       stats: [[num(m.chat.chamadosAbertos), 'Chamados abertos'], [m.chat.chamadosConcluidos ? dur(Math.round(m.chat.segundos / m.chat.chamadosConcluidos), 10) : '—', 'Tempo médio']] },

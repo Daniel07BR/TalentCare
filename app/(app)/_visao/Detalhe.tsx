@@ -49,7 +49,7 @@ const MODULOS = {
 }
 
 export const DETALHES = {
-  whatsapp: { titulo: 'Painel de Atendimento · WhatsApp', C: dynamic(MODULOS.whatsapp, { loading: carregando }) },
+  whatsapp: { titulo: 'WhatsApp', C: dynamic(MODULOS.whatsapp, { loading: carregando }) },
   chat: { titulo: 'Chat Interno', C: dynamic(MODULOS.chat, { loading: carregando }) },
   helpdesk: { titulo: 'HelpDesk', C: dynamic(MODULOS.helpdesk, { loading: carregando }) },
   classroom: { titulo: 'ClassRoom', C: dynamic(MODULOS.classroom, { loading: carregando }) },
