@@ -137,6 +137,11 @@ async function main() {
     const wAtual = [...wp.departments].filter((x: any) => x.abertos > 0).sort((a: any, b: any) => b.abertos - a.abertos).map((x: any) => [x.name, x.abertos])
     confere(onde, 'WhatsApp: linhas', linhasWhatsapp(wp.departments).map((l) => [l.nome, l.valor]), wAtual)
     confere(onde, 'WhatsApp: soma = total da rota', somaLinhas(linhasWhatsapp(wp.departments)), wp.totalAbertos)
+    // A barra abre a janela da FILA (decisão do dono): o número da janela = o da barra.
+    for (const l of linhasWhatsapp(wp.departments)) {
+      const jf = await get(`/api/whatsapp-overview?${q}&fila=${encodeURIComponent(l.id!)}`)
+      confere(onde, `WhatsApp · fila ${l.nome}: barra × janela da fila`, l.valor, jf.kpis.abertos)
+    }
 
     const clMap = new Map<string, any>(cl.byUser.map((u: any) => [u.nexusUserId, { videos: u.videos, courses: u.courses, created: u.created }]))
     const raMap = new Map<string, any>(ra.byUser.map((u: any) => [u.nexusUserId, { seconds: u.seconds, sessions: u.sessions }]))

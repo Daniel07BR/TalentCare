@@ -25,17 +25,17 @@ export type Linha = { id: string | null; nome: string; cor: string; valor: numbe
 
 /** WhatsApp: as linhas do cartão atual — só quem teve atendimento, maior primeiro.
  *
- *  ⚠️⚠️ `id: null` DE PROPÓSITO. A barra conta pela FILA do atendimento
- *  (`whatsapp_daily.dept`, o setor que o OneCode conhece), e a janela de um setor
- *  conta pelas ATENDENTES do setor. Medido em 11/09/2026, 30 dias: Recepção 127
- *  na fila × 246 pelas atendentes; Pessoal 1.123 × 1.221. Abrir a janela do
- *  setor pela barra poria dois números diferentes para "o mesmo setor" um em
- *  cima do outro. Até o dono decidir, a barra não abre janela. */
+ *  ⚠️⚠️ O `id` aqui é o NOME DA FILA, não o id de um setor. A barra conta pela
+ *  FILA do atendimento (`whatsapp_daily.dept`, o setor que o OneCode conhece), e a
+ *  janela de um SETOR conta pelas ATENDENTES do setor — medido em 11/09/2026, 30
+ *  dias: Recepção 127 na fila × 246 pelas atendentes. Por decisão do dono, a barra
+ *  abre a janela da MESMA FILA (`?fila=` em `/api/whatsapp-overview`), com o mesmo
+ *  número da barra. */
 export function linhasWhatsapp(rows: { name: string; color: string | null; abertos: number }[]): Linha[] {
   return rows
     .filter((x) => x.abertos > 0)
     .sort((a, b) => b.abertos - a.abertos)
-    .map((x) => ({ id: null, nome: x.name, cor: x.color ?? 'var(--n-green)', valor: x.abertos }))
+    .map((x) => ({ id: x.name, nome: x.name, cor: x.color ?? 'var(--n-green)', valor: x.abertos }))
 }
 
 /** ClassRoom: cursos CRIADOS por setor, na ordem do cartão atual (maior primeiro).

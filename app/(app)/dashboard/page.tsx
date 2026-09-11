@@ -207,7 +207,8 @@ function Conteudo() {
         abrirLista={(label) => setLista({ tipo: 'kpi', chave: label })} abrirTurnover={() => detalhe.abrir('turnover')} />
 
       <div className={p.linha2}>
-        <Atendimentos linhas={wpp.linhas ?? []} estado={wpp.estado} abrirCasa={() => detalhe.abrir('whatsapp')} />
+        <Atendimentos linhas={wpp.linhas ?? []} estado={wpp.estado} abrirCasa={() => detalhe.abrir('whatsapp')}
+          abrirFila={(fila) => detalhe.abrir('whatsapp', null, fila)} />
         <CurvaTurnover taxa={vm.turnoverWinRate} saidas={vm.turnoverSaidas} dias={vm.turnoverDias}
           vals={vm.turnoverVals} rotulos={vm.turnoverLabels} abrir={() => detalhe.abrir('turnover')} />
       </div>
@@ -243,7 +244,8 @@ function Conteudo() {
 
       {painel}
       {detalhe.aberto && (
-        <JanelaDetalhe chave={detalhe.aberto} setor={setorAberto} comQuemSaiu={!!setorAberto} onFechar={detalhe.fechar} />
+        <JanelaDetalhe chave={detalhe.aberto} setor={setorAberto} comQuemSaiu={!!setorAberto}
+          fila={detalhe.aberto === 'whatsapp' ? detalhe.fila : null} onFechar={detalhe.fechar} />
       )}
     </>
   )

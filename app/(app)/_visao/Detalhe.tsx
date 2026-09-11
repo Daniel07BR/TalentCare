@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { X } from 'lucide-react'
-import { RecorteDoSetor, EmJanela, type SetorRecorte } from '@/lib/ui/recorte-setor'
+import { RecorteDoSetor, RecorteDaFila, EmJanela, type SetorRecorte } from '@/lib/ui/recorte-setor'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import EsqueletoResumo from '../EsqueletoResumo'
@@ -75,29 +75,31 @@ const ehChave = (s: string | null): s is ChaveDetalhe => !!s && s in DETALHES
  *  URL, senão voltar da ficha reabriria a janela da casa no lugar da do setor.
  *  No relatório do setor o `setorId` é ignorado — o setor é o da página. */
 export function useDetalhe() {
-  const [estado, setEstado] = useState<{ chave: ChaveDetalhe; setorId: string | null } | null>(null)
+  const [estado, setEstado] = useState<{ chave: ChaveDetalhe; setorId: string | null; fila: string | null } | null>(null)
 
   // Ao chegar (inclusive voltando da ficha pelo histórico), reabre o que estava aberto.
   useEffect(() => {
     const u = new URLSearchParams(window.location.search)
     const q = u.get('detalhe')
-    if (ehChave(q)) setEstado({ chave: q, setorId: u.get('detalheSetor') })
+    if (ehChave(q)) setEstado({ chave: q, setorId: u.get('detalheSetor'), fila: u.get('detalheFila') })
   }, [])
 
   /* ⚠️ `replaceState`, não `pushState`: abrir uma janela não é uma página nova.
      Com push, o "voltar" do navegador fecharia a janela em vez de sair da tela,
      e cada abrir-e-fechar empilharia duas entradas no histórico. */
-  const escreve = (chave: ChaveDetalhe | null, setorId: string | null) => {
+  const escreve = (chave: ChaveDetalhe | null, setorId: string | null, fila: string | null) => {
     const u = new URL(window.location.href)
     if (chave) u.searchParams.set('detalhe', chave); else u.searchParams.delete('detalhe')
     if (chave && setorId) u.searchParams.set('detalheSetor', setorId); else u.searchParams.delete('detalheSetor')
+    if (chave && fila) u.searchParams.set('detalheFila', fila); else u.searchParams.delete('detalheFila')
     window.history.replaceState(null, '', u.pathname + u.search + u.hash)
   }
-  const abrir = useCallback((chave: ChaveDetalhe, setorId: string | null = null) => {
-    setEstado({ chave, setorId }); escreve(chave, setorId)
+  /** `fila`: só o WhatsApp — a janela de UMA fila (a barra do painel principal). */
+  const abrir = useCallback((chave: ChaveDetalhe, setorId: string | null = null, fila: string | null = null) => {
+    setEstado({ chave, setorId, fila }); escreve(chave, setorId, fila)
   }, [])
-  const fechar = useCallback(() => { setEstado(null); escreve(null, null) }, [])
-  return { aberto: estado?.chave ?? null, setorId: estado?.setorId ?? null, abrir, fechar }
+  const fechar = useCallback(() => { setEstado(null); escreve(null, null, null) }, [])
+  return { aberto: estado?.chave ?? null, setorId: estado?.setorId ?? null, fila: estado?.fila ?? null, abrir, fechar }
 }
 
 /**
@@ -105,8 +107,10 @@ export function useDetalhe() {
  * painel principal). O conteúdo é o mesmo resumo, com o dataset inteiro — os
  * mesmos números da página do sistema —, e só o cabeçalho do resumo some.
  */
-export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, onFechar }: {
+export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, fila = null, onFechar }: {
   chave: ChaveDetalhe; setor?: SetorRecorte | null
+  /** WhatsApp: a janela de UMA FILA (a barra do painel principal) — ver `RecorteDaFila`. */
+  fila?: string | null
   /**
    * ⚠️⚠️ Inclui quem já SAIU do setor (painel principal, 11/09/2026). As barras
    * por setor do painel somam a atividade de TODO mundo do setor no período —
@@ -154,14 +158,16 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, onFech
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '18px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 3 }}>
-              Detalhe do sistema · <b style={{ color: 'var(--text)' }}>{setor ? setor.nome : 'Grupo Itamarathy'}</b>
+              Detalhe do sistema · <b style={{ color: 'var(--text)' }}>{setor ? setor.nome : fila ? `Fila ${fila}` : 'Grupo Itamarathy'}</b>
             </div>
             <div id="detalhe-titulo" style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-.4px' }}>{titulo}</div>
             {/* ⚠️ Quem está dentro da conta, dito na cara: sem isto a janela parece
                 a página da empresa, e o gestor lê um total do setor como da casa. */}
             <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 4 }}>
               Período: <b style={{ color: 'var(--text-dim)' }}>{label}</b>
-              {' · '}{setor
+              {' · '}{fila
+                ? `só os atendimentos que chegaram pela fila de ${fila} — os mesmos da barra do painel; quem atendeu pode ser de outro setor`
+                : setor
                 ? (chave === 'turnover'
                     ? `todas as pessoas que passaram por ${setor.nome}, inclusive quem saiu`
                     : comQuemSaiu
@@ -193,7 +199,9 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, onFech
         <div style={{ overflowY: 'auto', padding: 24 }}>
           {/* `entrada`: cada seção do resumo sobe um pouco depois da de cima
               (globals.css) — a página se monta de cima para baixo. */}
-          {setor ? (
+          {fila ? (
+            <RecorteDaFila fila={fila}><div className="entrada"><C /></div></RecorteDaFila>
+          ) : setor ? (
             <RecorteDoSetor setor={setor} incluiDesligados={chave === 'turnover' || comQuemSaiu}>
               <div className="entrada"><C /></div>
             </RecorteDoSetor>

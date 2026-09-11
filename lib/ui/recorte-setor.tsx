@@ -51,6 +51,32 @@ export function EmJanela({ children }: { children: React.ReactNode }) {
   return <JanelaCtx.Provider value={true}>{children}</JanelaCtx.Provider>
 }
 
+/* ============================================================
+   A FILA DO WHATSAPP (11/09/2026, decisão do dono) — um terceiro recorte, só do
+   WhatsApp.
+
+   ⚠️⚠️ O WhatsApp tem DUAS réguas para "o setor": a FILA por onde o atendimento
+   chegou (`whatsapp_daily.dept`, o que o OneCode conhece) e as ATENDENTES do
+   setor (a régua do relatório do setor). Medido em 30 dias: Recepção 127 pela
+   fila × 246 pelas atendentes. A barra do painel principal é a FILA; aberta pela
+   barra, a janela tem de ser a mesma fila — não o setor, senão o número muda
+   entre o clique e a janela. Não recorta o dataset: a fila não é gente.
+   ============================================================ */
+const FilaCtx = createContext<string | null>(null)
+
+/** A fila do WhatsApp que a janela está olhando — `null` fora desse modo. */
+export function useFilaWhatsapp(): string | null {
+  return useContext(FilaCtx)
+}
+
+export function RecorteDaFila({ fila, children }: { fila: string; children: React.ReactNode }) {
+  return (
+    <FilaCtx.Provider value={fila}>
+      <JanelaCtx.Provider value={true}>{children}</JanelaCtx.Provider>
+    </FilaCtx.Provider>
+  )
+}
+
 export function RecorteDoSetor({ setor, incluiDesligados = false, children }: {
   setor: SetorRecorte
   /**

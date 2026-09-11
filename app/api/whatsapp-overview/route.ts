@@ -51,6 +51,36 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  /* ⚠️⚠️ UMA FILA (`?fila=<nome>`), aberta pela barra do painel principal
+     (11/09/2026, decisão do dono). Aqui a régua é a da BARRA — a fila por onde o
+     atendimento chegou (`whatsapp_daily.dept`, o `/api/whatsapp-by-dept`) —, e
+     não a das atendentes do setor (`?setor=`): as duas diferem (Recepção 127 ×
+     246 em 30 dias) e a janela tem de repetir o número de onde se clicou. As
+     atendentes são as que atuaram NESTA fila (`whatsapp_attendant_daily.dept` é
+     a fila — conferido: Recepção 127 nas duas tabelas). */
+  const fila = req.nextUrl.searchParams.get('fila')
+  if (fila) {
+    if (alcance.tipo !== 'tudo') {
+      const meus = (await db.department.findMany({ where: { id: { in: alcance.departmentIds } }, select: { name: true } })).map((d) => d.name)
+      if (!meus.includes(fila)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+    const [linhasDaFila, porAtendente] = await Promise.all([
+      prisma.whatsappDaily.findMany({ where: { ...where, dept: fila }, select: { day: true, abertos: true, finalizados: true, handleSum: true } }),
+      prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, dept: fila, ...porNome(alcance) }, _sum: { abertos: true } }),
+    ])
+    let ab = 0, fin = 0, hs = 0
+    const porDia = new Map<string, number>()
+    for (const r of linhasDaFila) { ab += r.abertos; fin += r.finalizados; hs += r.handleSum; porDia.set(r.day, (porDia.get(r.day) ?? 0) + r.abertos) }
+    return NextResponse.json({
+      period, fromDay, toDay,
+      // O "agora" é da casa inteira, sem fila — fica zerado e a tela não o mostra neste modo.
+      kpis: { pendingNow: 0, openNow: 0, abertos: ab, finalizados: fin, avgHandleSeconds: fin ? Math.round(hs / fin) : 0 },
+      series: [...porDia.entries()].map(([day, n]) => ({ day, abertos: n })).sort((a, b) => a.day.localeCompare(b.day)),
+      attendants: porAtendente.map((r) => ({ dept: r.dept, name: r.name, abertos: r._sum.abertos ?? 0 })).filter((x) => x.abertos > 0),
+      snapshotAt: null,
+    })
+  }
+
   /* ⚠️⚠️ O espelho do WhatsApp guarda o NOME do setor (`dept`), e não o id — ele
      vem do OneCode, que não conhece o Nexus. Então o recorte por setor precisa
      dos nomes, e eles saem do banco local. */

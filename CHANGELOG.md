@@ -1,5 +1,26 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (17) — A barra do WhatsApp abre a janela da fila
+
+Decisão do dono sobre as duas pendências do painel:
+
+**1. A barra do WhatsApp abre a janela da FILA dela.** A barra conta pela fila por onde o
+atendimento chegou (`whatsapp_daily.dept`); a janela do SETOR conta pelas atendentes do setor
+(Recepção 127 × 246 em 30 dias). Aberta pela barra, a janela tinha de repetir o número da
+barra — então ela é da fila, não do setor:
+- `/api/whatsapp-overview?fila=<nome>`: totais e série da própria fila, e as atendentes que
+  atuaram nela (`whatsapp_attendant_daily.dept` é a fila — conferido: Recepção 127 nas duas).
+  Fora da Diretoria, só a fila de um setor alcançado (403 no resto).
+- `RecorteDaFila` / `useFilaWhatsapp()` (`lib/ui/recorte-setor.tsx`); `JanelaDetalhe` com
+  `fila` e `&detalheFila=` na URL. O resumo do WhatsApp esconde o "agora" (é da casa) e as abas,
+  e avisa que o número de cada atendente é só na fila — a origem conta por atendente à parte, a
+  soma da lista não fecha com o total — e que o clique na pessoa mostra todas as filas.
+- O ensaio compara cada barra com a janela da fila em 7 janelas: **769 conferências, 0
+  divergências**.
+
+**2. O selo continua sumindo quando há feriado num dos lados** (recomendação aceita): comparar
+"por dia de expediente" seria uma conta nova no painel.
+
 ## 2026-09-11 (16) — O painel novo vira a página principal
 
 O dono aprovou o desenho da prévia e mandou trocar *"após a aprovação do agente crítico"*.

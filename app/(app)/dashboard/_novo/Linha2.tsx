@@ -10,10 +10,12 @@ import { Barras, CabecaBotao, Esqueleto, IconeWhatsapp, Vazio } from './pecas'
    LINHA 2 — Atendimentos por departamento (WhatsApp) | Curva de turnover.
    ============================================================ */
 
-export function Atendimentos({ linhas, estado, abrirCasa }: {
+export function Atendimentos({ linhas, estado, abrirCasa, abrirFila }: {
   linhas: Linha[]
   estado: 'carregando' | 'recarregando' | 'erro' | 'ok'
   abrirCasa: () => void
+  /** A janela de UMA fila — o mesmo número da barra (ver `linhasWhatsapp`). */
+  abrirFila: (fila: string) => void
 }) {
   return (
     <section className={v.cartao}>
@@ -26,11 +28,11 @@ export function Atendimentos({ linhas, estado, abrirCasa }: {
         : linhas.length === 0 ? <Vazio>Nenhum chamado no período.</Vazio>
         : (
           <div className={estado === 'recarregando' ? p.recarregando : undefined}>
-            {/* ⚠️⚠️ As barras NÃO abrem a janela do setor (11/09/2026): a barra é
-                a FILA e a janela do setor conta as ATENDENTES — a Recepção dá
-                127 numa e 246 na outra. Ver `linhasWhatsapp`. */}
-            <Barras linhas={linhas}
-              dica={() => 'Conta pela fila do atendimento (o setor que o WhatsApp conhece), não pelas atendentes do setor.'} />
+            {/* ⚠️⚠️ A barra abre a janela da FILA, não a do setor (decisão do dono,
+                11/09/2026): a barra conta pela fila e a janela do setor conta as
+                atendentes — a Recepção dá 127 numa e 246 na outra. */}
+            <Barras linhas={linhas} abrir={(fila) => abrirFila(fila)}
+              dica={(l) => `Abrir só a fila de ${l.nome} — conta pela fila do atendimento, não pelas atendentes do setor.`} />
           </div>
         )}
     </section>

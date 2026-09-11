@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { usePeriod } from '@/lib/ui/period'
-import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
+import { useRecorteSetor, useEmJanela, useFilaWhatsapp } from '@/lib/ui/recorte-setor'
 import { deptName } from '@/lib/mock/employee'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
@@ -41,6 +41,8 @@ export default function WhatsappResumo() {
   /* Numa janela (do setor OU da casa inteira, no painel principal) o cabeçalho
      sai — a janela já tem título. A comparação entre setores só sai com setor. */
   const emJanela = useEmJanela()
+  /* A janela de UMA FILA (a barra do painel principal) — régua da fila, não do setor. */
+  const fila = useFilaWhatsapp()
   const router = useRouter()
   const data = useTalentData()
   const { period, query, label } = usePeriod()
@@ -53,13 +55,13 @@ export default function WhatsappResumo() {
     setLoading(true)
     // ⚠️ Com setor, a rota muda de régua: conta pelas ATENDENTES do setor, igual
     // ao cartão do relatório — ver o comentário em `/api/whatsapp-overview`.
-    fetch(`/api/whatsapp-overview?${query}${setor ? `&setor=${encodeURIComponent(setor.id)}` : ''}`, { cache: 'no-store' })
+    fetch(`/api/whatsapp-overview?${query}${setor ? `&setor=${encodeURIComponent(setor.id)}` : ''}${fila ? `&fila=${encodeURIComponent(fila)}` : ''}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d: Overview) => { if (alive) setOv(d) })
       .catch(() => alive && setOv(null))
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [query, setor])
+  }, [query, setor, fila])
 
   // Casa o nome do atendente com um funcionário (p/ foto), por nome normalizado.
   const empByName = useMemo(() => {
@@ -137,9 +139,9 @@ export default function WhatsappResumo() {
           {/* ⚠️ "Agora" (sem atendimento / em andamento) é um número só da casa
               inteira, sem setor nem atendente: no detalhe de um setor ele sai,
               porque mostrá-lo ali o faria passar por número do setor. */}
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${setor ? 3 : 5},1fr)`, gap: 14, marginBottom: 16 }}>
-            {!setor && <KPI label="Sem atendimento (agora)" value={kpis!.pendingNow} accent="var(--danger)" />}
-            {!setor && <KPI label="Em andamento (agora)" value={kpis!.openNow} accent="var(--warning)" />}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${setor || fila ? 3 : 5},1fr)`, gap: 14, marginBottom: 16 }}>
+            {!setor && !fila && <KPI label="Sem atendimento (agora)" value={kpis!.pendingNow} accent="var(--danger)" />}
+            {!setor && !fila && <KPI label="Em andamento (agora)" value={kpis!.openNow} accent="var(--warning)" />}
             <KPI label="Abertos no período" value={kpis!.abertos.toLocaleString('pt-BR')} accent="var(--accent)" />
             <KPI label="Finalizados no período" value={kpis!.finalizados.toLocaleString('pt-BR')} accent="var(--success)" />
             <KPI label="Tempo médio" value={fmtDur(kpis!.avgHandleSeconds)} accent="var(--info)" />
@@ -147,7 +149,7 @@ export default function WhatsappResumo() {
 
           {/* Série diária de abertos */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{setor ? `Atendimentos abertos pelas pessoas de ${setor.nome}` : 'Atendimentos abertos no período'}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{setor ? `Atendimentos abertos pelas pessoas de ${setor.nome}` : fila ? `Atendimentos que chegaram pela fila de ${fila}` : 'Atendimentos abertos no período'}</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>{kpis!.abertos.toLocaleString('pt-BR')} no total</div>
             {ov.series.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum atendimento no período.</div>
@@ -172,10 +174,18 @@ export default function WhatsappResumo() {
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Top atendentes</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>
-              Atendimentos abertos no período · {setor ? setor.nome : activeTab === 'Geral' ? 'todos os departamentos' : activeTab}
+              Atendimentos abertos no período · {setor ? setor.nome : fila ? `quem atuou na fila de ${fila}` : activeTab === 'Geral' ? 'todos os departamentos' : activeTab}
             </div>
-            {/* abas — um setor só não tem entre o que escolher */}
-            {!setor && (
+            {/* ⚠️ Na fila, o número de cada atendente é SÓ nesta fila, e a origem
+                conta por atendente à parte — a soma da lista não fecha com o total
+                da fila. E o clique abre o dia a dia da pessoa em TODAS as filas. */}
+            {fila && (
+              <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: -8, marginBottom: 14, lineHeight: 1.5 }}>
+                O número de cada pessoa é só nesta fila. A origem conta por atendente separado do total da fila, então a soma da lista não fecha com o total. Clicar numa pessoa mostra o dia a dia dela em todas as filas.
+              </div>
+            )}
+            {/* abas — um setor (ou uma fila) só não tem entre o que escolher */}
+            {!setor && !fila && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
               {tabs.map((t) => (
                 <button

@@ -18,9 +18,9 @@
 >   base ≥ 10, ≤ 124 dias) — o de Advertências mentia pelo corte do mês;
 > - grades por `@container` (o menu lateral come 240 px); assiduidade da casa com calendário
 >   (`/api/assiduidade-mapa`, escala 1–4/5–7/8–10/11+); Chat e Gerência na faixa de sistemas.
-> - ⚠️ **PENDENTE com o dono:** o que a barra do WhatsApp abre (a barra é a FILA, a janela do
->   setor são as ATENDENTES — Recepção 127 × 246 em 30 dias; hoje não abre nada); e se o selo
->   deve comparar **por dia de expediente** quando há feriado de um lado (hoje some).
+> - ✅ Decidido pelo dono (11/09): a barra do WhatsApp abre a janela da **fila** (`?fila=`, a
+>   régua da barra — a do setor são as atendentes, Recepção 127 × 246); e o selo **some** quando
+>   há feriado num dos lados (não se compara "por dia de expediente").
 
 ---
 
