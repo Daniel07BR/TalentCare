@@ -172,7 +172,7 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, onFech
                    mesma tela, e a janela tem de dizer qual é qual — não se cria uma
                    terceira conta para "fazer bater". */
                 : chave === 'formacao'
-                  ? 'a casa inteira, com a Diretoria — retrato de hoje (o cartão do painel conta sem a Diretoria)'
+                  ? 'a casa inteira, sem a Diretoria — as mesmas pessoas do cartão; retrato de hoje'
                 : chave === 'turnover'
                   ? 'tudo nesta janela é de 12 meses e não acompanha o filtro — a taxa do cartão do painel é a do período'
                   : 'a casa inteira — os mesmos números da página do sistema'}

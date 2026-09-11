@@ -39,7 +39,7 @@ export function Assiduidade({ m, abrir, abrirPainel }: ComDetalhe & { abrirPaine
       <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>
         Cada quadro é um dia; a cor diz quantas pessoas do setor se atrasaram nele. <b style={{ color: 'var(--n-text-2)' }}>Clique num dia colorido para ver quem.</b>
       </div>
-      <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={a.pontoAte ?? null} escala="pessoas" paleta={HEAT}
+      <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={a.pontoAte ?? null} pontoDesde={a.pontoDesde ?? null} escala="pessoas" paleta={HEAT}
         onDia={(iso) => setDia((d) => (d === iso ? null : iso))} selecionado={dia} />
       {dia && doDia.length > 0 && <DiaDoMapa dia={dia} linhas={doDia} onFechar={() => setDia(null)} />}
     </Cartao>

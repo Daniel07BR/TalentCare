@@ -45,6 +45,8 @@ export type EmployeeMetrics = {
     dias?: { day: string; atrasos: number; abonados: number; minutos: number; ate5: number; ate30: number; mais30: number }[]
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
     pontoAte?: string | null
+    /** Primeiro dia coberto pelo ponto — antes dele o calendário hachura. */
+    pontoDesde?: string | null
     faltas: number | null; suspensoes: number | null
     /** Suspensões por ATRASO (planilha do DP) — separada da de LGPD. */
     suspensoesAtraso?: number | null

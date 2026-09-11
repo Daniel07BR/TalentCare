@@ -461,6 +461,7 @@ export async function GET(req: NextRequest) {
         })),
         /** Até quando o ponto mediu — o calendário para de afirmar depois disso. */
         pontoAte: cobPonto.ultimoDia,
+        pontoDesde: cobPonto.primeiroDia,
         pessoaMedida: cobPonto.roster.has(personKey),
         janelaComPonto: janelaTemDado(cobPonto, fromDay, toDay),
         motivoSemPonto: motivoSemPonto(cobPonto, cobPonto.roster.has(personKey), janelaTemDado(cobPonto, fromDay, toDay)),

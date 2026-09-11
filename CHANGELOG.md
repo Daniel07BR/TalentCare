@@ -1,5 +1,34 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (16) — O painel novo vira a página principal
+
+O dono aprovou o desenho da prévia e mandou trocar *"após a aprovação do agente crítico"*.
+
+**Rodada 2 do crítico — NÃO APROVADO por um item, consertado:**
+- **O selo de Advertências saiu.** A advertência é derivada do 2º atraso do mês, então o total
+  de uma janela depende de onde ela corta o mês: no Trimestre a janela anterior começava em
+  22/04, e 25 pessoas levaram advertência entre 22 e 30/04 porque o 1º atraso de abril caiu
+  antes. A tela dizia Atrasos ▲6% e Advertências **▼2% em verde** ("mais atraso, menos
+  advertência"); com meses inteiros a advertência também sobe (▲8%). Fica só o selo de Atrasos.
+- **O calendário pintava de "ninguém atrasou" os dias antes do ponto** (01/10/2025): um intervalo
+  de set/2025 mostrava o mês limpo ao lado de números "—". `CalendarioOcorrencias` ganhou
+  `pontoDesde` e hachura esses dias como "sem medição" — **nos três lugares** (painel, relatório
+  do setor e ficha): `/api/assiduidade-mapa`, `/api/dept-metrics` e `/api/employee-metrics`
+  passaram a devolver o início do ponto.
+- A janela da Escolaridade dizia "com a Diretoria"; o dataset já tira a Diretoria — são as
+  mesmas pessoas do cartão. Texto corrigido.
+
+**A troca:**
+- `/dashboard` é o painel novo (`dashboard/page.tsx`, seções em `dashboard/_novo/`).
+- O painel de antes ficou em **`/dashboard/anterior`**, por endereço, sem porta na tela (como o
+  `/completo` do setor) — os cartões antigos (`*DeptCard.tsx`) seguem só para ele.
+- `/dashboard/novo` redireciona para `/dashboard`.
+- Saem o selo "Prévia" e o atalho só do dono (`lib/ui/dono.tsx` removido).
+
+**Prova:** `ensaio-painel-novo.ts` — **714 conferências, 0 divergências** (agora com o acesso a
+`/dashboard`, `/novo` → `/dashboard` e `/anterior` fechado ao gestor). Setor: acesso limpo, 576
+números, 888 dias.
+
 ## 2026-09-11 (15) — Prévia: o painel principal no desenho da imagem conceito
 
 Pedido do dono: refazer a página principal (`/dashboard`, só da Diretoria) no molde do

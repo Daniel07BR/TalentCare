@@ -101,7 +101,7 @@ export function gruposGenero(data: TalentData): Grupo[] {
   return [g('M', 'Masculino', 'var(--n-blue)'), g('F', 'Feminino', 'var(--n-pink)'), g('?', 'Não informado', 'var(--n-text-3)')]
 }
 
-/* ── Os selos de variação (Atrasos e Advertências) ───────────────────────── */
+/* ── O selo de variação (só Atrasos — a advertência é derivada, ver a página) ── */
 
 const soma = (s: string, n: number) => {
   const x = new Date(`${s}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10)

@@ -5,19 +5,22 @@
 > [`RELATORIO-DO-SETOR.md`](RELATORIO-DO-SETOR.md) (o molde que você vai repetir) e
 > [`PERIODO-E-DEPLOY.md`](PERIODO-E-DEPLOY.md) (como publicar sem quebrar).
 
-> ## ✅ Estado em 11/09/2026 (noite): a PRÉVIA está no ar em `/dashboard/novo`
+> ## ✅ FEITO em 11/09/2026: o painel novo É o `/dashboard`
 >
-> Feita no molde abaixo; o registro completo está no `CHANGELOG` de 11/09 (15). O que
-> mudou em relação a este roteiro:
-> - as peças comuns **já saíram** para `app/(app)/_visao/` (`visao.module.css`, `ui.tsx`,
->   `tipos.ts`, `Detalhe.tsx`) e a janela aceita a casa inteira (`useEmJanela()`);
-> - as contas de tela moram em `lib/painel/visao.ts`; a prova é
->   `scripts/ensaio-painel-novo.ts` (tsx);
-> - decisões do dono: selos só em Atrasos/Advertências com a regra de dias medidos; sem
->   "Score médio" no gênero; Chat Interno e Gerência ganharam cartão.
-> - ⚠️ **PENDENTE com o dono:** o que a barra do WhatsApp abre (a barra é a FILA, a janela
->   do setor são as ATENDENTES — Recepção 127 × 246); e **quando trocar** `/dashboard`
->   pela prévia.
+> Prévia aprovada pelo dono e, em duas rodadas, pelo agente crítico; registro no `CHANGELOG`
+> de 11/09 (15) e (16). O de antes ficou em `/dashboard/anterior` (por endereço); `/novo`
+> redireciona. O que mudou em relação a este roteiro:
+> - peças comuns em `app/(app)/_visao/` (`visao.module.css`, `ui.tsx`, `tipos.ts`,
+>   `Detalhe.tsx`); a janela aceita a casa inteira (`useEmJanela()`) e a Escolaridade
+>   (`formacao/Resumo.tsx`);
+> - contas de tela em `lib/painel/visao.ts`; prova em `scripts/ensaio-painel-novo.ts` (tsx);
+> - selo **só em Atrasos** (dias medidos, mesmo nº de dias com expediente, mesmas pessoas,
+>   base ≥ 10, ≤ 124 dias) — o de Advertências mentia pelo corte do mês;
+> - grades por `@container` (o menu lateral come 240 px); assiduidade da casa com calendário
+>   (`/api/assiduidade-mapa`, escala 1–4/5–7/8–10/11+); Chat e Gerência na faixa de sistemas.
+> - ⚠️ **PENDENTE com o dono:** o que a barra do WhatsApp abre (a barra é a FILA, a janela do
+>   setor são as ATENDENTES — Recepção 127 × 246 em 30 dias; hoje não abre nada); e se o selo
+>   deve comparar **por dia de expediente** quando há feriado de um lado (hoje some).
 
 ---
 

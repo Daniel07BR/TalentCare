@@ -102,6 +102,8 @@ export type DeptMetrics = {
     quemDoMapa?: Record<string, { nome: string; cargo: string; hasAvatar: boolean; saiu: boolean }>
     /** Até quando o import de ponto cobriu — o calendário para de afirmar depois. */
     pontoAte?: string | null
+    /** Primeiro dia coberto pelo ponto — antes dele o calendário hachura. */
+    pontoDesde?: string | null
     /** A janela pedida foi coberta pelo import do ponto? Ver `lib/ponto-cobertura.ts`.
      *  Opcional porque resposta antiga em cache não traz o campo. */
     janelaComPonto?: boolean

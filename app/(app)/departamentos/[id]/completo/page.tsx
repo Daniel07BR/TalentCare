@@ -298,6 +298,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
             dias={m.assiduidade?.dias ?? []}
             de={m.fromDay} ate={m.toDay}
             pontoAte={m.assiduidade?.pontoAte ?? null}
+            pontoDesde={m.assiduidade?.pontoDesde ?? null}
             escala="pessoas"
           />
         ) : (

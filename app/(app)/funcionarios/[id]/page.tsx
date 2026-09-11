@@ -559,7 +559,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                     rótulo do filtro em cima. Num calendário isso pesa mais que
                     numa grade, porque a data está escrita dentro do quadro. */}
                 {m?.fromDay && m?.toDay ? (
-                  <CalendarioOcorrencias dias={ass?.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={ass?.pontoAte ?? vm.pontoAte} />
+                  <CalendarioOcorrencias dias={ass?.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={ass?.pontoAte ?? vm.pontoAte} pontoDesde={ass?.pontoDesde ?? null} />
                 ) : (
                   <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
                 )}

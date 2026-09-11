@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     period, fromDay, toDay,
     pontoAte: cob.ultimoDia,
+    // ⚠️ A ponta de baixo também: antes dela o calendário não pode dizer "limpo".
+    pontoDesde: cob.primeiroDia,
     chaves,
     /** [dia, índice da chave, atrasos, abonados, minutos, até 5 min, até 30, mais de 30] */
     linhas: linhas.map((l) => [

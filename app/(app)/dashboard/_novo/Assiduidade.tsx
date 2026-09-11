@@ -30,7 +30,7 @@ const HEAT = [0, 1, 2, 3, 4].map((i) => `var(--n-heat-${i})`)
 /** As linhas do ponto da janela — `/api/assiduidade-mapa`. */
 function useMapaDaCasa() {
   const { query } = usePeriod()
-  const [r, setR] = useState<{ chaves: string[]; linhas: LinhaPonto[]; pontoAte: string | null } | null>(null)
+  const [r, setR] = useState<{ chaves: string[]; linhas: LinhaPonto[]; pontoAte: string | null; pontoDesde: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(false)
   useEffect(() => {
@@ -38,7 +38,7 @@ function useMapaDaCasa() {
     setLoading(true); setErro(false)
     fetch(`/api/assiduidade-mapa?${query}`, { cache: 'no-store' })
       .then((x) => { if (!x.ok) throw new Error(String(x.status)); return x.json() })
-      .then((d) => { if (vivo) setR({ chaves: d.chaves ?? [], linhas: d.linhas ?? [], pontoAte: d.pontoAte ?? null }) })
+      .then((d) => { if (vivo) setR({ chaves: d.chaves ?? [], linhas: d.linhas ?? [], pontoAte: d.pontoAte ?? null, pontoDesde: d.pontoDesde ?? null }) })
       .catch(() => vivo && setErro(true))
       .finally(() => vivo && setLoading(false))
     return () => { vivo = false }
@@ -105,7 +105,7 @@ export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperan
             : !mapa ? <Esqueleto linhas={5} alto={30} />
             : (
               <div className={loading ? p.recarregando : undefined}>
-                <CalendarioOcorrencias dias={mapa.dias} de={fromDay} ate={toDay} pontoAte={r?.pontoAte ?? null} escala="pessoas" paleta={HEAT}
+                <CalendarioOcorrencias dias={mapa.dias} de={fromDay} ate={toDay} pontoAte={r?.pontoAte ?? null} pontoDesde={r?.pontoDesde ?? null} escala="pessoas" paleta={HEAT}
                   limites={LIMITES_CASA} onDia={(iso) => setDia((d) => (d === iso ? null : iso))} selecionado={dia} />
                 {dia && doDia.length > 0 && <DiaDoMapa dia={dia} linhas={doDia} onFechar={() => setDia(null)} aoClicar={abrirPessoa} />}
               </div>

@@ -1,4 +1,4 @@
-/* ENSAIO do PAINEL PRINCIPAL NOVO (`/dashboard/novo`, prévia de 11/09/2026). Não escreve nada.
+/* ENSAIO do PAINEL PRINCIPAL (`/dashboard`, no desenho novo desde 11/09/2026). Não escreve nada.
  *
  *   npx --yes tsx@4 --env-file=.env --tsconfig scripts/tsconfig.json scripts/ensaio-painel-novo.ts
  *
@@ -17,7 +17,7 @@
  *      sistema sobre o dataset recortado, com quem já saiu — `comQuemSaiu`);
  *   4. a janela de comparação dos selos: mesmos dias, mesmos dias da semana,
  *      sem sobrepor a atual, dentro do ponto;
- *   5. o acesso: a Diretoria abre `/dashboard/novo`; gestor e anônimo, não.
+ *   5. o acesso: a Diretoria abre `/dashboard` (e `/novo` redireciona); gestor e anônimo, não.
  */
 import { encode } from 'next-auth/jwt'
 import { prisma } from '../lib/db/prisma'
@@ -214,7 +214,9 @@ async function main() {
       else {
         const c = compararMesmasPessoas(base, j.de, assidMap, mapAnt)
         confere(onde, 'selo: há gente nas duas janelas', c.pessoas > 0, true)
-        const sel = (['atrasos', 'advertencias'] as const).map((f) => {
+        // Só o de Atrasos vai à tela: a advertência é derivada do 2º atraso do mês e
+        // o total dela depende de onde a janela corta o mês (crítico, rodada 2).
+        const sel = (['atrasos'] as const).map((f) => {
           const sv = seloVariacao(c.atual[f], c.anterior[f])
           return `${f} ${c.atual[f]} vs ${c.anterior[f]} → ${sv ? `${sv.seta} ${sv.texto}` : 'sem selo'}`
         })
@@ -258,20 +260,25 @@ async function main() {
     console.log(`   ${linhasSetor} linhas de setor conferidas contra a janela do setor`)
   }
 
-  // ── acesso à prévia
-  const ver = async (ck2: string | null) => {
-    const r = await fetch(`${BASE}/dashboard/novo`, { headers: ck2 ? { cookie: ck2 } : {}, redirect: 'manual' })
+  // ── acesso ao painel
+  const ver = async (path: string, ck2: string | null) => {
+    const r = await fetch(`${BASE}${path}`, { headers: ck2 ? { cookie: ck2 } : {}, redirect: 'manual' })
     return `${r.status}${r.headers.get('location') ? ` → ${new URL(r.headers.get('location')!, BASE).pathname}` : ''}`
   }
   const gestor = await prisma.user.findFirst({ where: { role: 'GESTOR', active: true }, select: { id: true, role: true, name: true } })
-  const a1 = await ver(ck)
-  const a2 = gestor ? await ver(await cookie(gestor)) : 'sem gestor'
-  const a3 = await ver(null)
-  console.log(`\n── acesso a /dashboard/novo`)
-  console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3}`)
+  const ckG = gestor ? await cookie(gestor) : null
+  const a1 = await ver('/dashboard', ck)
+  const a2 = ckG ? await ver('/dashboard', ckG) : 'sem gestor'
+  const a3 = await ver('/dashboard', null)
+  const a4 = await ver('/dashboard/novo', ck)
+  const a5 = ckG ? await ver('/dashboard/anterior', ckG) : 'sem gestor'
+  console.log(`\n── acesso ao painel`)
+  console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3} · /novo: ${a4} · /anterior p/ gestor: ${a5}`)
   confere('acesso', 'Diretoria abre', a1, '200')
   confere('acesso', 'gestor vai para o setor dele', a2.startsWith('307 → /meu-setor'), true)
   confere('acesso', 'sem sessão não abre', a3.startsWith('200'), false)
+  confere('acesso', '/dashboard/novo leva ao painel', a4.includes('/dashboard'), true)
+  confere('acesso', '/dashboard/anterior fechado ao gestor', a5.startsWith('307 → /meu-setor'), true)
 
   if (erros.length) { console.log('\n❌ divergências:'); for (const e of erros) console.log(`   ${e}`) }
   console.log(`\n${falhas === 0 ? '✅' : '❌'} ${conferidos} conferências, ${falhas} divergências`)

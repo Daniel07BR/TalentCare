@@ -13,7 +13,6 @@ import { PeriodProvider, usePeriod } from '@/lib/ui/period'
 import { TalentDataProvider } from '@/lib/ui/data'
 import { OrigemProvider } from '@/lib/ui/origem'
 import { PainelDaPessoaProvider } from './PainelDaPessoa'
-import { DonoProvider } from '@/lib/ui/dono'
 import Logo from './Logo'
 import Avatar from './Avatar'
 import type { Period } from '@/lib/mock/dashboard'
@@ -390,7 +389,6 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
 
   return (
     <PeriodProvider>
-     <DonoProvider value={isOwner}>
      <TalentDataProvider value={data}>
      {/* O rastro de onde a pessoa veio — o "voltar" das telas de detalhe. Os
          nomes das telas saem do MENU, para não haver uma segunda lista. */}
@@ -492,7 +490,6 @@ export default function AppShell({ name, roleLabel, isOwner = false, soMeuSetor 
      </PainelDaPessoaProvider>
      </OrigemProvider>
      </TalentDataProvider>
-     </DonoProvider>
     </PeriodProvider>
   )
 }

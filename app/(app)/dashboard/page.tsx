@@ -1,46 +1,89 @@
 'use client'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useEhDono } from '@/lib/ui/dono'
+import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 import { useTalentData } from '@/lib/ui/data'
 import { useAssiduidadePeriod } from '@/lib/ui/assiduidade-period'
 import { useFrescor } from '@/lib/ui/frescor'
-import { useEffect, useState } from 'react'
-import { PainelPessoas } from '../PainelPessoas'
 import { useScoreSignals } from '@/lib/ui/score-period'
 import { withRealScores } from '@/lib/mock/score'
 import { buildDashboard } from '@/lib/mock/dashboard'
 import { generationsVM, genderVM } from '@/lib/mock/demographics'
-import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import Avatar from '../Avatar'
-import WhatsappDeptCard from './WhatsappDeptCard'
-import RadioDeptCard from './RadioDeptCard'
-import ClassroomDeptCard from './ClassroomDeptCard'
-import ConsultoriaDeptCard from './ConsultoriaDeptCard'
-import HelpdeskDeptCard from './HelpdeskDeptCard'
-import CideDeptCard from './CideDeptCard'
+import {
+  janelaDeComparacao, seloVariacao, diasComExpediente, compararMesmasPessoas, somaAssiduidade, listaMinutos,
+  gruposEscolaridade, gruposGeracao, gruposGenero, linhasWhatsapp,
+  type Grupo, type Linha,
+} from '@/lib/painel/visao'
+import v from '../_visao/visao.module.css'
+import p from './_novo/painel.module.css'
+import { useDetalhe, JanelaDetalhe } from '../_visao/Detalhe'
+import { PainelDaPessoaProvider, usePainelDaPessoa } from '../PainelDaPessoa'
+import { PainelPessoas } from '../PainelPessoas'
+import { Cabecalho } from './_novo/Cabecalho'
+import { Indicadores, type SeloDoKpi } from './_novo/Indicadores'
+import { Atendimentos, CurvaTurnover } from './_novo/Linha2'
+import { Destaque, Escolaridade, Geracoes, Genero } from './_novo/Linha3'
+import { Sistemas } from './_novo/Sistemas'
+import { Assiduidade } from './_novo/Assiduidade'
 
-export default function DashboardPage() {
-  const { period, from, to, label: periodLabel } = usePeriod()
-  const router = useRouter()
-  /* O atalho da prévia do painel novo (11/09/2026) — só para o dono, até ele
-     mandar trocar. A página nova é protegida pelo `proxy.ts` como esta. */
-  const ehDono = useEhDono()
+/* ============================================================
+   O PAINEL PRINCIPAL — no desenho da imagem conceito (11/09/2026).
+
+   Nasceu como PRÉVIA em `/dashboard/novo`; o dono aprovou o desenho e mandou
+   trocar "após a aprovação do agente crítico" (duas rodadas, 11/09/2026). O
+   painel de antes ficou em `/dashboard/anterior`, por endereço; `/novo`
+   redireciona para cá.
+
+   Pedido do dono: refazer a página principal no molde do relatório do setor,
+   com o desenho e as cores da imagem conceito, interativa: todo número com
+   gente atrás abre quem; todo bloco de sistema abre o resumo numa janela; todo
+   nome abre o painel da pessoa; a linha de um setor abre o sistema só dele.
+
+   ⚠️⚠️ OS NÚMEROS SÃO OS DO PAINEL ANTERIOR. Esta página chama as
+   mesmas funções (`buildDashboard`, os mesmos ganchos e as mesmas funções de
+   cada sistema); `lib/painel/visao.ts` só dá forma. A prova é
+   `scripts/ensaio-painel-novo.ts`.
+
+   ⚠️ Só a Diretoria chega aqui (o `proxy.ts` cobre `/dashboard` e `/dashboard/…`).
+   ============================================================ */
+
+type Lista = { tipo: 'kpi'; chave: string } | { tipo: 'grupo'; chave: string } | { tipo: 'minutos' }
+
+const COR_KPI: Record<string, string> = {
+  Headcount: 'var(--n-blue)', Advertências: 'var(--n-orange)', Atrasos: 'var(--n-red)', Suspensões: 'var(--n-purple)',
+}
+/** As listas cujo clique abre o PAINEL DA PESSOA (assiduidade) em vez da ficha. */
+const DA_ASSIDUIDADE = new Set(['Advertências', 'Atrasos', 'Suspensões'])
+
+/** O WhatsApp por setor — a mesma rota e o mesmo filtro do cartão da página atual. */
+function useWhatsappPorSetor() {
+  const { query } = usePeriod()
+  const [linhas, setLinhas] = useState<Linha[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    setLoading(true); setErro(false)
+    fetch(`/api/whatsapp-by-dept?${query}`, { cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
+      .then((d: { departments: { name: string; color: string | null; abertos: number }[] }) => { if (vivo) setLinhas(linhasWhatsapp(d.departments)) })
+      .catch(() => vivo && setErro(true))
+      .finally(() => vivo && setLoading(false))
+    return () => { vivo = false }
+  }, [query])
+  return { linhas, estado: (erro ? 'erro' : !linhas ? 'carregando' : loading ? 'recarregando' : 'ok') as 'erro' | 'carregando' | 'recarregando' | 'ok' }
+}
+
+function Conteudo() {
+  const { period, from, to, label: periodo, fromDay, toDay } = usePeriod()
+  const abrirPessoa = usePainelDaPessoa()
   const { signals, loading: scoreLoading, erro: scoreErro } = useScoreSignals()
-  /* Qual cartão está aberto. `null` = nenhum. Guarda o RÓTULO e não o objeto:
-     ao trocar o filtro os KPIs são remontados, e um objeto congelado no estado
-     mostraria a lista da janela anterior debaixo do título da nova. */
-  const [aberto, setAberto] = useState<string | null>(null)
-  /* ⚠️⚠️ TROCAR O FILTRO FECHA O PAINEL. Sem isto ele trocava o conteúdo em
-     SILÊNCIO sob o mesmo título (durante o carregamento o map antigo ainda está
-     lá), e — pior — se a janela nova não tivesse ninguém o painel sumia com
-     `aberto` ainda no estado, reaparecendo sozinho na troca seguinte, sem
-     clique. Achado do crítico, 09/09/2026. */
-  useEffect(() => { setAberto(null) }, [period, from, to])
   const data = withRealScores(useTalentData(), signals)
   const assid = useAssiduidadePeriod()
   const frescor = useFrescor()
+  const detalhe = useDetalhe()
+  const wpp = useWhatsappPorSetor()
+
+  /* A MESMA chamada da página atual, com as mesmas opções. */
   const vm = buildDashboard(data, period, {
     assidMap: assid.map ?? undefined,
     from, to,
@@ -58,312 +101,162 @@ export default function DashboardPage() {
   })
   const gen = generationsVM(data).overall
   const gend = genderVM(data).overall
-  /* ⚠️⚠️ Enquanto os sinais do período não chegam, `withRealScores(data, null)`
-     devolve o score ACUMULADO de toda a história — e o cabeçalho já diz
-     "Período: Últimos 30 dias". Medido em 03/09/2026: média 57 no acumulado
-     contra 60 na janela, com saltos de até 57 pontos numa pessoa. A tela tem de
-     dizer que ainda está carregando, e tem de gritar se a leitura falhou: o
-     `catch` mudo deixava o acumulado ali para sempre, rotulado de período. */
-  const carregandoPeriodo = scoreLoading || assid.loading
 
-  /* ⚠️⚠️ O AVISO DE CARREGAMENTO SÓ APARECE SE DEMORAR (09/09/2026, relato do
-     dono: *"ao clicar nos filtros de período a tela pisca, aparece uma
-     informação no cabeçalho e some — parece um erro"*).
+  /* ── O selo de Atrasos (decisão do dono, 11/09/2026) ─────────────────────
+     Três travas, cada uma nascida de um número que mentia:
+     1. dias MEDIDOS contra dias medidos, recuados em semanas inteiras, só até 4
+        meses (`janelaDeComparacao`);
+     2. o MESMO número de dias com expediente dos dois lados — senão o feriado
+        vira melhora (`diasComExpediente`; achado do crítico: ▼27% falso em 7 dias);
+     3. as MESMAS pessoas dos dois lados — senão quem entrou puxa para "piorou"
+        (`compararMesmasPessoas`; achado do crítico: ▲9% × ▲6% no Trimestre).
+     E base ≥ 10 (`seloVariacao`). A janela anterior vem da MESMA rota. */
+  const j = assid.loading ? null : janelaDeComparacao(fromDay, toDay, assid.pontoDesde, assid.pontoAte, assid.janelaComPonto)
+  const ant = useAssiduidadePeriod(j ? { de: j.de, ate: j.ate } : null)
+  const selos: Partial<Record<string, SeloDoKpi>> = {}
+  if (j && assid.map && ant.map && !ant.loading && ant.janelaComPonto) {
+    const expAtual = diasComExpediente(assid.porDia, j.atualDe, j.atualAte)
+    const expAnt = diasComExpediente(ant.porDia, j.de, j.ate)
+    if (expAtual > 0 && expAtual === expAnt) {
+      const c = compararMesmasPessoas(data, j.de, assid.map, ant.map)
+      /* ⚠️⚠️ SÓ ATRASOS (achado do crítico, rodada 2). A advertência é DERIVADA —
+         do 2º atraso do mês em diante —, então o total de uma janela depende de
+         onde ela CORTA o mês: no Trimestre a anterior começava em 22/04, e 25
+         pessoas levaram advertência entre 22 e 30/04 porque o 1º atraso de abril
+         caiu antes, fora da janela. A tela dizia Atrasos ▲6% e Advertências ▼2%
+         em verde — "mais atraso, menos advertência" —, e com meses inteiros a
+         advertência também SOBE (▲8%). O selo de Atrasos já carrega o sinal. */
+      for (const [label, campo] of [['Atrasos', 'atrasos']] as const) {
+        const selo = seloVariacao(c.atual[campo], c.anterior[campo])
+        if (selo) selos[label] = { selo, janela: j, atual: c.atual[campo], anterior: c.anterior[campo], pessoas: c.pessoas, expediente: expAtual }
+      }
+    }
+  }
 
-     Ele NÃO foi removido, e não pode ser: enquanto os números do período não
-     chegam, o que está na tela é o acumulado de toda a história debaixo do
-     rótulo da janela — quem decidir naquele instante decide pelo número errado.
-     O defeito era o TEMPO: a resposta costuma vir em ~200 ms, então o aviso
-     nascia e morria, e um bloco que pisca no cabeçalho se lê como erro. Aviso
-     que ninguém consegue ler não avisa; assusta.
+  /* ── Demografia (retrato de hoje) ──────────────────────────────────────── */
+  const gEsc = gruposEscolaridade(data, vm.escSegments)
+  const gGer = gruposGeracao(data, gen.segs)
+  const gGen = gruposGenero(data)
 
-     450 ms: abaixo disso a troca é percebida como instantânea e o aviso não
-     serve a ninguém; acima, ele é a única coisa que separa "está carregando" de
-     "este número é o certo". */
-  const [demorou, setDemorou] = useState(false)
-  useEffect(() => {
-    if (!carregandoPeriodo) { setDemorou(false); return }
-    const t = setTimeout(() => setDemorou(true), 450)
-    return () => clearTimeout(t)
-  }, [carregandoPeriodo])
+  /* A lista aberta. Guarda a CHAVE e não a lista: trocar o filtro remonta os
+     números, e uma lista congelada ficaria debaixo do título da janela nova.
+     ⚠️ Trocar o filtro FECHA a lista (achado do crítico, 09/09/2026). */
+  const [lista, setLista] = useState<Lista | null>(null)
+  useEffect(() => { setLista(null) }, [period, from, to])
+
+  /* Minutos e abonados do quadro ativo, e quem somou minutos — a mesma população
+     dos cartões Atrasos e Advertências. */
+  const somaA = assid.map ? somaAssiduidade(data, assid.map) : { minutos: 0, abonados: 0 }
+  const minutosPessoas = assid.map ? listaMinutos(data, assid.map) : []
+
+  const painel = (() => {
+    if (!lista) return null
+    if (lista.tipo === 'minutos') {
+      if (!minutosPessoas.length) return null
+      return (
+        <PainelPessoas titulo="Minutos de atraso, por pessoa" nota="minutos somados na janela" periodo={periodo} pessoas={minutosPessoas}
+          cor="var(--n-blue)" sufixo="minutos" mostrarNumero aoFechar={() => setLista(null)}
+          aoClicar={(id) => abrirPessoa('assiduidade', id)}
+          rodape="Clique numa pessoa para ver, dia a dia, os atrasos e as medidas dela na janela." />
+      )
+    }
+    if (lista.tipo === 'kpi') {
+      const k = vm.kpis.find((x) => x.label === lista.chave)
+      if (!k?.pessoas?.length) return null
+      const assidLista = DA_ASSIDUIDADE.has(k.label)
+      return (
+        <PainelPessoas titulo={k.label} nota={k.pessoasNota} periodo={periodo} pessoas={k.pessoas}
+          cor={COR_KPI[k.label] ?? 'var(--n-blue)'} sufixo={k.pessoasSufixo ?? k.label.toLowerCase()}
+          mostrarNumero={assidLista} aoFechar={() => setLista(null)}
+          aoClicar={assidLista ? (id) => abrirPessoa('assiduidade', id) : undefined}
+          rodape={assidLista ? 'Clique numa pessoa para ver, dia a dia, os atrasos e as medidas dela na janela.' : undefined} />
+      )
+    }
+    const todos: Grupo[] = [...gEsc.map((g) => ({ ...g, chave: `esc:${g.chave}`, rotulo: `Escolaridade · ${g.rotulo}` })),
+      ...gGer.map((g) => ({ ...g, chave: `ger:${g.chave}` })), ...gGen.map((g) => ({ ...g, chave: `gen:${g.chave}`, rotulo: `Gênero · ${g.rotulo}` }))]
+    const g = todos.find((x) => x.chave === lista.chave)
+    if (!g) return null
+    return (
+      <PainelPessoas titulo={g.rotulo} nota="retrato de hoje — não acompanha o filtro" pessoas={g.pessoas}
+        cor={g.cor} sufixo="pessoas" aoFechar={() => setLista(null)} />
+    )
+  })()
+
+  const abrirGrupo = (prefixo: string) => (g: Grupo) => setLista({ tipo: 'grupo', chave: `${prefixo}:${g.chave}` })
+  const setorAberto = detalhe.setorId
+    ? { id: detalhe.setorId, nome: data.departments.find((d) => d.id === detalhe.setorId)?.nome ?? data.deptMeta[detalhe.setorId] ?? 'Setor' }
+    : null
   const erroPeriodo = scoreErro || assid.erro
 
   return (
-    <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
-            Painel de
-            {ehDono && (
-              <Link href="/dashboard/novo" style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--border)', borderRadius: 20, padding: '2px 9px' }}>
-                Prévia do layout novo ›
-              </Link>
-            )}
-          </div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Indicadores Grupo Itamarathy</h1>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.5 }}>
-          <div>Período: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{periodLabel}</span></div>
-          {/* ⚠️⚠️ Aqui dizia **"Atualizado há 12 min"**, cravado no JSX desde o
-              primeiro desenho e igual num painel fresco e num painel morto. O
-              `scripts/tc-vigia.sh` deste repositório já citava essa frase, por
-              escrito, como o exemplo do que dá errado: "o rádio ficou 39 dias
-              parado e o WhatsApp congelou — os crons rodavam, nada estourava, e
-              o painel dizia 'atualizado há 12 min'".
-              Agora é o espelho MAIS ATRASADO: um painel é tão fresco quanto a
-              fonte mais velha que ele soma. */}
-          <div title={frescor.detalhe}>{frescor.texto}</div>
-        </div>
-      </div>
+    <>
+      {/* ⚠️ `.painel` é um container de CSS (as grades respondem à largura do
+          conteúdo, não da tela). Container com `container-type` vira o bloco de
+          referência de quem é `position: fixed` — por isso a lista e a janela
+          ficam FORA dele, lá embaixo. */}
+      <div className={p.painel}>
+      <Cabecalho periodo={periodo} frescor={frescor} />
 
-      {carregandoPeriodo && demorou && !erroPeriodo && (
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: 14 }}>
-          Carregando os números do período… <span style={{ color: 'var(--text-mute)' }}>até chegarem, o score mostrado é o acumulado de toda a história, não o da janela.</span>
-        </div>
-      )}
       {erroPeriodo && (
-        <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(229,72,77,.08)', border: '1px solid rgba(229,72,77,.3)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
-          <b>Não foi possível ler os números do período.</b> O que está na tela é o acumulado de toda a história — <b>não</b> a janela escolhida. Recarregue antes de decidir qualquer coisa com estes números.
+        <div role="alert" style={{ fontSize: 12, color: 'var(--n-red)', background: 'var(--n-red-soft)', border: '1px solid var(--n-red)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+          <b>Não foi possível ler os números do período.</b> Os cartões que dependem deles mostram "—". Recarregue antes de decidir qualquer coisa com estes números.
         </div>
       )}
 
-      {/* KPIs — ⚠️ o grid era `repeat(6,1fr)` e ficou com 5 cartões desde que
-          "Tarefas concluídas" saiu: uma sexta coluna vazia à direita. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, marginBottom: 16 }}>
-        {vm.kpis.map((k) => {
-          const semDado = k.value === '—'
-          /* ⚠️ Só é clicável quando HÁ lista. Cartão que parece botão e não abre
-             nada ensina o leitor a não clicar em nenhum. */
-          const abre = !!k.pessoas?.length
-          return (
-          <div key={k.label} className="tc-card"
-            onClick={abre ? () => setAberto(k.label) : undefined}
-            role={abre ? 'button' : undefined}
-            tabIndex={abre ? 0 : undefined}
-            onKeyDown={abre ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAberto(k.label) } } : undefined}
-            title={abre ? `Ver as ${k.pessoas!.length} pessoas` : undefined}
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 130, cursor: abre ? 'pointer' : 'default' }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-dim)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
-              {k.label}
-              {/* A pista de que dá para abrir — discreta, no rótulo, e não um
-                  botão competindo com o número. */}
-              {abre && <span style={{ fontSize: 9.5, color: 'var(--text-mute)', border: '1px solid var(--border)', borderRadius: 20, padding: '1px 6px' }}>{k.pessoas!.length} pessoas</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              {/* ⚠️ "—" em cinza, nunca um 0 grande: zero se lê como "não houve",
-                  e aqui o que houve foi ninguém medir. */}
-              <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-1px', color: semDado ? 'var(--text-mute)' : 'var(--text)' }}>{k.value}</span>
-              {!semDado && <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>{k.unit}</span>}
-            </div>
-            {/* A legenda que diz de QUE janela o número fala — ou por que não fala. */}
-            <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.35 }}>{k.nota}</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: k.deltaColor, display: 'inline-flex', alignItems: 'center', gap: 2 }}>{k.delta ? `${k.deltaArrow} ${k.delta}` : ''}</span>
-              {/* ⚠️ Sem série real, sem gráfico. Era aqui que moravam os quatro
-                  passeios aleatórios — um deles com o número verdadeiro só no
-                  último ponto, o que é pior que nenhum gráfico. */}
-              {k.spark && (
-                <svg width="64" height="26" viewBox="0 0 64 26" style={{ overflow: 'visible' }}>
-                  <polyline points={k.spark} fill="none" stroke={k.sparkColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-          </div>
-        )})}
+      <Indicadores kpis={vm.kpis} selos={selos} esperandoPonto={assid.loading && !assid.map} recarregandoPonto={assid.loading && !!assid.map}
+        abrirLista={(label) => setLista({ tipo: 'kpi', chave: label })} abrirTurnover={() => detalhe.abrir('turnover')} />
+
+      <div className={p.linha2}>
+        <Atendimentos linhas={wpp.linhas ?? []} estado={wpp.estado} abrirCasa={() => detalhe.abrir('whatsapp')} />
+        <CurvaTurnover taxa={vm.turnoverWinRate} saidas={vm.turnoverSaidas} dias={vm.turnoverDias}
+          vals={vm.turnoverVals} rotulos={vm.turnoverLabels} abrir={() => detalhe.abrir('turnover')} />
       </div>
 
-      {/* ⚠️ Lido do `vm` recém-montado (pelo rótulo), nunca de uma cópia no
-          estado: o filtro de período remonta os KPIs, e uma lista congelada
-          apareceria debaixo do título da janela nova. */}
+      <div className={p.linha3}>
+        {/* ⚠️ Enquanto os sinais do período não chegam, a pontuação ainda não
+            existe — esqueleto, e não o destaque de outra competência. */}
+        <Destaque lista={vm.deptHighlights} info={vm.pontuacaoInfo} carregando={scoreLoading && !signals} recarregando={scoreLoading && !!signals} erro={scoreErro && !signals} />
+        <Escolaridade total={vm.headcountTotal} grupos={gEsc} fatias={vm.escSegments} topPct={vm.escTopPct} topRotulo={vm.escTopLabel} abrir={abrirGrupo('esc')} abrirDetalhe={() => detalhe.abrir('formacao')} />
+        <Geracoes media={gen.avg} grupos={gGer}
+          pcts={Object.fromEntries(gen.segs.map((s) => [s.key, s.pct]))}
+          idades={Object.fromEntries(gen.segs.map((s) => [s.key, s.ages]))} abrir={abrirGrupo('ger')} />
+      </div>
+
       {(() => {
-        const k = vm.kpis.find((x) => x.label === aberto)
-        if (!k?.pessoas?.length) return null
+        const kA = vm.kpis.find((k) => k.label === 'Atrasos')
+        const kV = vm.kpis.find((k) => k.label === 'Advertências')
         return (
-          <PainelPessoas
-            titulo={k.label} nota={k.pessoasNota} periodo={periodLabel} pessoas={k.pessoas} cor={k.color}
-            sufixo={k.pessoasSufixo ?? k.label.toLowerCase()} aoFechar={() => setAberto(null)}
-          />
+          <Assiduidade periodo={periodo} fromDay={fromDay} toDay={toDay}
+            semPonto={!assid.loading && !assid.janelaComPonto} motivo={assid.motivoSemPonto ?? (assid.erro ? 'não foi possível ler o ponto' : 'sem dado de ponto nesta janela')}
+            esperando={assid.loading && !assid.map} recarregando={assid.loading && !!assid.map}
+            atrasos={kA?.value ?? '—'} advertencias={kV?.value ?? '—'} minutos={somaA.minutos} abonados={somaA.abonados}
+            nAtrasos={kA?.pessoas?.length ?? 0} nMinutos={minutosPessoas.length} nAdvertencias={kV?.pessoas?.length ?? 0}
+            abrirLista={(q) => setLista(q === 'minutos' ? { tipo: 'minutos' } : { tipo: 'kpi', chave: q })}
+            abrirDetalhe={() => detalhe.abrir('assiduidade')} abrirPessoa={(id) => abrirPessoa('assiduidade', id)} />
         )
       })()}
 
-      {/* Atendimentos por departamento (WhatsApp) + Curva de turnover */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16, marginBottom: 16 }}>
-        <WhatsappDeptCard />
+      <Genero grupos={gGen} pcts={{ M: gend.mPct, F: gend.fPct }} idades={{ M: gend.avgM, F: gend.avgF }} abrir={abrirGrupo('gen')} />
 
-        <div className="tc-card" onClick={() => router.push('/turnover')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Curva de turnover</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{vm.turnoverSaidas} {vm.turnoverSaidas === 1 ? 'saída' : 'saídas'} em {vm.turnoverDias} dias · ver relatório</div>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{vm.turnoverWinRate}%</span>
-          </div>
-          <svg viewBox="0 0 320 150" preserveAspectRatio="none" style={{ width: '100%', height: 160, marginTop: 'auto' }}>
-            <line x1="0" y1="37" x2="320" y2="37" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" />
-            <line x1="0" y1="75" x2="320" y2="75" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" />
-            <line x1="0" y1="113" x2="320" y2="113" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" />
-            <path d={vm.turnoverArea} fill="url(#tgrad)" opacity="0.5" />
-            <path d={vm.turnoverLine} fill="none" stroke="var(--danger)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            <defs>
-              <linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--danger)" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="var(--danger)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-mute)', marginTop: 6 }}>
-            {vm.turnoverLabels.map((l, i) => <span key={i}>{l}</span>)}
-          </div>
-        </div>
+      <Sistemas periodo={periodo} abrir={detalhe.abrir} />
       </div>
 
-      {/* Ranking + Escolaridade + Alertas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Destaque por departamento</div>
-          {/* ⚠️⚠️ A lista está em ordem ALFABÉTICA de setor, de propósito. Ela era
-              ordenada por score — entre setores —, o que é exatamente a
-              comparação que o `/ranking` avisa, em amarelo, que não vale: o
-              score é percentil DENTRO do depto. Ordenada, ela virava um ranking
-              de setores pelo campeão de cada um, sem aviso nenhum. */}
-          {/* ⚠️⚠️ O NÚMERO MUDOU DE NATUREZA (09/09/2026): é a PONTUAÇÃO da
-              régua — a que o dono calibrou e a que decide aumento —, não o
-              score de percentil. A tela tem de dizer qual competência e se o
-              número é parcial, senão quem lê acha que é do filtro inteiro. */}
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-            Quem mais pontuou em cada setor{vm.pontuacaoInfo.competencia ? ` · ${competenciaLabel(vm.pontuacaoInfo.competencia)}` : ''}
-            {vm.pontuacaoInfo.estado === 'parcial' && <> · <b style={{ color: 'var(--warn)' }}>parcial</b>, mês em curso</>}
-            {vm.pontuacaoInfo.estado === 'previa' && <> · <b style={{ color: 'var(--warn)' }}>prévia</b>, ainda não gravada</>}
-            <br />pontos de setores diferentes <b>não</b> se comparam — a planilha de serviços não cobre todos
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 420, overflowY: 'auto' }}>
-            {vm.deptHighlights.map((r) => (
-              <div key={r.deptId} className="tc-row" onClick={() => router.push(`/funcionarios/${r.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderRadius: 8, padding: 5, margin: '-1px -5px' }}>
-                <span style={{ width: 8, height: 8, borderRadius: 3, background: r.color, flex: 'none' }} />
-                <Avatar id={r.id} hasAvatar={r.hasAvatar} initials={r.initials} color={r.color} size={28} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.nome}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {r.deptNome} · {r.cargo}
-                    {/* ⚠️ "Melhor de um" não é destaque — a tela diz contra
-                        quantos ele foi comparado em vez de coroar quem não teve
-                        com quem competir. */}
-                    {r.comparadoCom <= 1 && <span style={{ color: 'var(--warning)' }}> · único avaliável no setor</span>}
-                  </div>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.score.toLocaleString('pt-BR')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {painel}
+      {detalhe.aberto && (
+        <JanelaDetalhe chave={detalhe.aberto} setor={setorAberto} comQuemSaiu={!!setorAberto} onFechar={detalhe.fechar} />
+      )}
+    </>
+  )
+}
 
-        <div className="tc-card" onClick={() => router.push('/formacao')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Distribuição por escolaridade</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{vm.headcountTotal} colaboradores</div>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap' }}>ver ›</span>
-          </div>
-          <div style={{ position: 'relative', width: 150, height: 150 }}>
-            <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface-2)" strokeWidth="13" />
-              {vm.escSegments.map((s) => (
-                <circle key={s.label} cx="60" cy="60" r="46" fill="none" stroke={s.color} strokeWidth="13" strokeDasharray={s.dash} strokeDashoffset={s.offset} strokeLinecap="butt" />
-              ))}
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-1px' }}>{vm.escTopPct}%</span>
-              <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{vm.escTopLabel}</span>
-            </div>
-          </div>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
-            {vm.escSegments.map((s) => (
-              <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
-                <span style={{ flex: 1, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
-                <span style={{ fontWeight: 600 }}>{s.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="tc-card" onClick={() => router.push('/geracoes')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Gerações</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Idade média: <b style={{ color: 'var(--text)' }}>{gen.avg ?? '—'}</b> anos</div>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>ver ›</span>
-          </div>
-          <div style={{ display: 'flex', height: 10, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)', margin: '16px 0 14px' }}>
-            {gen.segs.map((s) => <div key={s.key} title={`${s.label} · ${s.desc}`} style={{ width: `${s.pct}%`, background: s.color }} />)}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {gen.segs.map((s) => (
-              <div key={s.key} title={s.desc} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'help' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
-                <span style={{ flex: 1, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
-                {s.ages && <span style={{ color: 'var(--text-mute)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{s.ages} anos</span>}
-                <span style={{ fontWeight: 600 }}>{s.count}</span>
-                <span style={{ color: 'var(--text-mute)', width: 34, textAlign: 'right' }}>{s.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Comparativo por gênero */}
-      <div className="tc-card" onClick={() => router.push('/genero')} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16, cursor: 'pointer' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Comparativo por gênero</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Quadro ativo · {gend.m + gend.f} com gênero informado{gend.ni ? ` · ${gend.ni} sem informação` : ''}</div>
-          </div>
-          <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>ver ›</span>
-        </div>
-        <div style={{ display: 'flex', height: 12, borderRadius: 20, overflow: 'hidden', background: 'var(--surface-2)', marginBottom: 16 }}>
-          <div title={`Masculino: ${gend.m}`} style={{ width: `${gend.mPct}%`, background: 'var(--info)' }} />
-          <div title={`Feminino: ${gend.f}`} style={{ width: `${gend.fPct}%`, background: 'var(--chart-5)' }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {[
-            { label: 'Masculino', color: 'var(--info)', count: gend.m, pct: gend.mPct, age: gend.avgM, score: gend.scoreM },
-            { label: 'Feminino', color: 'var(--chart-5)', count: gend.f, pct: gend.fPct, age: gend.avgF, score: gend.scoreF },
-          ].map((g) => (
-            <div key={g.label} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: g.color }} />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{g.label}</span>
-                </div>
-                <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: g.color, lineHeight: 1.1 }}>{g.count} <span style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 600 }}>· {g.pct}%</span></div>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 18 }}>
-                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Idade média</div><div style={{ fontSize: 15, fontWeight: 700 }}>{g.age ?? '—'}</div></div>
-                {/* ⚠️ "—" quando ninguém do grupo é medido. Zero aqui acusaria
-                    o grupo por uma ausência de dado. */}
-                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 15, fontWeight: 700, color: g.score == null ? 'var(--text-mute)' : undefined }}>{g.score ?? '—'}</div></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ClassRoom — cursos criados por departamento NO PERÍODO (dados reais, frente B) */}
-      <ClassroomDeptCard />
-
-      {/* Rádio Itamarathy — horas por departamento NO PERÍODO (dados reais, frente B) */}
-      <RadioDeptCard />
-
-      {/* Consultoria Plus — atividade por departamento NO PERÍODO (dados reais, frente B) */}
-      <ConsultoriaDeptCard />
-
-      {/* HelpDesk — chamados por departamento NO PERÍODO (dados reais, frente B) */}
-      <HelpdeskDeptCard />
-
-      {/* CIDE — atividades registradas por departamento NO PERÍODO (dados reais, frente B) */}
-      <CideDeptCard />
+export default function PainelPrincipal() {
+  return (
+    <div className={`tc-anim ${v.raiz}`}>
+      {/* ⚠️ O provedor do painel da pessoa AQUI DENTRO da `.raiz`: aberto de uma
+          lista ou de uma janela, ele nasce com a paleta nova (o molde do setor). */}
+      <PainelDaPessoaProvider>
+        <Conteudo />
+      </PainelDaPessoaProvider>
     </div>
   )
 }

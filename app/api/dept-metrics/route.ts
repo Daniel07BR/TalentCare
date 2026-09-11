@@ -868,6 +868,8 @@ export async function GET(req: NextRequest) {
       quemNoDia,
       quemDoMapa,
       pontoAte: cobPonto.ultimoDia,
+      // A ponta de baixo: antes dela o calendário hachura em vez de dizer "limpo".
+      pontoDesde: cobPonto.primeiroDia,
     },
     /* SERVIÇOS da planilha do setor. ⚠️ `temFonte` distingue "este setor não
        manda planilha" de "o setor não fez nada" — 14 dos 15 setores estão no

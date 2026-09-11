@@ -80,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites,
+  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites,
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -88,6 +88,14 @@ export default function CalendarioOcorrencias({
   ate: string
   /** Último dia coberto pelo import de ponto. Depois dele, nada se afirma. */
   pontoAte?: string | null
+  /**
+   * PRIMEIRO dia coberto pelo ponto. ⚠️⚠️ Antes dele, também nada se afirma
+   * (achado do crítico, 11/09/2026): o calendário só conhecia a ponta de cima, e
+   * um intervalo de set/2025 pintava o mês inteiro de "ninguém atrasou" — num
+   * mês que o ponto nunca mediu, ao lado de números que diziam "—". A ausência
+   * elogiando. Vai hachurado, como o que passa do `pontoAte`.
+   */
+  pontoDesde?: string | null
   /** `minutos` = a ficha de uma pessoa; `pessoas` = o mapa de um setor. */
   escala?: 'minutos' | 'pessoas'
   /** Os cinco fundos, do "sem atraso" ao topo. Só a prévia do relatório novo
@@ -152,7 +160,8 @@ export default function CalendarioOcorrencias({
                   const iso = `${mes}-${String(dia).padStart(2, '0')}`
                   const foraDoPeriodo = iso < de || iso > ate
                   const futuro = iso > hoje
-                  const semMedicao = !foraDoPeriodo && !futuro && !!pontoAte && iso > pontoAte
+                  const antesDoPonto = !!pontoDesde && iso < pontoDesde
+                  const semMedicao = !foraDoPeriodo && !futuro && ((!!pontoAte && iso > pontoAte) || antesDoPonto)
                   const oc = porIso.get(iso)
                   const lvl = foraDoPeriodo || futuro || semMedicao ? 0
                     : escala === 'pessoas' ? nivelPorPessoas(oc?.pessoas ?? 0, limites)
@@ -161,7 +170,9 @@ export default function CalendarioOcorrencias({
                   const brDia = `${String(dia).padStart(2, '0')}/${String(m).padStart(2, '0')}`
                   const titulo = foraDoPeriodo ? `${brDia}: fora do período filtrado`
                     : futuro ? ''
-                    : semMedicao ? `${brDia}: sem medição — o ponto foi importado até ${pontoAte!.split('-').reverse().join('/')}`
+                    : semMedicao ? (antesDoPonto
+                        ? `${brDia}: sem medição — o ponto começa em ${pontoDesde!.split('-').reverse().join('/')}`
+                        : `${brDia}: sem medição — o ponto foi importado até ${pontoAte!.split('-').reverse().join('/')}`)
                     : oc && oc.atrasos > 0
                       ? `${brDia}: ${oc.atrasos} atraso${oc.atrasos > 1 ? 's' : ''}`
                         + (escala === 'pessoas' && oc.pessoas ? ` · ${oc.pessoas} pessoa${oc.pessoas > 1 ? 's' : ''}` : '')
@@ -217,7 +228,7 @@ export default function CalendarioOcorrencias({
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
           <span style={{ width: 11, height: 11, borderRadius: 3, border: '1px dashed var(--border)' }} /> fora do período
         </span>
-        {pontoAte && ate > pontoAte && (
+        {((pontoAte && ate > pontoAte) || (pontoDesde && de < pontoDesde)) && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
             <span style={{ width: 11, height: 11, borderRadius: 3, background: 'repeating-linear-gradient(45deg, var(--border) 0 2px, transparent 2px 5px)' }} /> sem medição
           </span>
