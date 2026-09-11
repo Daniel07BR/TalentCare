@@ -5,6 +5,7 @@ import { Search, Building2 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import Avatar from './Avatar'
 import { buscar, type ResultadoBusca } from '@/lib/ui/busca'
+import type { Alcance } from '@/lib/alcance-recorte'
 
 /* ============================================================
    A BUSCA DO TOPO — pessoas e departamentos (11/09/2026).
@@ -13,14 +14,19 @@ import { buscar, type ResultadoBusca } from '@/lib/ui/busca'
    escrevemos o nome de um departamento ou de uma pessoa, ele não entrega nada".
    O campo existia desde o primeiro desenho e só guardava o que se digitava.
 
-   ⚠️ Busca no dataset que a sessão JÁ recebeu (`useTalentData`), que passou pela
-   régua de alcance no servidor (`lib/alcance.ts`): quem busca só encontra quem já
-   podia ver. Nenhuma rota nova, nenhuma segunda régua.
+   ⚠️ Busca no dataset que a sessão JÁ recebeu (`useTalentData`) — nenhuma rota
+   nova. Esse dataset traz a casa inteira (o recorte do servidor só zera ponto e
+   disciplina de quem está fora do alcance), então a busca filtra de novo, pelo
+   `alcance` — ver abaixo.
 
    A conta mora em `lib/ui/busca.ts` (pura), provada por `scripts/ensaio-busca.ts`.
+
+   ⚠️⚠️ Recortada pelo `alcance` (11/09/2026, quando a busca chegou ao gestor):
+   sem o recorte ela ofereceria a ficha de gente de outro setor — o clique cairia
+   numa rota que responde 403.
    ============================================================ */
 
-export default function BuscaGlobal() {
+export default function BuscaGlobal({ alcance }: { alcance: Alcance }) {
   const data = useTalentData()
   const router = useRouter()
   const [q, setQ] = useState('')
@@ -35,7 +41,7 @@ export default function BuscaGlobal() {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  const resultados = useMemo(() => buscar(data, q), [q, data])
+  const resultados = useMemo(() => buscar(data, q, alcance), [q, data, alcance])
 
   useEffect(() => { setAtivo(0) }, [q])
 
@@ -70,7 +76,11 @@ export default function BuscaGlobal() {
           style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 70, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', boxShadow: '0 12px 32px rgba(0,0,0,.18)', maxHeight: 'min(70vh, 460px)', overflowY: 'auto', padding: 6 }}>
           {resultados.length === 0 ? (
             <div style={{ padding: '12px 10px', fontSize: 12.5, color: 'var(--text-dim)' }}>
-              Ninguém e nenhum setor com “{q.trim()}” no nome.
+              {/* ⚠️ Para o gestor, "ninguém" soaria como "essa pessoa não existe" —
+                  quando ela só está fora dos setores dele. */}
+              {alcance.tipo === 'tudo'
+                ? <>Ninguém e nenhum setor com “{q.trim()}” no nome.</>
+                : <>Ninguém dos seus setores com “{q.trim()}” no nome.</>}
             </div>
           ) : resultados.map((r, i) => (
             <div key={`${r.tipo}-${r.id}`}>

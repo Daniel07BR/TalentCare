@@ -1,5 +1,23 @@
 # Próximo trabalho — tirar o menu lateral e trocar por uma janela de cartões
 
+> ## ✅ FEITO em 11/09/2026 (noite) — ver o `CHANGELOG`, entrada (25)
+>
+> O menu lateral saiu; a janela de cartões está no ar. As decisões do §4, tomadas com o dono:
+> **(1)** o selo e a prévia "VENDO COMO GESTOR" saíram; **(2)** a barra da Diretoria ficou SEM
+> atalhos — Avaliações e Meu desempenho viraram cartões (grupo "Avaliação"); **(3)** o gestor
+> ganhou a busca, recortada pelo alcance dele (`lib/alcance-recorte.ts`), e NÃO ganhou o
+> botão; **(4)** o sino (falso) saiu.
+>
+> Onde está agora: a lista das telas em `lib/ui/menu.ts` (`GRUPOS_TELAS`, `cartoesDoMenu`,
+> `TODAS_AS_TELAS` para o "voltar"); a janela em `app/(app)/JanelaMenu.tsx`; a barra e a
+> janela em `app/(app)/navegacao.module.css`; a paleta numa classe só de cores, `.paleta`
+> (`_visao/visao.module.css`). Provas: `scripts/ensaio-menu.ts` e a 5ª pergunta de
+> `scripts/ensaio-acesso-gestao.mjs`. O texto abaixo é o roteiro como foi escrito.
+>
+> ⚠️⚠️ **O §4.3 abaixo está ERRADO** ("o dataset dele só tem o time dele"): o dataset do gestor
+> traz a casa inteira — score, atividade, nascimento e sexo de todos; o recorte só zera ponto e
+> disciplina. A busca é recortada à parte. Ver o aviso de privacidade no `CHANGELOG` (25).
+
 > Escrito em **11/09/2026 (noite)** para o agente que continua. Leia antes, nesta ordem:
 > [`CONTINUAR-AQUI.md`](CONTINUAR-AQUI.md) (o bloco do topo e as regras da casa, §2),
 > este documento e [`PERIODO-E-DEPLOY.md`](PERIODO-E-DEPLOY.md) (como publicar).

@@ -12,7 +12,11 @@
    paleta nova sem uma linha a mais neles.
    ============================================================ */
 
-.raiz {
+/* ⚠️ A PALETA mora numa classe só dela (11/09/2026): a janela de cartões do topo
+   (`app/(app)/JanelaMenu.tsx`) usa as mesmas cores fora de qualquer página, e a
+   `.raiz` carrega margens e fundo que são do desenho da página. Uma cópia dos
+   tokens lá discordaria daqui no primeiro ajuste de cor. */
+.paleta {
   --n-bg: #f4f6fb;        --n-card: #ffffff;      --n-card-2: #f6f8fc;
   --n-border: #e6eaf2;    --n-border-2: #eef1f6;
   --n-text: #0f172a;      --n-text-2: #475569;    --n-text-3: #8a97ad;
@@ -34,7 +38,10 @@
   --accent: var(--n-blue); --info: var(--n-blue); --success: var(--n-green);
   --warning: var(--n-amber); --danger: var(--n-red);
   --chart-1: var(--n-green); --chart-2: var(--n-blue); --chart-3: var(--n-purple); --chart-4: var(--n-orange); --chart-5: var(--n-pink);
+}
 
+.raiz {
+  composes: paleta;
   /* a página pinta o próprio fundo por baixo do respiro do <main> */
   margin: -28px -32px -56px;
   padding: 22px 28px 48px;
@@ -45,7 +52,7 @@
 
 /* Tema escuro do app (<html data-theme="dark">): mesmas famílias de cor,
    superfícies azul-noite. Os azulejos ficam translúcidos para não brilhar. */
-:global([data-theme="dark"]) .raiz {
+:global([data-theme="dark"]) .paleta {
   --n-bg: #0b1020;        --n-card: #121a2b;      --n-card-2: #182238;
   --n-border: #243049;    --n-border-2: #1d2740;
   --n-text: #e6ebf5;      --n-text-2: #a8b4ca;    --n-text-3: #71809c;

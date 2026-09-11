@@ -2,8 +2,16 @@
 
 > ## ⚠️⚠️ ESTADO EM 11/09/2026 (NOITE) — leia isto primeiro
 >
-> **O próximo trabalho é o MENU:** [`PROXIMO-MENU.md`](PROXIMO-MENU.md) — tirar o menu
-> lateral e trocar por um botão que abre uma janela de cartões. Leia antes de mexer.
+> ✅ **O MENU LATERAL SAIU** (`CHANGELOG` (25); [`PROXIMO-MENU.md`](PROXIMO-MENU.md) tem o
+> estado no topo). A barra de cima é a navegação de todo mundo, com a busca; o botão de grade
+> abre a janela de cartões — **só a Diretoria** o recebe (`cartoesDoMenu`, decidido no
+> layout). O modo "VENDO COMO GESTOR" e o sino saíram. ⚠️ O gestor agora TEM a busca, e ela é
+> recortada pelo alcance dele (`lib/alcance-recorte.ts` — a mesma régua do dataset): o
+> dataset dele traz o diretório da casa inteira. Tela nova de navegação: entre em
+> `lib/ui/menu.ts`, que é também a fonte dos nomes do "voltar".
+> ⚠️⚠️ **PRIVACIDADE EM ABERTO (anterior ao menu):** o dataset do gestor leva score, atividade,
+> nascimento e sexo da CASA INTEIRA ao navegador dele, e `/funcionarios` e a ficha de outro setor
+> não são barrados para ele. Decisão do dono — ver `CHANGELOG` (25).
 >
 > O que mudou na tarde/noite de 11/09 (detalhe e porquês no `CHANGELOG`, entradas **(15) a
 > (24)**; commits `e29280d` … `98596da`, todos publicados no `.78`):
@@ -30,7 +38,8 @@
 >   o setor oculto Diretoria diria "9 a avaliar" se aberto por endereço.
 >
 > **Os ensaios** (rode depois de mexer; todos limpos em 11/09 à noite):
-> `ensaio-painel-novo.ts` (785) · `ensaio-regua-geral.ts` (171) · `ensaio-busca.ts` (136) — com
+> `ensaio-painel-novo.ts` (785) · `ensaio-regua-geral.ts` (171) · `ensaio-busca.ts` (136) ·
+> `ensaio-menu.ts` (101) — com
 > `npx --yes tsx@4 --env-file=.env --tsconfig scripts/tsconfig.json scripts/<nome>.ts` — e os
 > três `.mjs` do setor (`ensaio-acesso-gestao`, `ensaio-detalhe-setor`,
 > `ensaio-quem-atras-do-numero`) com `node --env-file=.env`.

@@ -1,5 +1,95 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (25) — Sai o menu lateral; entra a janela de cartões
+
+Pedido do dono: *"quero tirar o menu lateral. Hoje, com ele recolhido, incluir o campo de
+busca; e onde está o sinal para fazê-lo aparecer, colocar um botão que, ao clicar, abra uma
+janela no centro da tela com os cards de cada opção que temos hoje no menu lateral"*. Roteiro
+em `docs/PROXIMO-MENU.md`.
+
+- **Não há mais menu lateral**, para ninguém. A barra de cima é a navegação: botão da janela,
+  logo (leva ao painel), **busca**, meses e período, tema, e a pessoa com "Sair" (que morava no
+  rodapé do menu).
+- **A janela de cartões** (botão de grade, no canto esquerdo da barra) abre no centro com
+  quatro grupos: **Visão geral** (Dashboard, Funcionários, Departamentos), **Avaliação**
+  (Avaliações, Meu desempenho), **Sistemas** (os 10) e **Administração** (Configurações). Cada
+  cartão: ícone do menu antigo, nome e uma linha do que há lá. **Sem número** — número ao lado
+  do filtro teria de obedecer a ele (regra (b)). A tela atual vem marcada ("você está aqui").
+  Esc fecha, clicar fora fecha, o foco entra na janela (no cartão da tela atual), Tab gira
+  dentro dela, e ao fechar o foco volta ao botão. Paleta nova (a do painel), tema claro e
+  escuro; no celular a janela ocupa a tela, dois cartões por linha.
+- **Decisões do dono tomadas antes de construir:**
+  - o modo **"VENDO COMO GESTOR" saiu** (recolher o menu era a prévia da barra do gestor, com
+    selo) — sem menu não há o que recolher; a chave `tc-menu` do navegador é apagada;
+  - a barra da **Diretoria fica sem atalhos** — Avaliações e Meu desempenho viraram cartões;
+  - **gestor e sub-encarregado ganham a busca** e **não** ganham o botão nem os cartões; seguem
+    com os chips dos setores deles, Avaliações e Meu desempenho;
+  - **o sino saiu**: tinha um ponto vermelho fixo e não fazia nada ao clicar (regra (d)).
+- ⚠️⚠️ **Os cartões são decididos no servidor** (`cartoesDoMenu`, em `lib/ui/menu.ts`,
+  chamado pelo layout): quem não é Diretoria recebe a lista vazia — o botão nem é desenhado e
+  os cartões não viajam no payload dele. A lista das telas passou a ser a fonte única também
+  do "voltar" das telas de detalhe (era `NAV_MAIN`/`NAV_SYSTEMS`/`NAV_ADMIN` do `AppShell`).
+- ⚠️⚠️ **A busca do gestor é recortada pelo alcance dele.** O dataset que ele recebe traz o
+  DIRETÓRIO da casa inteira (nome, cargo e setor são diretório; a disciplina, não) — sem o
+  recorte, digitar um nome oferecia a ficha de gente de outro setor, e o clique cairia numa
+  rota que responde 403. A régua saiu de dentro de `lib/data/source.ts` para
+  `lib/alcance-recorte.ts` (pura), e o dataset e a busca usam a mesma: os setores que a pessoa
+  avalia (vínculo gravado) e ela mesma — a de `podeVer`.
+- **A paleta nova ganhou uma classe só de cores** (`.paleta`, em `_visao/visao.module.css`); a
+  `.raiz` das páginas a compõe. A janela usa a mesma, sem copiar token.
+- **A barra no celular e em tela média:** quando não cabe numa linha, os meses e o período
+  descem para uma segunda (a da Diretoria cabe numa linha a partir de ~1220 px; a do gestor,
+  com os chips, perto de 1600). No celular a busca ganha a linha inteira, chips e período rolam
+  para o lado e a barra deixa de grudar no topo. O calendário saiu de uma posição fixa
+  (`right: 120`) para baixo do botão dele.
+- **O painel principal alarga sozinho**: sem os 240 px do menu, as grades (`@container`)
+  sobem de degrau — em 1366 px, os sistemas passam de 2 para 3 por linha e a terceira linha
+  de 2 para 3 colunas; em 1920 px nada muda.
+- Prova: `scripts/ensaio-menu.ts` (novo) — os 16 cartões da Diretoria apontam para páginas que
+  existem, nenhum para `/servicos`, nenhum com número, e o gestor recebe 0; e, para **cada um
+  dos 16 gestores**, buscar o nome de cada pessoa e de cada setor da casa só devolve quem ele
+  abre, e acha o time inteiro dele — **101 conferências, 0 divergências**.
+  `ensaio-acesso-gestao.mjs` ganhou a 5ª pergunta com sessão de verdade: a página do setor de
+  cada gestor chega **sem o botão e sem os cartões** (16 de 16), e o `/dashboard` da Diretoria
+  chega **com** os dois. Os ensaios de antes seguem limpos: painel 785, régua 171, busca 136,
+  detalhe do setor 576, quem está atrás do número 888.
+
+**O crítico** (`docs/AGENTE-CRITICO.md`) confirmou as quatro decisões cumpridas, o teclado, as
+camadas, o tema escuro e os degraus do painel. Consertado do que ele achou:
+- **A régua de SETOR da busca não era a da rota:** a `/api/dept-metrics` abre também o setor
+  em que a pessoa senta. Hoje os 16 gestores avaliam o próprio setor (coincidia), mas um gestor
+  sem vínculo teria o chip e a rota e a busca o esconderia. `alcancaSetor` passou a somar
+  `meuSetorId`, e o `ensaio-menu` confere a busca contra a régua da ROTA, e não contra a
+  própria conta.
+- **A barra da Diretoria quebrava entre ~1220 e ~1310 px** (tela 1920 a 150%, ou 1366 com zoom
+  de 110%): o tema e a pessoa caíam sozinhos numa segunda linha, à esquerda. O degrau de duas
+  linhas foi para 1360 (Diretoria) e 1700 (gestor); no tablet os chips do gestor ganham linha
+  própria.
+- **O selo "você está aqui" passava da borda do cartão** (20–53 px, cortado pelo vizinho; no
+  celular, rolagem de lado) — agora quebra para baixo do nome.
+- **Textos que prometiam o que a tela não tem:** "Meu desempenho" dizia "a sua avaliação e a sua
+  pontuação" (a página só tem a avaliação); Configurações dizia "cadastros" (as abas de cadastro
+  são só do dono). A busca vazia do gestor diz "ninguém **dos seus setores**" — "ninguém" soava
+  como "essa pessoa não existe".
+
+⚠️⚠️ **PRIVACIDADE — ACHADO DO CRÍTICO, ANTERIOR A ESTA ENTREGA, EM ABERTO (decisão do dono).**
+O dataset que vai para o navegador do GESTOR (`getTalentData` com recorte) traz a **casa
+inteira**: o recorte só zera ponto e disciplina de quem está fora do alcance. Score, fatores, os
+acumulados dos oito sistemas, escolaridade, **data de nascimento e sexo** de todo mundo seguem no
+payload. Medido pelo crítico para a Adriana (Fiscal): **98 pessoas fora do alcance dela** no
+payload, 68 com data de nascimento, 77 com sexo, 79 com atividade. E há caminho de TELA: o
+`proxy.ts` não barra o gestor em `/funcionarios` nem na ficha de outro setor (só a linha do tempo
+e as métricas do período respondem 403). A busca desta entrega é recortada e não oferece esse
+caminho — mas "o gestor só recebe o time dele" (§4.3 do `PROXIMO-MENU.md`) **não é verdade**.
+Proposta: fora do alcance, só identidade (nome, cargo, setor, foto); `/funcionarios` e a ficha
+de fora fechados para o gestor.
+
+**Notados e deixados:** a lista de nomes das telas vai no JS de toda sessão (é o "voltar"; nome de
+tela, não dado). Para os 9 diretores do setor Diretoria (que não é avaliado), "Meu desempenho" diz
+"quando o seu gestor publicar a avaliação do mês, ela aparece aqui" — o que não vai acontecer
+(texto anterior, da própria página). E as ~23 telas presas em `maxWidth: 1280` ficam com margem
+cinza dos dois lados em 1920, agora que o menu não ocupa mais a esquerda.
+
 ## 2026-09-11 (24) — A busca do topo passa a funcionar
 
 Pedido do dono: *"dê uma funcionalidade real ao campo de busca — hoje, se escrevemos o nome de

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { assembleData, type Identity, type TalentData, type TrainingItem } from '@/lib/mock/data'
 import { isHiddenDept } from '@/lib/hidden-depts'
 import { coberturaDoPonto } from '@/lib/ponto-cobertura'
+import { alcancaPessoa, type Alcance } from '@/lib/alcance-recorte'
 
 /**
  * Dataset do TalentCare: IDENTIDADE real (Nexus) + MÉTRICAS simuladas (até a frente B).
@@ -22,9 +23,9 @@ import { coberturaDoPonto } from '@/lib/ponto-cobertura'
  * a ficha disciplinar de 73 pessoas a cada um dos 87 — e o que foi visto foi
  * visto.
  */
-export type Alcance =
-  | { tipo: 'tudo' }
-  | { tipo: 'recorte'; departmentIds: string[]; meuId: string }
+/* O tipo e a conta moram em `lib/alcance-recorte.ts` (pura): a busca do topo faz
+   a mesma pergunta no navegador. */
+export type { Alcance } from '@/lib/alcance-recorte'
 
 export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
@@ -172,10 +173,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
 
   /* Quem o leitor alcança. Fora disso, a pessoa continua aparecendo (nome,
      cargo, setor são diretório) — mas sem ocorrência de ponto e sem disciplina. */
-  const alcanca = (deptId: string | null, id: string): boolean => {
-    if (alcance.tipo === 'tudo') return true
-    return id === alcance.meuId || (!!deptId && alcance.departmentIds.includes(deptId))
-  }
+  const alcanca = (deptId: string | null, id: string): boolean => alcancaPessoa(alcance, deptId, id)
 
   const identities: Identity[] = users.map((u) => {
     const cs = u.nexusUserId ? statByNexus.get(u.nexusUserId) : undefined

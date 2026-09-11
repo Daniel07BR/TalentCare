@@ -8,16 +8,24 @@
 // conteúdo, em `lib/alcance.ts` + `regua.ts`) e o defeito clássico é uma passar
 // e a outra não: a tela oferece e a rota responde 403.
 //
-// Para CADA gestor/sub liberado, quatro perguntas:
+// Para CADA gestor/sub liberado, cinco perguntas:
 //   1. o relatório do setor DELE responde 200 e com a equipe dele dentro
 //   2. o relatório de um setor de OUTRO responde 403
 //   3. `/ranking` (painel da casa) não se abre
 //   4. `/dashboard` (a empresa inteira) não se abre
+//   5. a página dele chega sem o botão e sem os cartões da Diretoria (11/09/2026)
+// E a contraprova do 5: a Diretoria recebe os dois.
 import { PrismaClient } from '@prisma/client'
 import { encode } from 'next-auth/jwt'
 
 const prisma = new PrismaClient()
 const BASE = 'http://127.0.0.1:8082'
+// As marcas da janela de cartões (11/09/2026): o atributo do botão, no HTML, e a
+// descrição do cartão de Configurações, que só viaja nos dados da página (RSC) de
+// quem recebe os cartões (`lib/ui/menu.ts`). ⚠️ A LISTA de nomes das telas vai no
+// JS que toda sessão baixa (é o "voltar"); é nome de tela, não dado.
+const MARCA_BOTAO = 'data-menu-telas'
+const MARCA_CARTOES = 'as fontes de dados'
 
 const cookieDe = async (u) =>
   encode({
@@ -78,6 +86,30 @@ for (const g of gestores) {
 
   const rDash = await bate('/dashboard', token)
   console.log('   ' + conta(rDash.status === 307 || rDash.status === 302, `/dashboard: HTTP ${rDash.status} → ${rDash.headers.get('location') ?? '(sem redirect)'}`))
+
+  // 5. (11/09/2026) Sem menu lateral: a página do setor dele chega SEM o botão da
+  //    janela e SEM os cartões da Diretoria — nem escondidos, nem nos dados da página.
+  if (meus[0]) {
+    const rPag = await bate(`/departamentos/${meus[0].id}`, token)
+    const html = rPag.status === 200 ? await rPag.text() : ''
+    const limpo = rPag.status === 200 && !html.includes(MARCA_BOTAO) && !html.includes(MARCA_CARTOES)
+    console.log('   ' + conta(limpo, `página do setor sem o botão e sem os cartões da Diretoria (HTTP ${rPag.status})`))
+  }
+}
+
+// A outra metade da prova: a Diretoria RECEBE o botão e os cartões. Sem ela, um
+// botão que sumiu para todo mundo passaria como "o gestor não vê".
+const diretor = await prisma.user.findFirst({
+  where: { role: 'ADMIN', leftAt: null },
+  select: { id: true, name: true, role: true, department: { select: { name: true } } },
+  orderBy: { name: 'asc' },
+})
+if (diretor) {
+  const r = await bate('/dashboard', await cookieDe(diretor))
+  const html = r.status === 200 ? await r.text() : ''
+  console.log(`\n── Diretoria · ${diretor.name}`)
+  console.log('   ' + conta(r.status === 200 && html.includes(MARCA_BOTAO), `/dashboard traz o botão da janela de cartões (HTTP ${r.status})`))
+  console.log('   ' + conta(html.includes(MARCA_CARTOES), '/dashboard traz os cartões (o de Configurações)'))
 }
 
 // A contraprova: um colaborador comum continua fora. Sem ela o ensaio diria

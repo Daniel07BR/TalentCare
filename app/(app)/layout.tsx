@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { getTalentData, type Alcance } from '@/lib/data/source'
-import { isOwnerEmail } from '@/lib/nexus'
+import { cartoesDoMenu } from '@/lib/ui/menu'
 import AppShell from './AppShell'
 import PrepareGate from './PrepareGate'
 
@@ -42,12 +42,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
      Navegação e alcance de dado são coisas diferentes e agora estão separadas. */
   const alcance: Alcance = role === 'ADMIN'
     ? { tipo: 'tudo' }
-    : { tipo: 'recorte', departmentIds: [...new Set(vinculosDele.map((v) => v.departmentId))], meuId: uid ?? '' }
+    : { tipo: 'recorte', departmentIds: [...new Set(vinculosDele.map((v) => v.departmentId))], meuId: uid ?? '', meuSetorId: meDept }
   const data = await getTalentData(alcance)
-  const isOwner = isOwnerEmail(session.user.email)
 
   /*
-   * ⚠️⚠️ O MENU LATERAL É DA DIRETORIA (decisão do dono, 03/09/2026). Gestor e
+   * ⚠️⚠️ A NAVEGAÇÃO DA CASA É DA DIRETORIA (decisão do dono, 03/09/2026). Era o
+   * menu lateral; desde 11/09/2026 é a janela de cartões do topo. Gestor e
    * sub-encarregado não navegam pelo painel da empresa — eles caem no setor
    * deles e trabalham ali.
    *
@@ -58,10 +58,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
    * ver `AppShell`. Tirar tudo os deixaria presos numa página só.
    */
   const soMeuSetor = role !== 'ADMIN'
-  /* ⚠️ Calculado SEMPRE, inclusive para a Diretoria: é o que permite recolher o
-     menu e ver a tela como o gestor a vê. Um preview que mostra uma navegação
-     diferente da real não serve para conferir nada. */
-  const meusSetores = meusSetoresIds.length
+  /* Os chips dos setores são só da barra de quem não é Diretoria. (Até 11/09/2026
+     eram calculados também para a Diretoria, para a prévia "vendo como gestor",
+     que saiu com o menu lateral.) */
+  const meusSetores = soMeuSetor && meusSetoresIds.length
     ? (await prisma.department.findMany({ where: { id: { in: meusSetoresIds } }, select: { id: true, name: true } }))
         .sort((a, b) => a.name.localeCompare(b.name))
     : []
@@ -70,9 +70,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       name={session.user.name ?? 'Diretoria'}
       roleLabel={roleLabel}
-      isOwner={isOwner}
       soMeuSetor={soMeuSetor}
       meusSetores={meusSetores}
+      /* ⚠️⚠️ Os cartões da janela (o que era o menu lateral) são decididos AQUI,
+         no servidor: quem não é Diretoria recebe a lista vazia, e nem o botão
+         aparece. Ver `lib/ui/menu.ts`. */
+      cartoes={cartoesDoMenu(!soMeuSetor)}
+      alcance={alcance}
       me={{ id: me?.id ?? uid ?? '', cargo: me?.jobTitle ?? null, hasAvatar: !!me?.avatarUrl }}
       data={data}
     >
