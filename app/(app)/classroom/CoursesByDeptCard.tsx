@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { deptName } from '@/lib/mock/employee'
 import { useClassroomCourses } from '@/lib/ui/classroom-courses'
+import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import Avatar from '../Avatar'
 
 type CourseItem = { courseId: string; title: string; createdAt: string }
@@ -24,6 +25,7 @@ export default function CoursesByDeptCard() {
   const router = useRouter()
   const data = useTalentData()
   const { courses, loading } = useClassroomCourses()
+  const setor = useRecorteSetor()
   const [openDepts, setOpenDepts] = useState<Set<string>>(new Set())
   const [openCreators, setOpenCreators] = useState<Set<string>>(new Set())
 
@@ -34,6 +36,10 @@ export default function CoursesByDeptCard() {
 
     for (const c of courses) {
       const e = byNexus.get(c.creatorNexusUserId)
+      // ⚠️ Dentro de um setor, curso de autor de fora não é "Outros": não é
+      // deste setor, e ponto. Sem isto a janela do Legal ganharia um grupo
+      // "Outros" com os cursos da casa inteira.
+      if (setor && !e) continue
       const deptId = e ? e.dept : OTHER_ID
       let dg = depts.get(deptId)
       if (!dg) {
@@ -68,7 +74,7 @@ export default function CoursesByDeptCard() {
       dg.creators.forEach((cg) => cg.items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
     })
     return { groups, total: groups.reduce((s, x) => s + x.count, 0) }
-  }, [courses, data])
+  }, [courses, data, setor])
 
   const max = Math.max(1, ...groups.map((d) => d.count))
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
@@ -80,10 +86,10 @@ export default function CoursesByDeptCard() {
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Cursos criados por departamento</div>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{setor ? `Cursos criados por ${setor.nome}` : 'Cursos criados por departamento'}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{total.toLocaleString('pt-BR')} no período</div>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>Clique no setor para ver quem gravou e quantos; clique no funcionário para ver os cursos</div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{setor ? 'Clique no funcionário para ver os cursos que ele gravou' : 'Clique no setor para ver quem gravou e quantos; clique no funcionário para ver os cursos'}</div>
 
       {loading && courses.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Carregando…</div>
@@ -92,7 +98,8 @@ export default function CoursesByDeptCard() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {groups.map((d) => {
-            const isOpen = openDepts.has(d.id)
+            // Com um setor só, o grupo já nasce aberto: fechá-lo é um clique a mais para ver a única coisa que há.
+            const isOpen = !!setor || openDepts.has(d.id)
             return (
               <div key={d.id} style={{ borderRadius: 10, overflow: 'hidden', border: isOpen ? '1px solid var(--border-soft)' : '1px solid transparent' }}>
                 <div className="tc-row" onClick={() => toggle(openDepts, setOpenDepts, d.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '8px 8px', borderRadius: 10 }}>

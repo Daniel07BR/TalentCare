@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/config'
+import { alcanceDeQuemLe } from '@/lib/alcance'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -11,10 +11,14 @@ export const dynamic = 'force-dynamic'
 type Course = { courseId: string; title: string; createdAt: string; creatorNexusUserId: string }
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
+  /* ⚠️⚠️ Esta era a ÚNICA rota agregada que ficou fora de `lib/alcance.ts`: ela
+     devolvia os cursos da EMPRESA INTEIRA (título e autor) para qualquer sessão
+     — gestor incluído, desde que a chefia entrou em 10/09/2026. Achado em
+     11/09, ao pôr o detalhe do ClassRoom dentro do relatório do setor: a tela
+     filtraria, e o payload continuaria levando o resto da casa. */
+  const alcance = await alcanceDeQuemLe()
+  if (!alcance) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const alcancaAutor = (nx: string) => alcance.tipo === 'tudo' || alcance.nexusIds.includes(nx)
   const { period, fromDay, toDay } = rangeDaRequisicao(req)
   const from = `${fromDay}T00:00:00.000Z`
   // ⚠️ O fim do intervalo é o FIM DO DIA `toDay`, e não "agora": com o
@@ -35,7 +39,7 @@ export async function GET(req: NextRequest) {
     })
     if (!res.ok) return NextResponse.json({ period, courses: [] as Course[] })
     const data = (await res.json()) as { ok: boolean; courses: Course[] }
-    return NextResponse.json({ period, courses: data.courses ?? [] })
+    return NextResponse.json({ period, courses: (data.courses ?? []).filter((c) => alcancaAutor(c.creatorNexusUserId)) })
   } catch {
     return NextResponse.json({ period, courses: [] as Course[] })
   }

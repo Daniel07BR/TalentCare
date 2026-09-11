@@ -14,6 +14,7 @@ import { useDeptPeriod, type DeptMetrics } from '@/lib/ui/dept-period'
 import { Pessoas } from './Pessoas'
 import { Tendencia, Turnover } from './Tendencia'
 import { CardFonte } from './CardFonte'
+import { useDetalhe, JanelaDetalhe, BotaoDetalhe, type ChaveDetalhe } from './Detalhe'
 import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 import { Hero, Escolaridade } from './Hero'
 import { usePeriod } from '@/lib/ui/period'
@@ -38,6 +39,8 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   // porque ninguém desconfia de um número plausível.
   const { m, estado } = useDeptPeriod(id)
   const [busca, setBusca] = useState('')
+  // A janela de detalhe de um sistema, só com este setor — ver `Detalhe.tsx`.
+  const detalhe = useDetalhe()
   // ⚠️ Setor "cabe à Diretoria": cobrar do gestor uma avaliação que ele não pode
   // publicar é alerta que não se resolve — e alerta eterno se aprende a ignorar.
   // A rota já sabe quem está logado; aqui basta saber se ele alcança tudo.
@@ -74,7 +77,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
      para quem trocou o id na URL. */
   if (estado === 'negado') {
     return (
-      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="tc-anim" style={{ width: '100%' }}>
         <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Você não tem acesso a este setor</div>
@@ -96,7 +99,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
      página não muda de altura. Pedido do dono, 08/09/2026. */
   if (estado === 'carregando' && !m) {
     return (
-      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="tc-anim" style={{ width: '100%' }}>
         <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[92, 260, 180].map((h, i) => (
@@ -108,7 +111,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   }
   if (estado === 'erro') {
     return (
-      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="tc-anim" style={{ width: '100%' }}>
         <button onClick={() => router.push('/departamentos')} style={voltar}>‹ Voltar aos departamentos</button>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Não deu para carregar este relatório</div>
@@ -120,7 +123,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
 
   if (!vm) {
     return (
-      <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="tc-anim" style={{ width: '100%' }}>
         <button onClick={() => router.push('/departamentos')} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar aos departamentos</button>
         <div className="empty">Departamento não encontrado.</div>
       </div>
@@ -128,7 +131,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
+    <div className="tc-anim" style={{ width: '100%' }}>
       <button onClick={() => router.push('/departamentos')} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar aos departamentos</button>
       {/*
         ⚠️⚠️ A ORDEM DA PÁGINA (decisão do dono, 03/09/2026):
@@ -233,7 +236,7 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
       {m && (
         <div id="sec-tendencia" className="dept-duplo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, marginBottom: 16, alignItems: 'start' }}>
           <Tendencia m={m} />
-          <Turnover m={m} />
+          <Turnover m={m} onDetalhe={() => detalhe.abrir('turnover')} />
         </div>
       )}
 
@@ -241,11 +244,23 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           dados jogados" sobrevivia. As tarjas dão ritmo e dizem em que assunto o
           leitor está — sem mudar nada do conteúdo. */}
       <Tarja>O que aconteceu</Tarja>
-      <div id="sec-avaliacao">{m && <Avaliacao m={m} />}</div>
-      {m && <Atividade m={m} />}
+      {/* ⚠️⚠️ COLUNAS DE JORNAL (pedido do dono, 11/09/2026: "não aproveita toda
+          a tela, vem uma sequência de cards no mesmo formato"). Eram dez cartões
+          empilhados numa coluna de 1280px, cada um com a mesma cara, e o leitor
+          rolava a página inteira para passar por eles. Agora correm em colunas
+          de ~560px — duas num monitor comum, três num largo, uma no celular.
+          ⚠️ `columns`, e não `grid`: os cartões têm alturas muito diferentes
+          (CIDE tem um número; a planilha, a equipe inteira), e uma grade deixaria
+          um buraco do tamanho da diferença ao lado de cada cartão curto. */}
+      <div style={COLUNAS}>
+        <div id="sec-avaliacao" style={SEM_QUEBRA}>{m && <Avaliacao m={m} />}</div>
+        {m && <Atividade m={m} abrir={detalhe.abrir} />}
+      </div>
       <Tarja>Assiduidade e contexto da equipe</Tarja>
-      <div id="sec-assiduidade">{m && <Assiduidade m={m} />}</div>
-      {m && <Equipe m={m} />}
+      <div className="dept-duplo" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+        <div id="sec-assiduidade">{m && <Assiduidade m={m} abrir={detalhe.abrir} />}</div>
+        <div>{m && <Equipe m={m} />}</div>
+      </div>
 
       {/*
         ⚠️⚠️ Saíram daqui a "Evolução do score · 12 meses", o "Comparativo com a
@@ -285,9 +300,18 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
         )}
       </div>
+
+      {detalhe.aberto && m && (
+        <JanelaDetalhe chave={detalhe.aberto} setor={{ id: m.setor.id, nome: m.setor.nome }} onFechar={detalhe.fechar} />
+      )}
     </div>
   )
 }
+
+/** As colunas de jornal da "O que aconteceu" — ver o comentário na página. */
+const COLUNAS: React.CSSProperties = { columnWidth: 560, columnGap: 16 }
+/** Um cartão não se parte entre duas colunas. */
+const SEM_QUEBRA: React.CSSProperties = { breakInside: 'avoid' }
 
 /* ── helpers de formatação ─────────────────────────────────────────────────── */
 const num = (n: number) => n.toLocaleString('pt-BR')
@@ -300,11 +324,12 @@ function dur(sec: number, porDia = 24): string {
   return h > 0 ? `${h}h ${String(min).padStart(2, '0')}min` : `${min}min`
 }
 
-function Card({ titulo, sub, cor, children }: { titulo: string; sub?: string; cor?: string; children: React.ReactNode }) {
+function Card({ titulo, sub, cor, acao, children }: { titulo: string; sub?: string; cor?: string; acao?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: sub ? 2 : 14, display: 'flex', alignItems: 'center', gap: 8 }}>
         {cor && <span style={{ width: 7, height: 7, borderRadius: '50%', background: cor }} />}{titulo}
+        {acao}
       </div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{sub}</div>}
       {children}
@@ -382,14 +407,14 @@ function Avaliacao({ m }: { m: DeptMetrics }) {
    ⚠️⚠️ Cada fonte virou um CARTÃO com quem fez à esquerda e o total à direita.
    A tira de números que havia antes respondia "quanto o setor fez" e sumia com
    QUEM fez — num relatório lido para decidir sobre gente, o nome é o dado.  */
-function Atividade({ m }: { m: DeptMetrics }) {
+function Atividade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => void }) {
   const tem = (...vs: number[]) => vs.some((v) => v > 0)
   const r = m.rankings
   const cards: React.ReactNode[] = []
   const fora: string[] = []
 
   const add = (chave: string, mostrar: boolean, node: React.ReactNode) => {
-    if (mostrar) cards.push(<div key={chave}>{node}</div>)
+    if (mostrar) cards.push(<div key={chave} style={SEM_QUEBRA}>{node}</div>)
     else fora.push(chave)
   }
 
@@ -441,7 +466,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('Painel de Atendimento', tem(m.whatsapp.abertos, m.whatsapp.finalizados),
     <CardFonte
-      titulo="Painel de Atendimento · WhatsApp" cor="var(--chart-1)" Icone={MessageCircle}
+      titulo="Painel de Atendimento · WhatsApp" onDetalhe={() => abrir('whatsapp')} cor="var(--chart-1)" Icone={MessageCircle}
       ranking={r.whatsapp.gente} unidade={r.whatsapp.rotulo || "mais finalizou atendimento"}
       numeros={[
         { label: 'Atendimentos abertos', valor: m.whatsapp.abertos, cor: 'var(--info)' },
@@ -452,7 +477,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('Chat Interno', tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos),
     <CardFonte
-      titulo="Chat Interno" cor="var(--chart-3)" Icone={MessageSquareText}
+      titulo="Chat Interno" onDetalhe={() => abrir('chat')} cor="var(--chart-3)" Icone={MessageSquareText}
       ranking={r.chat.gente} unidade={r.chat.rotulo || "mais concluiu chamado"}
       numeros={[
         { label: 'Chamados abertos por estas pessoas', valor: m.chat.chamadosAbertos, cor: 'var(--info)' },
@@ -465,7 +490,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('HelpDesk', tem(m.helpdesk.abertos, m.helpdesk.resolvidos),
     <CardFonte
-      titulo="HelpDesk" cor="var(--chart-4)" Icone={LifeBuoy}
+      titulo="HelpDesk" onDetalhe={() => abrir('helpdesk')} cor="var(--chart-4)" Icone={LifeBuoy}
       ranking={r.helpdesk.gente} unidade={r.helpdesk.rotulo || "mais resolveu"}
       numeros={[
         { label: 'Chamados abertos', valor: m.helpdesk.abertos, cor: 'var(--info)' },
@@ -476,7 +501,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('ClassRoom', tem(m.classroom.criados, m.classroom.assistidos, m.classroom.videos),
     <CardFonte
-      titulo="ClassRoom" cor="var(--chart-2)" Icone={GraduationCap}
+      titulo="ClassRoom" onDetalhe={() => abrir('classroom')} cor="var(--chart-2)" Icone={GraduationCap}
       ranking={r.classroom.gente} unidade={r.classroom.rotulo || "mais concluiu curso e assistiu vídeo"}
       ranking2={r.classroom.gente2} unidade2={r.classroom.rotulo2}
       numeros={[
@@ -488,7 +513,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('Gerência', tem(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km),
     <CardFonte
-      titulo="Gerência · mensageria" cor="var(--chart-2)" Icone={Truck}
+      titulo="Gerência · mensageria" onDetalhe={() => abrir('gerencia')} cor="var(--chart-2)" Icone={Truck}
       ranking={r.gerencia.gente} unidade={r.gerencia.rotulo || "mais entregou e pediu"}
       numeros={[
         { label: 'Serviços entregues', valor: m.gerencia.servicos, cor: 'var(--chart-2)' },
@@ -502,7 +527,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('Consultoria Plus', tem(m.consultoria.estudos, m.consultoria.chamados, m.consultoria.mensagens, m.consultoria.comentarios),
     <CardFonte
-      titulo="Consultoria Plus" cor="var(--chart-3)" Icone={MessagesSquare}
+      titulo="Consultoria Plus" onDetalhe={() => abrir('consultoria')} cor="var(--chart-3)" Icone={MessagesSquare}
       ranking={r.consultoria.gente} unidade={r.consultoria.rotulo || "mais registrou atividade"}
       numeros={[
         { label: 'Estudos publicados', valor: m.consultoria.estudos, cor: 'var(--chart-3)' },
@@ -514,7 +539,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
 
   add('CIDE', tem(m.cide.atividades),
     <CardFonte
-      titulo="CIDE" cor="var(--chart-5)" Icone={Landmark}
+      titulo="CIDE" onDetalhe={() => abrir('cide')} cor="var(--chart-5)" Icone={Landmark}
       ranking={r.cide.gente} unidade={r.cide.rotulo || "mais alterou cadastro"}
       numeros={[{ label: 'Empresas atendidas', valor: m.cide.atividades, cor: 'var(--chart-5)' }]}
     />)
@@ -526,7 +551,8 @@ function Atividade({ m }: { m: DeptMetrics }) {
      lista por escutar rádio no trabalho. O rodapé dizia "escuta não é trabalho",
      mas o rodapé é 10,5px e o pódio é a forma. Aqui só os totais. */
   add('Rádio', tem(m.radio.horas, m.radio.sessoes),
-    <Card titulo="Rádio Itamarathy" cor="var(--info)" sub="Escuta não é trabalho — a rádio é vitrine e fica fora do score.">
+    <Card titulo="Rádio Itamarathy" cor="var(--info)" sub="Escuta não é trabalho — a rádio é vitrine e fica fora do score."
+      acao={<BotaoDetalhe onClick={() => abrir('radio')} />}>
       <div style={grade}>
         <N label="Horas ouvidas" valor={m.radio.horas} cor="var(--info)" />
         <N label="Sessões" valor={m.radio.sessoes} />
@@ -545,8 +571,8 @@ function Atividade({ m }: { m: DeptMetrics }) {
   const cs = m.chamadosDoSetor
   if (cs && (cs.pediu > 0 || cs.recebeu > 0)) {
     cards.unshift(
+      <div key="entre-setores" style={SEM_QUEBRA}>
       <Card
-        key="entre-setores"
         titulo="Chamados entre setores"
         cor="var(--chart-3)"
         sub="Duas faces do mesmo pedido: o que este setor pediu aos outros e o que recebeu para atender. Não se somam — contado pela função gravada no chamado, e não por pessoa."
@@ -561,7 +587,8 @@ function Atividade({ m }: { m: DeptMetrics }) {
             valor={cs.recebeuConcluidos ? dur(Math.round(cs.segundos / cs.recebeuConcluidos), 10) : null}
             nota="só expediente · 1 d = 10 h" />
         </div>
-      </Card>,
+      </Card>
+      </div>,
     )
   }
 
@@ -583,7 +610,7 @@ function Atividade({ m }: { m: DeptMetrics }) {
     <>
       {cards}
       {fora.length > 0 && (
-        <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5, margin: '-4px 0 16px 2px' }}>
+        <div style={{ fontSize: 10.5, color: 'var(--text-mute)', lineHeight: 1.5, margin: '-4px 0 16px 2px', columnSpan: 'all' }}>
           Sem nenhum registro deste setor no período, e por isso fora da lista: {fora.join(', ')}.
         </div>
       )}
@@ -592,10 +619,11 @@ function Atividade({ m }: { m: DeptMetrics }) {
 }
 
 /* ── Assiduidade do setor no período ──────────────────────────────────────── */
-function Assiduidade({ m }: { m: DeptMetrics }) {
+function Assiduidade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => void }) {
   const a = m.assiduidade
   return (
-    <Card titulo="Assiduidade e disciplina" sub={`Ponto eletrônico · ${m.label}`} cor="var(--warning)">
+    <Card titulo="Assiduidade e disciplina" sub={`Ponto eletrônico · ${m.label}`} cor="var(--warning)"
+      acao={<BotaoDetalhe onClick={() => abrir('assiduidade')} />}>
       <div style={grade}>
         <N label="Atrasos" valor={a.atrasos} cor={a.atrasos > 0 ? 'var(--warning)' : undefined} nota="não abonados" />
         <N label="Minutos de atraso" valor={a.minutos} />

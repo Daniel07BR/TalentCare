@@ -1,6 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import Avatar from '../../Avatar'
+import { BotaoDetalhe } from './Detalhe'
 
 /* ============================================================
    O CARTÃO DE UMA FONTE: quem fez, à esquerda; quanto, à direita.
@@ -26,7 +27,7 @@ export type Numero = { label: string; valor: number | string | null; cor?: strin
 const fmt = (v: number | string | null) =>
   v === null ? '—' : typeof v === 'number' ? v.toLocaleString('pt-BR') : v
 
-export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, ranking2, unidade2, semNinguem, numeros, rodape, todos }: {
+export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, ranking2, unidade2, semNinguem, numeros, rodape, todos, onDetalhe }: {
   titulo: string
   sub?: string
   cor: string
@@ -65,6 +66,8 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, ranking2,
    * como ausência de pessoa — e é justamente o que o gestor precisa ver.
    */
   todos?: boolean
+  /** Abre o resumo completo do sistema, só com este setor — ver `Detalhe.tsx`. */
+  onDetalhe?: () => void
 }) {
   const router = useRouter()
 
@@ -143,6 +146,7 @@ export function CardFonte({ titulo, sub, cor, Icone, ranking, unidade, ranking2,
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: sub ? 2 : 16 }}>
         <Icone size={15} color={cor} />
         <span style={{ fontSize: 14, fontWeight: 600 }}>{titulo}</span>
+        {onDetalhe && <BotaoDetalhe onClick={onDetalhe} />}
       </div>
       {sub && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>}
 

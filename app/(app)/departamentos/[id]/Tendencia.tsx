@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { BotaoDetalhe } from './Detalhe'
 import type { DeptMetrics } from '@/lib/ui/dept-period'
 import { geomLine } from '@/lib/mock/data'
 import Avatar from '../../Avatar'
@@ -119,7 +120,7 @@ export function Tendencia({ m }: { m: DeptMetrics }) {
 }
 
 /* ── Turnover REAL ─────────────────────────────────────────────────────────── */
-export function Turnover({ m }: { m: DeptMetrics }) {
+export function Turnover({ m, onDetalhe }: { m: DeptMetrics; onDetalhe?: () => void }) {
   const t = m.turnover
   const alto = t.taxa12m >= 20
   /* ⚠️ A janela com a lista completa (pedido do dono, 08/09/2026). O cartão
@@ -127,7 +128,10 @@ export function Turnover({ m }: { m: DeptMetrics }) {
   const [aberto, setAberto] = useState(false)
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Rotatividade</div>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+        Rotatividade
+        {onDetalhe && <BotaoDetalhe onClick={onDetalhe} />}
+      </div>
       {/* ⚠️ A TAXA é de 12 meses e NÃO acompanha o filtro: em 7 dias ela daria 0%
           para quase todo setor, e esse zero se leria como "ninguém sai daqui".
           O que acompanha o filtro é a contagem de saídas. */}

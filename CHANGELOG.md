@@ -1,5 +1,87 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (4) — "Ver detalhes": o resumo de cada sistema dentro do relatório do setor
+
+Pedido do dono: gestor e sub só alcançam o relatório do próprio setor, e as páginas
+de resumo dos sistemas (menu "Sistemas") têm muito mais detalhe do que o cartão.
+Estudar se o relatório espelha esse detalhe e, se não, abrir o detalhe ali mesmo, só
+com o setor. E, se quiser, redesenhar o relatório, que não aproveitava a tela.
+
+### O estudo — o que o relatório já espelhava e o que não
+
+Espelhava, em cada cartão: os **totais** do sistema e os **6 primeiros** de um
+ranking. Não espelhava o que as páginas têm a mais — a **tabela completa por
+pessoa** (HelpDesk, Chat, Consultoria, CIDE, Rádio, Assiduidade), **rankings por
+métrica** (Consultoria tem quatro; HelpDesk, quem abre × quem resolve), a **lista de
+cursos criados por pessoa** (ClassRoom), a **série diária** de atendimentos
+(WhatsApp), as **saídas externas** e a **demanda do escritório** (Gerência), e a
+**movimentação mês a mês** com a lista de desligados (Turnover).
+
+### O que entrou
+
+Um botão **"Ver detalhes ›"** no mesmo lugar de cada cartão — WhatsApp, Chat,
+HelpDesk, ClassRoom, Gerência, Consultoria, CIDE, Rádio, Assiduidade e Rotatividade.
+Ele abre uma janela grande, na própria página, com o resumo daquele sistema **só com
+o setor**. Esc ou clique fora fecha. A janela vai para a URL (`?detalhe=classroom`):
+clicar numa pessoa leva à ficha, e o "Voltar" da ficha devolve a janela aberta.
+
+⚠️⚠️ **É a PRÓPRIA página do sistema, não uma cópia.** Cada `page.tsx` virou
+`Resumo.tsx` (com `git mv`), e a janela o renderiza dentro de `RecorteDoSetor`
+(`lib/ui/recorte-setor.tsx`) — um `TalentDataProvider` que só enxerga o setor. Os
+montadores já trabalhavam em cima do diretório, então cada total e cada ranking saem
+da mesma conta que a Diretoria vê. Uma segunda tela para "o detalhe do setor" seria
+uma segunda régua. No modo setor, some só o que compara setores entre si (com um setor
+só, é uma barra de 100%) e o cabeçalho da página.
+
+⚠️⚠️ **O número da janela bate com o do cartão — conferido, não suposto.**
+`scripts/ensaio-detalhe-setor.mjs` refaz a conta da janela para cada setor (a rota do
+sistema somada nas pessoas ATIVAS, que é o que o recorte entrega) e compara com
+`/api/dept-metrics`: **576 números, 16 setores, 30 dias e ano, 0 divergências.** Três
+réguas tiveram de ser alinhadas para isso:
+
+- **Ativos, não todos.** O cartão soma os ativos do setor; as páginas somam todo
+  mundo. O recorte tira os desligados — menos no Turnover, cujo assunto são eles.
+- **WhatsApp por atendente, não por fila.** A página conta pela FILA
+  (`whatsappDaily.dept`); o cartão, pelas ATENDENTES do setor casadas por nome. Com
+  `?setor=`, a rota passa a usar a régua do cartão. Os números de "agora" (pendentes,
+  em andamento) são da casa inteira e saem da janela.
+- **Chamados do Chat por setor.** Eles vêm de `chat_dept_daily`, não por pessoa: o
+  recorte do diretório não os alcança e a janela filtra à parte.
+
+⚠️ **Turnover: a janela usa a taxa do RELATÓRIO**, não a da página. A página de
+Turnover calcula "saídas ÷ ativos" por setor; o relatório e a lista de
+departamentos, "saídas ÷ quem passou pelo setor" — **12,5% × 11,1% no Legal**. A
+janela abre por cima do cartão que mostra o segundo. ⚠️ **A página `/turnover` segue
+com a régua dela** — é uma divergência antiga, fora deste pedido, e está anotada.
+
+### A brecha que o estudo achou — `/api/classroom-courses`
+
+Era a única rota agregada fora de `lib/alcance.ts`: devolvia os **215 cursos da casa**
+(título e autor) para qualquer sessão, gestor incluído. Agora recorta pelo alcance —
+a Priscila Araújo recebe os 16 do Contábil, 0 de fora. O ensaio confere isso e o 403
+do WhatsApp de um setor alheio.
+
+### O relatório em tela inteira
+
+- Sem o teto de 1280px.
+- A "O que aconteceu" — avaliação e os cartões de sistema, que eram uma sequência de
+  cartões iguais numa coluna só — corre em **colunas de jornal** (`columns`, ~560px):
+  duas num monitor comum, três num largo, uma no celular. `columns` e não `grid`,
+  porque os cartões têm alturas muito diferentes e a grade deixaria buracos.
+- Assiduidade e "A equipe" lado a lado.
+
+⚠️ **O Rádio**: o relatório tirou de propósito o pódio de "quem mais escuta" (escuta
+não é trabalho, e a tela decide aumento). A janela do Rádio é a página do sistema, e
+ela tem o top 5 e a tabela por pessoa. Entrou porque o pedido foi espelhar as páginas;
+se não servir, é um `!setor &&` a mais no `radio/Resumo.tsx`.
+
+**Arquivos:** `lib/ui/recorte-setor.tsx` (novo); `app/(app)/<sistema>/Resumo.tsx` ×10
+(novos, vindos dos `page.tsx`); `app/(app)/turnover/Visao.tsx` (o corpo sem hooks, para
+servir à página do servidor e à janela); `app/(app)/departamentos/[id]/Detalhe.tsx`
+(novo), `CardFonte.tsx`, `Tendencia.tsx`, `page.tsx`; `app/(app)/classroom/CoursesByDeptCard.tsx`;
+`app/api/whatsapp-overview/route.ts`, `app/api/classroom-courses/route.ts`;
+`scripts/ensaio-detalhe-setor.mjs` (novo).
+
 ## 2026-09-11 (3) — Departamentos: a tela inteira, e o rosto de quem responde
 
 Pedido do dono: *"melhore o design desta página, aproveite a extensão inteira da tela,
