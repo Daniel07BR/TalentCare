@@ -1,5 +1,21 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (18) — O Ranking da casa sai do sistema
+
+Pedido do dono: *"a página ranking não faz mais sentido, uma vez que temos todos os
+departamentos com pontos independentes"*. Era uma lista única de todas as pessoas por score —
+e o score é percentil dentro do setor, e a pontuação de cada setor segue a régua dele (a
+própria página avisava, em amarelo, que a comparação entre setores não valia). O ranking que
+vale é o de cada setor, no relatório do setor.
+
+- Sai o item **Ranking** do menu (`AppShell.tsx`) e o **"ver todos ›"** do Destaque no painel.
+- `/ranking` **redireciona para `/dashboard`** (quem guardou o link não cai num 404); a trava
+  da Diretoria no `proxy.ts` segue antes (gestor → `/meu-setor`).
+- `lib/mock/ranking.ts` (leaderboard e comparação lado a lado) ficou sem uso e foi removido —
+  está no histórico do git.
+- Ensaio do painel: **770 conferências, 0 divergências** (com `/ranking` → `/dashboard`);
+  `ensaio-acesso-gestao` limpo.
+
 ## 2026-09-11 (17) — A barra do WhatsApp abre a janela da fila
 
 Decisão do dono sobre as duas pendências do painel:

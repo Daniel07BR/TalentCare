@@ -39,11 +39,13 @@ export function Destaque({ lista, info, carregando, recarregando = false, erro =
           {info.estado === 'parcial' && <> · <b style={{ color: 'var(--n-amber)' }}>parcial</b>, mês em curso</>}
           {info.estado === 'previa' && <> · <b style={{ color: 'var(--n-amber)' }}>prévia</b>, ainda não gravada</>}
           <br />pontos de setores diferentes <b>não</b> se comparam
-        </>}
-        acao={<Acao onClick={() => router.push('/ranking')} dica="Abrir o ranking completo">ver todos ›</Acao>} />
+        </>} />
+      {/* ⚠️ Sem "ver todos ›" (11/09/2026): levava ao `/ranking`, que saiu — com cada
+          setor pontuando pela própria régua, um ranking da casa compara o que não
+          se compara. O ranking de cada setor mora no relatório do setor. */}
       {/* ⚠️⚠️ Ordem ALFABÉTICA de setor e SEM número de posição, de propósito: o
           conceito numerava de 1 a 7, e isso faria desta lista um pódio entre
-          setores — a comparação que o `/ranking` avisa que não vale. */}
+          setores — a comparação que o antigo `/ranking` já avisava que não valia. */}
       {carregando ? <Esqueleto linhas={7} alto={28} />
         : erro ? <Vazio><span style={{ color: 'var(--n-red)' }}>Não foi possível ler a pontuação agora — recarregue a página.</span></Vazio>
         : lista.length === 0 ? <Vazio>Ninguém pontuou na competência deste filtro.</Vazio>

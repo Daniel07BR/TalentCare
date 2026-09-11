@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { FileSpreadsheet,
-  LayoutDashboard, Users, Building2, Trophy, TrendingUp, GraduationCap, ScrollText,
+  LayoutDashboard, Users, Building2, TrendingUp, GraduationCap, ScrollText,
   FileText, SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, UserCog, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, UserPlus, AlarmClock, Boxes, Truck, MessageSquareText,
   ClipboardCheck, UserCircle, CalendarDays, PanelLeftClose, PanelLeftOpen,
@@ -23,7 +23,9 @@ const NAV_MAIN = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/funcionarios', label: 'Funcionários', icon: Users },
   { href: '/departamentos', label: 'Departamentos', icon: Building2 },
-  { href: '/ranking', label: 'Ranking', icon: Trophy },
+  /* ⚠️ "Ranking" SAIU do menu (11/09/2026, pedido do dono): com cada setor pontuando
+     pela própria régua, um ranking da casa inteira compara números que não se
+     comparam. O endereço redireciona para o painel. */
   // A fila de avaliações do mês. O selo ao lado traz "quantas faltam" — ver
   // useFaltamAvaliar: é DERIVADO da fila, nunca um contador gravado.
   { href: '/avaliacoes', label: 'Avaliações', icon: ClipboardCheck },

@@ -277,13 +277,16 @@ async function main() {
   const a3 = await ver('/dashboard', null)
   const a4 = await ver('/dashboard/novo', ck)
   const a5 = ckG ? await ver('/dashboard/anterior', ckG) : 'sem gestor'
+  // O ranking da casa saiu (11/09/2026): o endereço leva ao painel.
+  const a6 = await ver('/ranking', ck)
   console.log(`\n── acesso ao painel`)
-  console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3} · /novo: ${a4} · /anterior p/ gestor: ${a5}`)
+  console.log(`   Diretoria: ${a1} · gestor (${gestor?.name}): ${a2} · sem sessão: ${a3} · /novo: ${a4} · /anterior p/ gestor: ${a5} · /ranking: ${a6}`)
   confere('acesso', 'Diretoria abre', a1, '200')
   confere('acesso', 'gestor vai para o setor dele', a2.startsWith('307 → /meu-setor'), true)
   confere('acesso', 'sem sessão não abre', a3.startsWith('200'), false)
   confere('acesso', '/dashboard/novo leva ao painel', a4.includes('/dashboard'), true)
   confere('acesso', '/dashboard/anterior fechado ao gestor', a5.startsWith('307 → /meu-setor'), true)
+  confere('acesso', '/ranking leva ao painel', a6.includes('/dashboard'), true)
 
   if (erros.length) { console.log('\n❌ divergências:'); for (const e of erros) console.log(`   ${e}`) }
   console.log(`\n${falhas === 0 ? '✅' : '❌'} ${conferidos} conferências, ${falhas} divergências`)
