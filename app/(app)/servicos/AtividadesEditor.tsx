@@ -82,7 +82,7 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
     .filter((g) => g.itens.length > 0)
   // ⚠️ Um sistema novo em `atividades.ts` sem título aqui NÃO pode sumir da tela.
   const semGrupo = ativs.filter((a) => !SISTEMAS_ATIVIDADE.some((sis) => sis.sistema === a.sistema))
-  if (semGrupo.length) grupos.push({ sistema: '—', titulo: 'Outros sistemas', oque: '', itens: semGrupo })
+  if (semGrupo.length) grupos.push({ sistema: '—', titulo: 'Outros sistemas', oque: '', cor: 'var(--text-mute)', itens: semGrupo })
 
   return (
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
@@ -126,12 +126,17 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
               título e as tarefas abaixo" — o mesmo nome de tarefa ("Chamado aberto")
               existe em mais de um sistema e quer dizer coisas diferentes em cada um. */}
           {grupos.map((g) => (
-          <section key={g.sistema} style={{ marginTop: 14 }}>
-            <div style={{ padding: '0 6px 6px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{g.titulo}</div>
-              {g.oque && <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 1, lineHeight: 1.45 }}>{g.oque}</div>}
+          <section key={g.sistema} style={{ marginTop: 22 }}>
+            {/* ⚠️ O TÍTULO DO SISTEMA centralizado, entre duas linhas da cor dele, e a
+                mesma cor na borda das tarefas abaixo (pedido do dono, 11/09/2026: "está
+                tudo muito misturado"). A cor é só marca de grupo — não diz nada do número. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 2px' }}>
+              <span style={{ flex: 1, height: 2, background: g.cor, borderRadius: 2, opacity: .85 }} />
+              <span style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: '.3px', textTransform: 'uppercase', color: g.cor, whiteSpace: 'nowrap' }}>{g.titulo}</span>
+              <span style={{ flex: 1, height: 2, background: g.cor, borderRadius: 2, opacity: .85 }} />
             </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {g.oque && <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 4, marginBottom: 6, lineHeight: 1.45, textAlign: 'center' }}>{g.oque}</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', borderLeft: `3px solid ${g.cor}`, borderRadius: 2, paddingLeft: 6 }}>
             {g.itens.map((a) => {
               const rMedia = rascunho[a.chave]?.media ?? (a.mediaEmUso != null ? String(a.mediaEmUso) : '')
               const previstos = Math.max(1, Math.round((parseInt(rMedia || '0', 10) || 0) * fator))

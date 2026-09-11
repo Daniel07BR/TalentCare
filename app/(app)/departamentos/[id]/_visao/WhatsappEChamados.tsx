@@ -75,7 +75,13 @@ export function WhatsappEChamados({ m, abrir }: ComDetalhe) {
               <Mini valor={w.finalizados ? dur(Math.round(w.handleSum / w.finalizados)) : '—'} rotulo="Tempo médio" onClick={() => abrir('whatsapp')} />
             </div>
             {gente.length > 0 && (
-              <ol style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              /* ⚠️ Rótulo dito (achado do crítico): o ranking do setor é por FINALIZADOS, e o
+                 Top atendentes da janela é por abertos — sem dizer, a mesma pessoa aparecia
+                 com dois números. */
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.4px', textTransform: 'uppercase', color: 'var(--n-text-3)', margin: '12px 0 5px' }}>Quem mais finalizou</div>
+            )}
+            {gente.length > 0 && (
+              <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {gente.map((p, i) => (
                   <li key={p.id} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
                     <span style={{ color: 'var(--n-text-3)', width: 10 }}>{i + 1}</span>
@@ -90,7 +96,13 @@ export function WhatsappEChamados({ m, abrir }: ComDetalhe) {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 12px', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--n-border-2)', fontSize: 11.5, color: 'var(--n-text-2)' }}>
               {w.verificados ? (
                 <>
-                  <span>Pediu avaliação em <b style={{ color: 'var(--n-text)' }}>{pct(w.pedidos ?? 0, w.verificados)}%</b> ({num(w.pedidos ?? 0)} de {num(w.verificados)})</span>
+                  {/* ⚠️ Sem o nº de conferidos ao lado dos "Finalizados" (achado do crítico):
+                      o espelho dos finalizados perdeu 15–24% em jun–set e a conferência vem
+                      completa do OneCode — lado a lado, "1.144 finalizados" e "de 1.302"
+                      brigariam. O % é sobre os conferidos; o denominador está no `title`. */}
+                  <span title={`Em ${num(w.pedidos ?? 0)} de ${num(w.verificados)} atendimentos conferidos no OneCode`}>
+                    Pediu avaliação em <b style={{ color: 'var(--n-text)' }}>{num(w.pedidos ?? 0)}</b> atendimentos ({pct(w.pedidos ?? 0, w.verificados)}%)
+                  </span>
                   <span><b style={{ color: 'var(--n-text)' }}>{num(w.avaliados ?? 0)}</b> {w.avaliados === 1 ? 'avaliado' : 'avaliados'}</span>
                   {media != null && (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>

@@ -28,10 +28,12 @@ const Icon = ({ size = 22, color = 'var(--accent)' }: { size?: number; color?: s
 
 export default function AvaliacoesPage() {
   const router = useRouter()
-  /* ⚠️⚠️ AS AVALIAÇÕES SE ACESSAM DENTRO DO SETOR (11/09/2026, pedido do dono): saiu
-     do menu lateral, e o cartão "Avaliação mensal" do relatório do setor abre esta
-     tela com `?setor=` — a lista só daquele setor. Sem o parâmetro, é a fila de
-     tudo o que a pessoa alcança, como antes. */
+  /* ⚠️⚠️ A LISTA DE UM SETOR SÓ (`?setor=`). Nasceu em 11/09/2026 com o cartão
+     "Avaliação mensal" do relatório do setor, que abria esta tela recortada. No mesmo
+     dia o cartão saiu da tela do setor (pedido do dono) e a porta passou a ser o
+     SELETOR DE SETOR daqui (achado do crítico: sem ele, a Diretoria e quem avalia dois
+     setores — Evandro, Joice, Rosemeire — só viam a fila misturada). Sem o parâmetro,
+     é a fila de tudo o que a pessoa alcança, como antes. */
   const sp = useSearchParams()
   const setorUrl = sp.get('setor')
   const [comp, setComp] = useState<string | null>(sp.get('competencia'))
@@ -68,6 +70,11 @@ export default function AvaliacoesPage() {
       }
     : { total: d.total, publicadas: d.publicadas, faltam: d.faltam, meus: d.faltam, orfaos: d.orfaos }
   const qsSetor = setorUrl ? `&setor=${setorUrl}` : ''
+  // Os setores que aparecem na fila de quem está olhando — só o que ele alcança.
+  const setoresDaFila = [...new Map(d.linhas.filter((l) => l.departmentId).map((l) => [l.departmentId as string, l.setor])).entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+  const trocaSetor = (id: string) =>
+    router.replace(`/avaliacoes?${id ? `setor=${id}&` : ''}competencia=${d.competencia}`)
 
   const visiveis = base
     // ⚠️ "Faltam" mostra o que EU posso fazer. Listar a pendência da casa
@@ -95,7 +102,14 @@ export default function AvaliacoesPage() {
             <Icon /> Avaliações{setorNome ? ` — ${setorNome}` : ''}
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {setoresDaFila.length > 1 && (
+            <select value={setorUrl ?? ''} onChange={(e) => trocaSetor(e.target.value)} aria-label="Setor" className="tc-btn"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>
+              <option value="">Todos os setores</option>
+              {setoresDaFila.map(([id, nome]) => (<option key={id} value={id}>{nome}</option>))}
+            </select>
+          )}
           <select
             value={d.competencia}
             onChange={(e) => setComp(e.target.value)}

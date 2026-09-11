@@ -4,6 +4,7 @@
    ============================================================ */
 :root{
   /* TEMA CLARO = principal (padrão). Tema escuro vem em [data-theme="dark"]. */
+  color-scheme: light;
   --bg:#f4f5f7; --surface:#ffffff; --surface-2:#eef0f3; --surface-3:#e1e4e9;
   --border:#e3e6eb; --border-soft:#eef0f3;
   --text:#1a1d23; --text-dim:#5b6470; --text-mute:#8b919c;
@@ -38,6 +39,10 @@
    mais alto e as cores de estado clareadas — no escuro, um vermelho de tema
    claro vira uma mancha marrom. */
 [data-theme="dark"]{
+  /* ⚠️ Os controles NATIVOS (a lista aberta do <select>, a barra de rolagem, o
+     calendário) seguem o tema só com isto — sem ele, texto claro herdado ficava
+     sobre a lista branca do navegador (11/09/2026). */
+  color-scheme: dark;
   /* Medido (WCAG), e é por isso que estes valores e não outros:
        texto      #f0f2f6 sobre a superfície … 14,7:1
        secundário #a8b0bc …………………………………………… 7,5:1
@@ -60,6 +65,13 @@
 }
 
 *{box-sizing:border-box;}
+/* ⚠️⚠️ Botão e campo HERDAM a cor do texto (11/09/2026). Sem isto o navegador pinta o
+   texto de <button> de preto (`buttontext`) — e toda linha clicável sem cor própria
+   (a lista de "Quem se atrasou", as linhas que abrem a ficha) ficava PRETA NO FUNDO
+   ESCURO no tema escuro, invisível. No tema claro passava despercebido: preto sobre
+   branco. Cor declarada no próprio botão continua valendo (seletor de elemento perde
+   para classe e para `style`). */
+button,input,select,textarea{color:inherit;}
 html,body{margin:0;padding:0;background:var(--bg);}
 body{
   font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;

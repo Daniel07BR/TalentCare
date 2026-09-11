@@ -57,7 +57,16 @@ async function main() {
   }
   const now = new Date()
   const wm = await prisma.syncWatermark.findUnique({ where: { source: SOURCE } })
-  const from = wm ? startOfDayMinusOne(wm.lastSyncedAt) : null
+  /* `--desde AAAA-MM-DD` (11/09/2026): relê a partir daquele dia, inteiro — o
+     incremental só relê o dia anterior e não traz correção retroativa (a memória
+     `sync-incremental-nao-traz-correcao-retroativa`). Usado para refazer SETEMBRO
+     depois do conserto do dia parcial no Painel. ⚠️ Reescreve abertos/finalizados
+     com o que o Painel tem hoje: não use para meses em que o espelho daqui é o melhor
+     registro sem medir antes (ver CHANGELOG (27)). */
+  const iDesde = process.argv.indexOf('--desde')
+  const desde = iDesde > 0 ? process.argv[iDesde + 1] : null
+  if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) throw new Error('--desde AAAA-MM-DD')
+  const from = desde ? new Date(`${desde}T03:00:00Z`) : wm ? startOfDayMinusOne(wm.lastSyncedAt) : null
 
   const qs = new URLSearchParams({ to: now.toISOString() })
   if (from) qs.set('from', from.toISOString())

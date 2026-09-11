@@ -1,5 +1,26 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (29) — Tema escuro legível; seletor de setor nas avaliações; setembro do WhatsApp refeito
+
+- **Tema escuro: nomes pretos no fundo escuro.** Toda linha clicável sem cor própria (a lista de
+  "Quem se atrasou", as que abrem a ficha) é um `<button>`, e o navegador pinta texto de botão de
+  preto. Conserto na raiz (`globals.css`): botão e campo herdam a cor do texto, e cada tema declara
+  o seu `color-scheme` — a lista aberta do `<select>`, a barra de rolagem e o calendário nativo
+  passam a acompanhar o escuro.
+- **Pontos por atividade:** o título de cada sistema fica centralizado entre duas linhas da cor
+  dele, e a mesma cor marca a borda das tarefas do grupo (pedido do dono: "está tudo muito
+  misturado").
+- **Avaliações ganham um seletor de setor** (achado do crítico): o cartão "Avaliação mensal" que
+  saiu do relatório do setor era a única porta para a lista de UM setor (`?setor=`); sem ela, a
+  Diretoria e quem avalia dois setores (Evandro, Joice, Rosemeire) só viam a fila misturada.
+- **Cartão WhatsApp do setor:** a lista de 3 diz "Quem mais finalizou" (o Top atendentes da janela
+  é por abertos); a linha da avaliação diz "pediu em N atendimentos (x%)" sem pôr o nº de
+  conferidos ao lado dos finalizados do espelho.
+- **Setembro do WhatsApp refeito** (`run-whatsapp-sync.mjs --desde 2026-09-01`, opção nova): de 1 a
+  10/09 os finalizados foram de 1.240 para **1.520** — agora iguais aos 1.519 conferidos no OneCode
+  (1 é atendimento em grupo). A rodada seguinte não mexeu. Mês em aberto, sem nota gravada.
+  ⚠️ Junho a agosto seguem ~15% abaixo — decisão do dono (CHANGELOG (27)).
+
 ## 2026-09-11 (28) — Relatório do setor: WhatsApp no lugar da avaliação mensal; chamados clicáveis
 
 Pedidos do dono: *"dentro de todos os departamentos tem o contador dos chamados do chat, mas não
