@@ -11,7 +11,7 @@ import { Escolaridade } from './_visao/Escolaridade'
 import { AtividadeDoPeriodo } from './_visao/AtividadeDoPeriodo'
 import { UltimasSaidas } from './_visao/UltimasSaidas'
 import { RankingMes } from './_visao/RankingMes'
-import { AvaliacaoChamados } from './_visao/AvaliacaoChamados'
+import { WhatsappEChamados } from './_visao/WhatsappEChamados'
 import { Assiduidade } from './_visao/Assiduidade'
 import { Sistemas } from './_visao/Sistemas'
 import { PainelDoIndicador, type ChavePainel } from './_visao/Paineis'
@@ -75,7 +75,7 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       </div>
       <div className={s.linha3}>
         <RankingMes m={m} />
-        <AvaliacaoChamados m={m} />
+        <WhatsappEChamados m={m} abrir={detalhe.abrir} />
         <Assiduidade m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>
       <Sistemas m={m} abrir={detalhe.abrir} />

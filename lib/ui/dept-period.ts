@@ -85,7 +85,11 @@ export type DeptMetrics = {
     pediu: number; pediuConcluidos: number; recebeu: number; recebeuConcluidos: number
     cancelados: number; segundos: number
   }
-  whatsapp: { abertos: number; finalizados: number; handleSum: number }
+  whatsapp: {
+    abertos: number; finalizados: number; handleSum: number
+    /** Avaliação do cliente (conferida no OneCode). `null` = nenhum dia conferido. */
+    verificados: number | null; pedidos: number | null; avaliados: number | null; notaSum: number | null
+  }
   assiduidade: {
     atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
     /** ⚠️ Medidas do Controle da LGPD no período. NÃO dependem da cobertura do

@@ -153,40 +153,6 @@ export default function WhatsappResumo() {
             <KPI label="Tempo médio" value={fmtDur(kpis!.avgHandleSeconds)} accent="var(--info)" />
           </div>
 
-          {/* ⚠️ A avaliação dos clientes, por pessoa (11/09/2026, pedido do dono) —
-              mesma janela, mesmo setor/fila e mesma aba do Top atendentes. Logo abaixo dos
-              números do topo: é o que o dono quer à vista ("não apresentou as estrelas"). */}
-          <AvaliacaoClientes
-            linhas={ov.attendants}
-            desde={ov.avaliacaoDesde ?? null}
-            pessoaDe={pessoaDe}
-            filtro={setor || fila || activeTab === 'Geral' ? null : activeTab}
-            onAbrir={(id) => abrirPessoa('whatsapp', id)}
-            subtitulo={setor ? `As pessoas de ${setor.nome}` : fila ? `Só o que passou pela fila de ${fila}` : activeTab === 'Geral' ? 'Todos os departamentos' : activeTab}
-          />
-
-          {/* Série diária de abertos */}
-          <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{setor ? `Atendimentos abertos pelas pessoas de ${setor.nome}` : fila ? `Atendimentos que chegaram pela fila de ${fila}` : 'Atendimentos abertos no período'}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>{kpis!.abertos.toLocaleString('pt-BR')} no total</div>
-            {ov.series.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum atendimento no período.</div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160 }}>
-                {ov.series.map((s) => (
-                  <div key={s.day} title={`${dayLabel(s.day)}: ${s.abertos}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
-                    <div className="cbar" style={{ width: '100%', height: `${(s.abertos / maxBar) * 100}%`, minHeight: 2, background: WPP, borderRadius: '3px 3px 0 0' }} />
-                  </div>
-                ))}
-              </div>
-            )}
-            {ov.series.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10.5, color: 'var(--text-mute)' }}>
-                <span>{dayLabel(ov.series[0].day)}</span>
-                <span>{dayLabel(ov.series[ov.series.length - 1].day)}</span>
-              </div>
-            )}
-          </div>
 
           {/* Top atendentes — Geral + abas por departamento */}
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
@@ -254,6 +220,44 @@ export default function WhatsappResumo() {
             )}
           </div>
 
+          {/* ⚠️ A avaliação dos clientes, por pessoa (11/09/2026, pedido do dono) —
+              mesma janela, mesmo setor/fila e mesma aba do Top atendentes. A ordem é do dono
+              (11/09/2026): números do topo → Top atendentes → esta tabela. */}
+          <AvaliacaoClientes
+            linhas={ov.attendants}
+            desde={ov.avaliacaoDesde ?? null}
+            pessoaDe={pessoaDe}
+            filtro={setor || fila || activeTab === 'Geral' ? null : activeTab}
+            onAbrir={(id) => abrirPessoa('whatsapp', id)}
+            subtitulo={setor ? `As pessoas de ${setor.nome}` : fila ? `Só o que passou pela fila de ${fila}` : activeTab === 'Geral' ? 'Todos os departamentos' : activeTab}
+          />
+
+          {/* Série diária de abertos. ⚠️ FORA da janela do setor (pedido do dono,
+              11/09/2026: "o gráfico de atendimentos abertos pelo Fiscal não precisa
+              apresentar"); segue na página do WhatsApp e na janela da casa/fila. */}
+          {!setor && (<>
+          <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{fila ? `Atendimentos que chegaram pela fila de ${fila}` : 'Atendimentos abertos no período'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 18 }}>{kpis!.abertos.toLocaleString('pt-BR')} no total</div>
+            {ov.series.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum atendimento no período.</div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160 }}>
+                {ov.series.map((s) => (
+                  <div key={s.day} title={`${dayLabel(s.day)}: ${s.abertos}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+                    <div className="cbar" style={{ width: '100%', height: `${(s.abertos / maxBar) * 100}%`, minHeight: 2, background: WPP, borderRadius: '3px 3px 0 0' }} />
+                  </div>
+                ))}
+              </div>
+            )}
+            {ov.series.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10.5, color: 'var(--text-mute)' }}>
+                <span>{dayLabel(ov.series[0].day)}</span>
+                <span>{dayLabel(ov.series[ov.series.length - 1].day)}</span>
+              </div>
+            )}
+          </div>
+          </>)}
         </>
       )}
     </div>

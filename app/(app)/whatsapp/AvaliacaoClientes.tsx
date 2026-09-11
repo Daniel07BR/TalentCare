@@ -105,7 +105,7 @@ export default function AvaliacaoClientes({ linhas, desde, pessoaDe, filtro, onA
   const cols = 'minmax(170px,1.6fr) 90px minmax(120px,1fr) minmax(120px,1fr) minmax(150px,1.1fr)'
 
   return (
-    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
+    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Avaliação dos clientes</div>

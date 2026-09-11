@@ -1,5 +1,56 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (28) — Relatório do setor: WhatsApp no lugar da avaliação mensal; chamados clicáveis
+
+Pedidos do dono: *"dentro de todos os departamentos tem o contador dos chamados do chat, mas não
+dá para clicar e ver as pessoas e quantidades de chamados que atenderam ou abriram, e nem de qual
+departamento eram os chamados que atenderam e nem para qual abriram. Dê opção de clique logo no
+card da página e apresente os resultados, assim não precisa apresentar lá embaixo na barra a
+opção do chat interno"* e *"o Top atendentes deveria vir logo abaixo dos totalizadores; o gráfico
+de atendimentos abertos pelo Fiscal não precisa; a tabela de avaliação depois do Top atendentes"*.
+
+- **O cartão "Chamados entre setores" do relatório do setor é clicável.** Cada número abre uma
+  janela com as duas faces em abas: **Pediu aos outros** (para QUAL setor, QUEM pediu e quantos,
+  e a lista) e **Recebeu para atender** (de QUAL setor veio, QUEM atendeu — o crédito é de quem
+  assumiu — com quantos e o tempo médio de expediente, e a lista com situação). Número, assunto,
+  setores e pessoas; texto de mensagem não atravessa. Link para a ficha só onde ela se abre para
+  quem lê (`podeVer`). A janela vai para a URL (`?chamados=`) e volta com o "voltar" da ficha.
+- **De onde vem:** rota nova no Chat Interno, `/api/integrations/talent-setor` (commits `6c49cc0`
+  e `7f13c13` do Chat), com as MESMAS regras da conta por setor do espelho (o setor é o da função
+  gravada no chamado; dia de SP; `hidden_at` fora). Aqui, `/api/chat-setor` (porta = a do
+  `dept-metrics`), sob demanda, sem gravar. Se a lista de agora divergir do cartão (o espelho é
+  de hora em hora), a janela diz.
+- "Desses, atendidos" virou **"Pedidos concluídos"**: a conta é o que o setor pediu e foi
+  concluído no período, pelo dia da conclusão — não só "desses" pedidos do cartão ao lado.
+- **O bloco "Chat Interno" saiu de "Sistemas e produtividade"** do relatório do setor (o que ele
+  tinha de chamado está no cartão; mensagem é vitrine e fica fora da nota).
+- **Resumo do WhatsApp:** números do topo → **Top atendentes** → **Avaliação dos clientes**. O
+  gráfico diário de abertos saiu da janela do setor (segue na página do WhatsApp e nas janelas da
+  casa e da fila).
+- Prova: `scripts/ensaio-chamados-setor.mjs` (novo) — 16 setores × 3 janelas (30 dias, agosto,
+  desde janeiro): as cinco listas têm o tamanho das cinco colunas do cartão; nenhum item fora da
+  face; Diretoria 200, gestor 200 no dele e 403 no alheio. **483 conferências, 0 divergências.**
+
+**Na sequência, mais três pedidos do dono:** *"tire o card de avaliação mensal da tela do
+departamento; no espaço que vai se abrir, coloque acima dos chamados entre setores o resumo do
+WhatsApp, tirando o WhatsApp da barra inferior de sistemas e produtividade"* e *"chamados entre
+setores deveria ter um botão de ver detalhes"*.
+- **Saiu o cartão "Avaliação mensal"** da tela do setor (só da tela: `m.avaliacao` segue na rota e
+  no `ensaio-regua-geral`). ⚠️ Era o caminho para as avaliações SÓ daquele setor
+  (`/avaliacoes?setor=`); agora a Diretoria chega pelo cartão "Avaliações" e o gestor pelo chip.
+- **No lugar, o cartão "WhatsApp"** (`_visao/WhatsappEChamados.tsx`): atendimentos, finalizados,
+  tempo médio, quem mais atendeu, e numa linha a avaliação do cliente do setor (% que pediu, quantos
+  avaliados, estrelas; "—" se nada conferido). Mesma população da janela (ativos do setor). Clique
+  ou "Ver detalhes" abre o resumo do WhatsApp do setor. **O WhatsApp saiu de "Sistemas e
+  produtividade".**
+- **"Chamados entre setores" ganhou "Ver detalhes ›".**
+- Consertos do crítico: a aba "Pediu aos outros" lista também os pedidos CONCLUÍDOS no período (o
+  aberto antes da janela e concluído nela entrava no número e não aparecia); o aviso de divergência
+  confere as cinco colunas; o cartão só diz "nenhum chamado" quando as cinco estão em zero; espaço
+  entre a avaliação e o gráfico na página do WhatsApp.
+- Ensaios limpos: chamados 483, detalhe do setor 576, quem está atrás do número 888, régua 171,
+  acesso dos gestores.
+
 ## 2026-09-11 (27) — WhatsApp: a avaliação do cliente por pessoa (estrelas, pedidos, avaliados)
 
 Pedido do dono: *"no relatório do whats, coloque para a pessoa a pontuação da nota que ela

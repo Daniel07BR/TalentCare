@@ -215,11 +215,11 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, fila =
 }
 
 /** O botão que abre a janela — o mesmo em todos os cartões, no mesmo lugar. */
-export function BotaoDetalhe({ onClick, chave }: { onClick: () => void; chave?: ChaveDetalhe }) {
+export function BotaoDetalhe({ onClick, chave, titulo }: { onClick: () => void; chave?: ChaveDetalhe; titulo?: string }) {
   return (
     <button type="button" onClick={onClick} className="tc-btn"
       onMouseEnter={chave ? () => precarregarDetalhe(chave) : undefined} onFocus={chave ? () => precarregarDetalhe(chave) : undefined}
-      title="Abrir o resumo completo deste sistema, só com este setor"
+      title={titulo ?? 'Abrir o resumo completo deste sistema, só com este setor'}
       style={{ marginLeft: 'auto', flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, height: 28, padding: '0 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
       Ver detalhes <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>›</span>
     </button>

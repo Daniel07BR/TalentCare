@@ -215,7 +215,10 @@ export async function GET(req: NextRequest) {
     // ⚠️ WhatsApp casa por NOME (a origem não tem id do Nexus) — ver o espelho.
     prisma.whatsappAttendantDaily.aggregate({
       where: { name: { in: nomes }, ...range },
-      _sum: { abertos: true, finalizados: true, handleSum: true },
+      /* ⚠️ + a avaliação do cliente (11/09/2026), para o resumo do WhatsApp que tomou
+         o lugar da avaliação mensal na tela do setor. Nulos = dia não conferido; o
+         `_sum` ignora nulo e devolve nulo se nada foi conferido ("—", não "0"). */
+      _sum: { abertos: true, finalizados: true, handleSum: true, verificados: true, pedidos: true, avaliados: true, notaSum: true },
     }),
     prisma.assiduidadeDaily.aggregate({
       where: { personKey: { in: chaves }, ...range },
@@ -834,7 +837,11 @@ export async function GET(req: NextRequest) {
       recebeu: n(chatSetor._sum.recebidosAbertos), recebeuConcluidos: n(chatSetor._sum.recebidosConcluidos),
       cancelados: n(chatSetor._sum.recebidosCancelados), segundos: n(chatSetor._sum.segundosResolucao),
     } : null,
-    whatsapp: { abertos: n(wpp._sum.abertos), finalizados: n(wpp._sum.finalizados), handleSum: n(wpp._sum.handleSum) },
+    whatsapp: {
+      abertos: n(wpp._sum.abertos), finalizados: n(wpp._sum.finalizados), handleSum: n(wpp._sum.handleSum),
+      verificados: wpp._sum.verificados ?? null, pedidos: wpp._sum.pedidos ?? null,
+      avaliados: wpp._sum.avaliados ?? null, notaSum: wpp._sum.notaSum ?? null,
+    },
     assiduidade: {
       atrasos: n(assid._sum.atrasos), abonados: n(assid._sum.atrasosAbon),
       minutos: n(assid._sum.minutosAtraso), advertencias: adv,
