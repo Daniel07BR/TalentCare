@@ -56,7 +56,16 @@ async function creditoDoSetor(id: string, comp: string) {
 /** ⚠️ Uma leitura só do argumento, no escopo do módulo: as duas rotas do script
  *  (a proposta completa e o `--so-suspensao`) precisam dela, e duas leituras
  *  divergiriam no dia em que alguém trocasse o nome da flag. */
-const gravar = process.argv.includes('--gravar')
+/* ⚠️⚠️ NÃO GRAVA MAIS (11/09/2026, achado do crítico): a régua agora é GERAL e se
+   altera em Configurações (`/api/regra-geral`), que cria VERSÃO e grava as
+   medianas. Este script escrevia na régua mais recente, no lugar, com a fração do
+   Legal de hoje — um segundo caminho de gravação, fora da régua geral. Ficou só o
+   ensaio. */
+if (process.argv.includes('--gravar')) {
+  console.error('A régua de pontuação agora é GERAL: altere em Configurações → Régua de pontuação. Este script só ensaia (rode sem --gravar).')
+  process.exit(1)
+}
+const gravar = false
 
 /* ⚠️⚠️ `--so-suspensao`: grava APENAS o item `suspensao`, derivado da
    advertência JÁ VIGENTE de cada setor — sem recalcular mais nada.

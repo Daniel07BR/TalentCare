@@ -60,8 +60,15 @@ export default function RegraEditor({ departmentId, setorNome }: { departmentId:
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.55 }}>
         A régua é <b>geral, para todos os setores</b>, e é definida em Configurações pelo dono do sistema e pela Diretoria.
-        Os pontos abaixo saem dela, <b>proporcionais ao que o setor costuma pontuar</b> — por isso uma falta pesa o mesmo
-        no mês de qualquer setor. O setor ajusta o <b>tempo médio de cada tarefa</b>, logo abaixo.
+        Cada setor recebe os pontos <b>proporcionais ao que ele costuma pontuar</b> — por isso uma falta pesa o mesmo no mês
+        de qualquer setor. O setor ajusta o <b>tempo médio de cada tarefa</b>, logo abaixo.
+        {/* ⚠️ Achado do crítico: a versão que vale hoje pode ser ANTERIOR à régua geral
+            (em seis setores ela ainda é a cópia do Legal). A tela não afirma o que
+            não é: diz de onde esta versão veio. */}
+        {vigente && !(vigente.motivo ?? '').startsWith('Gerada pela régua geral') && (
+          <><br /><b style={{ color: 'var(--warning)' }}>Esta versão é anterior à régua geral</b> e ainda não foi gerada por ela — passa a ser na
+          próxima vez que a régua geral for salva em Configurações.</>
+        )}
       </div>
 
       {carregando ? (

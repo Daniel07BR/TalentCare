@@ -140,19 +140,19 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Planilha do setor</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Serviços e pontuação</h1>
         </div>
-        {setores.length > 1 && (
-          <select value={setorId} onChange={(e) => { setSetorId(e.target.value); setPrevia(null); setArquivo(null) }}
-            style={{ height: 36, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' }}>
-            {setores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        )}
+        {/* ⚠️ Sem seletor de setor (11/09/2026): o setor é o do relatório de onde se
+            veio, na URL — e fica escrito, para ninguém enviar sem ver para onde vai. */}
+        <div style={{ fontSize: 13, fontWeight: 700, padding: '7px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          Setor: {setor.name}
+        </div>
       </div>
 
       {/* ── envio ─────────────────────────────────────────────────────────── */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Enviar a planilha de {setor.name}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Enviar a planilha do Gestta — {setor.name}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
-          O arquivo <b>.xlsx</b> exportado do sistema, com as colunas Nome, Tempo, Status, Tarefa, Cliente e Data.
+          <b>Hoje o sistema aceita apenas a planilha exportada do Gestta</b>: o arquivo <b>.xlsx</b> com as colunas Nome, Tempo,
+          Status, Tarefa, Cliente e Data. Planilha de outro sistema não é lida.
           {' '}<b>Nada é gravado no envio</b> — você vê primeiro o que vai entrar e confirma depois.
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -202,7 +202,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
               </div>
               <b>{previa.alertaSetor.quantas} das {previa.alertaSetor.de} pessoas</b> que reconheci neste arquivo são do
               {' '}<b>{previa.alertaSetor.setorProvavel}</b>, e você está importando para o <b>{setor.name}</b>.
-              {' '}Se estiver certo, siga; se não, <b>troque o setor no alto da tela</b> e envie de novo.
+              {' '}Se estiver certo, siga; se não, <b>volte ao relatório do setor certo</b> e envie de lá.
             </div>
           )}
 

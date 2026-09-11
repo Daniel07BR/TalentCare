@@ -25,7 +25,9 @@ const COLUNAS: [string, string][] = [
   ['suspensao', 'Suspensão'], ['lgpd_advertencia', 'Adv. LGPD'], ['lgpd_suspensao', 'Susp. LGPD'],
 ]
 const chave = (g: ParametrosGerais) => JSON.stringify(g)
-const pct = (f: number) => Math.round(f * 1000) / 10
+/* ⚠️ DUAS casas (achado do crítico): com uma, a tela mostrava 7,1 e quem redigitasse
+   gravava 0,071 — o Financeiro ia de −26 para −25 sem ninguém ter decidido isso. */
+const pct = (f: number) => Math.round(f * 10000) / 100
 
 export default function ReguaGeral() {
   const [g, setG] = useState<ParametrosGerais | null>(null)
@@ -103,7 +105,7 @@ export default function ReguaGeral() {
       </Grupo>
 
       <Grupo titulo="Faltas — proporcionais ao mês típico do setor">
-        <Campo label="Atraso" desc="% do que o setor costuma pontuar no mês" v={pct(g.fracaoAtraso)} sufixo="%" passo={0.1}
+        <Campo label="Atraso" desc="% do que o setor costuma pontuar no mês" v={pct(g.fracaoAtraso)} sufixo="%" passo={0.01}
           onChange={(v) => muda('fracaoAtraso')(v / 100)} />
         <Campo label="Advertência" desc="× o atraso" v={g.multAdvertencia} sufixo="×" passo={0.1} onChange={muda('multAdvertencia')} />
         <Campo label="Suspensão por atraso" desc="× a ADVERTÊNCIA" v={g.multSuspensao} sufixo="×" passo={0.1} onChange={muda('multSuspensao')} />
@@ -163,7 +165,7 @@ export default function ReguaGeral() {
             </tbody>
           </table>
           <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 6 }}>
-            Em negrito, o que muda em relação à régua que vale hoje. Mesmo com os mesmos números, um setor pode mudar: o mês típico dele se mexe com o tempo.
+            Em negrito, o que muda em relação à régua que vale hoje — pelos números que você mudou, ou porque o mês típico do setor se mexeu desde a última versão.
           </div>
         </div>
       )}
@@ -182,6 +184,15 @@ export default function ReguaGeral() {
           {ocupado === 'salvar' ? 'Salvando…' : 'Salvar régua geral'}
         </button>
       </div>
+
+      {/* ⚠️ Achado do crítico: a vigência padrão é o mês CORRENTE, e o parcial dele
+          (ainda não gravado) passa a usar a régua nova assim que se salva. */}
+      {vigencia === compAtual && (
+        <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 12, lineHeight: 1.5 }}>
+          Valendo a partir de <b>{compAtual}</b>, o mês corrente: a nota parcial deste mês, que as telas já mostram, passa a usar a régua
+          nova assim que você salvar. Para começar só no mês que vem, escolha o mês seguinte. Meses já gravados não mudam.
+        </div>
+      )}
 
       {msg && (
         <div style={{ fontSize: 12.5, marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--radius-sm)', lineHeight: 1.5,

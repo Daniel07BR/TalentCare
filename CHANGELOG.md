@@ -1,5 +1,44 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (22) — O crítico na régua geral; atividades sem ponto digitado; a planilha só no setor
+
+**O agente crítico reprovou a régua geral por dois defeitos de conta — consertados:**
+1. **O ponto por minuto não respeitava a vigência.** O cálculo do mês pegava a base e as faltas
+   da régua da competência, mas os catálogos de tarefas e de atividades pegavam o ponto por
+   minuto da régua MAIS RECENTE: uma versão com vigência em outubro já mudaria o crédito do
+   parcial de setembro, e agosto (gravado) mudaria no próximo "Gravar". `calcularCatalogo` e
+   `catalogoAtividades` agora recebem a competência (`montar` passa a dele; as telas, o mês
+   corrente).
+2. **Mês de referência recusado zerava a prévia.** O erro do `montar` virava "ninguém com nota",
+   a mediana da casa dava 0 e todos os setores saíam com atraso −1 — o que vai acontecer de
+   01/10 até alguém importar o ponto de setembro inteiro. Agora a prévia e a gravação param com
+   o motivo (422); só setor SEM RÉGUA usa a mediana da casa.
+
+E mais: o registro da v1 dizia que a régua de agosto de "cada setor" saiu da regra — **seis não
+saíram** (Cozinha, Diretoria, Limpeza, Marketing, Pousada, Programação seguem com a cópia do
+Legal até a primeira versão salva); texto corrigido, a tela do setor avisa quando a versão é
+anterior à régua geral, e o ensaio deixou de "provar" o atraso da v1 contra ele mesmo.
+`propor-pesos.ts --gravar` recusa (era um segundo caminho de gravação). O % do atraso tem duas
+casas (com uma, redigitar 7,1 levava o Financeiro de −26 a −25). A tela avisa que vigência no
+mês corrente muda o parcial dele ao salvar.
+
+**Pontos por atividade não se digitam mais** (pedido do dono: *"calculados automaticamente
+sempre em cima do tempo médio informado"*): o ponto é sempre média × ponto por minuto (piso 1);
+a rota recusa `campo: 'pontos'`; a coluna é só leitura. Conferido antes: nenhuma atividade tinha
+ponto digitado — nenhum número mudou.
+
+**A planilha de serviços, só dentro do setor** (pedido do dono): "Serviços do setor" saiu do
+menu; `/servicos` só abre com o setor na URL, vindo do botão **"Enviar/Atualizar planilha do
+Gestta"** do relatório do setor (sem ele, explica onde se envia); saiu o seletor de setor da
+tela; o texto diz que **hoje o sistema aceita apenas a planilha exportada do Gestta**.
+
+⚠️ **Pendente com o dono:** a tabela de SERVIÇOS da planilha ainda aceita ponto digitado — há 1
+caso (Legal, "SERVIÇOS INTERNOS - VERIFICAR CALCULADORA", zerado à mão em 08/09).
+
+Ensaios: `ensaio-regua-geral` **156 conferências, 0 divergências** (pontos de atividade =
+calculados nos 16 setores; `/servicos` sem setor explica; com setor diz Gestta; menu sem o
+link); painel 785/0; setor 576 números e 888 dias; `ensaio-acesso-gestao` limpo.
+
 ## 2026-09-11 (21) — A régua de pontuação vira GERAL, em Configurações
 
 Pedido do dono: *"cada departamento consegue subir a planilha e regular o tempo médio para o

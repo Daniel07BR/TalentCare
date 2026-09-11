@@ -74,15 +74,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ...(await uma(departmentId, atividade)) })
   }
 
+  /* ⚠️⚠️ Os pontos de uma atividade NÃO se digitam (11/09/2026, pedido do dono): saem
+     sempre de média × ponto por minuto. Só a MÉDIA se informa. */
+  if (body.campo === 'pontos') {
+    return NextResponse.json({ error: 'Os pontos de cada atividade são calculados sozinhos, pelo tempo médio × o ponto por minuto da régua geral. Informe a média.' }, { status: 422 })
+  }
   const valor = Math.round(Number(body.valor))
   if (!Number.isFinite(valor) || valor < 0 || valor > 100000) {
     return NextResponse.json({ error: 'O valor tem de ser um número entre 0 e 100.000.' }, { status: 422 })
   }
   /* ⚠️ Mexer na MÉDIA limpa o override de pontos (os pontos voltam a sair de
      média×fator) — o mesmo comportamento do catálogo de serviços. */
-  const dados = body.campo === 'pontos'
-    ? { pontos: valor, ...carimbo }
-    : { mediaMinutos: valor, pontos: null, ...carimbo }
+  const dados = { mediaMinutos: valor, pontos: null, ...carimbo }
   await prisma.pontuacaoAtividade.upsert({
     where: { departmentId_atividade: { departmentId, atividade } },
     create: { departmentId, atividade, ...dados },

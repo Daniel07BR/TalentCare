@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
  * setor do vizinho trocando o `?id=`; confiar só na régua de conteúdo deixa a
  * tela aparecer para quem não devia vê-la. As duas precisam existir.
  */
-export default async function ServicosPage() {
+export default async function ServicosPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
   const session = await auth()
   const uid = (session?.user as { id?: string } | undefined)?.id
   const quem = uid ? await quemEh(uid) : null
@@ -27,6 +27,24 @@ export default async function ServicosPage() {
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   })).filter((d) => !isHiddenDept(d.name))
+
+  /* ⚠️⚠️ SÓ COM O SETOR NA URL (11/09/2026, pedido do dono): a planilha se sobe
+     DENTRO do relatório de cada setor — o botão "Enviar planilha do Gestta" leva
+     para cá com `?setor=`. Saiu do menu lateral e saiu o seletor de setor desta
+     tela: foi por um seletor que 6.980 linhas do Legal entraram em Entregas. */
+  const { setor: setorDaUrl } = await searchParams
+  const doSetor = setores.filter((s) => s.id === setorDaUrl)
+  if (setores.length && !doSetor.length) {
+    return (
+      <div className="tc-anim" style={{ maxWidth: 720, margin: '0 auto' }}>
+        <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 700, letterSpacing: '-.5px' }}>Planilha de serviços</h1>
+        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+          A planilha de serviços se envia <b>dentro do relatório de cada setor</b>, pelo botão <b>“Enviar planilha do Gestta”</b> —
+          assim ela nunca entra no setor errado. Abra o setor em <a href={quem.role === 'ADMIN' ? '/departamentos' : '/meu-setor'} style={{ color: 'var(--accent)' }}>{quem.role === 'ADMIN' ? 'Departamentos' : 'Meu setor'}</a> e envie de lá.
+        </div>
+      </div>
+    )
+  }
 
   /* ⚠️ Sem setor nenhum, a tela DIZ por quê. Uma página em branco faz a pessoa
      achar que o sistema quebrou e abrir chamado — o `/portal` do Nexus já
@@ -57,7 +75,7 @@ export default async function ServicosPage() {
 
   return (
     <ServicosClient
-      setores={setores}
+      setores={doSetor}
       lotes={lotes.map((l) => ({
         id: l.id, departmentId: l.departmentId, arquivo: l.arquivo,
         diaDe: l.diaDe, diaAte: l.diaAte, linhas: l.linhas,

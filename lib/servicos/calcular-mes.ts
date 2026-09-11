@@ -111,7 +111,8 @@ export async function montar(
       select: { id: true, base: true, fatorPorMinuto: true, vigenteDesde: true, itens: { select: { evento: true, pontos: true } } },
     }),
     coberturaDoPonto(),
-    calcularCatalogo(departmentId),
+    // O ponto por minuto da régua DESTE mês — não da mais recente (crítico, 11/09).
+    calcularCatalogo(departmentId, competencia),
   ])
 
   const regra = regraDaCompetencia(regras, competencia)
@@ -204,7 +205,7 @@ export async function montar(
   const [catAtiv, aggAtiv] = await Promise.all([
     /* ⚠️ A MESMA conta da tela da régua: pontos = média×fator, mediana medida
        onde há. `catalogoAtividades` é a fonte única. */
-    catalogoAtividades(departmentId),
+    catalogoAtividades(departmentId, { competencia }),
     agregarAtividades(
       pessoas.map((p) => ({ personKey: p.nexusUserId ?? p.id, nexusUserId: p.nexusUserId, nome: p.name })),
       de, ate,

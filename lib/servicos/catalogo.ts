@@ -1,6 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
-import { normalizarTarefa } from '@/lib/servicos/pontuacao'
+import { normalizarTarefa, regraDaCompetencia, competenciaAtual } from '@/lib/servicos/pontuacao'
 
 /* ============================================================
    OS TIPOS DE SERVIÇO DO SETOR, e quantos pontos cada um vale.
@@ -153,8 +153,15 @@ const temValor = (a: ValoresDoAjuste) =>
  * cálculo é o MESMO nos dois caminhos: duplicá-lo faria a linha devolvida
  * divergir da lista na próxima leitura.
  */
-export async function calcularCatalogo(departmentId: string) {
-  const [linhas, ajustes, regra, usuariosDoSetor] = await Promise.all([
+/**
+ * @param competencia O mês cuja régua dá o PONTO POR MINUTO (padrão: o corrente).
+ *   ⚠️⚠️ Achado do crítico (11/09/2026): pegava a régua MAIS RECENTE, fosse qual
+ *   fosse o mês — uma versão da régua geral com vigência em outubro já mudaria o
+ *   crédito do parcial de setembro, e agosto (gravado) mudaria no próximo
+ *   "Gravar". O cálculo do mês passa a competência dele; a tela, o mês corrente.
+ */
+export async function calcularCatalogo(departmentId: string, competencia: string = competenciaAtual()) {
+  const [linhas, ajustes, versoes, usuariosDoSetor] = await Promise.all([
     /* ⚠️ SÓ CONCLUÍDO. Um serviço "aberto" tem tempo PARCIAL — o relógio dele
        ainda está correndo —, e "desconsiderado" o próprio setor descartou.
        Misturar os três faria a média de cada tarefa cair sem que ninguém tivesse
@@ -164,9 +171,9 @@ export async function calcularCatalogo(departmentId: string) {
       select: { tarefa: true, minutos: true, dia: true, nomeOrigem: true, personKey: true },
     }),
     prisma.pontuacaoTarefaAjuste.findMany({ where: { departmentId } }),
-    prisma.pontuacaoRegra.findFirst({
-      where: { departmentId }, orderBy: { vigenteDesde: 'desc' },
-      select: { fatorPorMinuto: true, criadoEm: true },
+    prisma.pontuacaoRegra.findMany({
+      where: { departmentId },
+      select: { fatorPorMinuto: true, criadoEm: true, vigenteDesde: true },
     }),
     prisma.user.findMany({
       where: { origin: { in: ['nexus', 'staff'] } },
@@ -184,6 +191,7 @@ export async function calcularCatalogo(departmentId: string) {
      ponto por minuto" como fato — os 72 ajustes foram feitos olhando pontos
      derivados de um número que ninguém escolheu, e que é justamente a decisão
      ainda aberta com o dono. A tela passa a dizer de onde ele veio. */
+  const regra = regraDaCompetencia(versoes, competencia)
   const fator = regra?.fatorPorMinuto ?? 0.5
   const fatorDecidido = regra != null
   const idsDeAutor = [...new Set(ajustes.flatMap((a) => [a.ajustadoPor, a.revisadoPor]).filter((x): x is string => !!x))]

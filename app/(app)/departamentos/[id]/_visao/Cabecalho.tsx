@@ -39,8 +39,11 @@ export function Cabecalho({ m }: SecaoProps) {
           <button type="button" style={botao} onClick={() => router.push('/entregas')}><Truck size={15} /> Área da mensageria</button>
         )}
         {m.setor.podeGerir && (
-          <button type="button" style={botao} onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}>
-            <Upload size={15} /> {m.servicos?.temFonte ? 'Atualizar planilha' : 'Enviar planilha'}
+          /* ⚠️ A ÚNICA PORTA da planilha de serviços (11/09/2026, pedido do dono): saiu
+             do menu lateral, e se sobe só daqui, com o setor na URL. Só Gestta. */
+          <button type="button" style={botao} onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
+            title="Enviar a planilha de serviços exportada do Gestta — só esse formato é aceito">
+            <Upload size={15} /> {m.servicos?.temFonte ? 'Atualizar planilha do Gestta' : 'Enviar planilha do Gestta'}
           </button>
         )}
       </div>

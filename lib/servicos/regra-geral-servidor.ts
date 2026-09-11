@@ -26,10 +26,22 @@ export type LinhaSetor = {
   atual: Record<string, number> | null
 }
 
+/** A referência não serve para medir: a prévia e a gravação PARAM, com o motivo. */
+export class ReferenciaRecusada extends Error {}
+
 /** O crédito (serviço + atividade, sem a metade disciplinar) de quem recebe nota. */
-async function creditoDoSetor(id: string, referencia: string, fatorNovo: number) {
+async function creditoDoSetor(id: string, referencia: string, fatorNovo: number): Promise<number[] | null> {
   const r = await montar(id, referencia)
-  if ('erro' in r) return null
+  if ('erro' in r) {
+    /* ⚠️⚠️ Achado do crítico (11/09/2026): o erro virava "ninguém com nota", e com o
+       mês de referência recusado (o ponto é import à mão — de 01/10 até alguém
+       importar setembro inteiro, 2026-09 é recusado) a mediana da casa dava 0 e
+       TODOS os setores saíam com atraso −1, rotulados de "mês típico da casa". Só
+       o setor SEM RÉGUA (setor novo) cai na mediana da casa; qualquer outra
+       recusa para tudo. */
+    if (String(r.erro).startsWith('Não há régua de pontuação vigente')) return null
+    throw new ReferenciaRecusada(`O mês de referência (${referencia}) não serve para medir o mês típico dos setores: ${r.erro}`)
+  }
   /* ⚠️ O crédito é MINUTOS × fator. Se o fator muda, a mediana muda na mesma
      proporção — e a falta tem de acompanhar, senão dobrar o ponto por minuto
      faria a disciplina valer metade sem ninguém ter decidido isso. */
@@ -50,6 +62,7 @@ export async function previa(g: ParametrosGerais, referencia: string): Promise<{
      Legal — "errados para eles, e inertes só enquanto ninguém ali receber nota"
      (`propor-pesos.ts`). A casa é o meio-termo que não pertence a setor nenhum. */
   const medianaCasa = mediana([...creditos.values()].flatMap((c) => c ?? []))
+  if (medianaCasa <= 0) throw new ReferenciaRecusada(`Ninguém recebeu nota em ${referencia} — sem o mês típico de ninguém, a régua não tem com que se medir.`)
   const hoje = competenciaAtual()
   const linhas = setores.map((s) => {
     const c = creditos.get(s.id) ?? []

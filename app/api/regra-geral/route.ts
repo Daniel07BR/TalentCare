@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { quemEh } from '@/lib/avaliacoes/regua'
 import { competenciaAtual, competenciaValida } from '@/lib/servicos/pontuacao'
 import { PARAMETROS_DE_09_09, LIMITES, competenciaAnterior, type ParametrosGerais } from '@/lib/servicos/regra-geral'
-import { previa, gravarRegraGeral } from '@/lib/servicos/regra-geral-servidor'
+import { previa, gravarRegraGeral, ReferenciaRecusada } from '@/lib/servicos/regra-geral-servidor'
 
 /* ============================================================
    A RÉGUA GERAL DE PONTUAÇÃO (11/09/2026, decisão do dono) — Configurações.
@@ -77,10 +77,20 @@ export async function POST(req: NextRequest) {
   if (typeof g === 'string') return NextResponse.json({ error: g }, { status: 422 })
   const referencia = referenciaAgora()
 
-  if (b.ensaio) {
-    const p = await previa(g, referencia)
-    return NextResponse.json({ ensaio: true, referencia, ...p })
+  try {
+    if (b.ensaio) {
+      const p = await previa(g, referencia)
+      return NextResponse.json({ ensaio: true, referencia, ...p })
+    }
+    return await gravar(b, g, referencia, a.quem.id)
+  } catch (e) {
+    // A referência recusada é resposta, não pane: diz o motivo e não grava nada.
+    if (e instanceof ReferenciaRecusada) return NextResponse.json({ error: e.message }, { status: 422 })
+    throw e
   }
+}
+
+async function gravar(b: Record<string, unknown>, g: ParametrosGerais, referencia: string, autorId: string) {
 
   const vigencia = String(b.vigenteDesde ?? '').trim()
   if (!competenciaValida(vigencia)) return NextResponse.json({ error: 'A vigência tem de ser uma competência AAAA-MM.' }, { status: 422 })
@@ -88,6 +98,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `A vigência não pode ser anterior ao mês corrente (${competenciaAtual()}). A régua nova vale daqui para a frente — o que já foi pontuado fica como foi.` }, { status: 422 })
   }
   const motivo = typeof b.motivo === 'string' && b.motivo.trim() ? b.motivo.trim().slice(0, 500) : null
-  const linhas = await gravarRegraGeral(g, vigencia, referencia, a.quem.id, motivo)
+  const linhas = await gravarRegraGeral(g, vigencia, referencia, autorId, motivo)
   return NextResponse.json({ ok: true, vigencia, referencia, setores: linhas.length })
 }

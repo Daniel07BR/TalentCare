@@ -16,6 +16,10 @@
 import { prisma } from '../lib/db/prisma'
 import { PARAMETROS_DE_09_09 } from '../lib/servicos/regra-geral'
 
+/* ⚠️ Corrigido depois do crítico (11/09/2026): a primeira redação dizia que a
+   régua de agosto de CADA setor saiu desta regra — seis não saíram. */
+export const MOTIVO_V1 = 'Registro da regra aprovada em 09/09/2026 (atraso = 50 ÷ mediana 700 do Legal = 7,1% do mês típico do setor). A régua de agosto de 10 setores saiu dela; Cozinha, Diretoria, Limpeza, Marketing, Pousada e Programação (ninguém com nota em 09/09) seguem com a cópia do Legal até a primeira versão salva em Configurações. Nada foi regerado ao registrar.'
+
 async function main() {
   const gravar = process.argv.includes('--gravar')
   const ja = await prisma.pontuacaoRegraGeral.findUnique({ where: { vigenteDesde: '2026-08' } })
@@ -26,7 +30,7 @@ async function main() {
   if (!dono) throw new Error('sem dono na allowlist')
   const dados = {
     vigenteDesde: '2026-08', ...PARAMETROS_DE_09_09, competenciaReferencia: '2026-08', criadoPor: dono.id,
-    motivo: 'Registro da regra aprovada em 09/09/2026 (atraso = 50 ÷ mediana 700 do Legal = 7,1% do mês típico do setor). A régua de agosto de cada setor saiu dela; nada foi regerado ao registrar.',
+    motivo: MOTIVO_V1,
   }
   console.log(gravar ? 'GRAVANDO' : 'ENSAIO (nada gravado)', { ...dados, criadoPor: dono.name })
   if (gravar) await prisma.pontuacaoRegraGeral.create({ data: dados })

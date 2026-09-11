@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileSpreadsheet,
+import {
   LayoutDashboard, Users, Building2, TrendingUp, GraduationCap,
   SlidersHorizontal, Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Radio, MessageCircle,
   MessagesSquare, LifeBuoy, Landmark, AlarmClock, Boxes, Truck, MessageSquareText,
@@ -32,7 +32,8 @@ const NAV_MAIN = [
   // A planilha que cada setor sobe + a régua de pontuação dele. Fica junto das
   // avaliações porque é a outra metade da mesma pergunta: o que a pessoa
   // entregou, e por qual critério isso vira nota.
-  { href: '/servicos', label: 'Serviços do setor', icon: FileSpreadsheet },
+  /* ⚠️ "Serviços do setor" SAIU do menu (11/09/2026, pedido do dono): a planilha do
+     Gestta se sobe só dentro do relatório de cada setor, com o setor na URL. */
   // A página da própria pessoa. Fica no topo de propósito: é a única do sistema
   // que TODO funcionário alcança, e escondê-la num menu faria o colaborador
   // entrar e achar que não há nada para ele.

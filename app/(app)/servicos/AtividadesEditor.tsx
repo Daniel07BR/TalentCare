@@ -69,8 +69,8 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
         Cada atividade vale <b>{fator} ponto por minuto</b> da média — a mesma conta dos serviços. Onde o sistema mede o
-        tempo (WhatsApp, HelpDesk, Chat), a média vem da <b>mediana medida</b>; nas outras, informe a média e os pontos
-        se ajustam.
+        tempo (WhatsApp, HelpDesk, Chat), a média vem da <b>mediana medida</b>; nas outras, informe a média.
+        {' '}<b>Os pontos não se digitam: saem sozinhos da média</b> (o ponto por minuto é o da régua geral, em Configurações).
         {semMedia > 0 && <> · <b style={{ color: 'var(--warning)' }}>{semMedia} sem média — valem o piso de 1</b></>}
       </div>
 
@@ -90,9 +90,8 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {ativs.map((a) => {
               const rMedia = rascunho[a.chave]?.media ?? (a.mediaEmUso != null ? String(a.mediaEmUso) : '')
-              const rPontos = rascunho[a.chave]?.pontos ?? String(a.pontos)
               const previstos = Math.max(1, Math.round((parseInt(rMedia || '0', 10) || 0) * fator))
-              const mostrarPontos = rascunho[a.chave]?.pontos != null ? rPontos : (a.pontosAjustados && rascunho[a.chave]?.media == null ? String(a.pontos) : String(previstos))
+              const mostrarPontos = rascunho[a.chave]?.media != null ? String(previstos) : String(a.pontos)
               return (
                 <div key={a.chave} style={{ display: 'grid', gridTemplateColumns: COLS, gap: 12, alignItems: 'center', padding: '9px 6px', borderBottom: '1px solid var(--border)', opacity: salvando[a.chave] ? 0.55 : 1, transition: 'opacity .12s' }}>
                   <div style={{ minWidth: 0 }}>
@@ -113,13 +112,12 @@ export default function AtividadesEditor({ departmentId, setorNome }: { departme
                     title={a.mediaAjustada != null ? `Lançado por ${a.ajustadoPor} em ${dataBr(a.ajustadoEm)}.${a.mediaMedida != null ? `\nO sistema mede ${a.mediaMedida} min.` : ''}` : a.mediaMedida != null ? `Mediana medida pelo sistema (${a.mediaMedida} min). Pode sobrescrever.` : 'O sistema não mede o tempo desta atividade — informe a média.'}
                     style={{ height: 30, width: '100%', textAlign: 'right', padding: '0 8px', background: 'var(--surface-2)', border: `1px solid ${a.mediaAjustada != null ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums' }}
                   />
-                  <input type="number" value={mostrarPontos}
-                    onChange={(e) => setRascunho((x) => ({ ...x, [a.chave]: { ...x[a.chave], pontos: e.target.value } }))}
-                    onBlur={() => { const v = parseInt(rPontos || '', 10); if (rascunho[a.chave]?.pontos != null && Number.isFinite(v) && v !== a.pontos) salvar(a, 'pontos', v) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                    title={a.pontosAjustados ? `Definido à mão. O cálculo dá ${a.pontosAuto}.` : `${a.mediaEmUso ?? 0} min × ${fator} = ${a.pontosAuto}`}
-                    style={{ height: 30, width: '100%', textAlign: 'right', padding: '0 8px', background: 'var(--surface-2)', border: `1px solid ${a.pontosAjustados ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums' }}
-                  />
+                  {/* ⚠️ SÓ LEITURA (pedido do dono, 11/09/2026): média × ponto por minuto, com
+                      piso de 1 — o que se ajusta é a média, ao lado. */}
+                  <span title={`${rMedia || 0} min × ${fator} = ${mostrarPontos} (piso de 1)`}
+                    style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', color: 'var(--text)', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                    {mostrarPontos}
+                  </span>
                   <button onClick={() => salvar(a, 'revisar', null)} disabled={a.revisado}
                     title={a.revisado ? `Conferido por ${a.ajustadoPor ?? '—'}.` : 'Conferi, e está certo.'}
                     style={{ height: 28, width: 28, display: 'grid', placeItems: 'center', background: 'transparent', border: 'none', borderRadius: 6, color: a.revisado ? 'var(--success)' : 'var(--warning)', cursor: a.revisado ? 'default' : 'pointer' }}>

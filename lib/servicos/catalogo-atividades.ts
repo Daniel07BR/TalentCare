@@ -2,6 +2,7 @@ import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { TIPOS_ATIVIDADE } from './atividades'
 import { agregarAtividades } from './atividade-agg'
+import { regraDaCompetencia, competenciaAtual } from './pontuacao'
 
 /* ============================================================
    O CATÁLOGO DE ATIVIDADES DE UM SETOR — média, fator e pontos.
@@ -68,16 +69,18 @@ export type AtividadeCat = {
  * Devolve o catálogo do setor + um `valorDe(chave)` que o cálculo do mês usa.
  * Uma chamada, uma verdade.
  */
-export async function catalogoAtividades(departmentId: string, opts?: { comVolume?: boolean }) {
-  const [pessoas, ajustes, regra, medidas] = await Promise.all([
+/** `opts.competencia`: o mês cuja régua dá o ponto por minuto (padrão: o corrente) — ver `calcularCatalogo`. */
+export async function catalogoAtividades(departmentId: string, opts?: { comVolume?: boolean; competencia?: string }) {
+  const [pessoas, ajustes, versoes, medidas] = await Promise.all([
     prisma.user.findMany({
       where: { departmentId, origin: { in: ['nexus', 'staff'] }, active: true },
       select: { id: true, nexusUserId: true, name: true },
     }),
     prisma.pontuacaoAtividade.findMany({ where: { departmentId } }),
-    prisma.pontuacaoRegra.findFirst({ where: { departmentId }, orderBy: { vigenteDesde: 'desc' }, select: { fatorPorMinuto: true } }),
+    prisma.pontuacaoRegra.findMany({ where: { departmentId }, select: { fatorPorMinuto: true, vigenteDesde: true } }),
     medianasMedidas(),
   ])
+  const regra = regraDaCompetencia(versoes, opts?.competencia ?? competenciaAtual())
   const fator = regra?.fatorPorMinuto ?? 0.5
 
   // Volume por tipo (vida inteira) — só quando pedido (a tela precisa; o cálculo não).
@@ -115,9 +118,14 @@ export async function catalogoAtividades(departmentId: string, opts?: { comVolum
       chave, label: t.label, sistema: t.sistema, descricao: t.descricao,
       volume: volume.get(chave) ?? 0, pessoas: pessoasPorTipo.get(chave) ?? 0,
       mediaMedida, mediaEmUso, mediaAjustada: aj?.mediaMinutos ?? null,
-      pontos: aj?.pontos ?? pontosAuto,
-      pontosAuto, pontosAjustados: aj?.pontos != null,
-      ajustado: !!aj && (aj.mediaMinutos != null || aj.pontos != null),
+      /* ⚠️⚠️ SEMPRE O CALCULADO (11/09/2026, pedido do dono): "em pontos por
+         atividade, não deixe aberto para ninguém configurar os pontos — eles devem
+         ser calculados automaticamente sempre em cima do tempo médio informado".
+         O override manual (`pontuacao_atividade.pontos`) deixou de valer; conferido
+         antes: nenhuma atividade tinha ponto digitado, então nenhum número mudou. */
+      pontos: pontosAuto,
+      pontosAuto, pontosAjustados: false,
+      ajustado: !!aj && aj.mediaMinutos != null,
       ajustadoPor: aj?.ajustadoPor ? (nomePorId.get(aj.ajustadoPor) ?? '—') : null,
       ajustadoEm: aj?.ajustadoEm ? aj.ajustadoEm.toISOString() : null,
       revisado: !!aj?.revisadoEm,
