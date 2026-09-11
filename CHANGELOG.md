@@ -1,5 +1,20 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-11 (14) — Documentação da rodada e passagem para o próximo agente
+
+Pedido do dono: documentar o que foi feito e preparar a continuação com um novo agente,
+cujo objetivo é refazer o **painel principal** no molde do relatório do setor.
+
+- `docs/RELATORIO-DO-SETOR.md` (novo) — a referência: quem entra (os três degraus), as
+  rotas do setor, a paleta, as seções, as três camadas de interação (lista de quem,
+  janela do sistema, painel da pessoa), as integrações "pessoa" de cada sistema com
+  commit e servidor, os números novos da `dept-metrics`, os ensaios e as armadilhas.
+- `docs/PROXIMO-DASHBOARD.md` (novo) — o roteiro do próximo trabalho: o pedido, como o dono
+  trabalha (prévia em paralelo antes de trocar), a imagem conceito **descrita** (o próximo
+  agente não a vê), o que reaproveitar, as decisões já tomadas pelo molde, onde o conceito
+  pode mentir (selos de variação, sparklines, score, taxa de turnover) e o "pronto é".
+- `docs/CONTINUAR-AQUI.md` aponta para os dois no topo.
+
 ## 2026-09-11 (13) — Escolaridade ocupa o cartão
 
 Pedido do dono: *"adapte os dados ao tamanho dos cards"*. O cartão da Escolaridade

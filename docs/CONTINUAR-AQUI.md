@@ -1,5 +1,12 @@
 # Continuar daqui — passagem de bastão
 
+> **⚠️ Atualizado em 11/09/2026.** Depois deste documento vieram duas rodadas grandes —
+> a chefia entrou no sistema e o relatório do setor foi refeito (visão nova, janelas,
+> painel da pessoa, integrações "pessoa" em seis sistemas). Leia também:
+> - [`RELATORIO-DO-SETOR.md`](RELATORIO-DO-SETOR.md) — o que foi construído e por quê;
+> - [`PROXIMO-DASHBOARD.md`](PROXIMO-DASHBOARD.md) — **o próximo trabalho**: refazer o
+>   painel principal no mesmo molde.
+
 > Escrito em **03/09/2026**, ao fim de uma sessão longa. Se você é o próximo agente:
 > **leia isto inteiro antes de tocar em qualquer arquivo.** Ele não é um resumo do que
 > foi feito (isso está no [`CHANGELOG.md`](../CHANGELOG.md)) — é o que você precisa
