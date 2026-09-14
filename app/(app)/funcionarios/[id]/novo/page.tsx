@@ -19,7 +19,7 @@ import { Indicadores } from '../_visao/Indicadores'
 import { Sistemas } from '../_visao/Sistemas'
 import { Assiduidade } from '../_visao/Assiduidade'
 import { LinhaDoTempo } from '../_visao/LinhaDoTempo'
-import { AntesDeAvaliar, Formacao, RadioCartao, UltimaAtividade } from '../_visao/Lateral'
+import { AntesDeAvaliar, RadioCartao, UltimaAtividade } from '../_visao/Lateral'
 
 /* ============================================================
    A FICHA DA PESSOA NO PADRÃO NOVO — PRÉVIA (14/09/2026).
@@ -79,7 +79,6 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
         </div>
         <aside className={f.lateral}>
           <AntesDeAvaliar vm={vm} m={m} periodo={periodo} estado={estado} />
-          <Formacao vm={vm} />
           <RadioCartao m={m} periodo={periodo} />
           <UltimaAtividade m={m} />
         </aside>

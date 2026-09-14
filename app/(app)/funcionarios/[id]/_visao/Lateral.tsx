@@ -1,14 +1,11 @@
 'use client'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardCheck, BookOpen, Radio, Clock3 } from 'lucide-react'
+import { ClipboardCheck, Radio, Clock3 } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { EmployeeVM } from '@/lib/mock/employee'
 import type { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
-import { Cartao, LinkAcao } from '../../../_visao/ui'
-import FormacaoEditor from '../FormacaoEditor'
-import TreinamentosEditor from '../TreinamentosEditor'
-import { formCor, num } from './derivar'
+import { Cartao } from '../../../_visao/ui'
+import { num } from './derivar'
 import f from './ficha.module.css'
 
 /* ============================================================
@@ -73,43 +70,6 @@ export function AntesDeAvaliar({ vm, m, periodo, estado }: { vm: EmployeeVM; m: 
       <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
         Estes números são o que os sistemas viram — não são a nota. A nota é sua, e o que ela mede (entrega, prazo, conduta, equipe) nenhum sistema registra.
       </div>
-    </Cartao>
-  )
-}
-
-export function Formacao({ vm }: { vm: EmployeeVM }) {
-  const [editando, setEditando] = useState(false)
-  return (
-    <Cartao titulo="Formação" Icone={BookOpen} corIcone="var(--n-green)" sub="Retrato de hoje · não acompanha o filtro"
-      acao={<LinkAcao onClick={() => setEditando((v) => !v)}>{editando ? 'Fechar edição' : 'Editar'}</LinkAcao>}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-        {vm.grauLevels.length === 0 ? <span style={{ fontSize: 12, color: 'var(--n-text-3)' }}>Escolaridade não informada.</span>
-          : vm.grauLevels.map((l) => (
-            <span key={l.label} style={{ fontSize: 12, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 15%, transparent)`, padding: '3px 11px', borderRadius: 20 }}>{l.label}</span>
-          ))}
-      </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--n-text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Formação acadêmica · cadastro RH</div>
-      {vm.cursos.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {vm.cursos.map((c, i) => {
-            const cor = formCor(c.quando, i)
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: `color-mix(in srgb, ${cor} 11%, var(--n-card-2))`, borderLeft: `4px solid ${cor}`, borderRadius: 10, padding: '9px 12px' }}>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--n-text)', minWidth: 0 }}>{c.nome}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: cor, flex: 'none' }}>{c.quando}</span>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div style={{ fontSize: 12.5, color: 'var(--n-text-3)', background: 'var(--n-card-2)', borderRadius: 10, padding: '10px 12px' }}>Sem cursos informados no cadastro.</div>
-      )}
-      {editando && (
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--n-border-2)' }}>
-          <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
-          <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
-        </div>
-      )}
     </Cartao>
   )
 }

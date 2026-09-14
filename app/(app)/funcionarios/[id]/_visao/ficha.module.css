@@ -31,8 +31,11 @@
 /* ⚠️ 5ª rodada (desenho do dono): os anéis vêm LOGO DEPOIS da identidade, na mesma
    linha — sem fio separando e sem serem empurrados para a borda direita. */
 .heroLado { min-width: 0; }
+/* A edição da formação ocupa a largura inteira do hero, embaixo das três colunas. */
+.heroEdicao { grid-column: 1 / -1; padding-top: 14px; border-top: 1px solid var(--n-border-2); }
+/* 6ª rodada: identidade · formação · pontos e posição, na mesma linha. */
 @media (min-width: 1100px) {
-  .hero { grid-template-columns: auto auto; justify-content: start; column-gap: clamp(40px, 7vw, 120px); }
+  .hero { grid-template-columns: auto auto auto; justify-content: start; align-items: start; column-gap: clamp(32px, 4.5vw, 88px); }
 }
 
 /* Os dados de identidade do cabeçalho, em pílulas. */

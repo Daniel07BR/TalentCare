@@ -1,10 +1,14 @@
 'use client'
-import { ChevronLeft, Home, CalendarPlus, CalendarX, Cake, Briefcase, type LucideIcon } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronLeft, Home, CalendarPlus, CalendarX, Cake, Briefcase, BookOpen, type LucideIcon } from 'lucide-react'
 import type { EmployeeVM } from '@/lib/mock/employee'
 import Avatar from '../../../Avatar'
 import DadosEditor from '../DadosEditor'
-import { forte, suave } from '../../../_visao/ui'
+import FormacaoEditor from '../FormacaoEditor'
+import TreinamentosEditor from '../TreinamentosEditor'
+import { LinkAcao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
+import { formCor } from './derivar'
 import f from './ficha.module.css'
 
 function Pilula({ Icone, tom, rotulo, valor }: { Icone: LucideIcon; tom: Tom; rotulo: string; valor: React.ReactNode }) {
@@ -21,11 +25,61 @@ function Pilula({ Icone, tom, rotulo, valor }: { Icone: LucideIcon; tom: Tom; ro
   )
 }
 
-/* O HERO da ficha: foto, nome, cargo e cadastro à esquerda; à direita, na mesma
-   peça, os pontos do período e a posição no setor (pedido do dono, 14/09/2026 —
-   "como uma hero junto com os dados e a foto, sem parecer um card abaixo").
-   O "Voltar" fica FORA, acima: é navegação, não parte da identidade. */
+/* ⚠️⚠️ A FORMAÇÃO MORA NO HERO (pedido do dono, 14/09/2026): "o hero fica
+   responsável por entregar todos os dados do usuário de bate-pronto". Saiu o
+   cartão da coluna da direita — movido, não copiado — e o nível de escolaridade
+   saiu de baixo do nome, porque agora está aqui. O que é ClassRoom (cursos e
+   vídeos do período) fica no cartão do ClassRoom, em "O que os sistemas
+   registraram": aquilo é atividade, isto é o cadastro de hoje. */
+function FormacaoDoHero({ vm, editando, alternar }: { vm: EmployeeVM; editando: boolean; alternar: () => void }) {
+  return (
+    <div style={{ minWidth: 0, maxWidth: 360 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ width: 26, height: 26, borderRadius: 8, background: suave('green'), color: forte('green'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <BookOpen size={14} strokeWidth={2.2} />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--n-text-3)' }}>Formação</div>
+          <div style={{ fontSize: 10, color: 'var(--n-text-3)' }}>cadastro do RH · retrato de hoje</div>
+        </div>
+        <LinkAcao onClick={alternar}>{editando ? 'Fechar' : 'Editar'}</LinkAcao>
+      </div>
+
+      {vm.grauLevels.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+          {vm.grauLevels.map((l) => (
+            <span key={l.label} style={{ fontSize: 11.5, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 15%, transparent)`, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
+          ))}
+        </div>
+      )}
+
+      {vm.cursos.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {vm.cursos.map((c, i) => {
+            const cor = formCor(c.quando, i)
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 10, borderLeft: `3px solid ${cor}` }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.25 }}>{c.nome}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: cor }}>{c.quando}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: 'var(--n-text-3)' }}>
+          {vm.grauLevels.length ? 'Sem cursos informados no cadastro.' : 'Escolaridade e cursos não informados.'}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* O HERO da ficha: identidade, formação e — na mesma peça — os pontos do período
+   e a posição no setor. O "Voltar" fica FORA, acima: é navegação. */
 export function Cabecalho({ vm, voltar, lado }: { vm: EmployeeVM; voltar: { ir: () => void; label: string }; lado?: React.ReactNode }) {
+  const [editando, setEditando] = useState(false)
   return (
     <>
       <button type="button" onClick={voltar.ir}
@@ -51,13 +105,6 @@ export function Cabecalho({ vm, voltar, lado }: { vm: EmployeeVM; voltar: { ir: 
                 <span>{vm.cargo}</span><span style={{ color: 'var(--n-text-3)' }}>·</span><b style={{ color: 'var(--n-text)', fontWeight: 700 }}>{vm.dept}</b>
                 {vm.username && <span style={{ color: 'var(--n-text-3)', fontSize: 12 }}>· {vm.username}</span>}
               </div>
-              {vm.grauLevels.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-                  {vm.grauLevels.map((l) => (
-                    <span key={l.label} style={{ fontSize: 11, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 15%, transparent)`, padding: '2px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>{l.label}</span>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
@@ -72,7 +119,18 @@ export function Cabecalho({ vm, voltar, lado }: { vm: EmployeeVM; voltar: { ir: 
           <DadosEditor nexusUserId={vm.nexusUserId} birthISO={vm.birthISO} hireISO={vm.hireISO} />
         </div>
 
+        <FormacaoDoHero vm={vm} editando={editando} alternar={() => setEditando((v) => !v)} />
+
         {lado && <div className={f.heroLado}>{lado}</div>}
+
+        {/* ⚠️ A edição abre na LARGURA do hero, embaixo — dentro da coluna estreita
+            da formação os dois editores esmagariam o resto da linha. */}
+        {editando && (
+          <div className={f.heroEdicao}>
+            <FormacaoEditor nexusUserId={vm.nexusUserId ?? vm.id} level={vm.grau} detail={vm.eduDetail} />
+            <TreinamentosEditor nexusUserId={vm.nexusUserId ?? vm.id} cursos={vm.treinoCursos} certs={vm.treinoCerts} />
+          </div>
+        )}
       </header>
     </>
   )

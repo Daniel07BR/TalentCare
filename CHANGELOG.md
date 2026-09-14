@@ -35,6 +35,10 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   altura, separados por um fio. O "Voltar" saiu do hero para cima.
 - **5ª rodada (desenho do dono):** os dois anéis vêm logo depois da identidade, na mesma linha, sem o fio
   e sem ir para a borda direita; a "fila do setor" (do maior para o menor) saiu do hero.
+- **6ª rodada:** a FORMAÇÃO (escolaridade e cursos do cadastro do RH) foi para o hero, entre os dados da
+  pessoa e os pontos — "o hero fica responsável por entregar todos os dados do usuário de bate-pronto".
+  Saiu o cartão da coluna da direita e o nível de escolaridade de baixo do nome. "Editar" abre os
+  editores na largura do hero. O que é ClassRoom segue no cartão do ClassRoom.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 
