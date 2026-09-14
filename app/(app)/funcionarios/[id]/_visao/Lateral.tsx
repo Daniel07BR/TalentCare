@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { ClipboardCheck, Radio, Clock3 } from 'lucide-react'
+import { ClipboardCheck, Radio } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { EmployeeVM } from '@/lib/mock/employee'
 import type { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
@@ -99,35 +99,7 @@ export function RadioCartao({ m, periodo }: { m: EmployeeMetrics | null; periodo
   )
 }
 
-const diasEntre = (a: string, b: string) => Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000)
-const br = (iso: string) => iso.split('-').reverse().join('/')
-
-/* "Ela parou" ou "a FONTE dela parou"? O que informa é o par de datas. */
-export function UltimaAtividade({ m }: { m: EmployeeMetrics | null }) {
-  const linhas = m?.ultimaAtividade
-  if (!linhas?.length) return null
-  const com = linhas.filter((l) => l.dela).sort((a, b) => (b.dela ?? '').localeCompare(a.dela ?? ''))
-  const sem = linhas.filter((l) => !l.dela).map((l) => l.fonte)
-  if (!com.length) return null
-  return (
-    <Cartao titulo="Última atividade por fonte" Icone={Clock3} corIcone="var(--n-orange)" sub="Retrato de sempre · não acompanha o filtro">
-      {com.map((l) => {
-        /* ⚠️ "Parada" = a fonte seguiu por mais de 30 dias depois da última dela. */
-        const atraso = l.dela && l.fonteAte ? diasEntre(l.dela, l.fonteAte) : 0
-        const parada = atraso > 30
-        return (
-          <div key={l.fonte} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderTop: '1px solid var(--n-border-2)' }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, color: 'var(--n-text)', fontWeight: 600 }}>{l.fonte}</div>
-              {parada && <div style={{ fontSize: 10.5, color: 'var(--n-red)', marginTop: 1 }}>a fonte seguiu até {br(l.fonteAte!)} · {atraso} dias sem ela</div>}
-            </div>
-            <span className="cnum" style={{ fontSize: 11.5, fontWeight: 700, flex: 'none', padding: '2px 8px', borderRadius: 6, color: parada ? 'var(--n-red)' : 'var(--n-text-2)', background: parada ? 'var(--n-red-soft)' : 'var(--n-card-2)' }}>{br(l.dela!)}</span>
-          </div>
-        )
-      })}
-      {sem.length > 0 && (
-        <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', paddingTop: 9, borderTop: '1px solid var(--n-border-2)', lineHeight: 1.5 }}>Nunca registrou em: {sem.join(' · ')}.</div>
-      )}
-    </Cartao>
-  )
-}
+/* ⚠️ "Última atividade por fonte" SAIU desta coluna (pedido do dono, 14/09/2026):
+   ela e a linha do tempo diziam quase a mesma coisa, e a linha do tempo veio para
+   cá no lugar dela. O aviso que só ela dava — "a fonte seguiu até X, N dias sem a
+   pessoa" — segue na ficha atual (`../LateralExtras.tsx`) até a troca. */

@@ -45,6 +45,10 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   `POST /api/admin/cargo-set` (só o dono, chave `users.id` para cobrir STAFF) e a pílula "Cargo" no
   hero, abrindo a fileira: clique → campo, Enter salva, Esc cancela; vazio mostra "a informar".
   ⚠️ NÃO é o `job_title`: aquele vem do Nexus, o sync o reescreve e ele decide o acesso (`mapRole`).
+- **Linha do tempo na lateral (mesmo dia):** "atividade por fonte e linha do tempo não entregam mais ou
+  menos o mesmo dado?". Saiu "Última atividade por fonte" da prévia e a linha do tempo foi para a coluna
+  da direita, no lugar dela (10 eventos antes do "Ver todos"); a coluna da esquerda termina na
+  assiduidade. ⚠️ Perde-se o aviso "a fonte seguiu até X · N dias sem ela" — segue só na ficha atual.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 

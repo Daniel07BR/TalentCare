@@ -19,7 +19,7 @@ import { Indicadores } from '../_visao/Indicadores'
 import { Sistemas } from '../_visao/Sistemas'
 import { Assiduidade } from '../_visao/Assiduidade'
 import { LinhaDoTempo } from '../_visao/LinhaDoTempo'
-import { AntesDeAvaliar, RadioCartao, UltimaAtividade } from '../_visao/Lateral'
+import { AntesDeAvaliar, RadioCartao } from '../_visao/Lateral'
 
 /* ============================================================
    A FICHA DA PESSOA NO PADRÃO NOVO — PRÉVIA (14/09/2026).
@@ -75,12 +75,14 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
           <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} />
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
-          <LinhaDoTempo events={events} estado={estado} periodo={periodo} />
         </div>
         <aside className={f.lateral}>
           <AntesDeAvaliar vm={vm} m={m} periodo={periodo} estado={estado} />
           <RadioCartao m={m} periodo={periodo} />
-          <UltimaAtividade m={m} />
+          {/* ⚠️ A linha do tempo veio para a lateral no lugar de "Última atividade por
+              fonte" (pedido do dono, 14/09/2026: "não entregam mais ou menos o mesmo
+              dado?"). A coluna da esquerda termina na assiduidade. */}
+          <LinhaDoTempo events={events} estado={estado} periodo={periodo} />
         </aside>
       </div>
       </PainelDaPessoaProvider>

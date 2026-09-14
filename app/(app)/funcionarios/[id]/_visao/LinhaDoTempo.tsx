@@ -8,7 +8,7 @@ type Timeline = ReturnType<typeof useEmployeeTimeline>
 
 /* Quantos eventos aparecem antes do "ver todos": a linha do tempo de um mês cheio
    passa de cem, e empurrava a ficha inteira para baixo. */
-const INICIAL = 12
+const INICIAL = 10
 
 export function LinhaDoTempo({ events, estado, periodo }: { events: Timeline['events']; estado: Timeline['estado']; periodo: string }) {
   const [tudo, setTudo] = useState(false)
@@ -20,7 +20,7 @@ export function LinhaDoTempo({ events, estado, periodo }: { events: Timeline['ev
   )
 
   return (
-    <Cartao titulo="Linha do tempo" Icone={History} corIcone="var(--n-purple)" sub={`O que aconteceu, dia a dia, em todos os sistemas · ${periodo}`}
+    <Cartao titulo="Linha do tempo" Icone={History} corIcone="var(--n-purple)" sub={`Todos os sistemas, dia a dia · ${periodo}`}
       acao={lista.length > INICIAL ? <LinkAcao onClick={() => setTudo((v) => !v)}>{tudo ? 'Mostrar menos' : `Ver todos (${lista.length})`}</LinkAcao> : undefined}>
       {/* ⚠️ "Sem atividade" só no estado `ok`: um 403 ou falha de rede não pode virar um fato sobre a pessoa. */}
       {estado === 'carregando' ? caixa('Carregando o período…')
