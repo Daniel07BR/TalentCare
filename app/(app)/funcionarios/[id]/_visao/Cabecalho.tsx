@@ -79,14 +79,21 @@ function FormacaoDoHero({ vm, editando, alternar }: { vm: EmployeeVM; editando: 
 
 /* O HERO da ficha: identidade, formação e — na mesma peça — os pontos do período
    e a posição no setor. O "Voltar" fica FORA, acima: é navegação. */
-export function Cabecalho({ vm, voltar, lado }: { vm: EmployeeVM; voltar: { ir: () => void; label: string }; lado?: React.ReactNode }) {
+export function Cabecalho({ vm, voltar, lado, acoes }: {
+  vm: EmployeeVM; voltar: { ir: () => void; label: string }; lado?: React.ReactNode
+  /** Botões na linha do "Voltar", à direita (hoje: "Gerar PDF"). */
+  acoes?: React.ReactNode
+}) {
   const [editando, setEditando] = useState(false)
   return (
     <>
-      <button type="button" onClick={voltar.ir}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, minHeight: 32, marginBottom: 6, color: 'var(--n-text-2)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-        <ChevronLeft size={15} /> {voltar.label}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        <button type="button" onClick={voltar.ir}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, minHeight: 32, color: 'var(--n-text-2)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+          <ChevronLeft size={15} /> {voltar.label}
+        </button>
+        {acoes}
+      </div>
 
       <header className={f.hero}>
         <div style={{ minWidth: 0 }}>

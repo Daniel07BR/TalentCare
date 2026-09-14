@@ -1,5 +1,20 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — "Gerar PDF" na ficha: a folha A4 do colaborador
+
+Pedido: *"um botão de gerar PDF, padronizado em A4, organizado numa folha, conforme o filtro de período;
+sem dados da rádio e sem quantidade de mensagens do Chat Interno"*.
+- Botão **Gerar PDF** na linha do "Voltar" (só habilita quando os dados do período chegaram). Ele
+  imprime `funcionarios/[id]/_visao/FichaImpressa.tsx` — uma folha A4 montada com os MESMOS dados e o
+  MESMO filtro da tela, escondida na tela e única na impressão (portal no `<body>` + `@media print`);
+  o navegador salva como PDF, com o nome "Ficha - <pessoa> - <período>". Sem biblioteca nova.
+- A folha: faixa com período e datas exatas · identidade (cargo oficial, casa, admissão, idade/saída) ·
+  formação · pontuação e posição · seis indicadores · tabela "O que os sistemas registraram" (uma linha
+  por sistema com registro; WhatsApp com a nota do cliente) · serviços do setor (top 5) · assiduidade
+  (gravidade e atrasos por mês quando a janela passa de um mês) · advertências e suspensões em duas
+  colunas (quebra para a 2ª página sem cortar linha) · rodapé "não é a nota".
+- ⚠️ FORA da folha, por decisão do dono: Rádio e mensagens do Chat Interno (do Chat, só chamados).
+
 ## 2026-09-14 — A FICHA NOVA é a ficha de todos (`/funcionarios/<id>`)
 
 Aprovada pelo dono: *"pode trocar a ficha de todos pela nova"*. Mesma receita das trocas do setor e do

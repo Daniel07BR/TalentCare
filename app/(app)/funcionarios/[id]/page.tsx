@@ -1,5 +1,6 @@
 'use client'
 import { use } from 'react'
+import { FileDown } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
 import { useEmployeePeriod } from '@/lib/ui/employee-period'
 import { useEmployeeTimeline } from '@/lib/ui/employee-timeline'
@@ -18,6 +19,7 @@ import { Sistemas } from './_visao/Sistemas'
 import { Assiduidade } from './_visao/Assiduidade'
 import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
+import { FichaImpressa } from './_visao/FichaImpressa'
 
 /* ============================================================
    A FICHA DA PESSOA — no padrão novo (o do relatório do setor e do painel).
@@ -51,16 +53,37 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
     )
   }
 
+  /* ⚠️ GERAR PDF = imprimir a folha A4 (`FichaImpressa`) que já está montada com os
+     dados DESTA tela e DESTE filtro; o navegador oferece "Salvar como PDF". O título
+     da aba vira o nome sugerido do arquivo, e volta ao normal depois. */
+  const gerarPdf = () => {
+    const antes = document.title
+    document.title = `Ficha - ${vm.name} - ${periodo}`
+    const volta = () => { document.title = antes; window.removeEventListener('afterprint', volta) }
+    window.addEventListener('afterprint', volta)
+    window.print()
+  }
+
   return (
     <div className={`tc-anim ${s.raiz}`}>
       {/* ⚠️ Provedor DENTRO da `.raiz`: o resumo aberto pelos cartões nasce na paleta nova. */}
       <PainelDaPessoaProvider>
       {/* ⚠️ O placar fica no hero, ao lado da foto e da formação, e só aparece
           quando a rota respondeu: zerado diria "zero pontos". */}
-      <Cabecalho vm={vm} voltar={voltar} lado={m?.posicao ? (
-        <Placar compacto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
-          motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
-      ) : null} />
+      <Cabecalho vm={vm} voltar={voltar}
+        acoes={
+          /* ⚠️ Só habilita quando os dados do período chegaram: um PDF gerado antes
+             sairia sem os números — e papel não recarrega. */
+          <button type="button" onClick={gerarPdf} disabled={!m}
+            title={m ? `Gerar a ficha em PDF (A4) · ${periodo}` : 'Aguarde os dados do período carregarem'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 36, padding: '0 16px', border: 'none', borderRadius: 10, background: m ? 'var(--n-blue)' : 'var(--n-card-2)', color: m ? '#fff' : 'var(--n-text-3)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: m ? 'pointer' : 'wait', boxShadow: m ? '0 6px 16px color-mix(in srgb, var(--n-blue) 25%, transparent)' : 'none' }}>
+            <FileDown size={16} /> {m ? 'Gerar PDF' : 'Carregando…'}
+          </button>
+        }
+        lado={m?.posicao ? (
+          <Placar compacto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
+            motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
+        ) : null} />
       <Indicadores m={m} periodo={periodo} />
 
       <div className={f.corpo}>
@@ -76,6 +99,9 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
         </aside>
       </div>
       </PainelDaPessoaProvider>
+
+      {/* A folha A4 — invisível na tela, a única coisa que sai na impressão. */}
+      {m && <FichaImpressa vm={vm} m={m} periodo={periodo} />}
     </div>
   )
 }
