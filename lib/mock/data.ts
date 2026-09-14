@@ -57,6 +57,8 @@ export type Employee = {
   admissao: string
   birthDate: string | null
   gender: string | null
+  /** Cargo oficial do DP, editável na ficha. `null` = a informar. */
+  cargoOficial: string | null
   hireISO: string | null
   leftISO: string | null
   nexusUserId: string | null
@@ -186,6 +188,8 @@ export type Identity = {
   nome: string
   username: string | null
   cargo: string | null
+  /** Cargo oficial do DP (`users.cargo_oficial`) — o `cargo` acima é o do Nexus. */
+  cargoOficial: string | null
   deptId: string | null
   deptName: string | null
   active: boolean
@@ -398,6 +402,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
       : 'Não informado',
     birthDate: id8.birthDate,
     gender: id8.gender,
+    cargoOficial: id8.cargoOficial,
     hireISO: id8.entryDate ? id8.entryDate.toISOString() : null,
     leftISO: id8.leftDate ? id8.leftDate.toISOString() : null,
     nexusUserId: id8.nexusUserId,

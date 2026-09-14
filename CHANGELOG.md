@@ -39,6 +39,12 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   pessoa e os pontos — "o hero fica responsável por entregar todos os dados do usuário de bate-pronto".
   Saiu o cartão da coluna da direita e o nível de escolaridade de baixo do nome. "Editar" abre os
   editores na largura do hero. O que é ClassRoom segue no cartão do ClassRoom.
+- **Cargo oficial editável (mesmo dia):** "acrescente um campo editável com o cargo da pessoa; vou subir
+  depois, mas preciso do campo pronto". Coluna nova `users.cargo_oficial` (nullable, `ALTER TABLE … ADD
+  COLUMN` aplicado à mão no .78 — nunca `db push`, que quer dropar os backups do Chat), rota
+  `POST /api/admin/cargo-set` (só o dono, chave `users.id` para cobrir STAFF) e a pílula "Cargo" no
+  hero, abrindo a fileira: clique → campo, Enter salva, Esc cancela; vazio mostra "a informar".
+  ⚠️ NÃO é o `job_title`: aquele vem do Nexus, o sync o reescreve e ele decide o acesso (`mapRole`).
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 

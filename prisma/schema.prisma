@@ -55,6 +55,12 @@ model User {
   role            UserRole    @default(SEM_PERMISSAO)
   jobTitle        String?     @map("job_title")
   birthDate       DateTime?   @map("birth_date")
+  /// ⚠️⚠️ CARGO OFICIAL (do DP), editado no TalentCare — 14/09/2026, pedido do dono
+  /// ("deixe o campo pronto, vou subir depois"). NÃO é o `jobTitle`: aquele vem do
+  /// Nexus, o sync o reescreve a cada rodada e ele alimenta o `mapRole` (acesso).
+  /// Editar o `jobTitle` aqui seria desfeito pelo cron — e poderia mudar permissão.
+  /// Este o sync não toca. `null` = ainda não informado.
+  cargoOficial    String?     @map("cargo_oficial")
   gender          String?
   // CPF (só dígitos). Usado p/ colaboradores STAFF sem Nexus e como chave de
   // casamento na futura importação de ponto/disciplina. Nullable.

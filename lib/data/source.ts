@@ -195,6 +195,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
       nome: u.name,
       username: u.domainAccount ?? u.windowsUser ?? null,
       cargo: u.jobTitle,
+      cargoOficial: u.cargoOficial ?? null,
       deptId: u.departmentId,
       deptName: u.department?.name ?? null,
       active: u.active,

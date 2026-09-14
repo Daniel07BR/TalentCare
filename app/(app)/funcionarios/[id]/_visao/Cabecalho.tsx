@@ -9,6 +9,7 @@ import TreinamentosEditor from '../TreinamentosEditor'
 import { LinkAcao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
 import { formCor } from './derivar'
+import { CargoEditor } from './CargoEditor'
 import f from './ficha.module.css'
 
 function Pilula({ Icone, tom, rotulo, valor }: { Icone: LucideIcon; tom: Tom; rotulo: string; valor: React.ReactNode }) {
@@ -109,6 +110,8 @@ export function Cabecalho({ vm, voltar, lado }: { vm: EmployeeVM; voltar: { ir: 
           </div>
 
           <div className={f.info} style={{ marginTop: 18 }}>
+            {/* O cargo oficial abre a fileira: é o dado de cadastro que a carga do DP vai preencher. */}
+            <CargoEditor id={vm.id} cargo={vm.cargoOficial} />
             <Pilula Icone={Home} tom="green" rotulo="Tempo de casa" valor={vm.tempo} />
             <Pilula Icone={CalendarPlus} tom="blue" rotulo="Admissão" valor={vm.admissao} />
             {vm.dataSaida && <Pilula Icone={CalendarX} tom="red" rotulo="Data de saída" valor={vm.dataSaida} />}

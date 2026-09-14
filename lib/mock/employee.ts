@@ -202,6 +202,7 @@ export function buildEmployeeVM(data: TalentData, empId: string) {
     // Data de saída — usada para dizer se a JANELA cobre a pessoa (a admissão
     // já vem como `hireISO` logo abaixo).
     leftISO: emp.leftISO,
+    cargoOficial: emp.cargoOficial ?? null,
     treinoCursos: emp.treinoCursos, treinoCerts: emp.treinoCerts,
     birthISO: emp.birthDate ? emp.birthDate.slice(0, 10) : '', hireISO: emp.hireISO ? emp.hireISO.slice(0, 10) : '',
     classroom: {
