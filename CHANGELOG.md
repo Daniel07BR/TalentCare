@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
+
+Pedido: a lista de advertências e suspensões da ficha ocupava só a metade esquerda e ficava
+comprida demais, com espaço vazio ao lado. A grade de 2 colunas tinha sobrado com um único filho
+desde que o bloco do Rádio saiu dali (09/09). Agora o cartão ocupa a linha inteira e a LISTA se
+divide em duas colunas (uma no celular, `minmax(min(100%, 320px), 1fr)`).
+
 ## 2026-09-14 — Suspensões no quadro "Assiduidade e disciplina" (painel e setor)
 
 Pedido: *"assiduidade e disciplina, tanto no dashboard quanto na página de cada empresa, não

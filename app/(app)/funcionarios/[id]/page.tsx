@@ -563,10 +563,13 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                 ) : (
                   <div style={{ fontSize: 12, color: 'var(--text-mute)' }}>Carregando o período…</div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginTop: 24 }}>
                     {/* ⚠️ O bloco do RÁDIO saiu daqui (09/09/2026) para a coluna
                         da direita — movido, não copiado. Ele aparecia em dois
-                        lugares nesta página; um terceiro seria repetição. */}
+                        lugares nesta página; um terceiro seria repetição.
+                        ⚠️ Com ele fora, a grade de 2 colunas deixava a metade
+                        direita VAZIA e a lista comprida numa só (14/09/2026): o
+                        cartão ocupa a linha e a LISTA é que se divide em colunas. */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
                     {/* ⚠️ Segue o FILTRO desde 11/09/2026 — o rótulo diz o período e o total
                         de sempre, para o recorte não se passar pelo todo. */}
@@ -599,7 +602,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                         )}
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                      /* Duas colunas onde cabe, uma no celular. A ordem segue a da
+                         lista (mais recente primeiro), lida linha a linha. */
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 9 }}>
                         {(m?.disciplina ?? []).map((d, i) => {
                           /* ⚠️⚠️ SUSPENSÃO EM ROXO, com barra e selo (pedido do dono,
                              11/09/2026: "outra cor para suspensões, para destacar que é
