@@ -259,13 +259,28 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
        Chat mediu a pessoa. Chamado primeiro; a conversa vem depois, com o aviso. */
     <Bloco onClick={abrir('chat')} dica="Ver os chamados e as mensagens dia a dia">
       <Titulo nome="Chat Interno" sub={impressao ? 'chamados entre setores' : 'chamados entre setores e conversa'} Icone={MessageSquareText} tom="pink" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+      {/* ⚠️ Na folha A4 o cartão é estreito (todos os sistemas numa fileira) e três
+          caixas lado a lado sobrepunham "Atendeu"/"Concluiu" — pedido do dono,
+          14/09/2026: um abaixo do outro, número à esquerda e o rótulo ao lado. */}
+      <div style={impressao
+        ? { display: 'flex', flexDirection: 'column', gap: 6 }
+        : { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {([['Abriu', ch.chamadosAbertos, 'pink', 'pedidos que fez'], ['Atendeu', ch.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', ch.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
-          <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
-            <Grande cor={forte(t)} tam={22}>{num(n)}</Grande>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)' }}>{rot}</div>
-            <div style={{ fontSize: 10, color: 'var(--n-text-2)' }}>{sub}</div>
-          </div>
+          impressao ? (
+            <div key={rot} style={{ display: 'flex', alignItems: 'center', gap: 10, background: suave(t), borderRadius: 10, padding: '6px 10px', minWidth: 0 }}>
+              <span style={{ minWidth: 30, textAlign: 'right' }}><Grande cor={forte(t)} tam={20}>{num(n)}</Grande></span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.2 }}>{rot}</div>
+                <div style={{ fontSize: 10, color: 'var(--n-text-2)', lineHeight: 1.2 }}>{sub}</div>
+              </div>
+            </div>
+          ) : (
+            <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
+              <Grande cor={forte(t)} tam={22}>{num(n)}</Grande>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)' }}>{rot}</div>
+              <div style={{ fontSize: 10, color: 'var(--n-text-2)' }}>{sub}</div>
+            </div>
+          )
         ))}
       </div>
       {ch.chamadosConcluidos > 0 && (

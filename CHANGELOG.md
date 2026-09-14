@@ -27,6 +27,8 @@ sem dados da rádio e sem quantidade de mensagens do Chat Interno"*.
   com os quatro números (`ServicosCard soNumeros`) · todos os sistemas numa fileira, anel e colunas
   menores e sem as notas · assiduidade com calendário, contadores e gravidade, SEM a lista de
   advertências — só o contador (`Assiduidade impressao`) · rodapé. Zoom da folha 0,72.
+- **Ajuste (mesmo dia):** no cartão do Chat Interno da folha, Abriu/Atendeu/Concluiu sobrepunham os
+  rótulos lado a lado; na impressão ficam um abaixo do outro (número à esquerda). A tela não muda.
 
 ## 2026-09-14 — A FICHA NOVA é a ficha de todos (`/funcionarios/<id>`)
 
