@@ -33,6 +33,8 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   feio — era para ser uma hero junto com os dados e a foto". Virou UMA peça (`.hero`): fundo único com
   degradê suave, identidade à esquerda (foto maior) e os pontos, a posição e a fila à direita na mesma
   altura, separados por um fio. O "Voltar" saiu do hero para cima.
+- **5ª rodada (desenho do dono):** os dois anéis vêm logo depois da identidade, na mesma linha, sem o fio
+  e sem ir para a borda direita; a "fila do setor" (do maior para o menor) saiu do hero.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 

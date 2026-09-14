@@ -199,7 +199,7 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
     <div className={compacto ? undefined : 'tc-card'} style={compacto ? {
       /* ⚠️ Os três lado a lado, na mesma altura da foto — quebrar a fila para uma
          segunda linha foi o que deixou a 1ª versão do hero torta. */
-      display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 10,
+      display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start', gap: '14px 56px',
       ['--placar-anel' as string]: '112px',
     } : {
       marginTop: 16, background: 'var(--surface)', border: '1px solid var(--border)',
@@ -283,7 +283,10 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
       </Anel>
 
       {/* ── A FILA do setor ──────────────────────────────────────────────── */}
-      {p.posicao != null && p.de > 1 && (
+      {/* ⚠️ No hero da ficha nova (modo compacto) a fila não entra — pedido do
+          dono, 14/09/2026: "não apresentar aquele dado de maior que". O anel da
+          posição já diz o lugar e a distância até o 1º. */}
+      {!compacto && p.posicao != null && p.de > 1 && (
         <div style={{ padding: '4px 8px', minWidth: 190, maxWidth: 300, flex: '1 1 200px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--text-mute)', marginBottom: 12 }}>
             A fila do setor
