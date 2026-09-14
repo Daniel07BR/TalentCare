@@ -230,12 +230,13 @@ function Conteudo() {
       {(() => {
         const kA = vm.kpis.find((k) => k.label === 'Atrasos')
         const kV = vm.kpis.find((k) => k.label === 'Advertências')
+        const kS = vm.kpis.find((k) => k.label === 'Suspensões')
         return (
           <Assiduidade periodo={periodo} fromDay={fromDay} toDay={toDay}
             semPonto={!assid.loading && !assid.janelaComPonto} motivo={assid.motivoSemPonto ?? (assid.erro ? 'não foi possível ler o ponto' : 'sem dado de ponto nesta janela')}
             esperando={assid.loading && !assid.map} recarregando={assid.loading && !!assid.map}
-            atrasos={kA?.value ?? '—'} advertencias={kV?.value ?? '—'} minutos={somaA.minutos} abonados={somaA.abonados}
-            nAtrasos={kA?.pessoas?.length ?? 0} nMinutos={minutosPessoas.length} nAdvertencias={kV?.pessoas?.length ?? 0}
+            atrasos={kA?.value ?? '—'} advertencias={kV?.value ?? '—'} suspensoes={kS?.value ?? '—'} minutos={somaA.minutos} abonados={somaA.abonados}
+            nAtrasos={kA?.pessoas?.length ?? 0} nMinutos={minutosPessoas.length} nAdvertencias={kV?.pessoas?.length ?? 0} nSuspensoes={kS?.pessoas?.length ?? 0}
             abrirLista={(q) => setLista(q === 'minutos' ? { tipo: 'minutos' } : { tipo: 'kpi', chave: q })}
             abrirDetalhe={() => detalhe.abrir('assiduidade')} abrirPessoa={(id) => abrirPessoa('assiduidade', id)} />
         )

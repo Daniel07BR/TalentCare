@@ -46,15 +46,17 @@ function useMapaDaCasa() {
   return { r, loading, erro }
 }
 
-export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperando, recarregando, atrasos, advertencias, minutos, abonados, nAtrasos, nMinutos, nAdvertencias, abrirLista, abrirDetalhe, abrirPessoa }: {
+export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperando, recarregando, atrasos, advertencias, suspensoes, minutos, abonados, nAtrasos, nMinutos, nAdvertencias, nSuspensoes, abrirLista, abrirDetalhe, abrirPessoa }: {
   periodo: string; fromDay: string; toDay: string
   /** A janela não foi medida pelo ponto: tudo vira "—", nunca zero. */
   semPonto: boolean; motivo: string
   esperando: boolean; recarregando: boolean
   atrasos: number | string; advertencias: number | string; minutos: number; abonados: number
+  /** Suspensões por atraso + de LGPD — o MESMO número do cartão lá de cima. */
+  suspensoes: number | string
   /** Quantas pessoas cada lista tem — o número só vira botão se houver quem mostrar. */
-  nAtrasos: number; nMinutos: number; nAdvertencias: number
-  abrirLista: (qual: 'Atrasos' | 'Advertências' | 'minutos') => void
+  nAtrasos: number; nMinutos: number; nAdvertencias: number; nSuspensoes: number
+  abrirLista: (qual: 'Atrasos' | 'Advertências' | 'Suspensões' | 'minutos') => void
   abrirDetalhe: () => void
   abrirPessoa: (id: string) => void
 }) {
@@ -86,6 +88,10 @@ export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperan
               <Mini valor={v2(minutos)} rotulo="Minutos de atraso" onClick={clica(nMinutos, 'minutos')} />
               <Mini valor={v2(abonados)} rotulo="Atrasos abonados" tom="green" />
               <Mini valor={v2(advertencias)} rotulo="Advertências" tom="red" onClick={clica(nAdvertencias, 'Advertências')} />
+              {/* ⚠️ A suspensão vem da planilha do DP, não do ponto: janela sem ponto
+                  NÃO a apaga — o valor já chega "—" quando não deu para ler. */}
+              <Mini valor={typeof suspensoes === 'number' ? num(suspensoes) : suspensoes} rotulo="Suspensões" tom="purple"
+                onClick={!esperando && nSuspensoes > 0 ? () => abrirLista('Suspensões') : undefined} />
               {/* ⚠️ Falta não vem no dump do Nexo: "—", nunca zero. */}
               <Mini valor="—" rotulo="Faltas · sem fonte" />
             </div>

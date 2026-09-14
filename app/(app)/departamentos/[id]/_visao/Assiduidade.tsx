@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { CalendarCheck } from 'lucide-react'
 import CalendarioOcorrencias from '../../../CalendarioOcorrencias'
 import { Cartao, Mini, LinkAcao } from '../../../_visao/ui'
-import { num } from './derivar'
+import { num, suspensoes } from './derivar'
 import { DiaDoMapa } from './DiaDoMapa'
 import { contagens, type ChavePainel } from './Paineis'
 import type { ComDetalhe } from './tipos'
@@ -15,6 +15,7 @@ export function Assiduidade({ m, abrir, abrirPainel }: ComDetalhe & { abrirPaine
   const a = m.assiduidade
   const semPonto = a.janelaComPonto === false
   const n = contagens(m)
+  const susp = suspensoes(m)
   const clique = (c: ChavePainel) => (!semPonto && n[c] > 0 ? () => abrirPainel(c) : undefined)
   /* O dia aberto no mapa. ⚠️ Trocar o filtro fecha: o dia de outra janela
      ficaria aberto debaixo de um calendário que já não o mostra. */
@@ -32,6 +33,10 @@ export function Assiduidade({ m, abrir, abrirPainel }: ComDetalhe & { abrirPaine
         <Mini valor={semPonto ? '—' : num(a.minutos)} rotulo="Minutos de atraso" onClick={clique('minutos')} />
         <Mini valor={semPonto ? '—' : num(a.abonados)} rotulo="Atrasos abonados" tom="green" />
         <Mini valor={num(a.advertencias)} rotulo="Advertências" tom="red" onClick={clique('advertencias')} />
+        {/* ⚠️ A suspensão vem da planilha do DP, não do ponto: janela sem ponto não a
+            apaga. Mesmo número (atraso + LGPD) do indicador do topo. */}
+        <Mini valor={susp === null ? '—' : num(susp)} rotulo="Suspensões" tom="purple"
+          onClick={n.suspensoes > 0 ? () => abrirPainel('suspensoes') : undefined} />
         {/* ⚠️ Falta não vem no dump do Nexo: "—", nunca zero. */}
         <Mini valor={a.faltas == null ? '—' : num(a.faltas)} rotulo={a.faltas == null ? 'Faltas · sem fonte' : 'Faltas'} />
       </div>

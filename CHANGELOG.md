@@ -1,5 +1,15 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — Suspensões no quadro "Assiduidade e disciplina" (painel e setor)
+
+Pedido: *"assiduidade e disciplina, tanto no dashboard quanto na página de cada empresa, não
+apresenta as suspensões"*. O quadro nasceu antes do histórico real do DP (10/09) e só tinha
+Atrasos, Minutos, Abonados, Advertências e Faltas — os indicadores do topo já contavam, o quadro não.
+- Novo número **Suspensões** (roxo) nos dois quadros: `dashboard/_novo/Assiduidade.tsx` e
+  `departamentos/[id]/_visao/Assiduidade.tsx`. É o MESMO número do indicador do topo (por atraso +
+  LGPD) e abre a mesma lista de quem.
+- ⚠️ Não vira "—" em janela sem ponto: a suspensão vem da planilha do DP, não do dump do Nexo.
+
 ## 2026-09-11 (30) — Pessoas, idade, casa e gênero do FIM do período; rotatividade do período em todas as telas
 
 Pergunta do dono: *"pessoas na equipe, rotatividade, mulheres/homens, idade média não deveriam se
