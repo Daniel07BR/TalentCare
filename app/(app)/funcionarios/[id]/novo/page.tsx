@@ -72,7 +72,7 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
 
       <div className={f.corpo}>
         <div className={s.pilha}>
-          <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} />
+          <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} semPontuacao />
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
         </div>

@@ -25,12 +25,21 @@ const horas = (min: number) => (min >= 60 ? `${Math.round(min / 60)} h` : `${min
  * nem usa esta fonte é a mesma falta do ponto com outra roupa: zero por ausência
  * de fonte se lê como ausência de trabalho, e aqui acusaria 14 dos 15 setores.
  */
-export default function ServicosCard({ servicos, pontuacao, periodo }: {
+export default function ServicosCard({ servicos, pontuacao, periodo, semPontuacao = false }: {
   servicos?: Servicos; pontuacao?: Ponto[]; periodo: string
+  /** Esconde "Pontuação do setor, mês a mês". A ficha nova liga: ali o anel
+   *  "Pontos no período" do hero já mostra os mesmos meses, e seguindo o filtro. */
+  semPontuacao?: boolean
 }) {
   const temServico = !!servicos?.temFonte
   const temPonto = !!pontuacao?.length
-  if (!temServico && !temPonto) return null
+  /* ⚠️⚠️ O GRÁFICO DE PONTUAÇÃO SAI NA FICHA NOVA (pedido do dono, 14/09/2026:
+     "os gráficos parecem duplicados, e no mensal continua mostrando o anual").
+     Medido no Marcos: as barras 120·140·120·120·130·160·198 somam 988 — o mesmo
+     número do anel do hero —, só que aqui sem obedecer ao filtro. Eram o mesmo
+     dado em dois lugares, e o de baixo contradizia o recorte da tela. */
+  const mostraPonto = temPonto && !semPontuacao
+  if (!temServico && !mostraPonto) return null
 
   const maxMes = Math.max(1, ...(servicos?.porMes ?? []).map((m) => m.concluidos))
   const maxTarefa = Math.max(1, ...(servicos?.porTarefa ?? []).map((t) => t.n))
@@ -91,7 +100,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo }: {
           )}
 
           {servicos.porTarefa.length > 0 && (
-            <div style={{ marginBottom: temPonto ? 18 : 0 }}>
+            <div style={{ marginBottom: mostraPonto ? 18 : 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>O que ela mais fez</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {servicos.porTarefa.map((t) => (
@@ -110,7 +119,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo }: {
         </>
       )}
 
-      {temPonto && (
+      {mostraPonto && (
         <div style={{ borderTop: temServico ? '1px solid var(--border)' : 'none', paddingTop: temServico ? 16 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
             <Scale size={14} color="var(--accent)" />

@@ -49,6 +49,12 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   menos o mesmo dado?". Saiu "Última atividade por fonte" da prévia e a linha do tempo foi para a coluna
   da direita, no lugar dela (10 eventos antes do "Ver todos"); a coluna da esquerda termina na
   assiduidade. ⚠️ Perde-se o aviso "a fonte seguiu até X · N dias sem ela" — segue só na ficha atual.
+- **Serviços do setor sem o gráfico de pontuação (mesmo dia):** "os gráficos parecem duplicados, e no
+  mensal continua mostrando o anual". Conferido no banco (Marcos): os serviços estão certos — 160
+  concluídos no ano (72·34·16·5·12·21 de mar a ago), 73 em aberto, agosto 21/3. O duplicado era a
+  "Pontuação do setor, mês a mês": 120·140·120·120·130·160·198 = 988, o mesmo anel "Pontos no período"
+  do hero, só que sem seguir o filtro. Na ficha nova ele sai (`semPontuacao` em `ServicosCard`); a
+  ficha atual segue igual até a troca.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 
