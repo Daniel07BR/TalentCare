@@ -29,6 +29,10 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   conferido, nunca 0) e o painel do WhatsApp mostra a nota por dia; o Chat virou UM cartão com
   Abriu/Atendeu/Concluiu sempre visíveis e a conversa embaixo; o placar ficou compacto (`compacto`
   em `Placar.tsx`) ao lado da foto e o cartão de baixo saiu.
+- **4ª rodada (mesmo dia):** o placar num cartão branco à parte, quebrando em duas linhas, "ficou muito
+  feio — era para ser uma hero junto com os dados e a foto". Virou UMA peça (`.hero`): fundo único com
+  degradê suave, identidade à esquerda (foto maior) e os pontos, a posição e a fila à direita na mesma
+  altura, separados por um fio. O "Voltar" saiu do hero para cima.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 

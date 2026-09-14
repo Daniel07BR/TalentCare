@@ -197,8 +197,10 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
 
   return (
     <div className={compacto ? undefined : 'tc-card'} style={compacto ? {
-      display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 14,
-      ['--placar-anel' as string]: '104px',
+      /* ⚠️ Os três lado a lado, na mesma altura da foto — quebrar a fila para uma
+         segunda linha foi o que deixou a 1ª versão do hero torta. */
+      display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 10,
+      ['--placar-anel' as string]: '112px',
     } : {
       marginTop: 16, background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: 'var(--radius)', padding: '18px 8px',

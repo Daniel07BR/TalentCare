@@ -12,12 +12,26 @@
   .corpo { grid-template-columns: minmax(0, 1fr) 380px; }
 }
 
-/* O cabeçalho: identidade à esquerda, placar à direita (desce em tela estreita). */
-.cabecalho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 16px; }
-.cabecalhoLado {
-  flex: 0 1 auto; min-width: 0; max-width: 100%;
-  background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; box-shadow: var(--n-shadow);
-  padding: 12px 14px;
+/* ⚠️⚠️ O HERO (14/09/2026). A 1ª tentativa pôs o placar num cartão branco à parte,
+   empurrado para a direita e quebrando em duas linhas, com a identidade solta no
+   fundo cinza — o dono: "ficou muito feio, era para estar como uma hero junto com
+   os dados e a foto". Agora é UMA peça: um fundo só, identidade à esquerda e o
+   placar à direita na mesma altura, separados por um fio — nunca um cartão dentro
+   do outro. Em tela estreita, o placar desce e o fio vira horizontal. */
+.hero {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 18px;
+  margin-bottom: 14px; padding: 22px 24px;
+  border: 1px solid var(--n-border); border-radius: 18px; box-shadow: var(--n-shadow);
+  background:
+    radial-gradient(420px 220px at 100% 0%, var(--n-purple-soft), transparent 70%),
+    radial-gradient(520px 260px at 70% 110%, var(--n-blue-soft), transparent 70%),
+    var(--n-card);
+}
+.heroLado { min-width: 0; padding-top: 16px; border-top: 1px solid var(--n-border-2); }
+@media (min-width: 1100px) {
+  .hero { grid-template-columns: minmax(0, 1fr) auto; gap: 28px; }
+  .heroLado { padding: 0 0 0 28px; border-top: none; border-left: 1px solid var(--n-border-2); align-self: stretch; display: flex; align-items: center; }
 }
 
 /* Os dados de identidade do cabeçalho, em pílulas. */
