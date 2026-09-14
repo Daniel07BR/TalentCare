@@ -1,5 +1,21 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — PRÉVIA da ficha da pessoa no padrão novo (`/funcionarios/<id>/novo`)
+
+Pedido: *"assim como refatoramos o setor e o dashboard, crie a página dos usuários no novo padrão —
+uma página para eu aprovar antes de trocar a de todos"*. Mesma receita das duas trocas: prévia ao lado
+da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.raiz`.
+- Seções em `funcionarios/[id]/_visao/`: cabeçalho com pílulas coloridas; seis azulejos (concluídas,
+  índice de assiduidade, atrasos, minutos, advertências, suspensões); placar; "O que os sistemas
+  registraram" com as partes na cor de cada sistema, barras coloridas e um cartão por sistema;
+  assiduidade com calendário ao lado da gravidade e a lista em duas colunas; linha do tempo com
+  "Ver todos" depois de 12; coluna "Antes de avaliar", Formação, Rádio e Última atividade.
+- ⚠️ Mudanças de conteúdo a aprovar junto: o cartão **Conduta** não veio (seus números viraram os
+  azulejos e o bloco de assiduidade — seria a mesma coisa três vezes); o **ClassRoom** saiu da Formação
+  para os cartões de sistema (é atividade do período, a Formação é retrato de hoje); "Antes de
+  avaliar" ganhou a pergunta sobre **suspensão**.
+- A ficha atual não mudou. Aprovada, a prévia vira `/funcionarios/<id>` e a de hoje vai para `./anterior`.
+
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 
 Pedido: a lista de advertências e suspensões da ficha ocupava só a metade esquerda e ficava

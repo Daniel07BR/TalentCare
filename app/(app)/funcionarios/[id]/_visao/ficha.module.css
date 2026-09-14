@@ -1,0 +1,38 @@
+/* ============================================================
+   A FICHA NO PADRÃO NOVO — prévia (14/09/2026)
+
+   A paleta e as peças são as de `app/(app)/_visao/visao.module.css` (a `.raiz`
+   do relatório do setor e do painel). Aqui mora só a grade própria da ficha.
+   Mobile primeiro: tudo numa coluna, e abre com a tela.
+   ============================================================ */
+
+.corpo { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; margin-top: 14px; }
+.lateral { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1200px) {
+  .corpo { grid-template-columns: minmax(0, 1fr) 380px; }
+}
+
+/* Os dados de identidade do cabeçalho, em pílulas. */
+.info { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Números pequenos que se ajeitam à largura do cartão. */
+.minis { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+
+/* Os cartões de cada sistema. */
+.sistemas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+
+/* Assiduidade: calendário à esquerda, números e gravidade à direita. */
+.assid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1100px) {
+  .assid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+}
+
+/* A lista de advertências e suspensões: duas colunas onde cabe. */
+.lista2 { display: grid; gap: 9px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+
+.botaoPrimario {
+  width: 100%; min-height: 42px; border: none; border-radius: 10px; background: var(--n-blue); color: #fff;
+  font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: filter .15s;
+}
+.botaoPrimario:hover:not(:disabled) { filter: brightness(1.08); }
+.botaoPrimario:disabled { background: var(--n-card-2); color: var(--n-text-3); border: 1px solid var(--n-border); cursor: not-allowed; }
