@@ -139,7 +139,12 @@ function Empilhada({ partes }: { partes: { rot: string; n: number; tom: Tom }[] 
 
 const nota1 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
-export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; periodo: string; pessoaId: string }) {
+export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
+  m: EmployeeMetrics | null; periodo: string; pessoaId: string
+  /** Modo da folha A4 (`FichaImpressa`): cartões sem clique e SEM o bloco de
+   *  mensagens do Chat Interno — decisão do dono, a folha não leva mensagens. */
+  impressao?: boolean
+}) {
   const abrirPainel = usePainelDaPessoa()
   if (!m) {
     return (
@@ -148,7 +153,7 @@ export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; 
       </Cartao>
     )
   }
-  const abrir = (sis: Sistema) => () => abrirPainel(sis, pessoaId)
+  const abrir = (sis: Sistema) => (impressao ? undefined : () => abrirPainel(sis, pessoaId))
   const { whatsapp: wpp, helpdesk: hd, classroom: cr, gerencia: gr, chat: ch, cide, consultoria: co } = m
   const blocos: { chave: string; no: React.ReactNode }[] = []
   const sem: string[] = []
@@ -252,7 +257,7 @@ export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; 
        sempre que o Chat tem registro dela, mesmo zerados: aqui zero é resposta, o
        Chat mediu a pessoa. Chamado primeiro; a conversa vem depois, com o aviso. */
     <Bloco onClick={abrir('chat')} dica="Ver os chamados e as mensagens dia a dia">
-      <Titulo nome="Chat Interno" sub="chamados entre setores e conversa" Icone={MessageSquareText} tom="pink" />
+      <Titulo nome="Chat Interno" sub={impressao ? 'chamados entre setores' : 'chamados entre setores e conversa'} Icone={MessageSquareText} tom="pink" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {([['Abriu', ch.chamadosAbertos, 'pink', 'pedidos que fez'], ['Atendeu', ch.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', ch.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
           <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
@@ -267,7 +272,7 @@ export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; 
           Tempo médio até concluir: <b style={{ color: 'var(--n-text)' }}>{ch.tempoMedio}</b> <span style={{ color: 'var(--n-text-3)' }}>· só expediente</span>
         </div>
       )}
-      {ch.hasConversa && (
+      {ch.hasConversa && !impressao && (
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px dashed var(--n-border)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
             <Grande cor="var(--n-purple)" tam={18}>{num(ch.mensagens)}</Grande>
@@ -280,7 +285,7 @@ export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; 
           ]} />
         </div>
       )}
-      <Nota>Só a contagem das mensagens chega aqui — o texto nunca sai do chat.</Nota>
+      {!impressao && <Nota>Só a contagem das mensagens chega aqui — o texto nunca sai do chat.</Nota>}
     </Bloco>
   ))
 
@@ -309,7 +314,7 @@ export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; 
   ))
 
   return (
-    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={`Só os sistemas com registro · ${periodo} · clique num sistema para o resumo`}>
+    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={impressao ? `Só os sistemas com registro · ${periodo}` : `Só os sistemas com registro · ${periodo} · clique num sistema para o resumo`}>
       {blocos.length === 0 ? (
         /* ⚠️ Silêncio nos sistemas não é inatividade. */
         <div style={{ fontSize: 12.5, color: 'var(--n-text-2)', background: 'var(--n-card-2)', borderRadius: 10, padding: '12px 14px' }}>

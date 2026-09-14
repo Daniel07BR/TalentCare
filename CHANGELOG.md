@@ -14,6 +14,13 @@ sem dados da rádio e sem quantidade de mensagens do Chat Interno"*.
   (gravidade e atrasos por mês quando a janela passa de um mês) · advertências e suspensões em duas
   colunas (quebra para a 2ª página sem cortar linha) · rodapé "não é a nota".
 - ⚠️ FORA da folha, por decisão do dono: Rádio e mensagens do Chat Interno (do Chat, só chamados).
+- **2ª versão (mesmo dia):** "perfeito, mas ficou muito feio — o mais próximo dos gráficos do relatório
+  web". A folha passou a ser MONTADA COM AS PEÇAS DA TELA (faixa + hero com anéis do placar, azulejos,
+  cartão de serviços, cartões de sistema com seus gráficos, assiduidade com calendário), desenhada a
+  1000 px e reduzida por `zoom` ao A4, com as grades forçadas pelas classes reais dos módulos, paleta
+  clara forçada e animação desligada (sairia no quadro zero). `Sistemas` ganhou `impressao` (sem clique
+  e sem o bloco de mensagens do Chat). Corrigido o logo em branco (o degradê apontava para a cópia
+  escondida do topo) e a data encavalada no tipo da advertência.
 
 ## 2026-09-14 — A FICHA NOVA é a ficha de todos (`/funcionarios/<id>`)
 
