@@ -1,5 +1,24 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — A FICHA NOVA é a ficha de todos (`/funcionarios/<id>`)
+
+Aprovada pelo dono: *"pode trocar a ficha de todos pela nova"*. Mesma receita das trocas do setor e do
+painel: a prévia virou `app/(app)/funcionarios/[id]/page.tsx` (sem a faixa de prévia), a de antes foi
+para `./anterior` (só por endereço, sem porta na tela; imports ajustados um nível abaixo) e `/novo`
+redireciona para a ficha.
+
+**Levantamento pedido junto — o que a ficha antiga mostrava e a nova não** (varredura dos campos que
+cada tela lê, `vm.*` e `EmployeeMetrics`, conferida à mão):
+- Tirados A PEDIDO nas rodadas: "Última atividade por fonte" (com o aviso "a fonte seguiu até X · N
+  dias sem ela"), a "fila do setor" do placar, o gráfico "Pontuação do setor, mês a mês" (com a
+  procedência informado × calculado) e as barras "Atividade por sistema" + pílulas de concluídas.
+- Perdidos SEM pedido, pequenos: o "Total" do ClassRoom (concluídos + criados); a barra de progresso
+  concluídos ÷ assumidos do Chat (os números seguem); a frase "Sem atividade no HelpDesk" (virou a linha
+  "Sem registro no período").
+- Sem perda real: `vm.bySystem` era valor SORTEADO (só o nome e a cor serviam); `vm.certs` é sempre vazio.
+- Dado que temos e NENHUMA das duas mostrava: serviços DESCONSIDERADOS da planilha (50 linhas, 7
+  pessoas); treinamentos e certificados do cadastro (só dentro do "Editar"); faltas seguem sem fonte.
+
 ## 2026-09-14 — PRÉVIA da ficha da pessoa no padrão novo (`/funcionarios/<id>/novo`)
 
 Pedido: *"assim como refatoramos o setor e o dashboard, crie a página dos usuários no novo padrão —
