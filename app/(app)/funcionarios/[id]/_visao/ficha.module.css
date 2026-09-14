@@ -12,6 +12,14 @@
   .corpo { grid-template-columns: minmax(0, 1fr) 380px; }
 }
 
+/* O cabeçalho: identidade à esquerda, placar à direita (desce em tela estreita). */
+.cabecalho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 16px; }
+.cabecalhoLado {
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; box-shadow: var(--n-shadow);
+  padding: 12px 14px;
+}
+
 /* Os dados de identidade do cabeçalho, em pílulas. */
 .info { display: flex; flex-wrap: wrap; gap: 8px; }
 

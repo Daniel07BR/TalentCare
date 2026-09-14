@@ -21,6 +21,14 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   HelpDesk, colunas no ClassRoom, km em destaque na rua, progresso nos chamados, barra 100% na
   conversa, número grande no CIDE). CIDE e Consultoria Plus ganharam cartão; os sem registro viram
   uma linha "Sem registro no período".
+- **3ª rodada (mesmo dia):** "os cards precisam dar cliques para vermos o resumo; não mostra nota média
+  do WhatsApp; não apresentou chamados abertos e atendidos no chat; ponha pontos e posição ao lado da
+  foto". Feito: cada cartão abre o painel da pessoa naquele sistema (`PainelDaPessoa`); o WhatsApp
+  mostra a nota média do cliente com estrelas e quantas notas, e quantos pedidos de avaliação —
+  `/api/employee-metrics` passou a somar `verificados/pedidos/avaliados/notaSum` (`null` = não
+  conferido, nunca 0) e o painel do WhatsApp mostra a nota por dia; o Chat virou UM cartão com
+  Abriu/Atendeu/Concluiu sempre visíveis e a conversa embaixo; o placar ficou compacto (`compacto`
+  em `Placar.tsx`) ao lado da foto e o cartão de baixo saiu.
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 

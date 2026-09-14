@@ -1,8 +1,12 @@
 'use client'
 import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
+import type { Sistema } from '@/lib/pessoa-sistema-tipos'
+import { usePainelDaPessoa } from '../../../PainelDaPessoa'
+import { Estrelas } from '../../../whatsapp/AvaliacaoClientes'
 import { Cartao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
+import s from '../../../_visao/visao.module.css'
 import { num } from './derivar'
 import f from './ficha.module.css'
 
@@ -15,17 +19,12 @@ import f from './ficha.module.css'
    detalhados), e só dos sistemas COM registro no período; o total de
    concluídas já é o primeiro azulejo do topo.
 
-   ⚠️ E cada sistema com um desenho PRÓPRIO, escolhido pela pergunta que o
-   número responde — não uma fileira de cartões iguais:
-   - WhatsApp: anel de finalizados ÷ abertos (quanto do que entrou, saiu).
-   - HelpDesk: duas barras lado a lado, SEM taxa (quem abre ≠ quem resolve).
-   - ClassRoom: colunas consumir × produzir.
-   - Gerência na rua: o km em destaque, com os outros números em linha.
-   - Gerência escritório: barras horizontais da demanda.
-   - Chat chamados: barra de progresso concluídos de assumidos.
-   - Chat conversa: barra 100% de onde a conversa acontece.
-   - CIDE: um número só, grande (é o que ele tem a dizer).
-   - Consultoria: lista com as quatro contagens.
+   ⚠️ Cada sistema com um desenho PRÓPRIO, escolhido pela pergunta que o número
+   responde — não uma fileira de cartões iguais.
+
+   ⚠️ E CADA CARTÃO ABRE O RESUMO (pedido do dono, 2ª rodada): o clique abre o
+   painel da pessoa naquele sistema (`PainelDaPessoa`), o mesmo dos resumos do
+   setor — a lista do que ela fez, dia a dia ou item a item.
    ============================================================ */
 
 function Titulo({ nome, sub, Icone, tom }: { nome: string; sub?: string; Icone: LucideIcon; tom: Tom }) {
@@ -42,11 +41,15 @@ function Titulo({ nome, sub, Icone, tom }: { nome: string; sub?: string; Icone: 
   )
 }
 
-function Bloco({ children, className, fundo }: { children: React.ReactNode; className?: string; fundo?: string }) {
+/** O cartão de um sistema. Com `onClick` vira botão e mostra "ver resumo ›". */
+function Bloco({ children, fundo, onClick, dica }: { children: React.ReactNode; fundo?: string; onClick?: () => void; dica?: string }) {
+  const Raiz = onClick ? 'button' : 'div'
   return (
-    <div className={className} style={{ background: fundo ?? 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 14, padding: 16, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+    <Raiz type={onClick ? 'button' : undefined} onClick={onClick} title={dica} className={onClick ? s.clicavel : undefined}
+      style={{ position: 'relative', background: fundo ?? 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 14, padding: '16px 16px 26px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       {children}
-    </div>
+      {onClick && <span className={s.verQuem} aria-hidden="true">ver resumo ›</span>}
+    </Raiz>
   )
 }
 
@@ -55,6 +58,9 @@ const Rotulo = ({ children }: { children: React.ReactNode }) => (
 )
 const Grande = ({ children, cor, tam = 22 }: { children: React.ReactNode; cor?: string; tam?: number }) => (
   <div className="cnum" style={{ fontSize: tam, fontWeight: 800, letterSpacing: '-.6px', lineHeight: 1.1, color: cor ?? 'var(--n-text)' }}>{children}</div>
+)
+const Nota = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 'auto', paddingTop: 10, lineHeight: 1.45 }}>{children}</div>
 )
 
 /** Anel de fração, com o percentual no meio. */
@@ -115,16 +121,15 @@ function Empilhada({ partes }: { partes: { rot: string; n: number; tom: Tom }[] 
   const vis = partes.filter((p) => p.n > 0)
   return (
     <>
-      <div style={{ display: 'flex', height: 14, borderRadius: 20, overflow: 'hidden', gap: 2 }}>
+      <div style={{ display: 'flex', height: 12, borderRadius: 20, overflow: 'hidden', gap: 2 }}>
         {vis.map((p) => <div key={p.rot} title={`${p.rot}: ${num(p.n)}`} style={{ width: `${(p.n / total) * 100}%`, background: forte(p.tom) }} />)}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 10 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', marginTop: 8 }}>
         {vis.map((p) => (
-          <div key={p.rot} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: forte(p.tom) }} />
-            <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>{p.rot}</span>
-            <b className="cnum" style={{ fontSize: 12.5, color: 'var(--n-text)' }}>{num(p.n)}</b>
-            <span style={{ fontSize: 10.5, color: 'var(--n-text-3)' }}>{Math.round((p.n / total) * 100)}%</span>
+          <div key={p.rot} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 3, background: forte(p.tom) }} />
+            <span style={{ fontSize: 11, color: 'var(--n-text-2)' }}>{p.rot}</span>
+            <b className="cnum" style={{ fontSize: 12, color: 'var(--n-text)' }}>{num(p.n)}</b>
           </div>
         ))}
       </div>
@@ -132,11 +137,10 @@ function Empilhada({ partes }: { partes: { rot: string; n: number; tom: Tom }[] 
   )
 }
 
-const Nota = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 'auto', paddingTop: 10, lineHeight: 1.45 }}>{children}</div>
-)
+const nota1 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
-export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: string }) {
+export function Sistemas({ m, periodo, pessoaId }: { m: EmployeeMetrics | null; periodo: string; pessoaId: string }) {
+  const abrirPainel = usePainelDaPessoa()
   if (!m) {
     return (
       <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={`Por sistema · ${periodo}`}>
@@ -144,6 +148,7 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
       </Cartao>
     )
   }
+  const abrir = (sis: Sistema) => () => abrirPainel(sis, pessoaId)
   const { whatsapp: wpp, helpdesk: hd, classroom: cr, gerencia: gr, chat: ch, cide, consultoria: co } = m
   const blocos: { chave: string; no: React.ReactNode }[] = []
   const sem: string[] = []
@@ -151,21 +156,46 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
     if (tem) blocos.push({ chave, no: no() }); else sem.push(nome)
   }
 
-  add(wpp.has && wpp.abertos + wpp.finalizados > 0, 'WhatsApp', 'wpp', () => (
-    <Bloco>
-      <Titulo nome="WhatsApp" sub="atendimentos" Icone={MessageCircle} tom="whats" />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Anel fracao={wpp.abertos ? wpp.finalizados / wpp.abertos : 0} tom="whats" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-          <div><Grande cor="var(--n-whats)">{num(wpp.finalizados)}</Grande><Rotulo>finalizados de {num(wpp.abertos)} abertos</Rotulo></div>
-          <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>
+  add(wpp.has && wpp.abertos + wpp.finalizados > 0, 'WhatsApp', 'wpp', () => {
+    /* ⚠️⚠️ A NOTA DO CLIENTE (pedido do dono, 14/09/2026). Três estados, e só um
+       deles é nota: `verificados == null` = o Painel ainda não conferiu os dias
+       (nada se afirma); conferido e sem avaliação = "sem nota no período"; e a
+       média SEMPRE com quantas notas a formam — 65 de 69 notas da casa são 5,
+       então "5,0" sozinho diz pouco. */
+    const conferido = wpp.verificados != null
+    const media = wpp.avaliados && wpp.notaSum != null ? wpp.notaSum / wpp.avaliados : null
+    return (
+      <Bloco onClick={abrir('whatsapp')} dica="Ver os atendimentos dia a dia">
+        <Titulo nome="WhatsApp" sub="atendimentos" Icone={MessageCircle} tom="whats" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Anel fracao={wpp.abertos ? wpp.finalizados / wpp.abertos : 0} tom="whats" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+            <div><Grande cor="var(--n-whats)">{num(wpp.finalizados)}</Grande><Rotulo>finalizados de {num(wpp.abertos)} abertos</Rotulo></div>
+            <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>
+          </div>
         </div>
-      </div>
-    </Bloco>
-  ))
+        <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 10, background: 'var(--n-amber-soft)' }}>
+          {!conferido ? (
+            <Rotulo>Avaliação do cliente ainda não conferida neste período.</Rotulo>
+          ) : media != null ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Estrelas media={media} tamanho={15} />
+                <Grande tam={18}>{nota1(media)}</Grande>
+                <span style={{ fontSize: 11, color: 'var(--n-text-2)' }}>nota média · {wpp.avaliados} {wpp.avaliados === 1 ? 'nota' : 'notas'}</span>
+              </div>
+              {wpp.pedidos != null && <Rotulo>pediu avaliação em {num(wpp.pedidos)} de {num(wpp.verificados!)} atendimentos conferidos</Rotulo>}
+            </>
+          ) : (
+            <Rotulo>Sem nota do cliente no período{wpp.pedidos != null ? ` · pediu avaliação em ${num(wpp.pedidos)} de ${num(wpp.verificados!)} conferidos` : ''}.</Rotulo>
+          )}
+        </div>
+      </Bloco>
+    )
+  })
 
   add(hd.has && hd.opened + hd.resolved > 0, 'HelpDesk', 'hd', () => (
-    <Bloco>
+    <Bloco onClick={abrir('helpdesk')} dica="Ver os chamados do HelpDesk">
       <Titulo nome="HelpDesk" sub="chamados" Icone={LifeBuoy} tom="blue" />
       <Barras linhas={[{ rot: 'Abertos por ela', n: hd.opened, tom: 'blue' }, { rot: hd.formalized > 0 ? `Resolvidos · ${hd.formalized} formalizados` : 'Resolvidos por ela', n: hd.resolved, tom: 'green' }]} />
       <div style={{ marginTop: 12 }}><Grande tam={17}>{hd.tempoMedio}</Grande><Rotulo>tempo médio de resolução</Rotulo></div>
@@ -175,20 +205,19 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
   ))
 
   add(cr.courses + cr.created + cr.videos > 0, 'ClassRoom', 'cr', () => (
-    <Bloco>
+    <Bloco onClick={abrir('classroom')} dica="Ver os cursos e vídeos">
       <Titulo nome="ClassRoom" sub="aprender e ensinar" Icone={GraduationCap} tom="green" />
       <Colunas colunas={[
         { rot: 'Vídeos assistidos', n: cr.videos, tom: 'blue' },
         { rot: 'Cursos concluídos', n: cr.courses, tom: 'green' },
         { rot: 'Cursos criados', n: cr.created, tom: 'purple' },
       ]} />
-      {/* ⚠️ Consumir e produzir separados: curso criado pesa mais e some na soma. */}
       {cr.created > 0 && <Nota>Criar curso vale mais que concluir: ensinar alguém conta como colaboração.</Nota>}
     </Bloco>
   ))
 
   add(gr.hasSaida, 'Gerência na rua', 'grs', () => (
-    <Bloco fundo="linear-gradient(160deg, var(--n-orange-soft), var(--n-card) 60%)">
+    <Bloco onClick={abrir('gerencia')} dica="Ver os serviços e saídas" fundo="linear-gradient(160deg, var(--n-orange-soft), var(--n-card) 60%)">
       <Titulo nome="Gerência · na rua" sub="saídas externas" Icone={Truck} tom="orange" />
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <Grande cor="var(--n-orange)" tam={38}>{num(gr.km)}</Grande><span style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text-2)' }}>km rodados</span>
@@ -203,7 +232,7 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
   ))
 
   add(gr.hasEscritorio, 'Gerência escritório', 'gre', () => (
-    <Bloco>
+    <Bloco onClick={abrir('gerencia')} dica="Ver protocolos e serviços criados">
       <Titulo nome="Gerência · escritório" sub="demanda do escritório" Icone={Truck} tom="orange" />
       <Barras linhas={[
         { rot: 'Serviços criados', n: gr.servCriados, tom: 'orange' },
@@ -215,46 +244,48 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
     </Bloco>
   ))
 
-  add(ch.hasChamado, 'Chamados do Chat', 'chc', () => {
-    const base = ch.chamadosAssumidos || 0
-    return (
-      <Bloco>
-        <Titulo nome="Chat Interno · chamados" sub="entre setores" Icone={MessageSquareText} tom="pink" />
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <Grande cor="var(--n-green)" tam={30}>{num(ch.chamadosConcluidos)}</Grande>
-          <span style={{ fontSize: 12, color: 'var(--n-text-2)' }}>{base ? `concluídos de ${num(base)} assumidos` : 'concluídos'}</span>
-        </div>
-        {base > 0 && (
-          <div style={{ height: 10, borderRadius: 20, background: 'var(--n-green-soft)', overflow: 'hidden', margin: '10px 0 4px' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, (ch.chamadosConcluidos / base) * 100)}%`, background: 'var(--n-green)', borderRadius: 20 }} />
+  add(ch.hasChamado || ch.hasConversa, 'Chat Interno', 'chat', () => (
+    /* ⚠️⚠️ UM cartão só para o Chat (pedido do dono, 14/09/2026: "não apresentou a
+       quantidade de chamados abertos e atendidos dentro do chat"). Antes eram dois,
+       e o de chamados sumia para quem só conversou — então a pergunta "quantos
+       chamados?" ficava sem resposta. Agora os três números de chamado aparecem
+       sempre que o Chat tem registro dela, mesmo zerados: aqui zero é resposta, o
+       Chat mediu a pessoa. Chamado primeiro; a conversa vem depois, com o aviso. */
+    <Bloco onClick={abrir('chat')} dica="Ver os chamados e as mensagens dia a dia">
+      <Titulo nome="Chat Interno" sub="chamados entre setores e conversa" Icone={MessageSquareText} tom="pink" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {([['Abriu', ch.chamadosAbertos, 'pink', 'pedidos que fez'], ['Atendeu', ch.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', ch.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
+          <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
+            <Grande cor={forte(t)} tam={22}>{num(n)}</Grande>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)' }}>{rot}</div>
+            <div style={{ fontSize: 10, color: 'var(--n-text-2)' }}>{sub}</div>
           </div>
-        )}
-        <div style={{ display: 'flex', gap: 22, marginTop: 10 }}>
-          <div><Grande tam={17} cor="var(--n-pink)">{num(ch.chamadosAbertos)}</Grande><Rotulo>pedidos que fez</Rotulo></div>
-          {ch.chamadosConcluidos > 0 && <div><Grande tam={17}>{ch.tempoMedio}</Grande><Rotulo>tempo médio · expediente</Rotulo></div>}
-        </div>
-      </Bloco>
-    )
-  })
-
-  add(ch.hasConversa, 'Conversa do Chat', 'chm', () => (
-    <Bloco>
-      <Titulo nome="Chat Interno · conversa" sub="não entra no score" Icone={MessagesSquare} tom="purple" />
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
-        <Grande cor="var(--n-purple)" tam={30}>{num(ch.mensagens)}</Grande><span style={{ fontSize: 12, color: 'var(--n-text-2)' }}>mensagens</span>
+        ))}
       </div>
-      <Empilhada partes={[
-        { rot: 'Em canais', n: ch.msgCanais, tom: 'purple' },
-        { rot: 'Diretas', n: ch.msgDiretas, tom: 'pink' },
-        { rot: 'Em chamados', n: ch.msgChamados, tom: 'blue' },
-      ]} />
-      {/* ⚠️ O aviso fica junto do número: conversa é contexto, não desempenho. */}
-      <Nota>Só a contagem chega aqui — o conteúdo nunca sai do chat.</Nota>
+      {ch.chamadosConcluidos > 0 && (
+        <div style={{ fontSize: 11.5, color: 'var(--n-text-2)', marginTop: 8 }}>
+          Tempo médio até concluir: <b style={{ color: 'var(--n-text)' }}>{ch.tempoMedio}</b> <span style={{ color: 'var(--n-text-3)' }}>· só expediente</span>
+        </div>
+      )}
+      {ch.hasConversa && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px dashed var(--n-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+            <Grande cor="var(--n-purple)" tam={18}>{num(ch.mensagens)}</Grande>
+            <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>mensagens · <b>não entram no score</b></span>
+          </div>
+          <Empilhada partes={[
+            { rot: 'Em canais', n: ch.msgCanais, tom: 'purple' },
+            { rot: 'Diretas', n: ch.msgDiretas, tom: 'pink' },
+            { rot: 'Em chamados', n: ch.msgChamados, tom: 'blue' },
+          ]} />
+        </div>
+      )}
+      <Nota>Só a contagem das mensagens chega aqui — o texto nunca sai do chat.</Nota>
     </Bloco>
   ))
 
   add(cide.has && cide.atividades > 0, 'CIDE', 'cide', () => (
-    <Bloco fundo="linear-gradient(160deg, var(--n-red-soft), var(--n-card) 65%)">
+    <Bloco onClick={abrir('cide')} dica="Ver as empresas atendidas" fundo="linear-gradient(160deg, var(--n-red-soft), var(--n-card) 65%)">
       <Titulo nome="CIDE" sub="cadastro de empresas" Icone={Landmark} tom="red" />
       <div style={{ margin: 'auto 0', display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <Grande cor="var(--n-red)" tam={44}>{num(cide.atividades)}</Grande>
@@ -264,7 +295,7 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
   ))
 
   add(co.has && co.total > 0, 'Consultoria Plus', 'co', () => (
-    <Bloco>
+    <Bloco onClick={abrir('consultoria')} dica="Ver estudos e chamados da Consultoria">
       <Titulo nome="Consultoria Plus" sub={`${num(co.total)} atividades`} Icone={MessagesSquare} tom="purple" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px 16px' }}>
         {([['Estudos', co.studies, 'purple'], ['Chamados', co.tickets, 'blue'], ['Mensagens', co.messages, 'pink'], ['Comentários', co.comments, 'amber']] as [string, number, Tom][]).map(([rot, n, t]) => (
@@ -278,7 +309,7 @@ export function Sistemas({ m, periodo }: { m: EmployeeMetrics | null; periodo: s
   ))
 
   return (
-    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={`Só os sistemas com registro · ${periodo}`}>
+    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={`Só os sistemas com registro · ${periodo} · clique num sistema para o resumo`}>
       {blocos.length === 0 ? (
         /* ⚠️ Silêncio nos sistemas não é inatividade. */
         <div style={{ fontSize: 12.5, color: 'var(--n-text-2)', background: 'var(--n-card-2)', borderRadius: 10, padding: '12px 14px' }}>

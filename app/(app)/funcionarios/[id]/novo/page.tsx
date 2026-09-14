@@ -10,6 +10,7 @@ import { useVoltar } from '@/lib/ui/origem'
 import { buildEmployeeVM } from '@/lib/mock/employee'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import s from '../../../_visao/visao.module.css'
+import { PainelDaPessoaProvider } from '../../../PainelDaPessoa'
 import { Placar } from '../Placar'
 import ServicosCard from '../ServicosCard'
 import f from '../_visao/ficha.module.css'
@@ -52,6 +53,8 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
 
   return (
     <div className={`tc-anim ${s.raiz}`}>
+      {/* ⚠️ Provedor DENTRO da `.raiz`: o resumo aberto pelos cartões nasce na paleta nova. */}
+      <PainelDaPessoaProvider>
       {/* A faixa de prévia sai junto quando a ficha for trocada. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: 'var(--n-blue-soft)', color: 'var(--n-text)', borderRadius: 12, padding: '9px 14px', marginBottom: 14, fontSize: 12.5 }}>
         <Sparkles size={16} color="var(--n-blue)" />
@@ -59,18 +62,18 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
         <Link href={`/funcionarios/${id}`} style={{ fontWeight: 700, color: 'var(--n-blue)' }}>Abrir a ficha atual ›</Link>
       </div>
 
-      <Cabecalho vm={vm} voltar={voltar} />
-      <Indicadores m={m} periodo={periodo} />
-      {/* ⚠️ O placar só aparece quando a rota respondeu: zerado diria "zero pontos". */}
-      {m?.posicao && (
-        <Placar p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
+      {/* ⚠️ O placar veio para o lado da foto (pedido do dono, 14/09/2026) e só
+          aparece quando a rota respondeu: zerado diria "zero pontos". */}
+      <Cabecalho vm={vm} voltar={voltar} lado={m?.posicao ? (
+        <Placar compacto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
           motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
-      )}
+      ) : null} />
+      <Indicadores m={m} periodo={periodo} />
 
       <div className={f.corpo}>
         <div className={s.pilha}>
           <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} />
-          <Sistemas m={m} periodo={periodo} />
+          <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
           <LinhaDoTempo events={events} estado={estado} periodo={periodo} />
         </div>
@@ -81,6 +84,7 @@ export default function FichaNova({ params }: { params: Promise<{ id: string }> 
           <UltimaAtividade m={m} />
         </aside>
       </div>
+      </PainelDaPessoaProvider>
     </div>
   )
 }

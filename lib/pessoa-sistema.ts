@@ -94,11 +94,23 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
   }
   if (sistema === 'whatsapp') {
     const rs = (await prisma.whatsappAttendantDaily.findMany({ where: { day: dia }, orderBy: desc })).filter((r) => norm(r.name) === norm(p.name))
-    const porDia = new Map<string, { ab: number; fin: number; hs: number; filas: Set<string> }>()
-    for (const r of rs) { const g = porDia.get(r.day) ?? { ab: 0, fin: 0, hs: 0, filas: new Set() }; g.ab += r.abertos; g.fin += r.finalizados; g.hs += r.handleSum; g.filas.add(r.dept); porDia.set(r.day, g) }
+    /* ⚠️ A avaliação do cliente (pedidos, avaliados, soma das notas) entra no dia —
+       pedido do dono, 14/09/2026: "não mostra a nota média do WhatsApp". `null` no
+       espelho = dia ainda não conferido pelo Painel, e continua fora da conta. */
+    const porDia = new Map<string, { ab: number; fin: number; hs: number; pe: number; av: number; ns: number; filas: Set<string> }>()
+    for (const r of rs) {
+      const g = porDia.get(r.day) ?? { ab: 0, fin: 0, hs: 0, pe: 0, av: 0, ns: 0, filas: new Set() }
+      g.ab += r.abertos; g.fin += r.finalizados; g.hs += r.handleSum; g.filas.add(r.dept)
+      g.pe += r.pedidos ?? 0; g.av += r.avaliados ?? 0; g.ns += r.notaSum ?? 0
+      porDia.set(r.day, g)
+    }
     const it = [...porDia].filter(([, g]) => g.ab + g.fin > 0)
-    return { aoVivo: false, grupos: [{ chave: 'atendimentos', titulo: 'Atendimentos, dia a dia', resumo: `${it.reduce((a, [, g]) => a + g.ab, 0)} abertos · ${it.reduce((a, [, g]) => a + g.fin, 0)} finalizados`,
-      itens: it.map(([d, g]) => ({ id: d, dia: d, titulo: `${plural(g.ab, 'aberto', 'abertos')} · ${plural(g.fin, 'finalizado', 'finalizados')}`, sub: [g.fin ? `tempo médio ${horas(Math.round(g.hs / g.fin))}` : '', `fila ${[...g.filas].join(', ')}`].filter(Boolean).join(' · ') })) }] }
+    const nota = (soma: number, n: number) => (soma / n).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    const tAv = it.reduce((a, [, g]) => a + g.av, 0), tNs = it.reduce((a, [, g]) => a + g.ns, 0), tPe = it.reduce((a, [, g]) => a + g.pe, 0)
+    return { aoVivo: false, grupos: [{ chave: 'atendimentos', titulo: 'Atendimentos, dia a dia',
+      resumo: [`${it.reduce((a, [, g]) => a + g.ab, 0)} abertos · ${it.reduce((a, [, g]) => a + g.fin, 0)} finalizados`, tPe ? `${tPe} pedidos de avaliação` : '', tAv ? `nota média ${nota(tNs, tAv)} (${plural(tAv, 'nota', 'notas')})` : ''].filter(Boolean).join(' · '),
+      itens: it.map(([d, g]) => ({ id: d, dia: d, titulo: `${plural(g.ab, 'aberto', 'abertos')} · ${plural(g.fin, 'finalizado', 'finalizados')}`,
+        sub: [g.fin ? `tempo médio ${horas(Math.round(g.hs / g.fin))}` : '', g.av ? `nota ${nota(g.ns, g.av)} (${plural(g.av, 'avaliação', 'avaliações')})` : g.pe ? `${plural(g.pe, 'pedido', 'pedidos')} de avaliação` : '', `fila ${[...g.filas].join(', ')}`].filter(Boolean).join(' · ') })) }] }
   }
   if (sistema === 'radio') {
     if (!p.nexusUserId) return { grupos: [], aoVivo: false }

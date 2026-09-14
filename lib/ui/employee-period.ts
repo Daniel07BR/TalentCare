@@ -11,7 +11,13 @@ export type EmployeeMetrics = {
    *  mediu. ⚠️ NÃO acompanha o filtro: a pergunta é "quando foi a última vez". */
   ultimaAtividade?: { fonte: string; dela: string | null; fonteAte: string | null }[]
   classroom: { videos: number; courses: number; created: number; total: number }
-  whatsapp: { has: boolean; abertos: number; finalizados: number; tempoMedio: string }
+  whatsapp: {
+    has: boolean; abertos: number; finalizados: number; tempoMedio: string
+    /** Avaliação do cliente no período. ⚠️ `null` = o Painel ainda não conferiu
+     *  aqueles dias — NÃO "não pediu" nem "sem nota". Opcional: resposta em
+     *  cache de antes do campo não traz. */
+    verificados?: number | null; pedidos?: number | null; avaliados?: number | null; notaSum?: number | null
+  }
   consultoria: { has: boolean; studies: number; tickets: number; messages: number; comments: number; total: number }
   helpdesk: { has: boolean; opened: number; resolved: number; formalized: number; tempoMedio: string }
   cide: { has: boolean; atividades: number }

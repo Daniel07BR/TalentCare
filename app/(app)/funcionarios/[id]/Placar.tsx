@@ -160,7 +160,9 @@ function Anel({ children, titulo, legenda }: {
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--text-mute)', textAlign: 'center' }}>
         {titulo}
       </div>
-      <svg width="132" height="132" viewBox="-66 -66 132 132" style={{ overflow: 'visible' }}>
+      {/* ⚠️ O tamanho vem da variável `--placar-anel`: o modo compacto (ao lado da
+          foto, na ficha nova) encolhe o anel sem mexer no desenho. */}
+      <svg viewBox="-66 -66 132 132" style={{ overflow: 'visible', width: 'var(--placar-anel, 132px)', height: 'var(--placar-anel, 132px)' }}>
         {/* -90° põe o começo do arco no topo, que é onde o olho procura. */}
         <g transform="rotate(-90)">{children}</g>
       </svg>
@@ -171,8 +173,10 @@ function Anel({ children, titulo, legenda }: {
   )
 }
 
-export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
+export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compacto = false }: {
   p: PosicaoFicha
+  /** Sem cartão próprio e com anéis menores — para ficar ao lado da foto. */
+  compacto?: boolean
   /** Os meses gravados, para a rosca do acumulado. */
   meses: MesDoPlacar[]
   setor: string
@@ -192,7 +196,10 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota }: {
   const pct = Math.round(Math.max(0, fracao) * 100)
 
   return (
-    <div className="tc-card" style={{
+    <div className={compacto ? undefined : 'tc-card'} style={compacto ? {
+      display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 14,
+      ['--placar-anel' as string]: '104px',
+    } : {
       marginTop: 16, background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: 'var(--radius)', padding: '18px 8px',
       display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-around', gap: 18,

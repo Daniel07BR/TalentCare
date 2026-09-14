@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
        A normalização é em JS, como nas outras rotas — o Postgres da casa não tem
        `unaccent`, e criar a extensão só para isto seria mais superfície. */
     prisma.whatsappAttendantDaily.groupBy({
-      by: ['name'], where: range, _sum: { abertos: true, finalizados: true, handleSum: true },
+      by: ['name'], where: range, _sum: { abertos: true, finalizados: true, handleSum: true, verificados: true, pedidos: true, avaliados: true, notaSum: true },
     }),
     user.nexusUserId
       ? prisma.consultoriaDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } })
@@ -172,6 +172,10 @@ export async function GET(req: NextRequest) {
   const wAb = minhas.reduce((a, r) => a + (r._sum.abertos ?? 0), 0)
   const wFi = minhas.reduce((a, r) => a + (r._sum.finalizados ?? 0), 0)
   const wHs = minhas.reduce((a, r) => a + (r._sum.handleSum ?? 0), 0)
+  /* ⚠️ A avaliação do cliente soma só o que o Painel CONFERIU: `null` em todas as
+     linhas fica `null` (nada se afirma) — nunca vira 0, que diria "não pediu". */
+  const somaConferida = (k: 'verificados' | 'pedidos' | 'avaliados' | 'notaSum') =>
+    minhas.reduce<number | null>((a, r) => (r._sum[k] == null ? a : (a ?? 0) + r._sum[k]!), null)
   const cStu = cons?._sum.studies ?? 0
   const cTic = cons?._sum.tickets ?? 0
   const cMsg = cons?._sum.messages ?? 0
@@ -373,7 +377,10 @@ export async function GET(req: NextRequest) {
     period, fromDay, toDay,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
-    whatsapp: { has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0) },
+    whatsapp: {
+      has: wAb > 0 || wFi > 0, abertos: wAb, finalizados: wFi, tempoMedio: fmtDur(wFi ? Math.round(wHs / wFi) : 0),
+      verificados: somaConferida('verificados'), pedidos: somaConferida('pedidos'), avaliados: somaConferida('avaliados'), notaSum: somaConferida('notaSum'),
+    },
     consultoria: { has: cTotal > 0, studies: cStu, tickets: cTic, messages: cMsg, comments: cCom, total: cTotal },
     helpdesk: { has: hOpen > 0 || hRes > 0, opened: hOpen, resolved: hRes, formalized: hForm, tempoMedio: fmtDur(hResNormal ? Math.round(hSec / hResNormal) : 0) },
     cide: { has: (cd?._sum.empresas ?? 0) > 0, atividades: cd?._sum.empresas ?? 0 },
