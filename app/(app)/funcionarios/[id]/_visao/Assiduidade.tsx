@@ -8,7 +8,12 @@ import f from './ficha.module.css'
 
 /* ASSIDUIDADE E DISCIPLINA — o que NÃO está nos azulejos do topo: abonados, a
    natureza de cada suspensão, a gravidade, o calendário e a lista. */
-export function Assiduidade({ m, periodo, pontoAteVm }: { m: EmployeeMetrics | null; periodo: string; pontoAteVm: string | null }) {
+export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
+  m: EmployeeMetrics | null; periodo: string; pontoAteVm: string | null
+  /** Folha A4 (pedido do dono, 14/09/2026): SEM a lista de advertências — só o
+   *  contador — e sem as linhas de explicação. */
+  impressao?: boolean
+}) {
   const a = m?.assiduidade
   if (!m || !a) {
     return (
@@ -33,12 +38,14 @@ export function Assiduidade({ m, periodo, pontoAteVm }: { m: EmployeeMetrics | n
       <div className={f.assid}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', marginBottom: 2 }}>Mapa de ocorrências</div>
-          <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso.</div>
+          {!impressao && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso.</div>}
           <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={a.pontoAte ?? pontoAteVm} pontoDesde={a.pontoDesde ?? null} />
         </div>
 
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className={f.minis}>
+            {/* Na folha, o contador substitui a lista de advertências. */}
+            {impressao && <Mini valor={ponto ? num(a.advertencias) : '—'} rotulo={m.disciplinaTotal > m.disciplina.length ? `Advertências · ${m.disciplinaTotal} no histórico` : 'Advertências'} tom="orange" />}
             <Mini valor={ponto ? num(a.atrasosAbon) : '—'} rotulo="Atrasos abonados" tom="green" />
             {/* ⚠️ Suspensão não depende do ponto: são fatos registrados. */}
             <Mini valor={a.suspensoesAtraso == null ? '—' : num(a.suspensoesAtraso)} rotulo="Suspensões por atraso" tom="purple" />
@@ -77,6 +84,7 @@ export function Assiduidade({ m, periodo, pontoAteVm }: { m: EmployeeMetrics | n
         </div>
       </div>
 
+      {!impressao && (
       <div style={{ borderTop: '1px solid var(--n-border-2)', marginTop: 18, paddingTop: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text)' }}>
           {temSusp ? 'Advertências e suspensões' : 'Advertências'}
@@ -116,6 +124,7 @@ export function Assiduidade({ m, periodo, pontoAteVm }: { m: EmployeeMetrics | n
           </div>
         )}
       </div>
+      )}
     </Cartao>
   )
 }

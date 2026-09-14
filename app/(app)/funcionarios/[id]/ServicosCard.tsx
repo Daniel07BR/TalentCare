@@ -25,8 +25,11 @@ const horas = (min: number) => (min >= 60 ? `${Math.round(min / 60)} h` : `${min
  * nem usa esta fonte é a mesma falta do ponto com outra roupa: zero por ausência
  * de fonte se lê como ausência de trabalho, e aqui acusaria 14 dos 15 setores.
  */
-export default function ServicosCard({ servicos, pontuacao, periodo, semPontuacao = false }: {
+export default function ServicosCard({ servicos, pontuacao, periodo, semPontuacao = false, soNumeros = false }: {
   servicos?: Servicos; pontuacao?: Ponto[]; periodo: string
+  /** Só os quatro números, sem "Concluídos por mês" e "O que ela mais fez" — a
+   *  folha A4, desenhada pelo dono para caber numa página (14/09/2026). */
+  soNumeros?: boolean
   /** Esconde "Pontuação do setor, mês a mês". A ficha nova liga: ali o anel
    *  "Pontos no período" do hero já mostra os mesmos meses, e seguindo o filtro. */
   semPontuacao?: boolean
@@ -84,7 +87,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
               valor={servicos.concluidos ? horas(Math.round(servicos.minutos / servicos.concluidos)) : '—'} />
           </div>
 
-          {servicos.porMes.length > 1 && (
+          {!soNumeros && servicos.porMes.length > 1 && (
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Concluídos por mês</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 90 }}>
@@ -99,7 +102,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
             </div>
           )}
 
-          {servicos.porTarefa.length > 0 && (
+          {!soNumeros && servicos.porTarefa.length > 0 && (
             <div style={{ marginBottom: mostraPonto ? 18 : 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>O que ela mais fez</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

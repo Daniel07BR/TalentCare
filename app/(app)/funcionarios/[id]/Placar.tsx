@@ -173,8 +173,10 @@ function Anel({ children, titulo, legenda }: {
   )
 }
 
-export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compacto = false }: {
+export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compacto = false, enxuto = false }: {
   p: PosicaoFicha
+  /** Sem o aviso longo de "mês cortado entra inteiro" — a folha A4. */
+  enxuto?: boolean
   /** Sem cartão próprio e com anéis menores — para ficar ao lado da foto. */
   compacto?: boolean
   /** Os meses gravados, para a rosca do acumulado. */
@@ -217,7 +219,7 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
                   corta um mês, o valor somado é o do MÊS INTEIRO — dizer isso é
                   o que separa este número do "acumulado com rótulo de período"
                   que a casa já pagou caro para tirar de outras telas. */}
-              {p.mesesCortados.length > 0 && (
+              {!enxuto && p.mesesCortados.length > 0 && (
                 <><br /><span style={{ color: 'var(--warn)' }}>
                   {p.mesesCortados.length === 1 ? 'o mês' : 'os meses'} de{' '}
                   {p.mesesCortados.map((m) => m.split('-').reverse().join('/')).join(' e ')}{' '}

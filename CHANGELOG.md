@@ -21,6 +21,12 @@ sem dados da rádio e sem quantidade de mensagens do Chat Interno"*.
   clara forçada e animação desligada (sairia no quadro zero). `Sistemas` ganhou `impressao` (sem clique
   e sem o bloco de mensagens do Chat). Corrigido o logo em branco (o degradê apontava para a cópia
   escondida do topo) e a data encavalada no tipo da advertência.
+- **3ª versão (mesmo dia), no LAYOUT DESENHADO PELO DONO para caber numa folha:** faixa · hero em duas
+  linhas (identidade e formação em cima, pílulas numa fileira embaixo, anéis menores à direita, sem o
+  aviso longo — `Placar enxuto`) · seis azulejos sem explicação (`Indicadores semNotas`) · serviços só
+  com os quatro números (`ServicosCard soNumeros`) · todos os sistemas numa fileira, anel e colunas
+  menores e sem as notas · assiduidade com calendário, contadores e gravidade, SEM a lista de
+  advertências — só o contador (`Assiduidade impressao`) · rodapé. Zoom da folha 0,72.
 
 ## 2026-09-14 — A FICHA NOVA é a ficha de todos (`/funcionarios/<id>`)
 

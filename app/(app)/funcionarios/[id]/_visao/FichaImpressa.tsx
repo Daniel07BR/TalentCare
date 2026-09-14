@@ -20,37 +20,36 @@ import { formCor } from './derivar'
 /* ============================================================
    A FICHA EM A4 — o que o botão "Gerar PDF" imprime.
 
-   1ª versão (14/09/2026): uma folha própria, de texto e tabela. O dono: "perfeito,
-   mas ficou muito feio — preciso que fique o mais próximo dos gráficos do
-   relatório web". Então a folha agora é MONTADA COM AS PEÇAS DA TELA: os azulejos
-   (`Indicadores`), os anéis do placar (`Placar compacto`), os cartões de sistema
-   com seus gráficos (`Sistemas`), o cartão de serviços e o de assiduidade com o
-   calendário. Uma correção na tela chega ao PDF sozinha.
+   1ª versão (14/09/2026): folha própria, de texto e tabela — "ficou muito feio".
+   2ª: montada com AS PEÇAS DA TELA (azulejos, anéis, cartões com gráficos,
+   calendário) — "bem melhor", mas passou de uma página.
+   3ª (esta): o LAYOUT QUE O DONO DESENHOU para caber numa folha —
+     faixa · hero em duas linhas (identidade e formação em cima, as pílulas numa
+     fileira embaixo, os anéis à direita ocupando as duas) · seis azulejos sem
+     explicação · serviços só com os quatro números · TODOS os sistemas numa
+     fileira · assiduidade com calendário, contadores e gravidade, SEM a lista
+     de advertências (só o contador) · rodapé.
 
-   ⚠️⚠️ COMO CABE NUMA FOLHA: a folha é desenhada com 1000 px de largura e
-   reduzida com `zoom` para os ~188 mm úteis do A4. As peças foram feitas para
-   tela larga; sem isso as grades (que abrem por `@media`, e na impressão a
-   "tela" é a folha) cairiam para uma coluna. As grades que importam são
-   forçadas aqui, pelas classes REAIS dos módulos (`s.indicadores`, `f.assid`…).
+   ⚠️⚠️ COMO CABE: a folha é desenhada com 1000 px de largura e reduzida com
+   `zoom` para os ~188 mm úteis do A4. As peças foram feitas para tela larga e as
+   grades delas abrem por `@media` — na impressão a "tela" é a folha e elas
+   cairiam para uma coluna. As grades são forçadas aqui pelas classes REAIS dos
+   módulos (`s.indicadores`, `f.assid`, `f.sistemas`).
 
-   ⚠️⚠️ COMO FUNCIONA: portal direto no <body>, escondido na tela; na impressão só
-   ele aparece. Os dados são os DESTA tela e DESTE filtro — o PDF não tem como
-   mostrar outro período.
+   ⚠️⚠️ COMO FUNCIONA: portal direto no <body>, escondido na tela; na impressão
+   só ele aparece. Os dados são os DESTA tela e DESTE filtro.
 
    ⚠️⚠️ FORA DA FOLHA, POR DECISÃO DO DONO: a Rádio e as MENSAGENS do Chat Interno
-   (`Sistemas` em modo `impressao` tira o bloco de conversa; do Chat, só chamados).
+   (`Sistemas` em modo `impressao`; do Chat, só chamados).
 
-   ⚠️ ANIMAÇÃO DESLIGADA na folha: ela passa de `display:none` a visível na hora
-   de imprimir, e uma animação que começa nesse instante sai no PDF no quadro
-   zero (cartão transparente, barra vazia).
-   ⚠️ PALETA CLARA FORÇADA: papel é branco — com o tema escuro ligado a folha
-   sairia azul-noite.
+   ⚠️ ANIMAÇÃO DESLIGADA (sairia no quadro zero) e PALETA CLARA FORÇADA (papel
+   é branco, mesmo com o tema escuro ligado).
    ============================================================ */
 
 const CSS = `
 .fi-root { display: none; }
 @media print {
-  @page { size: A4 portrait; margin: 9mm 10mm 10mm; }
+  @page { size: A4 portrait; margin: 8mm 9mm 9mm; }
   html, body { background: #fff !important; }
   body > *:not(.fi-root) { display: none !important; }
   .fi-root { display: block !important; }
@@ -75,14 +74,21 @@ html body .fi-root.fi-root {
   animation: none !important; transition: none !important;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
-.fi-folha { width: 1000px; zoom: .705; font-family: Inter, 'Segoe UI', system-ui, sans-serif; }
-.fi-folha .${s.cartao}, .fi-folha .tc-card { break-inside: avoid; box-shadow: none !important; }
-.fi-folha .${s.pilha} { gap: 12px; }
-.fi-folha .${s.indicadores} { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; margin-bottom: 12px; }
-.fi-folha .${f.hero} { grid-template-columns: minmax(0, 1.35fr) minmax(0, .9fr) auto !important; align-items: start; column-gap: 34px; box-shadow: none; margin-bottom: 12px; }
-.fi-folha .${f.assid} { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) !important; }
-.fi-folha .${f.sistemas} { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-.fi-folha .${f.lista2} { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.fi-folha { width: 1000px; zoom: .72; font-family: Inter, 'Segoe UI', system-ui, sans-serif; }
+.fi-folha .${s.cartao}, .fi-folha .tc-card { break-inside: avoid; box-shadow: none !important; padding: 14px 16px !important; margin-bottom: 0 !important; }
+.fi-folha .${s.pilha} { gap: 10px; }
+.fi-folha [data-nota] { display: none !important; }
+/* seis azulejos numa fileira, mais baixos */
+.fi-folha .${s.indicadores} { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 8px !important; margin-bottom: 10px; }
+.fi-folha .${s.indicadores} > * { padding: 11px 12px !important; gap: 10px !important; }
+.fi-folha .${s.indicadores} > * > span:first-child { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
+/* todos os sistemas numa fileira */
+.fi-folha .${f.sistemas} { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px !important; }
+.fi-folha .${f.sistemas} > * { padding: 12px !important; }
+/* assiduidade: calendário | contadores + gravidade */
+.fi-folha .${f.assid} { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) !important; gap: 16px !important; }
+/* os anéis do placar, menores */
+.fi-folha .fi-hero svg[viewBox="-66 -66 132 132"] { width: 92px !important; height: 92px !important; }
 `
 
 type Props = { vm: EmployeeVM; m: EmployeeMetrics; periodo: string }
@@ -104,11 +110,11 @@ export function FichaImpressa(props: Props) {
 const br = (iso?: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—')
 
 /* ⚠️ Logo com id de degradê PRÓPRIO: o `Logo` do app usa `tc-logo-bg`, e a cópia
-   dele no topo da tela fica `display:none` na impressão — o `url(#…)` apontava para
-   ela e a marca saía em branco na 1ª versão do PDF. */
+   do topo da tela fica `display:none` na impressão — o `url(#…)` apontava para
+   ela e a marca saía em branco. */
 function Marca() {
   return (
-    <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true" style={{ display: 'block', flex: 'none' }}>
+    <svg width="38" height="38" viewBox="0 0 64 64" aria-hidden="true" style={{ display: 'block', flex: 'none' }}>
       <defs><linearGradient id="fi-logo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f7b733" /><stop offset="1" stopColor="#d98a15" /></linearGradient></defs>
       <rect width="64" height="64" rx="15" fill="url(#fi-logo-bg)" />
       <path d="M14 41 A18 18 0 0 1 50 41" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" />
@@ -120,13 +126,13 @@ function Marca() {
 
 function Pilula({ Icone, tom, rotulo, valor }: { Icone: LucideIcon; tom: Tom; rotulo: string; valor: React.ReactNode }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '6px 12px 6px 6px', background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12 }}>
-      <span style={{ width: 28, height: 28, borderRadius: 8, background: suave(tom), color: forte(tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-        <Icone size={15} strokeWidth={2.2} />
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 10px 5px 5px', background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 10, whiteSpace: 'nowrap' }}>
+      <span style={{ width: 24, height: 24, borderRadius: 7, background: suave(tom), color: forte(tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+        <Icone size={13} strokeWidth={2.2} />
       </span>
       <span>
-        <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)', lineHeight: 1.2 }}>{rotulo}</span>
-        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--n-text)', whiteSpace: 'nowrap', fontStyle: valor ? 'normal' : 'italic' }}>{valor || 'a informar'}</span>
+        <span style={{ display: 'block', fontSize: 9.5, color: 'var(--n-text-3)', lineHeight: 1.2 }}>{rotulo}</span>
+        <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: valor ? 'var(--n-text)' : 'var(--n-text-3)', fontStyle: valor ? 'normal' : 'italic' }}>{valor || 'a informar'}</span>
       </span>
     </span>
   )
@@ -137,94 +143,94 @@ function Folha({ vm, m, periodo }: Props) {
   return (
     <div className="fi-folha">
       {/* ── FAIXA ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', marginBottom: 12, borderRadius: 16, color: '#fff', background: 'linear-gradient(120deg, #1e3a8a, #2563eb 55%, #7c3aed)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', marginBottom: 10, borderRadius: 14, color: '#fff', background: 'linear-gradient(120deg, #1e3a8a, #2563eb 55%, #7c3aed)' }}>
         <Marca />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.5px', lineHeight: 1.1 }}>Ficha do colaborador</div>
-          <div style={{ fontSize: 12, opacity: .85 }}>TalentCare · Grupo Itamarathy</div>
+          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.4px', lineHeight: 1.1 }}>Ficha do colaborador</div>
+          <div style={{ fontSize: 11.5, opacity: .85 }}>TalentCare · Grupo Itamarathy</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>{periodo}</div>
-          <div style={{ fontSize: 12.5, opacity: .9 }}>{br(m.fromDay)} a {br(m.toDay)}</div>
-          <div style={{ fontSize: 11, opacity: .75 }}>gerado em {agora}</div>
+          <div style={{ fontSize: 12, opacity: .9 }}>{br(m.fromDay)} a {br(m.toDay)} · gerado em {agora}</div>
         </div>
       </div>
 
-      {/* ── HERO (o mesmo desenho da tela, sem os botões de edição) ─────────── */}
-      <header className={f.hero} style={{ padding: '18px 22px' }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <span style={{ padding: 3, borderRadius: 24, background: 'linear-gradient(135deg, var(--n-blue), var(--n-purple))', flex: 'none', lineHeight: 0 }}>
-              <span style={{ display: 'block', padding: 3, borderRadius: 21, background: 'var(--n-card)' }}>
-                <Avatar id={vm.id} hasAvatar={vm.hasAvatar} initials={vm.initials} color={vm.color} size={84} radius={18} />
-              </span>
+      {/* ── HERO em duas linhas (desenho do dono) ─────────────────────────────
+          | identidade | formação | anéis (2 linhas) |
+          | pílulas numa fileira    |                  |                          */}
+      <header className="fi-hero" style={{
+        display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1fr) auto', gridTemplateRows: 'auto auto',
+        columnGap: 22, rowGap: 12, alignItems: 'start', padding: '14px 18px', marginBottom: 10,
+        border: '1px solid var(--n-border)', borderRadius: 16,
+        background: 'radial-gradient(420px 200px at 100% 0%, var(--n-purple-soft), transparent 70%), radial-gradient(480px 220px at 70% 120%, var(--n-blue-soft), transparent 70%), var(--n-card)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          <span style={{ padding: 3, borderRadius: 20, background: 'linear-gradient(135deg, var(--n-blue), var(--n-purple))', flex: 'none', lineHeight: 0 }}>
+            <span style={{ display: 'block', padding: 2, borderRadius: 18, background: 'var(--n-card)' }}>
+              <Avatar id={vm.id} hasAvatar={vm.hasAvatar} initials={vm.initials} color={vm.color} size={70} radius={15} />
             </span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1.1, color: 'var(--n-text)' }}>{vm.name}</h1>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: vm.statusColor, background: vm.statusBg, padding: '3px 10px', borderRadius: 20 }}>{vm.status}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--n-text-2)', marginTop: 5 }}>
-                <Briefcase size={14} color="var(--n-text-3)" />
-                <span>{vm.cargo}</span><span style={{ color: 'var(--n-text-3)' }}>·</span><b style={{ color: 'var(--n-text)' }}>{vm.dept}</b>
-              </div>
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-.8px', lineHeight: 1.1, color: 'var(--n-text)', whiteSpace: 'nowrap' }}>{vm.name}</h1>
+              <span style={{ fontSize: 11, fontWeight: 700, color: vm.statusColor, background: vm.statusBg, padding: '2px 9px', borderRadius: 20 }}>{vm.status}</span>
             </div>
-          </div>
-          <div className={f.info} style={{ marginTop: 14 }}>
-            <Pilula Icone={BadgeCheck} tom="purple" rotulo="Cargo" valor={vm.cargoOficial} />
-            <Pilula Icone={Home} tom="green" rotulo="Tempo de casa" valor={vm.tempo} />
-            <Pilula Icone={CalendarPlus} tom="blue" rotulo="Admissão" valor={vm.admissao} />
-            {vm.dataSaida && <Pilula Icone={CalendarX} tom="red" rotulo="Data de saída" valor={vm.dataSaida} />}
-            {(vm.idade != null || vm.nascimento) && (
-              <Pilula Icone={Cake} tom="pink" rotulo="Idade" valor={<>{vm.idade != null ? `${vm.idade} anos` : '—'}{vm.nascimento && <span style={{ fontWeight: 500, color: 'var(--n-text-3)' }}> · {vm.nascimento}</span>}</>} />
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--n-text-2)', marginTop: 4 }}>
+              <Briefcase size={13} color="var(--n-text-3)" />
+              <span>{vm.cargo}</span><span style={{ color: 'var(--n-text-3)' }}>·</span><b style={{ color: 'var(--n-text)' }}>{vm.dept}</b>
+            </div>
           </div>
         </div>
 
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ width: 26, height: 26, borderRadius: 8, background: suave('green'), color: forte('green'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpen size={14} /></span>
-            <div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--n-text-3)' }}>Formação</div>
-              <div style={{ fontSize: 10, color: 'var(--n-text-3)' }}>cadastro do RH · retrato de hoje</div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+            <span style={{ width: 22, height: 22, borderRadius: 7, background: suave('green'), color: forte('green'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpen size={12} /></span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: 'var(--n-text-3)' }}>Formação</span>
+            {vm.grauLevels.map((l) => (
+              <span key={l.label} style={{ fontSize: 11, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 15%, transparent)`, padding: '2px 9px', borderRadius: 20 }}>{l.label}</span>
+            ))}
           </div>
-          {vm.grauLevels.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-              {vm.grauLevels.map((l) => (
-                <span key={l.label} style={{ fontSize: 11.5, fontWeight: 700, color: l.color, background: `color-mix(in srgb, ${l.color} 15%, transparent)`, padding: '3px 10px', borderRadius: 20 }}>{l.label}</span>
-              ))}
+          {vm.cursos.length > 0 ? vm.cursos.slice(0, 3).map((c, i) => (
+            <div key={i} style={{ paddingLeft: 9, borderLeft: `3px solid ${formCor(c.quando, i)}`, marginTop: 5 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.25 }}>{c.nome}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: formCor(c.quando, i) }}>{c.quando}</div>
             </div>
-          )}
-          {vm.cursos.length > 0 ? vm.cursos.slice(0, 4).map((c, i) => (
-            <div key={i} style={{ paddingLeft: 10, borderLeft: `3px solid ${formCor(c.quando, i)}`, marginTop: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.25 }}>{c.nome}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: formCor(c.quando, i) }}>{c.quando}</div>
-            </div>
-          )) : <div style={{ fontSize: 12, color: 'var(--n-text-3)' }}>Sem cursos informados no cadastro.</div>}
+          )) : <div style={{ fontSize: 11.5, color: 'var(--n-text-3)' }}>Sem cursos informados no cadastro.</div>}
         </div>
 
-        {m.posicao && (
-          <Placar compacto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
-            motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
-        )}
+        <div style={{ gridColumn: 3, gridRow: '1 / span 2', alignSelf: 'center' }}>
+          {m.posicao && (
+            <Placar compacto enxuto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
+              motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
+          )}
+        </div>
+
+        <div style={{ gridColumn: '1 / span 2', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          <Pilula Icone={BadgeCheck} tom="purple" rotulo="Cargo" valor={vm.cargoOficial} />
+          <Pilula Icone={Home} tom="green" rotulo="Tempo de casa" valor={vm.tempo} />
+          <Pilula Icone={CalendarPlus} tom="blue" rotulo="Admissão" valor={vm.admissao} />
+          {vm.dataSaida && <Pilula Icone={CalendarX} tom="red" rotulo="Data de saída" valor={vm.dataSaida} />}
+          {(vm.idade != null || vm.nascimento) && (
+            <Pilula Icone={Cake} tom="pink" rotulo="Idade" valor={<>{vm.idade != null ? `${vm.idade} anos` : '—'}{vm.nascimento && <span style={{ fontWeight: 500, color: 'var(--n-text-3)' }}> · {vm.nascimento}</span>}</>} />
+          )}
+        </div>
       </header>
 
-      <Indicadores m={m} periodo={periodo} />
+      <Indicadores m={m} periodo={periodo} semNotas />
 
       <div className={s.pilha}>
-        <ServicosCard servicos={m.servicos} pontuacao={m.pontuacao} periodo={periodo} semPontuacao />
+        <ServicosCard servicos={m.servicos} pontuacao={m.pontuacao} periodo={periodo} semPontuacao soNumeros />
         <Sistemas m={m} periodo={periodo} pessoaId={vm.id} impressao />
-        <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
+        <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} impressao />
       </div>
 
       {/* ── RODAPÉ ────────────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid var(--n-border)', display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--n-text-3)', breakInside: 'avoid' }}>
-        <div style={{ maxWidth: 680, lineHeight: 1.45 }}>
+      <div style={{ marginTop: 10, paddingTop: 7, borderTop: '1px solid var(--n-border)', display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 10.5, color: 'var(--n-text-3)', breakInside: 'avoid' }}>
+        <div style={{ maxWidth: 700, lineHeight: 1.45 }}>
           Números registrados pelos sistemas integrados no período — não são a nota; a nota é de quem avalia.
           Não constam deste documento a escuta da Rádio nem as mensagens do Chat Interno.
         </div>
-        <div style={{ textAlign: 'right' }}>{vm.name}<br />{br(m.fromDay)} a {br(m.toDay)}</div>
+        <div style={{ textAlign: 'right' }}>{vm.name} · {br(m.fromDay)} a {br(m.toDay)}</div>
       </div>
     </div>
   )

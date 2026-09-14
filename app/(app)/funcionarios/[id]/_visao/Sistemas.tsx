@@ -60,7 +60,8 @@ const Grande = ({ children, cor, tam = 22 }: { children: React.ReactNode; cor?: 
   <div className="cnum" style={{ fontSize: tam, fontWeight: 800, letterSpacing: '-.6px', lineHeight: 1.1, color: cor ?? 'var(--n-text)' }}>{children}</div>
 )
 const Nota = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 'auto', paddingTop: 10, lineHeight: 1.45 }}>{children}</div>
+  /* `data-nota`: a folha A4 esconde estas explicações para caber numa página. */
+  <div data-nota style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 'auto', paddingTop: 10, lineHeight: 1.45 }}>{children}</div>
 )
 
 /** Anel de fração, com o percentual no meio. */
@@ -72,7 +73,7 @@ function Anel({ fracao, tom, tam = 104 }: { fracao: number; tom: Tom; tam?: numb
       <circle cx={tam / 2} cy={tam / 2} r={r} fill="none" stroke={suave(tom)} strokeWidth={12} />
       <circle cx={tam / 2} cy={tam / 2} r={r} fill="none" stroke={forte(tom)} strokeWidth={12} strokeLinecap="round"
         strokeDasharray={`${c * p} ${c}`} transform={`rotate(-90 ${tam / 2} ${tam / 2})`} />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 20, fontWeight: 800, fill: 'var(--n-text)' }}>{Math.round(p * 100)}%</text>
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: Math.round(tam * 0.19), fontWeight: 800, fill: 'var(--n-text)' }}>{Math.round(p * 100)}%</text>
     </svg>
   )
 }
@@ -172,8 +173,8 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
     return (
       <Bloco onClick={abrir('whatsapp')} dica="Ver os atendimentos dia a dia">
         <Titulo nome="WhatsApp" sub="atendimentos" Icone={MessageCircle} tom="whats" />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Anel fracao={wpp.abertos ? wpp.finalizados / wpp.abertos : 0} tom="whats" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: impressao ? 10 : 16, flexWrap: 'wrap' }}>
+          <Anel fracao={wpp.abertos ? wpp.finalizados / wpp.abertos : 0} tom="whats" tam={impressao ? 70 : 104} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
             <div><Grande cor="var(--n-whats)">{num(wpp.finalizados)}</Grande><Rotulo>finalizados de {num(wpp.abertos)} abertos</Rotulo></div>
             <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>
@@ -212,7 +213,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   add(cr.courses + cr.created + cr.videos > 0, 'ClassRoom', 'cr', () => (
     <Bloco onClick={abrir('classroom')} dica="Ver os cursos e vídeos">
       <Titulo nome="ClassRoom" sub="aprender e ensinar" Icone={GraduationCap} tom="green" />
-      <Colunas colunas={[
+      <Colunas alto={impressao ? 54 : 92} colunas={[
         { rot: 'Vídeos assistidos', n: cr.videos, tom: 'blue' },
         { rot: 'Cursos concluídos', n: cr.courses, tom: 'green' },
         { rot: 'Cursos criados', n: cr.created, tom: 'purple' },
