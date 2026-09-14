@@ -1,5 +1,4 @@
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
-import type { EmployeeVM } from '@/lib/mock/employee'
 import type { Tom } from '../../../_visao/tipos'
 
 /* As contas da ficha nova. São AS MESMAS da ficha atual (`../page.tsx`) — só
@@ -7,13 +6,6 @@ import type { Tom } from '../../../_visao/tipos'
    isto fica sendo a única cópia. */
 
 export const num = (n: number) => n.toLocaleString('pt-BR')
-
-/** A cor de cada sistema na paleta nova — a mesma família do relatório do setor. */
-export const TOM_SISTEMA: Record<string, Tom> = {
-  HelpDesk: 'blue', ClassRoom: 'green', WhatsApp: 'whats', 'Consultoria Plus': 'purple',
-  CIDE: 'red', 'Gerência': 'orange', 'Chat Interno': 'pink',
-}
-export const tomDoSistema = (sys: string): Tom => TOM_SISTEMA[sys] ?? 'blue'
 
 export type Parte = { label: string; sys: string; n: number }
 
@@ -35,26 +27,6 @@ export function concluidas(m: EmployeeMetrics | null): { total: number | null; p
     { label: 'chamados concluídos', sys: 'Chat Interno', n: m.chat.chamadosConcluidos },
   ].filter((p) => p.n > 0)
   return { total: partes.reduce((a, p) => a + p.n, 0), partes }
-}
-
-/** Volume por sistema no período. ⚠️ `null` = ainda não sabemos: barra vazia e
- *  "—", nunca zero carimbado "real". */
-export function porSistema(vm: EmployeeVM, m: EmployeeMetrics | null) {
-  const real: Record<string, number | null> = {
-    HelpDesk: m ? m.helpdesk.opened + m.helpdesk.resolved : null,
-    ClassRoom: m ? m.classroom.videos + m.classroom.courses + m.classroom.created : null,
-    WhatsApp: m ? m.whatsapp.abertos : null,
-    'Consultoria Plus': m ? m.consultoria.total : null,
-    CIDE: m ? m.cide.atividades : null,
-    'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.protAprovados + m.gerencia.servCriados + m.gerencia.datasAlteradas : null,
-    /* ⚠️ Chamado, não mensagem — senão o Chat encosta no teto em toda ficha. */
-    'Chat Interno': m ? m.chat.chamadosAbertos + m.chat.chamadosConcluidos : null,
-  }
-  const linhas = vm.bySystem.map((b) => {
-    const eReal = b.sys in real
-    return { sys: b.sys, tom: tomDoSistema(b.sys), real: eReal, value: eReal ? real[b.sys] : b.value }
-  })
-  return { linhas, max: Math.max(1, ...linhas.map((l) => l.value ?? 0)) }
 }
 
 export const ehSuspensao = (tipo: string) => tipo === 'suspensao' || tipo === 'lgpd_suspensao'

@@ -15,6 +15,12 @@ da atual, mesmos dados (`/api/employee-metrics` + linha do tempo), paleta da `.r
   para os cartões de sistema (é atividade do período, a Formação é retrato de hoje); "Antes de
   avaliar" ganhou a pergunta sobre **suspensão**.
 - A ficha atual não mudou. Aprovada, a prévia vira `/funcionarios/<id>` e a de hoje vai para `./anterior`.
+- **2ª rodada (mesmo dia):** o dono apontou o MESMO dado em dois formatos (total + pílulas, barras
+  "Atividade por sistema" e os cartões). Saíram o total, as pílulas e as barras; ficaram os cartões, só
+  dos sistemas com registro, cada um com um desenho próprio (anel no WhatsApp, barras sem taxa no
+  HelpDesk, colunas no ClassRoom, km em destaque na rua, progresso nos chamados, barra 100% na
+  conversa, número grande no CIDE). CIDE e Consultoria Plus ganharam cartão; os sem registro viram
+  uma linha "Sem registro no período".
 
 ## 2026-09-14 — Ficha da pessoa: advertências e suspensões em duas colunas
 
