@@ -1,5 +1,18 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-14 — Carga do CARGO OFICIAL (planilha do DP, "cargo em 14/09/2026")
+
+Planilha "DADOS COLABORADORES CONTABILIDADE" (4 abas por empresa, 87 pessoas) enviada pelo dono e
+gravada em `users.cargo_oficial`. Casamento pela régua de `lib/servicos/vinculo.ts` (`sugerir`), só
+entre os ATIVOS, e só onde o campo estava vazio:
+- **83 fortes** gravados sozinhos (nome completo idêntico, ou primeiro nome + sobrenome com um só
+  candidato); nenhuma colisão (duas linhas → mesma pessoa).
+- **2 confirmados pelo dono:** "Fabiana Esaki" = Fabiana Higa; "Bianca Dignani de Souza" = Bianca Sousa.
+- **Fora (não estão entre os ativos do TalentCare):** Josuel Rufino de Souza e Kiyoshi Kawakami.
+- Ficaram sem cargo: as 9 contas da Diretoria (não vieram na planilha) e Alice (Pousada).
+- A planilha e as cópias de trabalho foram apagadas do servidor depois da carga (dado pessoal).
+- ⚠️ Texto gravado como veio (maiúsculas do DP). Cargo novo daqui em diante: pela pílula "Cargo" da ficha.
+
 ## 2026-09-14 — "Gerar PDF" na ficha: a folha A4 do colaborador
 
 Pedido: *"um botão de gerar PDF, padronizado em A4, organizado numa folha, conforme o filtro de período;
