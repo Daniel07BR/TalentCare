@@ -7,10 +7,13 @@ estude algumas anotações que podem sair para ganharmos espaço"*. Saíram do p
 a tela continua igual:
 - **O período repetido.** Ele já está na faixa do topo (rótulo do filtro + as datas exatas) e vinha
   de novo no subtítulo dos serviços, no dos sistemas e na assiduidade.
-- **WhatsApp:** o tempo médio por atendimento. E a caixa amarela da avaliação do cliente agora só
-  aparece quando **há nota** — os dois estados de ressalva ("ainda não conferida", "sem nota no
-  período · pediu avaliação em 0 de 57") gastavam três linhas para dizer que não há o que dizer.
-  ⚠️ Nada vira elogio: sem a caixa, o cartão simplesmente não fala de nota do cliente.
+- **WhatsApp:** o tempo médio por atendimento.
+  ⚠️⚠️ **E o que NÃO podia sair, apesar de eu ter cortado:** a caixa da avaliação do cliente. Tentei
+  escondê-la no papel quando não havia nota, e o dono corrigiu no mesmo dia — *"não apresentou
+  quantos chamados teve a solicitação de avaliação; tem que apresentar mesmo se a pessoa nunca
+  pediu"*. **"Pediu avaliação em 0 de 57 conferidos" é o dado, não a ressalva:** sem ele some a
+  diferença entre quem pediu e não foi respondido e quem nunca pediu — e a régua do WhatsApp cobra
+  justamente o pedido. A caixa voltou para os três estados.
 - **"Sem registro no período: ClassRoom, Consultoria Plus."** — o subtítulo já avisa que só vêm os
   sistemas COM registro. Na tela a linha fica: ali o leitor pode querer saber por que o sistema sumiu.
 - **Assiduidade:** o "Ponto eletrônico · período" e a **legenda do calendário, que subiu do pé para o

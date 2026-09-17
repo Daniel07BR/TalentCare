@@ -182,12 +182,12 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
             {!impressao && <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>}
           </div>
         </div>
-        {/* ⚠️⚠️ Na folha, esta caixa só aparece quando HÁ nota do cliente (pedido do
-            dono, 17/09/2026). Os outros dois estados — "ainda não conferida" e
-            "sem nota no período" — são ressalvas de tela: no papel ocupavam três
-            linhas para dizer que não há o que dizer. Nada vira elogio: sem a
-            caixa, o cartão simplesmente não fala de nota do cliente. */}
-        {(!impressao || media != null) && (
+        {/* ⚠️⚠️ ESTA CAIXA VAI NO PAPEL SEMPRE, inclusive quando NÃO há nota
+            (correção do dono, 17/09/2026, no mesmo dia em que tentei cortá-la
+            para ganhar espaço). "Pediu avaliação em 0 de 57 conferidos" não é
+            ressalva: é o dado. Quem nunca pediu a avaliação do cliente tem de
+            aparecer pedindo zero — esconder isso apaga a diferença entre quem
+            pediu e ninguém respondeu e quem nunca pediu. */}
         <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 10, background: 'var(--n-amber-soft)' }}>
           {!conferido ? (
             <Rotulo>Avaliação do cliente ainda não conferida neste período.</Rotulo>
@@ -204,7 +204,6 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
             <Rotulo>Sem nota do cliente no período{wpp.pedidos != null ? ` · pediu avaliação em ${num(wpp.pedidos)} de ${num(wpp.verificados!)} conferidos` : ''}.</Rotulo>
           )}
         </div>
-        )}
       </Bloco>
     )
   })
