@@ -1,4 +1,5 @@
 'use client'
+import { Fragment } from 'react'
 import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { Sistema } from '@/lib/pessoa-sistema-tipos'
@@ -111,12 +112,15 @@ function Colunas({ colunas, alto = 92 }: { colunas: { rot: string; n: number; to
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${colunas.length}, minmax(0, 1fr))`, gap: 12, alignItems: 'end' }}>
       {colunas.map((c) => (
-        <div key={c.rot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 0 }}>
+        <div key={c.rot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 0, overflow: 'hidden' }}>
           <b className="cnum" style={{ fontSize: 15, color: forte(c.tom) }}>{num(c.n)}</b>
           <div style={{ width: '100%', maxWidth: 44, height: alto, display: 'flex', alignItems: 'flex-end', background: 'var(--n-card-2)', borderRadius: 8, overflow: 'hidden' }}>
             <div style={{ width: '100%', height: `${(c.n / max) * 100}%`, minHeight: c.n > 0 ? 4 : 0, background: forte(c.tom), borderRadius: 8 }} />
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--n-text-2)', textAlign: 'center', lineHeight: 1.25 }}>{c.rot}</div>
+          {/* ⚠️ `overflowWrap` + `minWidth: 0`: na folha A4 a coluna fica com ~50
+              px e "Vídeos assistidos" passava POR CIMA da coluna do lado —
+              texto que não quebra não encolhe, transborda. */}
+          <div style={{ fontSize: 10.5, color: 'var(--n-text-2)', textAlign: 'center', lineHeight: 1.25, minWidth: 0, overflowWrap: 'anywhere' }}>{c.rot}</div>
         </div>
       ))}
     </div>
@@ -371,7 +375,12 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
           Nenhum sistema medido registrou atividade desta pessoa no período — o trabalho dela pode não passar por eles.
         </div>
       ) : (
-        <div className={f.sistemas}>{blocos.map((b) => <div key={b.chave} style={{ display: 'contents' }}>{b.no}</div>)}</div>
+        /* ⚠️⚠️ `Fragment` com chave, e NÃO um <div style="display:contents">. O
+           wrapper de contents não existe no desenho, mas EXISTE na árvore: ele
+           era o filho direto da grade, e toda regra `.sistemas > *` da folha A4
+           (o padding menor, a largura mínima) caía nele e não fazia nada — o
+           cartão parecia ignorar o CSS da impressão. */
+        <div className={f.sistemas}>{blocos.map((b) => <Fragment key={b.chave}>{b.no}</Fragment>)}</div>
       )}
       {/* ⚠️ Fora da folha (pedido do dono, 17/09/2026): o que não registrou nada não
           ganha linha no papel — o subtítulo já avisa que só vêm os sistemas com

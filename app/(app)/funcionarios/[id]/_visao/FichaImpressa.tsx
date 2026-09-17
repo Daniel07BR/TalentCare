@@ -88,9 +88,20 @@ html body .fi-root.fi-root {
 .fi-folha .${s.indicadores} { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 8px !important; margin-bottom: 10px; }
 .fi-folha .${s.indicadores} > * { padding: 11px 12px !important; gap: 10px !important; }
 .fi-folha .${s.indicadores} > * > span:first-child { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
-/* todos os sistemas numa fileira */
-.fi-folha .${f.sistemas} { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px !important; }
-.fi-folha .${f.sistemas} > * { padding: 12px !important; }
+/* ⚠️⚠️ OS SISTEMAS EM QUATRO COLUNAS, não numa fileira só (17/09/2026). A regra
+   anterior ("grid-auto-flow: column") punha TODOS na mesma linha: com oito
+   sistemas registrando, cada cartão ficava com ~120 px e o conteúdo saía do
+   desenho — rótulo de coluna por cima do vizinho, título em três linhas, e a
+   fileira transbordando a folha pela direita. Quatro colunas dão ~230 px por
+   cartão, que é a largura para a qual eles foram desenhados; quem tiver menos
+   de quatro sistemas continua ocupando a linha inteira ("auto-fit").
+   ⚠️ A altura que isto custa é devolvida pela trava de zoom, no fim do arquivo:
+   a folha continua cabendo numa página. */
+.fi-folha .${f.sistemas} { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important; gap: 8px !important; }
+/* ⚠️ "min-width: 0" e "overflow: hidden": numa grade, o filho tem largura mínima
+   igual ao conteúdo dele — sem isto, um número grande ou um nome comprido empurra
+   a coluna e estoura a folha em vez de quebrar a linha. */
+.fi-folha .${f.sistemas} > * { padding: 12px 12px 14px !important; min-width: 0; overflow: hidden; }
 /* assiduidade: calendário | contadores + gravidade */
 .fi-folha .${f.assid} { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) !important; gap: 16px !important; }
 /* os anéis do placar, menores */
@@ -104,6 +115,10 @@ const ZOOM = 0.72
 /** A altura útil do A4 com as margens do `@page` (297 − 8 − 9 mm), em px de tela,
  *  com uma folga de 1% para o arredondamento do navegador. */
 const ALTURA_UTIL = ((297 - 8 - 9) / 25.4) * 96 * 0.99
+/** E a largura útil (210 − 9 − 9 mm). ⚠️ A folha é desenhada com 1000 px e a
+ *  redução padrão existe justamente para caber aqui; esta constante serve para o
+ *  caso em que ALGO dentro dela ficou mais largo que os 1000 px. */
+const LARGURA_UTIL = ((210 - 9 - 9) / 25.4) * 96 * 0.99
 
 export function FichaImpressa(props: Props) {
   /* O portal só existe no navegador — no servidor não há <body> para mirar. */
@@ -129,10 +144,20 @@ export function FichaImpressa(props: Props) {
       root.setAttribute('style', 'display:block;position:fixed;left:-20000px;top:0;visibility:hidden')
       folha.style.setProperty('zoom', '1')
       const alto = folha.getBoundingClientRect().height
+      /* ⚠️⚠️ A LARGURA também: `scrollWidth` acusa o que passou dos 1000 px da
+         folha (um cartão que não coube, um número que não quebrou). Sem esta
+         conta, o excesso não encolhe — ele é CORTADO pela borda da página, e a
+         ficha sai com meia coluna faltando sem nada avisar. */
+      const largo = Math.max(folha.scrollWidth, 1000)
       if (antes == null) root.removeAttribute('style'); else root.setAttribute('style', antes)
       /* Piso de 0,5: abaixo disso o número fica ilegível no papel, e uma folha
          que ninguém lê é pior que duas páginas. */
-      const z = alto > 0 ? Math.max(0.5, Math.min(ZOOM, ALTURA_UTIL / alto)) : ZOOM
+      /* ⚠️ `LARGURA_UTIL / largo` dá os mesmos ~0,72 quando nada passou dos
+         1000 px — é a própria conta de onde o teto saiu. Ela só morde quando
+         algo ficou mais largo que a folha. */
+      const z = alto > 0
+        ? Math.max(0.5, Math.min(ZOOM, ALTURA_UTIL / alto, LARGURA_UTIL / largo))
+        : ZOOM
       folha.style.setProperty('zoom', String(z))
     }
     window.addEventListener('beforeprint', ajustar)
@@ -214,7 +239,10 @@ function Folha({ vm, m, periodo }: Props) {
           </span>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-.8px', lineHeight: 1.1, color: 'var(--n-text)', whiteSpace: 'nowrap' }}>{vm.name}</h1>
+              {/* ⚠️ Sem `nowrap`: um nome comprido em 26 px empurrava a coluna do
+                  hero e levava o resto para fora da folha. Duas linhas de nome é
+                  feio; meia ficha cortada é pior. */}
+              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: '-.8px', lineHeight: 1.1, color: 'var(--n-text)', minWidth: 0, overflowWrap: 'anywhere' }}>{vm.name}</h1>
               <span style={{ fontSize: 11, fontWeight: 700, color: vm.statusColor, background: vm.statusBg, padding: '2px 9px', borderRadius: 20 }}>{vm.status}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--n-text-2)', marginTop: 4 }}>
