@@ -1,5 +1,30 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-17 — O PDF da ficha cabe numa página só
+
+Pedido do dono, com prints do que sobrava na folha: *"preciso que tudo saia em uma única página,
+estude algumas anotações que podem sair para ganharmos espaço"*. Saíram do papel — **só do papel**,
+a tela continua igual:
+- **O período repetido.** Ele já está na faixa do topo (rótulo do filtro + as datas exatas) e vinha
+  de novo no subtítulo dos serviços, no dos sistemas e na assiduidade.
+- **WhatsApp:** o tempo médio por atendimento. E a caixa amarela da avaliação do cliente agora só
+  aparece quando **há nota** — os dois estados de ressalva ("ainda não conferida", "sem nota no
+  período · pediu avaliação em 0 de 57") gastavam três linhas para dizer que não há o que dizer.
+  ⚠️ Nada vira elogio: sem a caixa, o cartão simplesmente não fala de nota do cliente.
+- **"Sem registro no período: ClassRoom, Consultoria Plus."** — o subtítulo já avisa que só vêm os
+  sistemas COM registro. Na tela a linha fica: ali o leitor pode querer saber por que o sistema sumiu.
+- **Assiduidade:** o "Ponto eletrônico · período" e a **legenda do calendário, que subiu do pé para o
+  lado do título** — onde o olho já está quando começa a ler o mapa. A legenda virou peça própria
+  (`LegendaOcorrencias`), e o calendário ganhou `legenda={false}`.
+- **Rodapé:** as duas linhas de ressalva ("não são a nota" / o que não consta). Ficou a assinatura.
+
+⚠️⚠️ **E uma trava, porque folha não tem tamanho fixo.** Os cortes devolveram o espaço que faltava
+nesta ficha — mas quem tiver mais sistemas com registro, mais cursos ou um filtro de vários meses
+estica o conteúdo e traz a segunda página de volta **sem avisar ninguém**. Agora, no `beforeprint`,
+a folha é medida em tamanho natural (fora da tela, escondida) e a redução cai o quanto for preciso
+para caber na altura útil do A4: teto nos 0,72 de sempre (que preenchem a largura), piso em 0,5 —
+abaixo disso o número fica ilegível, e uma folha que ninguém lê é pior que duas páginas.
+
 ## 2026-09-14 — Carga do CARGO OFICIAL (planilha do DP, "cargo em 14/09/2026")
 
 Planilha "DADOS COLABORADORES CONTABILIDADE" (4 abas por empresa, 87 pessoas) enviada pelo dono e
