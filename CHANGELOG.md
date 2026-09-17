@@ -1,5 +1,29 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-17 — O PDF: os sistemas em quatro colunas (o que estava saindo do desenho)
+
+O dono, olhando a impressão: *"alguns cards ficaram com dados se sobrepondo ou saindo do desenho
+proposto"*. Eram três defeitos somados, e o primeiro era meu, de 14/09:
+
+1. **`grid-auto-flow: column` punha TODOS os sistemas na MESMA linha.** Com quatro sistemas
+   registrando aquilo cabia; com oito, cada cartão ficava com ~120 px — rótulo de coluna por cima do
+   vizinho ("Vídeos assistidos" invadindo "Cursos concluídos"), título em três linhas e a fileira
+   transbordando a folha pela direita. Agora são **quatro colunas** (`auto-fit`, ~235 px medidos —
+   a largura para a qual os cartões foram desenhados); com menos de quatro sistemas, a linha inteira.
+2. **O cartão nunca foi filho direto da grade:** havia um `<div style="display:contents">` entre os
+   dois, e TODA regra `.sistemas > *` da folha caía nele — o cartão parecia ignorar o CSS da
+   impressão. Virou `Fragment` com chave.
+3. **Texto que não quebra não encolhe, transborda:** `overflowWrap` nos rótulos de coluna e no nome
+   da pessoa (que era `nowrap` em 26 px e empurrava o hero inteiro).
+
+E a **trava de uma página passou a medir também a LARGURA** (`scrollWidth`): o que passa dos 1000 px
+da folha não é encolhido, é **cortado** pela borda da página — a ficha sairia com meia coluna
+faltando, sem nada avisar.
+
+**Conferido no navegador, não no olho:** com a ficha do Ezequiel (7 sistemas com registro) a folha
+mede **1568 px** de altura por **1000 px** de largura — nada fora dela —, e o `beforeprint` deixa o
+zoom em **0,668**, que dá 1047 px de 1048 úteis: **uma página**, com o mecanismo agindo de verdade.
+
 ## 2026-09-17 — Os CHAMADOS agora vêm do FLUXO (9ª fonte), e o Chat ficou com a conversa
 
 Os chamados entre setores saíram do Chat Interno em 16/09/2026 e foram para o Fluxo (`.70`), com
