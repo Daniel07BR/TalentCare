@@ -177,9 +177,17 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
           <Anel fracao={wpp.abertos ? wpp.finalizados / wpp.abertos : 0} tom="whats" tam={impressao ? 70 : 104} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
             <div><Grande cor="var(--n-whats)">{num(wpp.finalizados)}</Grande><Rotulo>finalizados de {num(wpp.abertos)} abertos</Rotulo></div>
-            <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>
+            {/* ⚠️ Fora da folha (pedido do dono, 17/09/2026): o tempo médio por
+                atendimento não entra no papel. */}
+            {!impressao && <div><Grande tam={17}>{wpp.tempoMedio}</Grande><Rotulo>tempo médio por atendimento</Rotulo></div>}
           </div>
         </div>
+        {/* ⚠️⚠️ Na folha, esta caixa só aparece quando HÁ nota do cliente (pedido do
+            dono, 17/09/2026). Os outros dois estados — "ainda não conferida" e
+            "sem nota no período" — são ressalvas de tela: no papel ocupavam três
+            linhas para dizer que não há o que dizer. Nada vira elogio: sem a
+            caixa, o cartão simplesmente não fala de nota do cliente. */}
+        {(!impressao || media != null) && (
         <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 10, background: 'var(--n-amber-soft)' }}>
           {!conferido ? (
             <Rotulo>Avaliação do cliente ainda não conferida neste período.</Rotulo>
@@ -196,6 +204,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
             <Rotulo>Sem nota do cliente no período{wpp.pedidos != null ? ` · pediu avaliação em ${num(wpp.pedidos)} de ${num(wpp.verificados!)} conferidos` : ''}.</Rotulo>
           )}
         </div>
+        )}
       </Bloco>
     )
   })
@@ -330,7 +339,8 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   ))
 
   return (
-    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={impressao ? `Só os sistemas com registro · ${periodo}` : `Só os sistemas com registro · ${periodo} · clique num sistema para o resumo`}>
+    /* ⚠️ Na folha, o subtítulo NÃO repete o período: ele já está na faixa do topo. */
+    <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={impressao ? 'Só os sistemas com registro' : `Só os sistemas com registro · ${periodo} · clique num sistema para o resumo`}>
       {blocos.length === 0 ? (
         /* ⚠️ Silêncio nos sistemas não é inatividade. */
         <div style={{ fontSize: 12.5, color: 'var(--n-text-2)', background: 'var(--n-card-2)', borderRadius: 10, padding: '12px 14px' }}>
@@ -339,7 +349,11 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
       ) : (
         <div className={f.sistemas}>{blocos.map((b) => <div key={b.chave} style={{ display: 'contents' }}>{b.no}</div>)}</div>
       )}
-      {sem.length > 0 && blocos.length > 0 && (
+      {/* ⚠️ Fora da folha (pedido do dono, 17/09/2026): o que não registrou nada não
+          ganha linha no papel — o subtítulo já avisa que só vêm os sistemas com
+          registro. Na tela ela fica: ali o leitor pode querer saber por que o
+          sistema sumiu. */}
+      {sem.length > 0 && blocos.length > 0 && !impressao && (
         <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10 }}>Sem registro no período: {sem.join(', ')}.</div>
       )}
     </Cartao>

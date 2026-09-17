@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Home, CalendarPlus, CalendarX, Cake, Briefcase, BadgeCheck, BookOpen, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
@@ -23,7 +23,13 @@ import { formCor } from './derivar'
    1ª versão (14/09/2026): folha própria, de texto e tabela — "ficou muito feio".
    2ª: montada com AS PEÇAS DA TELA (azulejos, anéis, cartões com gráficos,
    calendário) — "bem melhor", mas passou de uma página.
-   3ª (esta): o LAYOUT QUE O DONO DESENHOU para caber numa folha —
+   4ª rodada (17/09/2026), para caber DE FATO numa página: fora o período
+   repetido nos subtítulos (a faixa do topo já o traz), o tempo médio do
+   WhatsApp, a linha dos sistemas sem registro, a explicação do ponto e a
+   legenda no pé da assiduidade (subiu para o lado do título) e as ressalvas do
+   rodapé — mais a trava de zoom em `FichaImpressa`, abaixo.
+
+   3ª: o LAYOUT QUE O DONO DESENHOU para caber numa folha —
      faixa · hero em duas linhas (identidade e formação em cima, as pílulas numa
      fileira embaixo, os anéis à direita ocupando as duas) · seis azulejos sem
      explicação · serviços só com os quatro números · TODOS os sistemas numa
@@ -93,13 +99,49 @@ html body .fi-root.fi-root {
 
 type Props = { vm: EmployeeVM; m: EmployeeMetrics; periodo: string }
 
+/** A redução padrão: 1000 px de folha viram os ~188 mm úteis da largura do A4. */
+const ZOOM = 0.72
+/** A altura útil do A4 com as margens do `@page` (297 − 8 − 9 mm), em px de tela,
+ *  com uma folga de 1% para o arredondamento do navegador. */
+const ALTURA_UTIL = ((297 - 8 - 9) / 25.4) * 96 * 0.99
+
 export function FichaImpressa(props: Props) {
   /* O portal só existe no navegador — no servidor não há <body> para mirar. */
   const [pronto, setPronto] = useState(false)
+  const raiz = useRef<HTMLDivElement>(null)
   useEffect(() => { setPronto(true) }, [])
+
+  /* ⚠️⚠️ A TRAVA DE UMA PÁGINA (17/09/2026). Os cortes deste dia devolveram o
+     espaço que faltava para o Ezequiel — mas a folha não tem tamanho fixo: quem
+     tem mais sistemas com registro, mais cursos ou um filtro de vários meses
+     estica o conteúdo, e a segunda página volta sem avisar. Aqui, ANTES de
+     imprimir, a folha é medida em tamanho natural (fora da tela, escondida) e a
+     redução cai o tanto que for preciso para caber na altura útil do A4. Quando
+     já cabe — o caso comum — nada muda: o teto continua sendo os 0,72 que
+     preenchem a largura da folha. */
+  useEffect(() => {
+    if (!pronto) return
+    const ajustar = () => {
+      const root = raiz.current
+      const folha = root?.querySelector<HTMLElement>('.fi-folha')
+      if (!root || !folha) return
+      const antes = root.getAttribute('style')
+      root.setAttribute('style', 'display:block;position:fixed;left:-20000px;top:0;visibility:hidden')
+      folha.style.setProperty('zoom', '1')
+      const alto = folha.getBoundingClientRect().height
+      if (antes == null) root.removeAttribute('style'); else root.setAttribute('style', antes)
+      /* Piso de 0,5: abaixo disso o número fica ilegível no papel, e uma folha
+         que ninguém lê é pior que duas páginas. */
+      const z = alto > 0 ? Math.max(0.5, Math.min(ZOOM, ALTURA_UTIL / alto)) : ZOOM
+      folha.style.setProperty('zoom', String(z))
+    }
+    window.addEventListener('beforeprint', ajustar)
+    return () => window.removeEventListener('beforeprint', ajustar)
+  }, [pronto])
+
   if (!pronto) return null
   return createPortal(
-    <div className="fi-root" aria-hidden="true">
+    <div className="fi-root" aria-hidden="true" ref={raiz}>
       <style>{CSS}</style>
       <Folha {...props} />
     </div>,
@@ -224,12 +266,11 @@ function Folha({ vm, m, periodo }: Props) {
         <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} impressao />
       </div>
 
-      {/* ── RODAPÉ ────────────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 10, paddingTop: 7, borderTop: '1px solid var(--n-border)', display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 10.5, color: 'var(--n-text-3)', breakInside: 'avoid' }}>
-        <div style={{ maxWidth: 700, lineHeight: 1.45 }}>
-          Números registrados pelos sistemas integrados no período — não são a nota; a nota é de quem avalia.
-          Não constam deste documento a escuta da Rádio nem as mensagens do Chat Interno.
-        </div>
+      {/* ── RODAPÉ ──────────────────────────────────────────────────────────
+          ⚠️ Só a assinatura (pedido do dono, 17/09/2026). As duas linhas de
+          ressalva — "não são a nota" e o que não consta — saíram: quem recebe a
+          folha é quem avalia, e já sabe. */}
+      <div style={{ marginTop: 10, paddingTop: 7, borderTop: '1px solid var(--n-border)', display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 10.5, color: 'var(--n-text-3)', breakInside: 'avoid' }}>
         <div style={{ textAlign: 'right' }}>{vm.name} · {br(m.fromDay)} a {br(m.toDay)}</div>
       </div>
     </div>

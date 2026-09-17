@@ -1,7 +1,7 @@
 'use client'
 import { CalendarCheck, CheckCircle2 } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
-import CalendarioOcorrencias from '../../../CalendarioOcorrencias'
+import CalendarioOcorrencias, { LegendaOcorrencias } from '../../../CalendarioOcorrencias'
 import { Cartao, Chip, Mini, forte } from '../../../_visao/ui'
 import { comPonto, ehSuspensao, num, rotuloDisciplina, tomDisciplina } from './derivar'
 import f from './ficha.module.css'
@@ -11,7 +11,9 @@ import f from './ficha.module.css'
 export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
   m: EmployeeMetrics | null; periodo: string; pontoAteVm: string | null
   /** Folha A4 (pedido do dono, 14/09/2026): SEM a lista de advertências — só o
-   *  contador — e sem as linhas de explicação. */
+   *  contador — e sem as linhas de explicação.
+   *  17/09/2026: sem "Ponto eletrônico · período" (o período já está no alto da
+   *  folha) e com a LEGENDA do calendário ao lado do título, não no pé. */
   impressao?: boolean
 }) {
   const a = m?.assiduidade
@@ -33,13 +35,20 @@ export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
   ] : []
   const temSusp = m.disciplina.some((d) => ehSuspensao(d.tipo))
 
+  /* A legenda sobe para o título na folha; o degrau "sem medição" só entra se
+     houver dia sem medição DENTRO do período — a mesma conta do calendário. */
+  const pontoAte = a.pontoAte ?? pontoAteVm
+  const semMedicao = !!((pontoAte && m.toDay > pontoAte) || (a.pontoDesde && m.fromDay < a.pontoDesde))
+
   return (
-    <Cartao titulo="Assiduidade e disciplina" Icone={CalendarCheck} corIcone="var(--n-amber)" sub={`Ponto eletrônico · ${periodo}`}>
+    <Cartao titulo="Assiduidade e disciplina" Icone={CalendarCheck} corIcone="var(--n-amber)"
+      sub={impressao ? undefined : `Ponto eletrônico · ${periodo}`}
+      acao={impressao ? <LegendaOcorrencias semMedicao={semMedicao} style={{ marginTop: 2 }} /> : undefined}>
       <div className={f.assid}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', marginBottom: 2 }}>Mapa de ocorrências</div>
           {!impressao && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso.</div>}
-          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={a.pontoAte ?? pontoAteVm} pontoDesde={a.pontoDesde ?? null} />
+          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={pontoAte} pontoDesde={a.pontoDesde ?? null} legenda={!impressao} />
         </div>
 
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>

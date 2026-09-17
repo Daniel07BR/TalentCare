@@ -28,7 +28,8 @@ const horas = (min: number) => (min >= 60 ? `${Math.round(min / 60)} h` : `${min
 export default function ServicosCard({ servicos, pontuacao, periodo, semPontuacao = false, soNumeros = false }: {
   servicos?: Servicos; pontuacao?: Ponto[]; periodo: string
   /** Só os quatro números, sem "Concluídos por mês" e "O que ela mais fez" — a
-   *  folha A4, desenhada pelo dono para caber numa página (14/09/2026). */
+   *  folha A4, desenhada pelo dono para caber numa página (14/09/2026). Também
+   *  tira o período do subtítulo (17/09/2026): ele já está na faixa do topo. */
   soNumeros?: boolean
   /** Esconde "Pontuação do setor, mês a mês". A ficha nova liga: ali o anel
    *  "Pontos no período" do hero já mostra os mesmos meses, e seguindo o filtro. */
@@ -70,8 +71,11 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
       </div>
       {/* ⚠️⚠️ O período E o total, lado a lado. Sem o segundo, quem subiu 18
           meses de planilha lê o recorte de 30 dias como se fosse tudo. */}
-      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.5 }}>
-        Da planilha que o setor envia · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b>
+      {/* ⚠️ Na folha A4 o período NÃO se repete aqui: a faixa do topo já o traz, e
+          era a mesma data escrita pela terceira vez. O "na planilha inteira"
+          fica: sem ele, quem subiu 18 meses lê o recorte como se fosse tudo. */}
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: soNumeros ? 12 : 16, lineHeight: 1.5 }}>
+        Da planilha que o setor envia{!soNumeros && <> · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b></>}
         {servicos?.totalConcluidos != null && servicos.totalConcluidos > servicos.concluidos && (
           <> · na planilha inteira são <b style={{ color: 'var(--text)' }}>{servicos.totalConcluidos.toLocaleString('pt-BR')} concluídos</b></>
         )}

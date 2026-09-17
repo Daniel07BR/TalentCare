@@ -80,7 +80,7 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites,
+  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites, legenda = true,
 }: {
   dias: DiaOcorrencia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
@@ -116,6 +116,12 @@ export default function CalendarioOcorrencias({
    * quase todo dia da empresa seria "4 ou mais".
    */
   limites?: [number, number, number]
+  /**
+   * A legenda embaixo do calendário. Desligue quando ela for desenhada FORA —
+   * é o que a folha A4 faz (pedido do dono, 17/09/2026): a legenda sobe para o
+   * lado do título do cartão, onde já se está olhando, e a linha some do pé.
+   */
+  legenda?: boolean
 }) {
   if (!de || !ate || ate < de) return null
 
@@ -224,19 +230,37 @@ export default function CalendarioOcorrencias({
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: 12, fontSize: 11, color: 'var(--text-mute)' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
-          <span style={{ width: 11, height: 11, borderRadius: 3, border: '1px dashed var(--border)' }} /> fora do período
-        </span>
-        {((pontoAte && ate > pontoAte) || (pontoDesde && de < pontoDesde)) && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
-            <span style={{ width: 11, height: 11, borderRadius: 3, background: 'repeating-linear-gradient(45deg, var(--border) 0 2px, transparent 2px 5px)' }} /> sem medição
-          </span>
-        )}
-        {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
-        {paleta.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
-        {escala === 'pessoas' ? `${limites?.[2] ?? 4} ou mais pessoas` : 'mais minutos'}
-      </div>
+      {legenda && (
+        <LegendaOcorrencias escala={escala} paleta={paleta} limites={limites} style={{ marginTop: 12 }}
+          semMedicao={!!((pontoAte && ate > pontoAte) || (pontoDesde && de < pontoDesde))} />
+      )}
     </>
+  )
+}
+
+/** A legenda do calendário, sozinha — para quem quer desenhá-la em outro lugar
+ *  (a folha A4 põe ao lado do título). `semMedicao` é o único degrau que depende
+ *  do período: só aparece quando há dia sem medição dentro dele. */
+export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, semMedicao = false, style }: {
+  escala?: 'minutos' | 'pessoas'
+  paleta?: string[]
+  limites?: [number, number, number]
+  semMedicao?: boolean
+  style?: React.CSSProperties
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap', fontSize: 11, color: 'var(--text-mute)', ...style }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
+        <span style={{ width: 11, height: 11, borderRadius: 3, border: '1px dashed var(--border)' }} /> fora do período
+      </span>
+      {semMedicao && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 10 }}>
+          <span style={{ width: 11, height: 11, borderRadius: 3, background: 'repeating-linear-gradient(45deg, var(--border) 0 2px, transparent 2px 5px)' }} /> sem medição
+        </span>
+      )}
+      {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
+      {paleta.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
+      {escala === 'pessoas' ? `${limites?.[2] ?? 4} ou mais pessoas` : 'mais minutos'}
+    </div>
   )
 }
