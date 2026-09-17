@@ -173,10 +173,20 @@ function Anel({ children, titulo, legenda }: {
   )
 }
 
-export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compacto = false, enxuto = false }: {
+export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compacto = false, enxuto = false, semPosicao = false }: {
   p: PosicaoFicha
   /** Sem o aviso longo de "mês cortado entra inteiro" — a folha A4. */
   enxuto?: boolean
+  /** Sem o anel da COLOCAÇÃO no setor — pedido do dono, 17/09/2026, para a folha
+   *  A4: *"na impressão do pdf do funcionário, não apresente mais a colocação
+   *  dele no departamento"*.
+   *
+   *  ⚠️ Só o PAPEL. Na tela o anel continua: ali quem lê está comparando o time
+   *  e tem o resto da ficha em volta; a folha circula sozinha, muitas vezes na
+   *  frente da própria pessoa, e "2º de 7" fora de contexto vira outra conversa.
+   *  Os PONTOS no período continuam na folha — eles são o que ela produziu, e
+   *  não o lugar dela numa fila. */
+  semPosicao?: boolean
   /** Sem cartão próprio e com anéis menores — para ficar ao lado da foto. */
   compacto?: boolean
   /** Os meses gravados, para a rosca do acumulado. */
@@ -238,6 +248,7 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
       </Anel>
 
       {/* ── POSIÇÃO no setor, na competência do filtro ───────────────────── */}
+      {!semPosicao && (
       <Anel
         titulo={`No ${setor} · ${competenciaLabel}`}
         legenda={p.posicao == null
@@ -283,6 +294,7 @@ export function Placar({ p, meses, setor, competenciaLabel, motivoSemNota, compa
           )}
         </g>
       </Anel>
+      )}
 
       {/* ── A FILA do setor ──────────────────────────────────────────────── */}
       {/* ⚠️ No hero da ficha nova (modo compacto) a fila não entra — pedido do

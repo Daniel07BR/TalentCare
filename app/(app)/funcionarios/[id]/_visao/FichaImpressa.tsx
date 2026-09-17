@@ -270,8 +270,11 @@ function Folha({ vm, m, periodo }: Props) {
 
         <div style={{ gridColumn: 3, gridRow: '1 / span 2', alignSelf: 'center' }}>
           {m.posicao && (
-            <Placar compacto enxuto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}
-              motivoSemNota={m.posicao.de === 0 ? `ninguém do ${vm.dept} pontuou em ${competenciaLabel(m.posicao.competencia)}` : null} />
+            /* ⚠️ `semPosicao`: a COLOCAÇÃO no setor não vai ao papel (pedido do
+               dono, 17/09/2026). Ficam os pontos do período — o que a pessoa
+               produziu, e não o lugar dela numa fila que a folha levaria
+               sozinha para fora da tela. */
+            <Placar compacto enxuto semPosicao p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)} />
           )}
         </div>
 
