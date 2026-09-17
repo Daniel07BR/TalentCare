@@ -30,7 +30,7 @@ import { radioVM } from '../lib/mock/radio'
 import { consultoriaVM } from '../lib/mock/consultoria'
 import { helpdeskVM } from '../lib/mock/helpdesk'
 import { cideVM } from '../lib/mock/cide'
-import { chatVM, type ChatSetor } from '../lib/mock/chat'
+import { fluxoVM, type FluxoSetor } from '../lib/mock/fluxo'
 import { gerenciaVM } from '../lib/mock/gerencia'
 import { periodDays } from '../lib/period-range'
 import {
@@ -91,7 +91,7 @@ async function main() {
     const [as, sc, wp, cl, ra, co, hd, ci, ch, ge] = await Promise.all([
       get(`/api/assiduidade-metrics?${q}`), get(`/api/score-metrics?${q}`), get(`/api/whatsapp-by-dept?${q}`),
       get(`/api/classroom-metrics?${q}`), get(`/api/radio-metrics?${q}`), get(`/api/consultoria-metrics?${q}`),
-      get(`/api/helpdesk-metrics?${q}`), get(`/api/cide-metrics?${q}`), get(`/api/chat-metrics?${q}`), get(`/api/gerencia-metrics?${q}`),
+      get(`/api/helpdesk-metrics?${q}`), get(`/api/cide-metrics?${q}`), get(`/api/fluxo-metrics?${q}`), get(`/api/gerencia-metrics?${q}`),
     ])
     const assidMap = new Map<string, any>()
     for (const u of as.byPerson) assidMap.set(u.personKey, {
@@ -148,16 +148,19 @@ async function main() {
     const coMap = new Map<string, any>(co.byUser.map((u: any) => [u.nexusUserId, { studies: u.studies, tickets: u.tickets, messages: u.messages, comments: u.comments }]))
     const hdMap = new Map<string, any>(hd.byUser.map((u: any) => [u.nexusUserId, { opened: u.opened, resolved: u.resolved, formalized: u.formalized, resolvedSeconds: u.resolvedSeconds }]))
     const ciMap = new Map<string, any>(ci.byUser.map((u: any) => [u.nexusUserId, { atividades: u.atividades }]))
+    /* ⚠️ `ch` aqui é o FLUXO desde 17/09/2026 — os chamados saíram do Chat. O
+       nome curto ficou para não reescrever o ensaio inteiro. */
     const chMap = new Map<string, any>(ch.byUser.map((u: any) => [u.nexusUserId, {
-      msgCanais: u.msgCanais, msgDiretas: u.msgDiretas, msgChamados: u.msgChamados, chamadosAbertos: u.chamadosAbertos,
-      chamadosAssumidos: u.chamadosAssumidos, chamadosConcluidos: u.chamadosConcluidos, segundosResolucao: u.segundosResolucao,
+      chamadosAbertos: u.chamadosAbertos, chamadosAssumidos: u.chamadosAssumidos,
+      chamadosConcluidos: u.chamadosConcluidos, segundosResolucao: u.segundosResolucao,
+      tarefasAbertas: u.tarefasAbertas, tarefasAssumidas: u.tarefasAssumidas, tarefasConcluidas: u.tarefasConcluidas,
     }]))
     const geMap = new Map<string, any>(ge.byUser.map(({ nexusUserId, ...s }: any) => [nexusUserId, s]))
-    const setores: ChatSetor[] = ch.byDept ?? []
+    const setores: FluxoSetor[] = ch.byDept ?? []
 
     // Os resumos da janela leem o dataset CRU (`useTalentData()`), não o do score.
     const cvm = classroomVM(base, clMap), rvm = radioVM(base, raMap), covm = consultoriaVM(base, coMap)
-    const hvm = helpdeskVM(base, hdMap), civm = cideVM(base, ciMap), chvm = chatVM(base, chMap, setores), gvm = gerenciaVM(base, geMap)
+    const hvm = helpdeskVM(base, hdMap), civm = cideVM(base, ciMap), chvm = fluxoVM(base, chMap, setores), gvm = gerenciaVM(base, geMap)
 
     const lCl = linhasClassroom(cvm.deptBars)
     confere(onde, 'ClassRoom: linhas', lCl.map((l) => [l.nome, l.valor]), [...cvm.deptBars].sort((a, b) => b.created - a.created).map((d) => [d.nome, d.created]))
@@ -193,12 +196,12 @@ async function main() {
     for (const c of ['opened', 'resolved'] as const) {
       porSetor(`HelpDesk ${c}`, hvm.deptBars.map((d) => ({ id: d.id, nome: d.nome, cor: '', valor: d[c] })), (d) => helpdeskVM(d, hdMap).totals[c])
     }
-    // Chat: a janela do setor filtra os chamados POR SETOR (`byDept`), não pelas pessoas.
+    // Fluxo: a janela do setor filtra os chamados POR SETOR (`byDept`), não pelas pessoas.
     for (const s of chvm.porSetor) {
       if (!s.id) continue
       linhasSetor++
-      const j = chatVM(recorte(base, s.id), chMap, setores.filter((x) => x.id === s.id)).totaisSetor
-      confere(onde, `Chat · ${s.nome}: linha × janela`, [s.pedidosAbertos, s.recebidosAbertos, s.recebidosConcluidos], [j.pedidosAbertos, j.recebidosAbertos, j.recebidosConcluidos])
+      const j = fluxoVM(recorte(base, s.id), chMap, setores.filter((x) => x.id === s.id)).totaisSetor
+      confere(onde, `Fluxo · ${s.nome}: linha × janela`, [s.pedidosAbertos, s.recebidosAbertos, s.recebidosConcluidos], [j.pedidosAbertos, j.recebidosAbertos, j.recebidosConcluidos])
     }
 
     // ── 4. a janela de comparação dos selos

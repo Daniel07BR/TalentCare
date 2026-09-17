@@ -38,7 +38,7 @@ export type FonteAtividade =
   | { modelo: 'cideDaily'; campos: (keyof Prisma.CideDailySumAggregateOutputType)[] }
   | { modelo: 'consultoriaDaily'; campos: (keyof Prisma.ConsultoriaDailySumAggregateOutputType)[] }
   | { modelo: 'gerenciaDaily'; campos: (keyof Prisma.GerenciaDailySumAggregateOutputType)[] }
-  | { modelo: 'chatDaily'; campos: (keyof Prisma.ChatDailySumAggregateOutputType)[] }
+  | { modelo: 'fluxoDaily'; campos: (keyof Prisma.FluxoDailySumAggregateOutputType)[] }
   | { modelo: 'whatsappAttendantDaily'; campos: string[] } // casa por NOME, não por nexusUserId
 
 export type TipoAtividade = {
@@ -103,9 +103,15 @@ export const TIPOS_ATIVIDADE: TipoAtividade[] = [
   { chave: 'ger_prot_aprovado', label: 'Protocolo aprovado', sistema: 'Gerência', descricao: 'Cada protocolo urgente que a pessoa aprovou.', fonte: { modelo: 'gerenciaDaily', campos: ['protAprovados'] } },
   { chave: 'ger_serv_criado', label: 'Serviço criado', sistema: 'Gerência', descricao: 'Cada serviço de rua criado em nome da pessoa — à mão, ou gerado sozinho pelo protocolo com data limite que ela lançou.', fonte: { modelo: 'gerenciaDaily', campos: ['servCriados'] } },
   { chave: 'ger_data_alterada', label: 'Data de serviço alterada', sistema: 'Gerência', descricao: 'Cada troca de data de um serviço de rua feita pela pessoa, com justificativa.', fonte: { modelo: 'gerenciaDaily', campos: ['datasAlteradas'] } },
-  // ── Chat Interno ── só CHAMADO (mensagem é vitrine, fica fora)
-  { chave: 'chat_cham_aberto', label: 'Pedido a outro setor', sistema: 'Chat Interno', descricao: 'Cada pedido que a pessoa fez a outro setor pelo Chat Interno.', fonte: { modelo: 'chatDaily', campos: ['chamadosAbertos'] } },
-  { chave: 'chat_cham_concluido', label: 'Pedido de outro setor atendido', sistema: 'Chat Interno', descricao: 'Cada pedido de outro setor que a pessoa assumiu e atendeu até o fim (conta quando quem pediu confirma).', fonte: { modelo: 'chatDaily', campos: ['chamadosConcluidos'] } },
+  /* ── Fluxo ── o CHAMADO entre setores (a mensagem do Chat é vitrine e fica
+     fora). ⚠️⚠️ A CHAVE continua `chat_cham_*` de propósito: ela é o id gravado
+     na régua de pontuação (`pontuacao_regra_geral`) e nos pesos que o dono
+     calibrou. Renomear a chave para combinar com a casa nova apagaria esses
+     pesos em silêncio — e o histórico do que já foi pontuado deixaria de casar.
+     O que mudou foi a FONTE (o Fluxo, desde 16/09/2026) e o rótulo que a tela
+     mostra. */
+  { chave: 'chat_cham_aberto', label: 'Pedido a outro setor', sistema: 'Fluxo', descricao: 'Cada pedido que a pessoa fez a outro setor pelo Fluxo (até 16/09/2026, pelo Chat Interno).', fonte: { modelo: 'fluxoDaily', campos: ['chamadosAbertos'] } },
+  { chave: 'chat_cham_concluido', label: 'Pedido de outro setor atendido', sistema: 'Fluxo', descricao: 'Cada pedido de outro setor que a pessoa assumiu e atendeu até o fim (conta quando quem pediu confirma).', fonte: { modelo: 'fluxoDaily', campos: ['chamadosConcluidos'] } },
 ]
 
 export const TIPO_ATIVIDADE_POR_CHAVE = new Map(TIPOS_ATIVIDADE.map((t) => [t.chave, t]))

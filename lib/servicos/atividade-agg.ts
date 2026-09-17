@@ -50,7 +50,7 @@ export async function agregarAtividades(
   const somaCampos = (r: Record<string, unknown>, campos: string[]) =>
     campos.reduce((a, c) => a + Number((r as Record<string, number | null>)[c] ?? 0), 0)
 
-  const [cls, hd, cide, cons, ger, chat, wpp] = await Promise.all([
+  const [cls, hd, cide, cons, ger, fluxo, wpp] = await Promise.all([
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { courses: true, videos: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { opened: true, resolved: true } }),
     /* ⚠️⚠️ `empresas`, não `atividades` — ver o comentário do tipo
@@ -62,7 +62,9 @@ export async function agregarAtividades(
     prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { empresas: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, datasAlteradas: true } }),
-    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
+    // ⚠️ Os chamados são do FLUXO desde 16/09/2026 (a chave da régua continua
+    // `chat_cham_*` — ver `atividades.ts`).
+    prisma.fluxoDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
     /* ⚠️⚠️ O WHATSAPP CASA POR NOME NORMALIZADO EM JS, não no WHERE. O banco
        guarda o nome com a caixa original ("Joice Rocha"); filtrar por
        `name IN [<minúsculo>]` não casa NADA — foi o bug que zerou a atividade de
@@ -78,7 +80,7 @@ export async function agregarAtividades(
     cideDaily: new Map(cide.map((r) => [r.nexusUserId, r._sum])),
     consultoriaDaily: new Map(cons.map((r) => [r.nexusUserId, r._sum])),
     gerenciaDaily: new Map(ger.map((r) => [r.nexusUserId, r._sum])),
-    chatDaily: new Map(chat.map((r) => [r.nexusUserId, r._sum])),
+    fluxoDaily: new Map(fluxo.map((r) => [r.nexusUserId, r._sum])),
     whatsappAttendantDaily: new Map(wpp.map((r) => [normNome(r.name), r._sum])),
   }
 

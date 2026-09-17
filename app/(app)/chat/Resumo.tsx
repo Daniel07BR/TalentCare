@@ -4,7 +4,7 @@ import { useTalentData } from '@/lib/ui/data'
 import { useChatPeriod } from '@/lib/ui/chat-period'
 import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
-import { chatVM, fmtDurUtil, type ChatPerson, type ChatSetor } from '@/lib/mock/chat'
+import { chatVM, type ChatPerson } from '@/lib/mock/chat'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
 import EsqueletoResumo from '../EsqueletoResumo'
@@ -17,6 +17,10 @@ const ChatIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; colo
 
 const num = (n: number) => n.toLocaleString('pt-BR')
 
+/* ⚠️⚠️ SÓ AS MENSAGENS desde 17/09/2026. Os chamados que esta tela mostrava
+   mudaram de casa em 16/09 (Chat → Fluxo) e o painel deles foi junto, para
+   `app/(app)/fluxo/Resumo.tsx`. Aqui não ficou nem cópia nem número velho: uma
+   tabela parada no dia da migração é pior que tabela nenhuma. */
 export default function ChatResumo() {
   const abrirPessoa = usePainelDaPessoa()
   /* Aberto de dentro do relatório de um setor? Então some o que compara
@@ -28,23 +32,14 @@ export default function ChatResumo() {
   const router = useRouter()
   const data = useTalentData()
   const { period, label } = usePeriod()
-  const { map, setores: todosSetores, desde, loading } = useChatPeriod()
-  /* ⚠️ Os chamados vêm POR SETOR (`chat_dept_daily`, pela função gravada no
-     chamado), não por pessoa — o recorte do diretório não os alcança. Sem este
-     filtro, a janela do Legal mostraria os chamados da casa inteira nos KPIs. */
-  const setores = setor ? todosSetores.filter((s) => s.id === setor.id) : todosSetores
-  const vm = chatVM(data, map ?? undefined, setores)
+  const { map, desde, loading } = useChatPeriod()
+  const vm = chatVM(data, map ?? undefined)
 
   const kpis = [
     { label: 'Mensagens trocadas', value: num(vm.totalMensagens), color: 'var(--info)', desc: `${num(vm.totais.msgCanais)} em canais · ${num(vm.totais.msgDiretas)} diretas` },
-    /* ⚠️ Na casa inteira, "aberto" e "recebido" são o mesmo total (todo pedido
-       é recebido por alguém). Num setor só, não: aqui é o que ELE recebeu para
-       atender — e o rótulo precisa dizer, senão se lê como o que ele pediu. */
-    setor
-      ? { label: 'Chamados recebidos', value: num(vm.totaisSetor.recebidosAbertos), color: 'var(--chart-3)', desc: 'Pedidos de outros setores a este' }
-      : { label: 'Chamados abertos', value: num(vm.totaisSetor.recebidosAbertos), color: 'var(--chart-3)', desc: 'Pedidos de um setor a outro' },
-    { label: 'Chamados concluídos', value: num(vm.totaisSetor.recebidosConcluidos), color: 'var(--success)', desc: `${num(vm.totaisSetor.recebidosCancelados)} cancelados à parte` },
-    { label: 'Tempo médio de atendimento', value: vm.tempoMedioSetor, color: 'var(--chart-4)', desc: 'Só o expediente · 8h–18h, seg a sex' },
+    { label: 'Em canais', value: num(vm.totais.msgCanais), color: 'var(--chart-3)', desc: 'Público e privado' },
+    { label: 'Diretas', value: num(vm.totais.msgDiretas), color: 'var(--chart-5)', desc: 'Conversa direta e grupo' },
+    { label: 'Quem escreveu', value: num(vm.conversaPessoas), color: 'var(--chart-4)', desc: 'Pessoas com mensagem no período' },
   ]
 
   /* ⚠️ Na janela do setor, nada de conta com o ACUMULADO enquanto o período
@@ -76,75 +71,48 @@ export default function ChatResumo() {
       </div>
 
       {/*
-        ⚠️ As duas janelas de histórico são MUITO diferentes e a tela precisa
-        dizer isso: mensagem vem desde o Mattermost (a data original veio no
-        import), chamado só existe desde 21/08/2026. Sem o aviso, o filtro de
-        Ano mostra um setor "sem chamado nenhum" que parece bug — foi a mesma
-        armadilha das janelas desiguais da Gerência.
+        ⚠️ A janela do histórico é maior que o sistema: a mensagem vem desde o
+        Mattermost, com a data original do import. E os CHAMADOS não estão mais
+        aqui — a tela diz para onde foram, senão quem procurava por eles acha
+        que o número sumiu.
       */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginBottom: 16, fontSize: 11.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
         <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
         <span>
           <b>Mensagem</b> tem história desde {desde ? new Date(`${desde}T12:00:00Z`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'o Mattermost'} (o
-          histórico veio no import, com a data original). <b>Chamado entre setores</b> só existe
-          desde <b>21/08/2026</b> — período anterior a isso aparece zerado porque a coisa não
-          existia, e não porque ninguém pediu nada. O tempo conta só o <b>expediente</b> (8h–18h,
-          seg a sex), então <b>1 d = 10 h</b> de trabalho.
+          histórico veio no import, com a data original). Os <b>chamados entre setores</b> saíram do
+          Chat em <b>16/09/2026</b> e agora vivem no <b>Fluxo</b> — os números deles estão em{' '}
+          <b>Sistemas → Fluxo</b>. ⚠️ Mensagem <b>não entra no score</b>: ela aparece aqui e na
+          ficha, e o que pontua é o pedido feito e entregue.
         </span>
       </div>
 
-      {/*
-        ⚠️⚠️ O painel por setor mostra as DUAS FACES do mesmo chamado e NÃO as
-        soma: "pediu" e "recebeu" são as colunas SOLICITANTE e RESPONSÁVEL da
-        tela de chamados do chat. Somar dobraria a casa inteira.
-      */}
-      {/* Num setor só, esta tabela é o cartão "Chamados entre setores" que o
-          relatório já mostra — repeti-lo na janela seria o mesmo número duas vezes. */}
-      {!setor && (
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Chamados por departamento</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-          Duas faces do mesmo pedido: o que o setor <b>pediu</b> aos outros e o que <b>recebeu</b> para
-          atender. Não se somam.
-        </div>
-        {vm.porSetor.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem chamados no período.</div>
-        ) : (
-          <SetorTable rows={vm.porSetor} totais={vm.totaisSetor} onRow={(id) => id && router.push(`/departamentos/${id}`)} />
-        )}
-      </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+      <div style={{ marginBottom: 16 }}>
         <Leaderboard
-          title="Quem mais conversa" sub="Mensagens em canais, diretas e chamados"
-          color="var(--info)" rows={vm.conversa.slice(0, 5)} valor={(p) => p.mensagens} router={router}
-        />
-        <Leaderboard
-          title="Quem mais conclui chamado" sub="Responsáveis que entregaram o pedido"
-          color="var(--success)" rows={vm.chamados.slice(0, 5)} valor={(p) => p.stat.chamadosConcluidos} router={router}
+          title="Quem mais conversa" sub="Mensagens em canais, diretas e dentro de chamado"
+          color="var(--info)" rows={vm.conversa.slice(0, 8)} valor={(p) => p.mensagens}
         />
       </div>
 
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por usuário</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-          {vm.conversaPessoas} pessoas escreveram · {vm.chamadoPessoas} moveram chamado. ⚠️ Mensagem
-          <b> não entra</b> no score — só chamado.
+          {vm.conversaPessoas} pessoas escreveram no período. ⚠️ Mensagem <b>não entra</b> no score —
+          o que pontua é o chamado, e ele está no Fluxo.
         </div>
-        {vm.conversa.length === 0 && vm.chamados.length === 0 ? (
+        {vm.conversa.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>
         ) : (
-          <UserTable rows={vm.pessoas.filter((p) => p.mensagens > 0 || p.chamados > 0 || p.stat.chamadosAssumidos > 0).sort((a, b) => b.mensagens - a.mensagens)} totais={vm.totais} onRow={(id) => abrirPessoa('chat', id)} />
+          <UserTable rows={vm.conversa} totais={vm.totais} onRow={(id) => abrirPessoa('chat', id)} />
         )}
       </div>
     </div>
   )
 }
 
-function Leaderboard({ title, sub, color, rows, valor, router }: {
+function Leaderboard({ title, sub, color, rows, valor }: {
   title: string; sub: string; color: string; rows: ChatPerson[]
-  valor: (p: ChatPerson) => number; router: ReturnType<typeof useRouter>
+  valor: (p: ChatPerson) => number
 }) {
   const abrirPessoa = usePainelDaPessoa()
   return (
@@ -174,68 +142,13 @@ function Leaderboard({ title, sub, color, rows, valor, router }: {
   )
 }
 
-const COLS = [
-  { key: 'pedidosAbertos' as const, label: 'Pediu', color: 'var(--info)' },
-  { key: 'pedidosConcluidos' as const, label: 'Atendidos', color: 'var(--text-mute)' },
-  { key: 'recebidosAbertos' as const, label: 'Recebeu', color: 'var(--chart-3)' },
-  { key: 'recebidosConcluidos' as const, label: 'Concluiu', color: 'var(--success)' },
-]
-
-function SetorTable({ rows, totais, onRow }: {
-  rows: ChatSetor[]
-  totais: { pedidosAbertos: number; pedidosConcluidos: number; recebidosAbertos: number; recebidosConcluidos: number; recebidosCancelados: number; segundosResolucao: number }
-  onRow: (id: string | null) => void
-}) {
-  const grid = '1fr 88px 88px 88px 88px 120px'
-  return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '0 6px 9px', borderBottom: '1px solid var(--border-soft)' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)' }}>Departamento</div>
-        {COLS.map((c) => (
-          <div key={c.key} style={{ textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color }} />{c.label}
-          </div>
-        ))}
-        <div style={{ textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-mute)' }}>Tempo médio</div>
-      </div>
-      {rows.map((d) => (
-        <div
-          key={d.nexusDepartmentId} className={d.id ? 'tc-row' : undefined}
-          onClick={() => onRow(d.id)}
-          style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '9px 6px', borderBottom: '1px solid var(--border-soft)', alignItems: 'center', cursor: d.id ? 'pointer' : 'default' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: 'var(--chart-3)', flex: 'none' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.nome}</span>
-          </div>
-          {COLS.map((c) => (
-            <div key={c.key} style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: d[c.key] > 0 ? 'var(--text)' : 'var(--text-mute)' }}>{num(d[c.key])}</div>
-          ))}
-          {/* ⚠️ Tempo médio só dos CONCLUÍDOS que o setor atendeu. Cancelado fica
-              fora: média com cancelado dentro premia quem desiste. */}
-          <div style={{ textAlign: 'right', fontSize: 12.5, color: d.recebidosConcluidos > 0 ? 'var(--text-dim)' : 'var(--text-mute)' }}>
-            {d.recebidosConcluidos > 0 ? fmtDurUtil(Math.round(d.segundosResolucao / d.recebidosConcluidos)) : '—'}
-          </div>
-        </div>
-      ))}
-      <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '10px 6px 0' }}>
-        <div style={{ fontSize: 12, fontWeight: 700 }}>Total</div>
-        {COLS.map((c) => (
-          <div key={c.key} style={{ textAlign: 'right', fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: c.color }}>{num(totais[c.key])}</div>
-        ))}
-        <div />
-      </div>
-    </div>
-  )
-}
-
 function UserTable({ rows, totais, onRow }: {
   rows: ChatPerson[]
-  totais: { msgCanais: number; msgDiretas: number; msgChamados: number; chamadosAbertos: number; chamadosConcluidos: number }
+  totais: { msgCanais: number; msgDiretas: number; msgChamados: number }
   onRow: (id: string) => void
 }) {
-  const grid = '1fr 92px 92px 84px 84px 110px'
-  const cab = ['Em canais', 'Diretas', 'Abriu', 'Concluiu', 'Tempo médio']
+  const grid = '1fr 100px 100px 116px'
+  const cab = ['Em canais', 'Diretas', 'Em chamados']
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: grid, gap: 10, padding: '0 6px 9px', borderBottom: '1px solid var(--border-soft)' }}>
@@ -254,11 +167,7 @@ function UserTable({ rows, totais, onRow }: {
             </div>
             <Cel v={p.stat.msgCanais} />
             <Cel v={p.stat.msgDiretas} />
-            <Cel v={p.stat.chamadosAbertos} />
-            <Cel v={p.stat.chamadosConcluidos} />
-            <div style={{ textAlign: 'right', fontSize: 12.5, color: p.stat.chamadosConcluidos > 0 ? 'var(--text-dim)' : 'var(--text-mute)' }}>
-              {p.stat.chamadosConcluidos > 0 ? p.tempoMedio : '—'}
-            </div>
+            <Cel v={p.stat.msgChamados} />
           </div>
         ))}
       </div>
@@ -266,9 +175,7 @@ function UserTable({ rows, totais, onRow }: {
         <div style={{ fontSize: 12, fontWeight: 700 }}>Total</div>
         <Cel v={totais.msgCanais} forte color="var(--info)" />
         <Cel v={totais.msgDiretas} forte color="var(--info)" />
-        <Cel v={totais.chamadosAbertos} forte color="var(--chart-3)" />
-        <Cel v={totais.chamadosConcluidos} forte color="var(--success)" />
-        <div />
+        <Cel v={totais.msgChamados} forte color="var(--info)" />
       </div>
     </div>
   )

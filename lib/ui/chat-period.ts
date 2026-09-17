@@ -1,17 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
-import type { ChatUsage, ChatSetor } from '@/lib/mock/chat'
+import type { ChatUsage } from '@/lib/mock/chat'
 
-// Busca a atividade do Chat Interno no período (do banco local,
-// /api/chat-metrics). Devolve as DUAS visões que a tela usa e que não se somam:
-// `map` (por pessoa) e `setores` (por setor, nas duas faces do chamado).
-// `desde` é o dia mais antigo do espelho — a tela avisa, senão o filtro de Ano
-// parece bug (a mensagem tem história do Mattermost; o chamado, só desde 21/08).
-export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; desde: string | null; loading: boolean; erro: boolean } {
+// Busca as MENSAGENS do Chat Interno no período (do banco local,
+// /api/chat-metrics). `desde` é o dia mais antigo do espelho — a tela avisa,
+// senão o filtro de Ano parece bug (a mensagem tem história do Mattermost).
+//
+// ⚠️ Os CHAMADOS não estão mais aqui: saíram para o Fluxo em 16/09/2026, e quem
+// os busca é `useFluxoPeriod`.
+export function useChatPeriod(): { map: ChatUsage | null; desde: string | null; loading: boolean; erro: boolean } {
   const { period, query } = usePeriod()
   const [map, setMap] = useState<ChatUsage | null>(null)
-  const [setores, setSetores] = useState<ChatSetor[]>([])
   const [desde, setDesde] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   /* ⚠️ A leitura FALHOU (11/09/2026). O `catch` segue pondo um mapa vazio, como
@@ -25,25 +25,21 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
     setErro(false)
     fetch(`/api/chat-metrics?${query}`, { cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
-      .then((d: { byUser: ({ nexusUserId: string } & Record<string, number>)[]; byDept: ChatSetor[]; desde: string | null }) => {
+      .then((d: { byUser: ({ nexusUserId: string } & Record<string, number>)[]; desde: string | null }) => {
         if (!alive) return
         const m: ChatUsage = new Map()
         for (const u of d.byUser ?? []) {
           m.set(u.nexusUserId, {
             msgCanais: u.msgCanais, msgDiretas: u.msgDiretas, msgChamados: u.msgChamados,
-            chamadosAbertos: u.chamadosAbertos, chamadosAssumidos: u.chamadosAssumidos,
-            chamadosConcluidos: u.chamadosConcluidos, segundosResolucao: u.segundosResolucao,
           })
         }
         setMap(m)
-        setSetores(d.byDept ?? [])
         setDesde(d.desde ?? null)
       })
       .catch(() => {
         if (!alive) return
         setErro(true)
         setMap(new Map())
-        setSetores([])
       })
       .finally(() => alive && setLoading(false))
     return () => {
@@ -51,5 +47,5 @@ export function useChatPeriod(): { map: ChatUsage | null; setores: ChatSetor[]; 
     }
   }, [query])
 
-  return { map, setores, desde, loading, erro }
+  return { map, desde, loading, erro }
 }

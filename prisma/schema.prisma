@@ -544,6 +544,67 @@ model ChatDeptDaily {
   @@map("chat_dept_daily")
 }
 
+// ---------------------------------------------------------------------------
+// FLUXO (.70) — 9ª fonte: os CHAMADOS entre setores.
+//
+// ⚠️⚠️ ELES ERAM DO CHAT INTERNO até 16/09/2026, quando mudaram de casa com
+// TODAS as funções (o Chat ficou com as mensagens e com os avisos). Os 105
+// chamados vieram com a DATA ORIGINAL, então este espelho cobre a história
+// inteira — e as colunas `chamados_*` de `chat_daily` deixaram de ser lidas no
+// mesmo dia. ⚠️ Ler as duas contaria o mesmo pedido duas vezes.
+//
+// ⚠️ `segundosResolucao` é SEGUNDO DE EXPEDIENTE (08h–18h, seg a sex) e vem
+// PRONTO da origem — nunca recalcular aqui a partir de datas, senão passam a
+// existir duas verdades sobre quanto um chamado levou.
+//
+// ⚠️⚠️ CHAMADO e TAREFA DELEGADA em colunas separadas. A tarefa é delegada
+// DENTRO do setor: somada aos chamados, ela contaria como "pedido a outro
+// setor" um trabalho que nunca saiu de casa. Cada coluna responde uma pergunta
+// só — e a tela pode mostrar as duas lado a lado sem que ninguém precise
+// subtrair.
+model FluxoDaily {
+  nexusUserId        String   @map("nexus_user_id")
+  day                String   @db.VarChar(10) // YYYY-MM-DD
+  chamadosAbertos    Int      @default(0) @map("chamados_abertos")
+  chamadosAssumidos  Int      @default(0) @map("chamados_assumidos")
+  chamadosConcluidos Int      @default(0) @map("chamados_concluidos")
+  segundosResolucao  Int      @default(0) @map("segundos_resolucao")
+  tarefasAbertas     Int      @default(0) @map("tarefas_abertas")
+  tarefasAssumidas   Int      @default(0) @map("tarefas_assumidas")
+  tarefasConcluidas  Int      @default(0) @map("tarefas_concluidas")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("fluxo_daily")
+}
+
+// Espelho diário dos CHAMADOS do Fluxo por DEPARTAMENTO × dia.
+//
+// ⚠️⚠️ São as DUAS FACES do mesmo chamado, e elas NÃO se somam: `pedidos*` é o
+// que o setor pediu aos outros, `recebidos*` é o que chegou para ele atender —
+// as colunas SOLICITANTE e RESPONSÁVEL da tela. Somar contaria a casa duas
+// vezes. (Herdado do espelho do Chat, onde a regra nasceu.)
+//
+// ⚠️ A chave é o `nexusDepartmentId`, nunca o nome: nome de setor muda e o
+// histórico se perderia. Chamado cujo setor não tem id no Nexus não vira linha,
+// e a origem devolve essa contagem em `foraDeSetor` para o sync registrar.
+model FluxoDeptDaily {
+  nexusDepartmentId   String   @map("nexus_department_id")
+  day                 String   @db.VarChar(10) // YYYY-MM-DD
+  pedidosAbertos      Int      @default(0) @map("pedidos_abertos")
+  pedidosConcluidos   Int      @default(0) @map("pedidos_concluidos")
+  recebidosAbertos    Int      @default(0) @map("recebidos_abertos")
+  recebidosConcluidos Int      @default(0) @map("recebidos_concluidos")
+  recebidosCancelados Int      @default(0) @map("recebidos_cancelados")
+  segundosResolucao   Int      @default(0) @map("segundos_resolucao")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusDepartmentId, day])
+  @@index([day])
+  @@map("fluxo_dept_daily")
+}
+
 /**
  * ============================================================
  * AVALIAÇÃO MENSAL — a nota que uma PESSOA dá a outra.

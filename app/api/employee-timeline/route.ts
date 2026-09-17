@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   const take = 30
   const ord = { day: 'desc' as const }
 
-  const [hd, cls, cide, cons, radio, wpp, ger, chat] = await Promise.all([
+  const [hd, cls, cide, cons, radio, wpp, ger, chat, fx] = await Promise.all([
     nx ? prisma.helpdeskDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.classroomDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.cideDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
@@ -68,6 +68,7 @@ export async function GET(req: NextRequest) {
     prisma.whatsappAttendantDaily.groupBy({ by: ['day'], where: { name: user.name, ...range }, _sum: { abertos: true, finalizados: true }, orderBy: { day: 'desc' }, take }),
     nx ? prisma.gerenciaDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
     nx ? prisma.chatDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
+    nx ? prisma.fluxoDaily.findMany({ where: { nexusUserId: nx, ...range }, orderBy: ord, take }) : [],
   ])
 
   const now = new Date()
@@ -109,15 +110,24 @@ export async function GET(req: NextRequest) {
     if (esc.length) push('Gerência', 'var(--info)', r.day, esc[0].charAt(0).toUpperCase() + esc[0].slice(1), esc.slice(1).join(' · ') || 'na mensageria')
   }
 
-  // CHAT INTERNO — chamado e conversa viram DOIS eventos no mesmo dia, de
-  // propósito. Juntá-los daria "Concluiu 2 chamados · 340 mensagens", e a
-  // segunda metade abafaria a primeira em toda linha do tempo.
-  for (const r of chat) {
+  // FLUXO — o chamado. ⚠️ Ele era do Chat até 16/09/2026; a linha do tempo
+  // antiga continua certa porque a história migrou com as datas originais.
+  for (const r of fx) {
     const cham: string[] = []
     if (r.chamadosConcluidos > 0) cham.push(plural(r.chamadosConcluidos, 'chamado concluído', 'chamados concluídos'))
     if (r.chamadosAssumidos > 0) cham.push(plural(r.chamadosAssumidos, 'assumido', 'assumidos'))
     if (r.chamadosAbertos > 0) cham.push(plural(r.chamadosAbertos, 'chamado aberto', 'chamados abertos'))
-    if (cham.length) push('Chat Interno', 'var(--chart-3)', r.day, cham[0].charAt(0).toUpperCase() + cham[0].slice(1), cham.slice(1).join(' · ') || 'nos chamados entre setores')
+    if (cham.length) push('Fluxo', 'var(--chart-3)', r.day, cham[0].charAt(0).toUpperCase() + cham[0].slice(1), cham.slice(1).join(' · ') || 'nos chamados entre setores')
+    const tar: string[] = []
+    if (r.tarefasConcluidas > 0) tar.push(plural(r.tarefasConcluidas, 'tarefa concluída', 'tarefas concluídas'))
+    if (r.tarefasAbertas > 0) tar.push(plural(r.tarefasAbertas, 'tarefa delegada', 'tarefas delegadas'))
+    if (tar.length) push('Fluxo', 'var(--chart-5)', r.day, tar[0].charAt(0).toUpperCase() + tar[0].slice(1), tar.slice(1).join(' · ') || 'no próprio setor')
+  }
+
+  // CHAT INTERNO — a conversa, num evento próprio: junta com o chamado daria
+  // "Concluiu 2 chamados · 340 mensagens", e a segunda metade abafaria a
+  // primeira em toda linha do tempo.
+  for (const r of chat) {
     const msgs = r.msgCanais + r.msgDiretas + r.msgChamados
     if (msgs > 0) {
       const onde: string[] = []

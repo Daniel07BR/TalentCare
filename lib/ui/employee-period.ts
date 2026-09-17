@@ -29,13 +29,20 @@ export type EmployeeMetrics = {
     reagendados: number; cancelados: number; datasAlteradas: number
     hasSaida: boolean; hasEscritorio: boolean
   }
-  // Chat Interno: CONVERSA e CHAMADO com flags próprias, p/ a ficha de quem só
-  // conversa não mostrar um bloco de chamados zerado (que se lê como "não
-  // atendeu nada") e vice-versa.
+  // Chat Interno: só a CONVERSA desde 17/09/2026 — os chamados mudaram de casa
+  // (viraram `fluxo`, abaixo). `hasConversa` existe para a ficha de quem não
+  // escreve não mostrar um bloco zerado, que se lê como "não falou com ninguém".
   chat: {
     msgCanais: number; msgDiretas: number; msgChamados: number; mensagens: number
+    hasConversa: boolean
+  }
+  // FLUXO: o CHAMADO entre setores e a TAREFA delegada dentro do setor, com
+  // flags próprias — quem só recebe tarefa não mostra um bloco de chamados
+  // zerado (que se lê como "não atendeu nada"), e vice-versa.
+  fluxo: {
     chamadosAbertos: number; chamadosAssumidos: number; chamadosConcluidos: number
-    tempoMedio: string; hasConversa: boolean; hasChamado: boolean
+    tarefasAbertas: number; tarefasAssumidas: number; tarefasConcluidas: number
+    tempoMedio: string; hasChamado: boolean; hasTarefa: boolean
   }
   /** Histórico de advertências COM motivo — vem daqui, e não do dataset do
    *  cliente, porque esta rota confere `podeVer`. */

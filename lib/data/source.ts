@@ -30,7 +30,7 @@ export type { Alcance } from '@/lib/alcance-recorte'
 export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promise<TalentData> {
   // Janela do heatmap de ocorrências: últimas ~18 semanas (130 dias).
   const heatCutoff = new Date(Date.now() - 130 * 86400_000).toISOString().slice(0, 10)
-  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, edu, train, assidTot, assidRecent, servTot, discAll] = await Promise.all([
+  const [usersRaw, stats, radioStats, whatsappAtt, consultoriaStats, helpdeskStats, cideStats, gerenciaStats, chatStats, fluxoStats, edu, train, assidTot, assidRecent, servTot, discAll] = await Promise.all([
     prisma.user.findMany({
       // Nexus (sincronizados) + STAFF (cadastro manual local, sem usuário no Nexus:
       // motoboy/cozinha/limpeza etc.). Exclui contas locais técnicas (admin/break-glass).
@@ -97,6 +97,18 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
         segundosResolucao: true,
       },
     }),
+    /* FLUXO ACUMULADO (9ª fonte): os CHAMADOS, que saíram do Chat em
+       16/09/2026. ⚠️ Os 105 migrados vieram com a data original, então este
+       acumulado é a história inteira — e `chat_daily.chamados_*` deixou de ser
+       lido no mesmo dia, para o mesmo pedido não contar duas vezes. */
+    prisma.fluxoDaily.groupBy({
+      by: ['nexusUserId'],
+      _sum: {
+        chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true,
+        segundosResolucao: true,
+        tarefasAbertas: true, tarefasAssumidas: true, tarefasConcluidas: true,
+      },
+    }),
     prisma.employeeEducation.findMany({ select: { nexusUserId: true, level: true, detail: true } }),
     prisma.employeeTraining.findMany({ select: { nexusUserId: true, cursos: true, certs: true } }),
     // ASSIDUIDADE (ponto) ACUMULADA por pessoa — espelho do dump do Nexo.
@@ -148,6 +160,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
   const cideByNexus = new Map(cideStats.map((c) => [c.nexusUserId, c]))
   const gerenciaByNexus = new Map(gerenciaStats.map((g) => [g.nexusUserId, g]))
   const chatByNexus = new Map(chatStats.map((c) => [c.nexusUserId, c]))
+  const fluxoByNexus = new Map(fluxoStats.map((f) => [f.nexusUserId, f]))
   // WhatsApp por nome normalizado (atendente → funcionário).
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
   const whatsappByName = new Map(whatsappAtt.map((w) => [normName(w.name), w]))
@@ -183,6 +196,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
     const cds = u.nexusUserId ? cideByNexus.get(u.nexusUserId) : undefined
     const gds = u.nexusUserId ? gerenciaByNexus.get(u.nexusUserId) : undefined
     const chs = u.nexusUserId ? chatByNexus.get(u.nexusUserId) : undefined
+    const fxs = u.nexusUserId ? fluxoByNexus.get(u.nexusUserId) : undefined
     const ws = whatsappByName.get(normName(u.name))
     // Escolaridade/cursos/certificados são preenchíveis MANUALMENTE p/ todos
     // (inclusive STAFF sem Nexus): a chave é nexus_user_id quando existe, senão o id.
@@ -257,16 +271,23 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
         cancelados: gds?._sum.cancelados ?? 0,
         datasAlteradas: gds?._sum.datasAlteradas ?? 0,
       },
-      // CHAT INTERNO: conversa (canais/diretas/chamados) + os chamados que a
-      // pessoa abriu, assumiu e concluiu. Só chamado entra no score.
+      // CHAT INTERNO: a conversa (canais, diretas e mensagens dentro de
+      // chamado). ⚠️ Vitrine — não entra no score.
       chat: {
         msgCanais: chs?._sum.msgCanais ?? 0,
         msgDiretas: chs?._sum.msgDiretas ?? 0,
         msgChamados: chs?._sum.msgChamados ?? 0,
-        chamadosAbertos: chs?._sum.chamadosAbertos ?? 0,
-        chamadosAssumidos: chs?._sum.chamadosAssumidos ?? 0,
-        chamadosConcluidos: chs?._sum.chamadosConcluidos ?? 0,
-        segundosResolucao: chs?._sum.segundosResolucao ?? 0,
+      },
+      // FLUXO: os chamados que a pessoa abriu, assumiu e concluiu, e as tarefas
+      // que delegou, recebeu e entregou. É o que entra no score.
+      fluxo: {
+        chamadosAbertos: fxs?._sum.chamadosAbertos ?? 0,
+        chamadosAssumidos: fxs?._sum.chamadosAssumidos ?? 0,
+        chamadosConcluidos: fxs?._sum.chamadosConcluidos ?? 0,
+        segundosResolucao: fxs?._sum.segundosResolucao ?? 0,
+        tarefasAbertas: fxs?._sum.tarefasAbertas ?? 0,
+        tarefasAssumidas: fxs?._sum.tarefasAssumidas ?? 0,
+        tarefasConcluidas: fxs?._sum.tarefasConcluidas ?? 0,
       },
       // ASSIDUIDADE real (ponto). Sem dado de falta/suspensão na fonte → ficam
       // "sem fonte" na ficha (não zero fabricado). advertencias = nº de eventos.

@@ -6,14 +6,14 @@ import { useRadioPeriod } from '@/lib/ui/radio-period'
 import { useConsultoriaPeriod } from '@/lib/ui/consultoria-period'
 import { useHelpdeskPeriod } from '@/lib/ui/helpdesk-period'
 import { useCidePeriod } from '@/lib/ui/cide-period'
-import { useChatPeriod } from '@/lib/ui/chat-period'
+import { useFluxoPeriod } from '@/lib/ui/fluxo-period'
 import { useGerenciaPeriod } from '@/lib/ui/gerencia-period'
 import { classroomVM } from '@/lib/mock/classroom'
 import { radioVM } from '@/lib/mock/radio'
 import { consultoriaVM } from '@/lib/mock/consultoria'
 import { helpdeskVM } from '@/lib/mock/helpdesk'
 import { cideVM } from '@/lib/mock/cide'
-import { chatVM } from '@/lib/mock/chat'
+import { fluxoVM } from '@/lib/mock/fluxo'
 import { gerenciaVM } from '@/lib/mock/gerencia'
 import { linhasClassroom, linhasDe } from '@/lib/painel/visao'
 import v from '../../_visao/visao.module.css'
@@ -30,7 +30,7 @@ import { Barras, CabecaBotao, Esqueleto, Tabela, Vazio, num } from './pecas'
    - clicar numa LINHA abre o mesmo resumo só com aquele setor — com quem já
      saiu dele no período, que é a população da barra (ver `JanelaDetalhe`).
 
-   Chat Interno e Gerência entraram aqui (decisão do dono, 11/09/2026) com os
+   Fluxo (os chamados, que eram do Chat Interno) e Gerência entraram aqui (decisão do dono, 11/09/2026) com os
    números das páginas deles; a página atual não tinha cartão para os dois.
    ============================================================ */
 
@@ -145,18 +145,20 @@ function Cide({ abrir }: { abrir: Abrir }) {
   )
 }
 
-function Chat({ abrir }: { abrir: Abrir }) {
+function Fluxo({ abrir }: { abrir: Abrir }) {
   const data = useTalentData()
-  const { map, setores, loading, erro } = useChatPeriod()
-  const vm = chatVM(data, map ?? undefined, setores)
+  const { map, setores, loading, erro } = useFluxoPeriod()
+  const vm = fluxoVM(data, map ?? undefined, setores)
   const t = vm.totaisSetor
+  /* ⚠️ Era "Chat Interno · chamados entre setores" até 16/09/2026, quando os
+     chamados mudaram de casa. O cartão é o mesmo; a fonte é outra. */
   return (
-    <CartaoSistema chave="chat" titulo="Chat Interno · chamados entre setores" Icone={MessageSquareText} cor="var(--n-purple)" abrir={abrir}
+    <CartaoSistema chave="fluxo" titulo="Fluxo · chamados entre setores" Icone={MessageSquareText} cor="var(--n-purple)" abrir={abrir}
       estado={estadoDe(loading, !!map, erro)} vazio={vm.porSetor.length ? null : 'Sem chamados no período (o chamado entre setores existe desde 21/08/2026).'}
       sub={`${num(t.recebidosAbertos)} abertos · ${num(t.recebidosConcluidos)} concluídos · tempo médio ${vm.tempoMedioSetor}`}>
       {/* ⚠️⚠️ "Pediu" e "Recebeu" são as DUAS FACES do mesmo chamado e não se
-          somam — somar dobraria a casa inteira. É a tabela da página do Chat. */}
-      <Tabela linhas={vm.porSetor} abrir={(id) => abrir('chat', id)}
+          somam — somar dobraria a casa inteira. É a tabela da página do Fluxo. */}
+      <Tabela linhas={vm.porSetor} abrir={(id) => abrir('fluxo', id)}
         colunas={[
           { rotulo: 'Pediu', cor: 'var(--n-blue)', valor: (r) => r.pedidosAbertos },
           { rotulo: 'Recebeu', cor: 'var(--n-purple)', valor: (r) => r.recebidosAbertos },
@@ -208,7 +210,7 @@ export function Sistemas({ periodo, abrir }: { periodo: string; abrir: Abrir }) 
         <Consultoria abrir={abrir} />
         <HelpDesk abrir={abrir} />
         <Cide abrir={abrir} />
-        <Chat abrir={abrir} />
+        <Fluxo abrir={abrir} />
         <Gerencia abrir={abrir} />
       </div>
     </>

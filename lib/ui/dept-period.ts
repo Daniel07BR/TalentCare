@@ -38,7 +38,7 @@ export type DeptMetrics = {
   /** Quem fez o quê em cada fonte, do maior para o menor. Só quem tem valor > 0. */
   /** Por fonte: por QUAL grandeza está ranqueado, e quem. `gente` vazia é o
    *  caso comum (o setor abre chamado e não resolve) — o cartão diz isso. */
-  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'chat' | 'radio' | 'servicos',
+  rankings: Record<'whatsapp' | 'helpdesk' | 'classroom' | 'consultoria' | 'cide' | 'gerencia' | 'fluxo' | 'radio' | 'servicos',
     /** `rotulo2`/`gente2`: a segunda lista, quando a fonte mede dois eixos
      *  diferentes na mesma pessoa (o ClassRoom: quem consome × quem produz). */
     { rotulo: string; gente: PessoaRank[]; rotulo2?: string; gente2?: PessoaRank[] }>
@@ -88,7 +88,11 @@ export type DeptMetrics = {
   }
   chat: {
     msgCanais: number; msgDiretas: number; msgChamados: number
+  }
+  /** Os CHAMADOS — do Fluxo desde 16/09/2026, quando saíram do Chat. */
+  fluxo: {
     chamadosAbertos: number; chamadosConcluidos: number; segundos: number
+    tarefasAbertas: number; tarefasConcluidas: number
   }
   chamadosDoSetor: null | {
     pediu: number; pediuConcluidos: number; recebeu: number; recebeuConcluidos: number

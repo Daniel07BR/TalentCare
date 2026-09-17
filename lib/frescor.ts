@@ -16,7 +16,7 @@ import { prisma } from '@/lib/db/prisma'
 export type Fonte = { nome: string; ate: string | null; semCron?: boolean }
 
 export async function frescorDasFontes(): Promise<Fonte[]> {
-  const [cls, radio, wpp, cide, hd, cons, ger, chat, ponto, disc] = await Promise.all([
+  const [cls, radio, wpp, cide, hd, cons, ger, chat, fluxo, ponto, disc] = await Promise.all([
     prisma.classroomDaily.aggregate({ _max: { day: true } }),
     prisma.radioDaily.aggregate({ _max: { day: true } }),
     prisma.whatsappDaily.aggregate({ _max: { day: true } }),
@@ -25,6 +25,7 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
     prisma.consultoriaDaily.aggregate({ _max: { day: true } }),
     prisma.gerenciaDaily.aggregate({ _max: { day: true } }),
     prisma.chatDaily.aggregate({ _max: { day: true } }),
+    prisma.fluxoDaily.aggregate({ _max: { day: true } }),
     prisma.assiduidadeDaily.aggregate({ _max: { day: true } }),
     /* ⚠️ Só o que veio do ponto: esta tela diz até quando cada FONTE mediu, e
        uma medida de LGPD registrada hoje faria o dump do ponto — que é import à
@@ -42,6 +43,7 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
     { nome: 'Consultoria Plus', ate: cons._max.day },
     { nome: 'Gerência', ate: ger._max.day },
     { nome: 'Chat Interno', ate: chat._max.day },
+    { nome: 'Fluxo', ate: fluxo._max.day },
     // ⚠️ As duas sem cron: entram por import à mão, e é sempre uma delas que
     // atrasa. ⚠️⚠️ E são DUAS linhas, não uma: a disciplina termina em 11/06 e o
     // ponto em 25/06 — anunciar só o ponto daria o painel por 14 dias mais fresco

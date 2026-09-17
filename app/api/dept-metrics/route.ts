@@ -186,7 +186,7 @@ export async function GET(req: NextRequest) {
   const avaliaveisIds = avaliaveisRows.map((r) => r.id)
   const avaliaveis = avaliaveisIds.length
 
-  const [cls, hd, cide, cons, radio, ger, chat, wpp, assid, adv, avals] = await Promise.all([
+  const [cls, hd, cide, cons, radio, ger, chat, fx, wpp, assid, adv, avals] = await Promise.all([
     prisma.classroomDaily.aggregate({ where: porNexus, _sum: { videos: true, courses: true, created: true } }),
     prisma.helpdeskDaily.aggregate({ where: porNexus, _sum: { opened: true, resolved: true, formalized: true, resolvedSeconds: true } }),
     /* ⚠️⚠️ `empresas`, NÃO `atividades` — a unidade do CIDE mudou em 08/09/2026.
@@ -208,9 +208,15 @@ export async function GET(req: NextRequest) {
     }),
     prisma.chatDaily.aggregate({
       where: porNexus,
+      _sum: { msgCanais: true, msgDiretas: true, msgChamados: true },
+    }),
+    // ⚠️ Os CHAMADOS são do Fluxo desde 16/09/2026 — somar com os do Chat
+    // contaria o mesmo pedido duas vezes.
+    prisma.fluxoDaily.aggregate({
+      where: porNexus,
       _sum: {
-        msgCanais: true, msgDiretas: true, msgChamados: true,
         chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true, segundosResolucao: true,
+        tarefasAbertas: true, tarefasAssumidas: true, tarefasConcluidas: true,
       },
     }),
     // ⚠️ WhatsApp casa por NOME (a origem não tem id do Nexus) — ver o espelho.
@@ -242,13 +248,13 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  // ── Chamados do CHAT por setor (as duas faces) ─────────────────────────────
-  // ⚠️ Vem de `chat_dept_daily`, pela FUNÇÃO gravada no chamado — e não da soma
+  // ── Chamados do FLUXO por setor (as duas faces) ────────────────────────────
+  // ⚠️ Vem de `fluxo_dept_daily`, pelo SETOR gravado no chamado — e não da soma
   // das pessoas. São perguntas diferentes: aqui é "o que este setor pediu e
   // recebeu", lá é "o que estas pessoas fizeram". Divergem quando alguém troca
   // de área, e é assim que deve ser.
   const chatSetor = dept.nexusDepartmentId
-    ? await prisma.chatDeptDaily.aggregate({
+    ? await prisma.fluxoDeptDaily.aggregate({
         where: { nexusDepartmentId: dept.nexusDepartmentId, ...range },
         _sum: {
           pedidosAbertos: true, pedidosConcluidos: true,
@@ -350,10 +356,10 @@ export async function GET(req: NextRequest) {
           SELECT substring(day, 1, 7), SUM(servicos + prot_abertos + prot_aprovados + serv_criados)::bigint
             FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
           UNION ALL
-          -- ⚠️ Do Chat entra só CHAMADO. Mensagem é vitrine e fora do score; numa
-          -- série de produção ela abafaria as outras seis fontes somadas.
+          -- ⚠️ Entra só CHAMADO (do Fluxo). Mensagem é vitrine e fora do score;
+          -- numa série de produção ela abafaria as outras seis fontes somadas.
           SELECT substring(day, 1, 7), SUM(chamados_abertos + chamados_concluidos)::bigint
-            FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
+            FROM fluxo_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${diaInicioSerie} AND day < ${fimSerie} GROUP BY 1
         ) t GROUP BY mes ORDER BY mes`
     : []
   /* ⚠️⚠️ O `GROUP BY` só emite mês COM linha. Com [mar, abr, ago] o gráfico
@@ -400,14 +406,14 @@ export async function GET(req: NextRequest) {
         UNION ALL SELECT 'CIDE', day, SUM(empresas)::bigint FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
         UNION ALL SELECT 'Consultoria', day, SUM(studies + tickets + messages + comments)::bigint FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
         UNION ALL SELECT 'Gerência', day, SUM(servicos + prot_abertos + prot_aprovados + serv_criados)::bigint FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2
-        UNION ALL SELECT 'Chat', day, SUM(chamados_abertos + chamados_concluidos)::bigint FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2`,
+        UNION ALL SELECT 'Fluxo', day, SUM(chamados_abertos + chamados_concluidos)::bigint FROM fluxo_daily WHERE nexus_user_id = ANY(${nx}) AND day >= ${ant.de} AND day <= ${toDay} GROUP BY 2`,
       prisma.$queryRaw<{ fonte: string; primeiro: string | null }[]>`
         SELECT 'ClassRoom' AS fonte, MIN(day) AS primeiro FROM classroom_daily WHERE nexus_user_id = ANY(${nx}) AND (courses + created) > 0
         UNION ALL SELECT 'HelpDesk', MIN(day) FROM helpdesk_daily WHERE nexus_user_id = ANY(${nx}) AND (opened + resolved + formalized) > 0
         UNION ALL SELECT 'CIDE', MIN(day) FROM cide_daily WHERE nexus_user_id = ANY(${nx}) AND empresas > 0
         UNION ALL SELECT 'Consultoria', MIN(day) FROM consultoria_daily WHERE nexus_user_id = ANY(${nx}) AND (studies + tickets + messages + comments) > 0
         UNION ALL SELECT 'Gerência', MIN(day) FROM gerencia_daily WHERE nexus_user_id = ANY(${nx}) AND (servicos + prot_abertos + prot_aprovados + serv_criados) > 0
-        UNION ALL SELECT 'Chat', MIN(day) FROM chat_daily WHERE nexus_user_id = ANY(${nx}) AND (chamados_abertos + chamados_concluidos) > 0`,
+        UNION ALL SELECT 'Fluxo', MIN(day) FROM fluxo_daily WHERE nexus_user_id = ANY(${nx}) AND (chamados_abertos + chamados_concluidos) > 0`,
     ])
     : [[], []]
   const inicioDa = new Map(primeiros.filter((r) => r.primeiro).map((r) => [r.fonte, r.primeiro as string]))
@@ -490,7 +496,10 @@ export async function GET(req: NextRequest) {
     prisma.cideDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { empresas: true } }),
     prisma.consultoriaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { studies: true, tickets: true, messages: true, comments: true } }),
     prisma.gerenciaDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { servicos: true, protAbertos: true, protAprovados: true, servCriados: true, km: true } }),
-    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true, msgCanais: true, msgDiretas: true, msgChamados: true } }),
+    prisma.fluxoDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
+    // ⚠️ As MENSAGENS continuam no Chat (e continuam fora do score) — só os
+    // chamados mudaram de casa.
+    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: porNexus, _sum: { msgCanais: true, msgDiretas: true, msgChamados: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, ...range }, _sum: { atrasos: true, minutosAtraso: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { personKey: { in: chaves }, tipo: 'advertencia', data: { gte: fromDay, lte: toDay } }, _count: { _all: true } }),
     /* ⚠️⚠️ AS MEDIDAS DE LGPD, por pessoa e por tipo. Ficam SEPARADAS da
@@ -533,7 +542,7 @@ export async function GET(req: NextRequest) {
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { name: { in: nomes } }, _count: { _all: true } }),
   ]) : [[], [], [], [], [], [], [], [], [], [], []] as never
 
-  const [gCls, gHd, gCide, gCons, gGer, gChat, gAss, gAdv, gLgpd, gRadio, gWpp, gWppSempre] = grupos
+  const [gCls, gHd, gCide, gCons, gGer, gChat, gMsg, gAss, gAdv, gLgpd, gRadio, gWpp, gWppSempre] = grupos
   const mapa = <T,>(rows: T[], chave: (r: T) => string | null, valor: (r: T) => number) =>
     new Map(rows.map((r) => [chave(r), valor(r)] as const))
 
@@ -543,7 +552,7 @@ export async function GET(req: NextRequest) {
   const mCons = mapa(gCons, (r) => r.nexusUserId, (r) => n(r._sum.studies) + n(r._sum.tickets) + n(r._sum.messages) + n(r._sum.comments))
   const mGer = mapa(gGer, (r) => r.nexusUserId, (r) => n(r._sum.servicos) + n(r._sum.protAbertos) + n(r._sum.protAprovados) + n(r._sum.servCriados))
   const mChatCham = mapa(gChat, (r) => r.nexusUserId, (r) => n(r._sum.chamadosAbertos) + n(r._sum.chamadosConcluidos))
-  const mChatMsg = mapa(gChat, (r) => r.nexusUserId, (r) => n(r._sum.msgCanais) + n(r._sum.msgDiretas) + n(r._sum.msgChamados))
+  const mChatMsg = mapa(gMsg, (r) => r.nexusUserId, (r) => n(r._sum.msgCanais) + n(r._sum.msgDiretas) + n(r._sum.msgChamados))
   const mAtr = mapa(gAss, (r) => r.personKey, (r) => n(r._sum.atrasos))
   const mMin = mapa(gAss, (r) => r.personKey, (r) => n(r._sum.minutosAtraso))
   const mAdv = mapa(gAdv, (r) => r.personKey, (r) => r._count._all)
@@ -791,7 +800,7 @@ export async function GET(req: NextRequest) {
     consultoria: { rotulo: 'mais registrou atividade', gente: rank(mConsTudo) },
     cide: { rotulo: 'mais alterou cadastro', gente: rank(mCideAt) },
     gerencia: comAlternativa(['mais entregou e pediu', mGerServ], ['mais rodou (km)', mGerKm]),
-    chat: comAlternativa(['mais concluiu chamado', mChatConcl], ['mais abriu chamado', mChatAbertos]),
+    fluxo: comAlternativa(['mais concluiu chamado', mChatConcl], ['mais abriu chamado', mChatAbertos]),
     // ⚠️ A rádio NÃO tem ranking. Ver o comentário na tela: pódio de escuta,
     // com foto e posição, na mesma gramática dos cartões de entrega, numa tela
     // lida para decidir aumento.
@@ -848,8 +857,11 @@ export async function GET(req: NextRequest) {
     },
     chat: {
       msgCanais: n(chat._sum.msgCanais), msgDiretas: n(chat._sum.msgDiretas), msgChamados: n(chat._sum.msgChamados),
-      chamadosAbertos: n(chat._sum.chamadosAbertos), chamadosConcluidos: n(chat._sum.chamadosConcluidos),
-      segundos: n(chat._sum.segundosResolucao),
+    },
+    fluxo: {
+      chamadosAbertos: n(fx._sum.chamadosAbertos), chamadosConcluidos: n(fx._sum.chamadosConcluidos),
+      segundos: n(fx._sum.segundosResolucao),
+      tarefasAbertas: n(fx._sum.tarefasAbertas), tarefasConcluidas: n(fx._sum.tarefasConcluidas),
     },
     // As duas faces do chamado entre setores — que NÃO se somam.
     chamadosDoSetor: chatSetor ? {

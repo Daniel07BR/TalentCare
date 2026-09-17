@@ -37,6 +37,7 @@ const carregando = () => <EsqueletoResumo />
 const MODULOS = {
   whatsapp: () => import('../whatsapp/Resumo'),
   chat: () => import('../chat/Resumo'),
+  fluxo: () => import('../fluxo/Resumo'),
   helpdesk: () => import('../helpdesk/Resumo'),
   classroom: () => import('../classroom/Resumo'),
   gerencia: () => import('../gerencia/Resumo'),
@@ -51,6 +52,7 @@ const MODULOS = {
 export const DETALHES = {
   whatsapp: { titulo: 'WhatsApp', C: dynamic(MODULOS.whatsapp, { loading: carregando }) },
   chat: { titulo: 'Chat Interno', C: dynamic(MODULOS.chat, { loading: carregando }) },
+  fluxo: { titulo: 'Fluxo · chamados', C: dynamic(MODULOS.fluxo, { loading: carregando }) },
   helpdesk: { titulo: 'HelpDesk', C: dynamic(MODULOS.helpdesk, { loading: carregando }) },
   classroom: { titulo: 'ClassRoom', C: dynamic(MODULOS.classroom, { loading: carregando }) },
   gerencia: { titulo: 'Gerência · mensageria', C: dynamic(MODULOS.gerencia, { loading: carregando }) },

@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
   const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
 
-  const [radio, classroom, wpp, cons, hd, cd, gd, ct, assid, assidDias, advert, gLgpdPessoa, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
+  const [radio, classroom, wpp, cons, hd, cd, gd, ct, fx, assid, assidDias, advert, gLgpdPessoa, servicos, servTotal, pontuacoes, discLista] = await Promise.all([
     user.nexusUserId
       ? prisma.radioDaily.aggregate({ where: { nexusUserId: user.nexusUserId, ...range }, _sum: { seconds: true, sessions: true }, _max: { day: true } })
       : null,
@@ -87,14 +87,22 @@ export async function GET(req: NextRequest) {
           },
         })
       : null,
-    // CHAT INTERNO no período: conversa (canais/diretas/chamados) + chamados.
+    // CHAT INTERNO no período: a conversa (canais, diretas, dentro de chamado).
     user.nexusUserId
       ? prisma.chatDaily.aggregate({
           where: { nexusUserId: user.nexusUserId, ...range },
+          _sum: { msgCanais: true, msgDiretas: true, msgChamados: true },
+        })
+      : null,
+    // FLUXO no período: os CHAMADOS (e as tarefas delegadas). ⚠️ Eram do Chat
+    // até 16/09/2026 — ler os dois contaria o mesmo pedido duas vezes.
+    user.nexusUserId
+      ? prisma.fluxoDaily.aggregate({
+          where: { nexusUserId: user.nexusUserId, ...range },
           _sum: {
-            msgCanais: true, msgDiretas: true, msgChamados: true,
             chamadosAbertos: true, chamadosAssumidos: true, chamadosConcluidos: true,
             segundosResolucao: true,
+            tarefasAbertas: true, tarefasAssumidas: true, tarefasConcluidas: true,
           },
         })
       : null,
@@ -190,10 +198,13 @@ export async function GET(req: NextRequest) {
   const tCan = ct?._sum.msgCanais ?? 0
   const tDir = ct?._sum.msgDiretas ?? 0
   const tCha = ct?._sum.msgChamados ?? 0
-  const tAb = ct?._sum.chamadosAbertos ?? 0
-  const tAs = ct?._sum.chamadosAssumidos ?? 0
-  const tCo = ct?._sum.chamadosConcluidos ?? 0
-  const tSec = ct?._sum.segundosResolucao ?? 0
+  const tAb = fx?._sum.chamadosAbertos ?? 0
+  const tAs = fx?._sum.chamadosAssumidos ?? 0
+  const tCo = fx?._sum.chamadosConcluidos ?? 0
+  const tSec = fx?._sum.segundosResolucao ?? 0
+  const tTab = fx?._sum.tarefasAbertas ?? 0
+  const tTas = fx?._sum.tarefasAssumidas ?? 0
+  const tTco = fx?._sum.tarefasConcluidas ?? 0
 
   const lgpdSusp = gLgpdPessoa.find((r) => r.tipo === 'lgpd_suspensao')?._count._all ?? 0
   const lgpdAdv = gLgpdPessoa.find((r) => r.tipo === 'lgpd_advertencia')?._count._all ?? 0
@@ -240,6 +251,9 @@ export async function GET(req: NextRequest) {
       UNION ALL SELECT 'Chat Interno',
              (SELECT MAX(day) FROM chat_daily WHERE nexus_user_id = ${nx}),
              (SELECT MAX(day) FROM chat_daily)
+      UNION ALL SELECT 'Fluxo',
+             (SELECT MAX(day) FROM fluxo_daily WHERE nexus_user_id = ${nx}),
+             (SELECT MAX(day) FROM fluxo_daily)
       UNION ALL SELECT 'Rádio',
              (SELECT MAX(day) FROM radio_daily WHERE nexus_user_id = ${nx}),
              (SELECT MAX(day) FROM radio_daily)
@@ -403,21 +417,26 @@ export async function GET(req: NextRequest) {
         || (gd?._sum.servCriados ?? 0) > 0 || (gd?._sum.reagendados ?? 0) > 0 || (gd?._sum.cancelados ?? 0) > 0
         || (gd?._sum.datasAlteradas ?? 0) > 0,
     },
-    // CHAT INTERNO — duas faces separadas na ficha, como na Gerência: CONVERSA
-    // (quanto se falou) e CHAMADO (o que foi pedido e entregue). `hasConversa` e
-    // `hasChamado` existem para a ficha de quem só conversa não mostrar um
-    // bloco de chamados zerado, que se lê como "não atendeu nada".
-    //
-    // ⚠️ `tempoMedio` sai de SEGUNDOS DE EXPEDIENTE (08h–18h, seg a sex) já
-    // contados no chat — é o mesmo número do painel de chamados de lá, e não
-    // uma segunda conta feita aqui.
+    // CHAT INTERNO — a CONVERSA, e só ela. ⚠️ Os chamados saíram daqui em
+    // 16/09/2026 e estão no bloco `fluxo`, abaixo.
     chat: {
       msgCanais: tCan, msgDiretas: tDir, msgChamados: tCha,
       mensagens: tCan + tDir + tCha,
-      chamadosAbertos: tAb, chamadosAssumidos: tAs, chamadosConcluidos: tCo,
-      tempoMedio: fmtDur(tCo ? Math.round(tSec / tCo) : 0),
       hasConversa: tCan + tDir + tCha > 0,
+    },
+    // FLUXO — o que foi pedido e entregue. `hasChamado` e `hasTarefa` existem
+    // para a ficha de quem só recebe tarefa não mostrar um bloco de chamados
+    // zerado, que se lê como "não atendeu nada".
+    //
+    // ⚠️ `tempoMedio` sai de SEGUNDOS DE EXPEDIENTE (08h–18h, seg a sex) já
+    // contados no Fluxo — é o mesmo número do painel de chamados de lá, e não
+    // uma segunda conta feita aqui.
+    fluxo: {
+      chamadosAbertos: tAb, chamadosAssumidos: tAs, chamadosConcluidos: tCo,
+      tarefasAbertas: tTab, tarefasAssumidas: tTas, tarefasConcluidas: tTco,
+      tempoMedio: fmtDur(tCo ? Math.round(tSec / tCo) : 0),
       hasChamado: tAb > 0 || tAs > 0 || tCo > 0,
+      hasTarefa: tTab > 0 || tTas > 0 || tTco > 0,
     },
     assiduidade: (() => {
       const atr = assid._sum.atrasos ?? 0

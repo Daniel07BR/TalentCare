@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
     // 02/09/2026) — é a métrica mais fácil de subir e a que menos diz sobre
     // entrega; em ordem de grandeza abafaria as outras sete fontes somadas e o
     // score passaria a medir quem mais escreve. Ver `activityOf()`.
-    prisma.chatDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
+    // ⚠️ CHAMADO é do Fluxo desde 16/09/2026. Mensagem do Chat segue fora do
+    // score, como sempre esteve.
+    prisma.fluxoDaily.groupBy({ by: ['nexusUserId'], where: { ...range, ...porNexus(alcance) }, _sum: { chamadosAbertos: true, chamadosConcluidos: true } }),
     prisma.assiduidadeDaily.groupBy({ by: ['personKey'], where: { ...range, ...porPersonKey(alcance) }, _sum: { atrasos: true } }),
     prisma.disciplinaEvento.groupBy({ by: ['personKey'], where: { tipo: 'advertencia', data: { gte: fromDay, lte: toDay }, ...porPersonKey(alcance) }, _count: { _all: true } }),
     /* SERVIÇOS DA PLANILHA DO SETOR — a 11ª fonte, e ela ENTRA no score

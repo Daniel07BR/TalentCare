@@ -4,7 +4,7 @@ import CalendarioOcorrencias from '../../../CalendarioOcorrencias'
 import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
-  MessageSquareText, MessageCircle, Search,
+  MessageSquareText, MessageCircle, ClipboardList, Search,
   FileSpreadsheet, Upload,
 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
@@ -480,17 +480,35 @@ function Atividade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => v
       ]}
     />)
 
-  add('Chat Interno', tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.chamadosAbertos, m.chat.chamadosConcluidos),
+  /* ⚠️ DOIS cartões desde 17/09/2026, porque são dois sistemas: o pedido está no
+     FLUXO (para onde os chamados foram em 16/09) e a conversa ficou no Chat. */
+  add('Fluxo', tem(m.fluxo.chamadosAbertos, m.fluxo.chamadosConcluidos, m.fluxo.tarefasAbertas, m.fluxo.tarefasConcluidas),
     <CardFonte
-      titulo="Chat Interno" onDetalhe={() => abrir('chat')} cor="var(--chart-3)" Icone={MessageSquareText}
-      ranking={r.chat.gente} unidade={r.chat.rotulo || "mais concluiu chamado"}
+      titulo="Fluxo · chamados" onDetalhe={() => abrir('fluxo')} cor="var(--chart-3)" Icone={ClipboardList}
+      ranking={r.fluxo.gente} unidade={r.fluxo.rotulo || "mais concluiu chamado"}
       numeros={[
-        { label: 'Chamados abertos por estas pessoas', valor: m.chat.chamadosAbertos, cor: 'var(--info)' },
-        { label: 'Concluídos', valor: m.chat.chamadosConcluidos, cor: 'var(--success)' },
-        { label: 'Tempo médio', valor: m.chat.chamadosConcluidos ? dur(Math.round(m.chat.segundos / m.chat.chamadosConcluidos), 10) : null, nota: 'só expediente' },
-        { label: 'Mensagens', valor: m.chat.msgCanais + m.chat.msgDiretas + m.chat.msgChamados, nota: 'não entra no score' },
+        { label: 'Chamados abertos por estas pessoas', valor: m.fluxo.chamadosAbertos, cor: 'var(--info)' },
+        { label: 'Concluídos', valor: m.fluxo.chamadosConcluidos, cor: 'var(--success)' },
+        { label: 'Tempo médio', valor: m.fluxo.chamadosConcluidos ? dur(Math.round(m.fluxo.segundos / m.fluxo.chamadosConcluidos), 10) : null, nota: 'só expediente' },
+        { label: 'Tarefas delegadas', valor: m.fluxo.tarefasAbertas, nota: `${m.fluxo.tarefasConcluidas} concluídas · dentro do setor` },
       ]}
-      rodape={<>Das mensagens, {m.chat.msgCanais.toLocaleString('pt-BR')} em canais, {m.chat.msgDiretas.toLocaleString('pt-BR')} em conversas diretas e {m.chat.msgChamados.toLocaleString('pt-BR')} dentro de chamados.</>}
+      rodape={<>O chamado entre setores era do Chat Interno até 16/09/2026 — a história veio junto, com as datas originais.</>}
+    />)
+
+  add('Chat Interno', tem(m.chat.msgCanais, m.chat.msgDiretas, m.chat.msgChamados),
+    <CardFonte
+      titulo="Chat Interno" onDetalhe={() => abrir('chat')} cor="var(--chart-5)" Icone={MessageSquareText}
+      /* ⚠️ Sem ranking: escrever mais não é entregar mais, e a lista de "quem
+         mais conversa" numa tela lida para decidir aumento seria lida como
+         desempenho. É a mesma razão pela qual a Rádio não tem pódio. */
+      ranking={[]} unidade=""
+      numeros={[
+        { label: 'Mensagens', valor: m.chat.msgCanais + m.chat.msgDiretas + m.chat.msgChamados, nota: 'não entra no score' },
+        { label: 'Em canais', valor: m.chat.msgCanais },
+        { label: 'Diretas', valor: m.chat.msgDiretas },
+        { label: 'Dentro de chamado', valor: m.chat.msgChamados },
+      ]}
+      rodape={<>Só a contagem chega aqui — o texto das conversas nunca sai do Chat.</>}
     />)
 
   add('HelpDesk', tem(m.helpdesk.abertos, m.helpdesk.resolvidos),

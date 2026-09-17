@@ -73,6 +73,8 @@ export type Employee = {
   cide: CideStat
   gerencia: GerenciaStat
   chat: ChatStat
+  /** Os CHAMADOS, que saíram do Chat e hoje são do Fluxo (9ª fonte). */
+  fluxo: FluxoStat
   /** Serviços CONCLUÍDOS na planilha do setor (11ª fonte), acumulado. */
   servicosConcluidos: number
 }
@@ -117,10 +119,29 @@ export type GerenciaStat = {
  *  ⚠️⚠️ Mensagem NÃO entra em `activityOf()` nem no score: ela é vitrine. O
  *  score decide aumento e promoção, e contar mensagem premiaria quem mais
  *  escreve, não quem mais entrega. Só chamado (aberto + concluído) conta. */
+/* ⚠️⚠️ SÓ MENSAGEM desde 17/09/2026. Os CHAMADOS eram do Chat e mudaram de casa
+   em 16/09 — hoje são do Fluxo (`FluxoStat` abaixo). Deixá-los aqui, mesmo
+   zerados, faria a ficha de quem atende chamado mostrar um bloco do Chat vazio
+   ao lado do bloco do Fluxo cheio: dois números para a mesma pergunta, e um
+   deles mentindo. ⚠️ Mensagem é VITRINE: não entra no score. */
 export type ChatStat = {
   msgCanais: number; msgDiretas: number; msgChamados: number
+}
+
+/** Métricas REAIS do FLUXO (9ª fonte): os CHAMADOS entre setores e as TAREFAS
+ *  delegadas dentro do setor.
+ *
+ *  ⚠️ `segundosResolucao` é segundo de EXPEDIENTE (8h–18h, seg a sex) e conta só
+ *  os chamados — tarefa delegada não tem a mesma régua de tempo (ela nasce com
+ *  dono e o relógio dela é o prazo, não a fila).
+ *
+ *  ⚠️⚠️ Chamado e tarefa em contadores SEPARADOS: a tarefa é delegada dentro do
+ *  próprio setor, e somá-la contaria como pedido a outro setor um trabalho que
+ *  nunca saiu de casa. */
+export type FluxoStat = {
   chamadosAbertos: number; chamadosAssumidos: number; chamadosConcluidos: number
   segundosResolucao: number
+  tarefasAbertas: number; tarefasAssumidas: number; tarefasConcluidas: number
 }
 
 /** Assiduidade REAL (ponto, dump do Nexo). Só atrasos+advertências têm fonte;
@@ -161,7 +182,8 @@ export type Department = {
   helpdesk: HelpdeskStat // soma da atividade do HelpDesk do depto (REAL)
   cide: CideStat // soma da atividade do CIDE do depto (REAL)
   gerencia: GerenciaStat // soma da atividade da Gerência do depto (REAL)
-  chat: ChatStat // soma da atividade do Chat Interno do depto (REAL)
+  chat: ChatStat // soma das MENSAGENS do Chat Interno do depto (REAL)
+  fluxo: FluxoStat // soma dos CHAMADOS do Fluxo do depto (REAL)
 }
 
 export type ChefeDoSetor = {
@@ -206,6 +228,7 @@ export type Identity = {
   cide: CideStat
   gerencia: GerenciaStat
   chat: ChatStat
+  fluxo: FluxoStat
   assid: AssidStat
   /** Serviços CONCLUÍDOS na planilha do setor, acumulado. */
   servicosConcluidos: number
@@ -417,6 +440,7 @@ function simulateEmployee(id8: Identity, idx: number): Employee {
     cide: id8.cide,
     gerencia: id8.gerencia,
     chat: id8.chat,
+    fluxo: id8.fluxo,
   }
 }
 
@@ -428,9 +452,10 @@ export const zeroGerencia = (): GerenciaStat => ({
   servicos: 0, km: 0, saidas: 0, viagens: 0, jornadaMin: 0,
   protAbertos: 0, protAprovados: 0, servCriados: 0, reagendados: 0, cancelados: 0, datasAlteradas: 0,
 })
-export const zeroChat = (): ChatStat => ({
-  msgCanais: 0, msgDiretas: 0, msgChamados: 0,
+export const zeroChat = (): ChatStat => ({ msgCanais: 0, msgDiretas: 0, msgChamados: 0 })
+export const zeroFluxo = (): FluxoStat => ({
   chamadosAbertos: 0, chamadosAssumidos: 0, chamadosConcluidos: 0, segundosResolucao: 0,
+  tarefasAbertas: 0, tarefasAssumidas: 0, tarefasConcluidas: 0,
 })
 
 /* ============================================================
@@ -455,7 +480,7 @@ export function formacaoNota(esc: string | null | undefined): number | null {
 // Rádio (escuta) NÃO entra. Usado quando não há override por período.
 export function activityOf(e: Employee): number {
   const c = e.classroom, h = e.helpdesk, k = e.cide, p = e.consultoria, w = e.whatsapp, g = e.gerencia
-  const t = e.chat
+  const t = e.fluxo
   return c.videosCompleted + c.coursesCompleted + c.coursesCreated
     + h.opened + h.resolved + k.atividades
     + p.studies + p.tickets + p.messages + p.comments
@@ -465,16 +490,21 @@ export function activityOf(e: Employee): number {
     // km/viagens/jornada NÃO entram — são a MAGNITUDE dos mesmos serviços e, em
     // ordem de grandeza (951 km × 266 serviços), abafariam todo o resto.
     + g.servicos + g.protAbertos + g.protAprovados + g.servCriados + g.datasAlteradas
-    // CHAT INTERNO: só CHAMADO conta — pedido feito e pedido entregue, exatamente
-    // como o HelpDesk (opened + resolved).
+    // FLUXO: o CHAMADO — pedido feito e pedido entregue, exatamente como o
+    // HelpDesk (opened + resolved). ⚠️ Ele vinha do Chat Interno até 16/09/2026,
+    // quando os chamados mudaram de casa; a conta é a mesma, a fonte é outra.
     //
-    // ⚠️⚠️ MENSAGEM FICA DE FORA, de propósito (decisão do dono, 02/09/2026).
-    // Ela é a métrica mais fácil de subir do sistema inteiro e a que menos diz
-    // sobre entrega: em ordem de grandeza (milhares de mensagens × dezenas de
-    // chamados) abafaria todas as outras sete fontes somadas, e o ranking
-    // passaria a medir quem mais escreve. Mensagem aparece na ficha e na tela
-    // do Chat; no score, não. Mesmo raciocínio de km/jornada na Gerência.
-    + t.chamadosAbertos + t.chamadosConcluidos
+    // ⚠️⚠️ MENSAGEM DO CHAT FICA DE FORA, de propósito (decisão do dono,
+    // 02/09/2026). Ela é a métrica mais fácil de subir do sistema inteiro e a
+    // que menos diz sobre entrega: em ordem de grandeza (milhares de mensagens
+    // × dezenas de chamados) abafaria todas as outras fontes somadas, e o
+    // ranking passaria a medir quem mais escreve. Mesmo raciocínio de
+    // km/jornada na Gerência.
+    //
+    // ⚠️ A TAREFA DELEGADA entra pelo mesmo caminho: delegar é pedir, e
+    // entregar é entregar. O que ela não faz é virar "pedido a outro setor" na
+    // tabela de setores — lá ela nunca saiu de casa.
+    + t.chamadosAbertos + t.chamadosConcluidos + t.tarefasAbertas + t.tarefasConcluidas
     // PLANILHA DO SETOR: só o CONCLUÍDO. Aberta não é entrega; o tempo fica de
     // fora porque é a magnitude do mesmo serviço (ver /api/score-metrics).
     + e.servicosConcluidos
@@ -754,28 +784,37 @@ export function assembleData(identities: Identity[]): TalentData {
           datasAlteradas: a.datasAlteradas + g.datasAlteradas,
         }
       }, zeroGerencia())
-      // CHAT INTERNO (conversa + chamados) SOMA todos, inclusive desligados.
-      //
-      // ⚠️ Esta é a soma das PESSOAS do setor, e não o painel por setor do chat:
-      // aqui um chamado é creditado a quem o abriu ou concluiu, esteja essa
-      // pessoa em que setor estiver hoje. O painel por setor (`chat_dept_daily`)
-      // conta pela FUNÇÃO gravada no chamado, que não muda quando alguém troca
-      // de área — os dois números respondem perguntas diferentes e podem
-      // divergir de propósito.
+      // CHAT INTERNO (as mensagens) SOMA todos, inclusive desligados.
       const chat = all.reduce((a, e) => {
         const t = e.chat
         return {
           msgCanais: a.msgCanais + t.msgCanais, msgDiretas: a.msgDiretas + t.msgDiretas,
           msgChamados: a.msgChamados + t.msgChamados,
+        }
+      }, zeroChat())
+      // FLUXO (os chamados) — mesma soma, e a mesma ressalva de sempre:
+      //
+      // ⚠️ Esta é a soma das PESSOAS do setor, e não o painel por setor do
+      // Fluxo: aqui um chamado é creditado a quem o abriu ou concluiu, esteja
+      // essa pessoa em que setor estiver hoje. O painel por setor
+      // (`fluxo_dept_daily`) conta pelo SETOR GRAVADO no chamado, que não muda
+      // quando alguém troca de área — os dois números respondem perguntas
+      // diferentes e podem divergir de propósito.
+      const fluxo = all.reduce((a, e) => {
+        const t = e.fluxo
+        return {
           chamadosAbertos: a.chamadosAbertos + t.chamadosAbertos,
           chamadosAssumidos: a.chamadosAssumidos + t.chamadosAssumidos,
           chamadosConcluidos: a.chamadosConcluidos + t.chamadosConcluidos,
           segundosResolucao: a.segundosResolucao + t.segundosResolucao,
+          tarefasAbertas: a.tarefasAbertas + t.tarefasAbertas,
+          tarefasAssumidas: a.tarefasAssumidas + t.tarefasAssumidas,
+          tarefasConcluidas: a.tarefasConcluidas + t.tarefasConcluidas,
         }
-      }, zeroChat())
+      }, zeroFluxo())
       return {
         id, nome: deptMeta[id], headcount: hc, score, turnover, saidas12m, color: PALETTE[dseed % 6],
-        radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia, chat,
+        radioHoras, radioSessoes, consultoria, helpdesk, cide, gerencia, chat, fluxo,
         chefia: [] as ChefeDoSetor[], pelaDiretoria: false,
         classroom,
       }

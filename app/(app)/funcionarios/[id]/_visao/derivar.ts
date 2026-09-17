@@ -23,8 +23,10 @@ export function concluidas(m: EmployeeMetrics | null): { total: number | null; p
     { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
     { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
     { label: 'serviços criados', sys: 'Gerência', n: m.gerencia.servCriados },
-    /* ⚠️ Só chamado concluído — mensagem não é entrega. */
-    { label: 'chamados concluídos', sys: 'Chat Interno', n: m.chat.chamadosConcluidos },
+    /* ⚠️ Só chamado concluído — mensagem não é entrega. E o chamado é do FLUXO
+       desde 16/09/2026; no Chat ficou a conversa. */
+    { label: 'chamados concluídos', sys: 'Fluxo', n: m.fluxo.chamadosConcluidos },
+    { label: 'tarefas concluídas', sys: 'Fluxo', n: m.fluxo.tarefasConcluidas },
   ].filter((p) => p.n > 0)
   return { total: partes.reduce((a, p) => a + p.n, 0), partes }
 }

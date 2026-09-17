@@ -22,7 +22,7 @@ export type ChaveTela =
   | 'dashboard' | 'funcionarios' | 'departamentos'
   | 'avaliacoes' | 'minha-avaliacao'
   | 'turnover' | 'assiduidade' | 'classroom' | 'radio' | 'whatsapp'
-  | 'consultoria' | 'helpdesk' | 'cide' | 'gerencia' | 'chat'
+  | 'consultoria' | 'helpdesk' | 'cide' | 'gerencia' | 'fluxo' | 'chat'
   | 'configuracoes'
 
 export type Tela = { chave: ChaveTela; href: string; label: string; desc: string; tom: Tom | 'neutro' }
@@ -59,7 +59,10 @@ export const GRUPOS_TELAS: GrupoTelas[] = [
       { chave: 'helpdesk', href: '/helpdesk', label: 'HelpDesk', desc: 'Chamados abertos e resolvidos', tom: 'orange' },
       { chave: 'cide', href: '/cide', label: 'CIDE', desc: 'Atividades registradas no CIDE', tom: 'purple' },
       { chave: 'gerencia', href: '/gerencia', label: 'Gerência', desc: 'Mensageria: saídas, viagens e serviços', tom: 'amber' },
-      { chave: 'chat', href: '/chat', label: 'Chat Interno', desc: 'Conversas e chamados entre setores', tom: 'blue' },
+      /* ⚠️ Os CHAMADOS saíram do Chat em 16/09/2026 e são do Fluxo; no Chat
+         ficou a conversa. Duas entradas, porque são dois sistemas. */
+      { chave: 'fluxo', href: '/fluxo', label: 'Fluxo', desc: 'Chamados entre setores e tarefas delegadas', tom: 'purple' },
+      { chave: 'chat', href: '/chat', label: 'Chat Interno', desc: 'Conversas em canais e diretas', tom: 'blue' },
     ],
   },
   {

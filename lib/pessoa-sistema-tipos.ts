@@ -11,9 +11,10 @@ export type Detalhe = {
   /** Algo que o painel diz sem esconder o resto (ex.: o Chat não respondeu e os chamados vieram do espelho). */
   aviso?: string
 }
-export const SISTEMAS = ['classroom', 'helpdesk', 'cide', 'consultoria', 'gerencia', 'chat', 'whatsapp', 'radio', 'assiduidade'] as const
+export const SISTEMAS = ['classroom', 'helpdesk', 'cide', 'consultoria', 'gerencia', 'fluxo', 'chat', 'whatsapp', 'radio', 'assiduidade'] as const
 export type Sistema = (typeof SISTEMAS)[number]
 export const NOME_DO_SISTEMA: Record<Sistema, string> = {
   classroom: 'ClassRoom', helpdesk: 'HelpDesk', cide: 'CIDE', consultoria: 'Consultoria Plus', gerencia: 'Gerência · mensageria',
-  chat: 'Chat Interno', whatsapp: 'WhatsApp', radio: 'Rádio Itamarathy', assiduidade: 'Assiduidade e disciplina',
+  fluxo: 'Fluxo · chamados', chat: 'Chat Interno', whatsapp: 'WhatsApp', radio: 'Rádio Itamarathy',
+  assiduidade: 'Assiduidade e disciplina',
 }

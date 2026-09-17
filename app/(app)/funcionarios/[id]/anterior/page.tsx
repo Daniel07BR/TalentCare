@@ -81,6 +81,7 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
   const hd = m?.helpdesk ?? null
   const gr = m?.gerencia ?? null
   const ch = m?.chat ?? null
+  const fx = m?.fluxo ?? null
   // Assiduidade REAL (ponto) no período; fallback ao acumulado do vm enquanto carrega.
   const ass = m?.assiduidade ?? null
   /* ⚠️⚠️ São DUAS perguntas, e a heurística antiga confundia as duas.
@@ -115,8 +116,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
         { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
         { label: 'serviços criados', sys: 'Gerência', n: m.gerencia.servCriados },
         // ⚠️ Só CHAMADO CONCLUÍDO. Mensagem não é entrega e não entra aqui —
-        // seria o maior número da lista e o mais vazio.
-        { label: 'chamados concluídos', sys: 'Chat Interno', n: m.chat.chamadosConcluidos },
+        // seria o maior número da lista e o mais vazio. (O chamado é do FLUXO
+        // desde 16/09/2026; no Chat ficou a conversa.)
+        { label: 'chamados concluídos', sys: 'Fluxo', n: m.fluxo.chamadosConcluidos },
       ].filter((p) => p.n > 0)
     : []
   const concluidas = m ? concluidasParts.reduce((a, p) => a + p.n, 0) : null
@@ -131,9 +133,10 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
     CIDE: m ? m.cide.atividades : null,
     // Gerência = execução + demanda; o card abaixo separa as duas.
     'Gerência': m ? m.gerencia.servicos + m.gerencia.protAbertos + m.gerencia.protAprovados + m.gerencia.servCriados + m.gerencia.datasAlteradas : null,
-    // ⚠️ A barra do Chat mede CHAMADO, não mensagem: com mensagem dentro, ela
-    // encostaria no teto em toda ficha e as outras seis viravam risquinhos.
-    'Chat Interno': m ? m.chat.chamadosAbertos + m.chat.chamadosConcluidos : null,
+    // ⚠️ A barra mede CHAMADO, não mensagem: com mensagem dentro, ela encostaria
+    // no teto em toda ficha e as outras seis viravam risquinhos. O chamado mudou
+    // de casa em 16/09/2026 (Chat → Fluxo) e a barra foi junto.
+    'Fluxo': m ? m.fluxo.chamadosAbertos + m.fluxo.chamadosConcluidos : null,
   }
   const bySystem = vm.bySystem.map((b) => {
     const real = b.sys in realBySystem
@@ -386,33 +389,33 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                   </div>
                 )}
 
-                {ch && (ch.hasConversa || ch.hasChamado) && (
+                {ch && fx && (ch.hasConversa || fx.hasChamado) && (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--chart-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z" /><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
                       </svg>
-                      Chat Interno <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
+                      Fluxo e Chat Interno <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 500 }}>· dados reais · {periodo}</span>
                     </div>
 
                     {/* ⚠️ CHAMADO primeiro, e CONVERSA depois com o aviso: o
                         número de mensagem é uma ordem de grandeza maior e, em
                         cima, seria lido como o resultado da pessoa. */}
-                    {ch.hasChamado && (
+                    {fx.hasChamado && (
                       <div style={{ marginBottom: ch.hasConversa ? 12 : 0 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.3px' }}>Chamados entre setores</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                           {/* ⚠️ O anel é concluídos ÷ assumidos — a fila dela.
                               Contra "abertos por ela" seria outra conversa: quem
                               abre pede, quem assume entrega. */}
-                          <Medidor valor={ch.chamadosConcluidos} de={ch.chamadosAssumidos || null}
-                            rotulo="Concluídos" nota={ch.chamadosAssumidos ? undefined : 'no período'} cor="var(--success)" />
-                          <Medidor valor={ch.chamadosAbertos} rotulo="Abertos por ela" nota="pedidos que ela fez" cor="var(--info)" />
-                          {ch.chamadosAssumidos > 0 && (
-                            <Medidor valor={ch.chamadosAssumidos} rotulo="Assumidos" nota="que ela pegou" cor="var(--chart-2)" />
+                          <Medidor valor={fx.chamadosConcluidos} de={fx.chamadosAssumidos || null}
+                            rotulo="Concluídos" nota={fx.chamadosAssumidos ? undefined : 'no período'} cor="var(--success)" />
+                          <Medidor valor={fx.chamadosAbertos} rotulo="Abertos por ela" nota="pedidos que ela fez" cor="var(--info)" />
+                          {fx.chamadosAssumidos > 0 && (
+                            <Medidor valor={fx.chamadosAssumidos} rotulo="Assumidos" nota="que ela pegou" cor="var(--chart-2)" />
                           )}
-                          {ch.chamadosConcluidos > 0 && (
-                            <Medidor valor={null} texto={ch.tempoMedio} rotulo="Tempo médio" nota="só expediente" cor="var(--chart-4)" />
+                          {fx.chamadosConcluidos > 0 && (
+                            <Medidor valor={null} texto={fx.tempoMedio} rotulo="Tempo médio" nota="só expediente" cor="var(--chart-4)" />
                           )}
                         </div>
                       </div>
@@ -805,7 +808,7 @@ function PainelDoAvaliador({ vm, m, periodo, estado }: {
      julgamento que cabe a quem avalia, não à tela. */
   const pontos: { texto: string; cor: string }[] = []
   if (m) {
-    const c = m.chat
+    const c = m.fluxo
     if (c.hasChamado && c.chamadosConcluidos > 0) {
       pontos.push({ texto: `Concluiu ${c.chamadosConcluidos} ${c.chamadosConcluidos === 1 ? 'chamado' : 'chamados'} de outros setores, em média ${c.tempoMedio}. Isso corresponde ao que você via no dia a dia?`, cor: 'var(--chart-3)' })
     }

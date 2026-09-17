@@ -12,9 +12,11 @@ import { prisma } from '@/lib/db/prisma'
      rota diária que alimenta o número ao lado do nome — conferido 1:1 contra o
      espelho em 11/09/2026. No dia de hoje a lista pode ter um item a mais: o
      espelho sincroniza de hora em hora.
-   - CHAT, misto: os CHAMADOS vêm ao vivo (`talent-pessoa` do Chat, liberado
-     pelo dono em 11/09/2026: "pode mostrar os chamados do chat também"); as
-     MENSAGENS continuam só como contagem por dia, do espelho — o texto das
+   - FLUXO (os CHAMADOS): ao vivo, com a lista e o assunto — liberado pelo dono
+     em 11/09/2026 ("pode mostrar os chamados do chat também") e mantido quando
+     eles mudaram de casa, em 16/09/2026. ⚠️ Se o Fluxo não responder, cai para
+     a contagem por dia do espelho, COM AVISO.
+   - CHAT: só a contagem de MENSAGENS por dia, do espelho — o texto das
      conversas não sai do Chat, e isso não mudou.
    - DO ESPELHO, dia a dia (WhatsApp, Rádio, Assiduidade):
      ⚠️ o WhatsApp é conversa com CLIENTE (nome e telefone de terceiros);
@@ -35,8 +37,9 @@ const EXTERNOS: Record<string, { base?: string; key?: string; header: string; ca
   cide: { base: process.env.CIDE_BASE_URL, key: process.env.CIDE_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   consultoria: { base: process.env.CONSULTORIA_BASE_URL, key: process.env.CONSULTORIA_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   gerencia: { base: process.env.GERENCIA_BASE_URL, key: process.env.GERENCIA_API_KEY, header: 'x-api-key', caminho: '/integrations/talent-pessoa' },
-  // ⚠️ Fora de `detalheDaPessoa`'s "externos": o Chat é MISTO — ver `doChat`.
-  chat: { base: process.env.CHAT_BASE_URL, key: process.env.CHAT_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
+  // ⚠️ Fora dos "externos" de `detalheDaPessoa`: o Fluxo cai para o espelho
+  // quando não responde — ver `doFluxo`.
+  fluxo: { base: process.env.FLUXO_BASE_URL, key: process.env.FLUXO_API_KEY, header: 'x-api-key', caminho: '/api/integrations/talent-pessoa' },
   classroom: { base: process.env.CLASSROOM_BASE_URL, key: process.env.CLASSROOM_INTEGRATION_KEY, header: 'x-integration-key', caminho: '/api/integrations/talent-user-learning' },
 }
 
@@ -80,16 +83,28 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
   if (sistema === 'chat') {
     if (!p.nexusUserId) return { grupos: [], aoVivo: false, semConta: true }
     const rs = await prisma.chatDaily.findMany({ where: { nexusUserId: p.nexusUserId, day: dia }, orderBy: desc })
-    const ch = rs.filter((r) => r.chamadosAbertos + r.chamadosAssumidos + r.chamadosConcluidos > 0)
     const ms = rs.filter((r) => r.msgCanais + r.msgDiretas + r.msgChamados > 0)
-    const s = (k: 'chamadosAbertos' | 'chamadosAssumidos' | 'chamadosConcluidos') => ch.reduce((a, r) => a + r[k], 0)
     const totMsg = ms.reduce((a, r) => a + r.msgCanais + r.msgDiretas + r.msgChamados, 0)
+    /* ⚠️ Só MENSAGEM. Os chamados saíram do Chat em 16/09/2026 — quem os quer
+       abre o Fluxo, e o painel deles é o `doFluxo` abaixo. */
+    return { aoVivo: false, grupos: [
+      { chave: 'mensagens', titulo: 'Mensagens, dia a dia', resumo: `${totMsg.toLocaleString('pt-BR')} mensagens`,
+        itens: ms.map((r) => ({ id: r.day, dia: r.day, titulo: plural(r.msgCanais + r.msgDiretas + r.msgChamados, 'mensagem', 'mensagens'), sub: `${r.msgCanais} em canais · ${r.msgDiretas} diretas · ${r.msgChamados} em chamados` })) },
+    ] }
+  }
+  if (sistema === 'fluxo') {
+    if (!p.nexusUserId) return { grupos: [], aoVivo: false, semConta: true }
+    const rs = await prisma.fluxoDaily.findMany({ where: { nexusUserId: p.nexusUserId, day: dia }, orderBy: desc })
+    const ch = rs.filter((r) => r.chamadosAbertos + r.chamadosAssumidos + r.chamadosConcluidos > 0)
+    const tf = rs.filter((r) => r.tarefasAbertas + r.tarefasAssumidas + r.tarefasConcluidas > 0)
+    const s = (k: 'chamadosAbertos' | 'chamadosAssumidos' | 'chamadosConcluidos') => ch.reduce((a, r) => a + r[k], 0)
+    const t = (k: 'tarefasAbertas' | 'tarefasAssumidas' | 'tarefasConcluidas') => tf.reduce((a, r) => a + r[k], 0)
     return { aoVivo: false, grupos: [
       { chave: 'chamados', titulo: 'Chamados, dia a dia', resumo: `${s('chamadosAbertos')} abertos · ${s('chamadosAssumidos')} assumidos · ${s('chamadosConcluidos')} concluídos`,
         itens: ch.map((r) => ({ id: r.day, dia: r.day, titulo: [r.chamadosAbertos && plural(r.chamadosAbertos, 'aberto', 'abertos'), r.chamadosAssumidos && plural(r.chamadosAssumidos, 'assumido', 'assumidos'), r.chamadosConcluidos && plural(r.chamadosConcluidos, 'concluído', 'concluídos')].filter(Boolean).join(' · '),
           sub: r.chamadosConcluidos && r.segundosResolucao ? `tempo médio ${horas(Math.round(r.segundosResolucao / r.chamadosConcluidos))} (só expediente)` : undefined })) },
-      { chave: 'mensagens', titulo: 'Mensagens, dia a dia', resumo: `${totMsg.toLocaleString('pt-BR')} mensagens`,
-        itens: ms.map((r) => ({ id: r.day, dia: r.day, titulo: plural(r.msgCanais + r.msgDiretas + r.msgChamados, 'mensagem', 'mensagens'), sub: `${r.msgCanais} em canais · ${r.msgDiretas} diretas · ${r.msgChamados} em chamados` })) },
+      { chave: 'tarefas', titulo: 'Tarefas delegadas, dia a dia', resumo: `${t('tarefasAbertas')} delegadas · ${t('tarefasAssumidas')} recebidas · ${t('tarefasConcluidas')} concluídas`,
+        itens: tf.map((r) => ({ id: `t-${r.day}`, dia: r.day, titulo: [r.tarefasAbertas && plural(r.tarefasAbertas, 'delegada', 'delegadas'), r.tarefasAssumidas && plural(r.tarefasAssumidas, 'recebida', 'recebidas'), r.tarefasConcluidas && plural(r.tarefasConcluidas, 'concluída', 'concluídas')].filter(Boolean).join(' · ') })) },
     ] }
   }
   if (sistema === 'whatsapp') {
@@ -134,21 +149,23 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
 }
 
 /**
- * CHAT: chamados AO VIVO (a lista, com assunto) + mensagens do ESPELHO (por dia).
- * ⚠️ Se o Chat não responder, os chamados caem para o dia a dia do espelho, com
- * aviso — um painel vazio se leria "não abriu chamado nenhum".
+ * FLUXO: os chamados AO VIVO (a lista, com número, assunto e situação).
+ * ⚠️ Se o Fluxo não responder, cai para o dia a dia do espelho, COM AVISO — um
+ * painel vazio se leria "não abriu chamado nenhum", que é outra coisa.
+ * ⚠️⚠️ O assunto da TAREFA DELEGADA FECHADA não vem: a origem manda o número e
+ * o rótulo, e o texto fica lá. Quem enxerga aquela tarefa é uma lista curta, e
+ * a régua de quem lê o TalentCare não é a mesma.
  */
-async function doChat(p: Pessoa, de: string, ate: string): Promise<Detalhe> {
-  const espelho = await doEspelho('chat', p, de, ate)
-  if (!p.nexusUserId) return espelho
-  const vivo = await aoVivo('chat', p.nexusUserId, de, ate)
-  const mensagens = espelho.grupos.filter((g) => g.chave === 'mensagens')
-  if (vivo.erro) return { ...espelho, aviso: `${vivo.erro} — os chamados abaixo são a contagem por dia do espelho.` }
-  return { aoVivo: true, grupos: [...vivo.grupos, ...mensagens] }
+async function doFluxo(p: Pessoa, de: string, ate: string): Promise<Detalhe> {
+  if (!p.nexusUserId) return { grupos: [], aoVivo: true, semConta: true }
+  const vivo = await aoVivo('fluxo', p.nexusUserId, de, ate)
+  if (!vivo.erro) return vivo
+  const espelho = await doEspelho('fluxo', p, de, ate)
+  return { ...espelho, aviso: `${vivo.erro} — os chamados abaixo são a contagem por dia do espelho.` }
 }
 
 export async function detalheDaPessoa(sistema: Sistema, p: Pessoa, de: string, ate: string): Promise<Detalhe> {
-  if (sistema === 'chat') return doChat(p, de, ate)
+  if (sistema === 'fluxo') return doFluxo(p, de, ate)
   if (sistema in EXTERNOS) {
     // Sem conta no Nexus não há como casar com o sistema — não é "não fez nada".
     if (!p.nexusUserId) return { grupos: [], aoVivo: true, semConta: true }

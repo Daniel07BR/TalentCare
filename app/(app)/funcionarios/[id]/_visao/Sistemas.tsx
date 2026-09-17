@@ -1,5 +1,5 @@
 'use client'
-import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
+import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, ClipboardList, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { Sistema } from '@/lib/pessoa-sistema-tipos'
 import { usePainelDaPessoa } from '../../../PainelDaPessoa'
@@ -142,8 +142,10 @@ const nota1 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 
 
 export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   m: EmployeeMetrics | null; periodo: string; pessoaId: string
-  /** Modo da folha A4 (`FichaImpressa`): cartões sem clique e SEM o bloco de
-   *  mensagens do Chat Interno — decisão do dono, a folha não leva mensagens. */
+  /** Modo da folha A4 (`FichaImpressa`): cartões sem clique e SEM o cartão do
+   *  Chat Interno — decisão do dono, a folha não leva mensagens. Os CHAMADOS
+   *  continuam na folha: mudaram de casa (Chat → Fluxo) em 16/09/2026, e é o
+   *  cartão do Fluxo que os leva. */
   impressao?: boolean
 }) {
   const abrirPainel = usePainelDaPessoa()
@@ -155,7 +157,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
     )
   }
   const abrir = (sis: Sistema) => (impressao ? undefined : () => abrirPainel(sis, pessoaId))
-  const { whatsapp: wpp, helpdesk: hd, classroom: cr, gerencia: gr, chat: ch, cide, consultoria: co } = m
+  const { whatsapp: wpp, helpdesk: hd, classroom: cr, gerencia: gr, chat: ch, fluxo: fx, cide, consultoria: co } = m
   const blocos: { chave: string; no: React.ReactNode }[] = []
   const sem: string[] = []
   const add = (tem: boolean, nome: string, chave: string, no: () => React.ReactNode) => {
@@ -258,22 +260,19 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
     </Bloco>
   ))
 
-  add(ch.hasChamado || ch.hasConversa, 'Chat Interno', 'chat', () => (
-    /* ⚠️⚠️ UM cartão só para o Chat (pedido do dono, 14/09/2026: "não apresentou a
-       quantidade de chamados abertos e atendidos dentro do chat"). Antes eram dois,
-       e o de chamados sumia para quem só conversou — então a pergunta "quantos
-       chamados?" ficava sem resposta. Agora os três números de chamado aparecem
-       sempre que o Chat tem registro dela, mesmo zerados: aqui zero é resposta, o
-       Chat mediu a pessoa. Chamado primeiro; a conversa vem depois, com o aviso. */
-    <Bloco onClick={abrir('chat')} dica="Ver os chamados e as mensagens dia a dia">
-      <Titulo nome="Chat Interno" sub={impressao ? 'chamados entre setores' : 'chamados entre setores e conversa'} Icone={MessageSquareText} tom="pink" />
+  /* ⚠️⚠️ O CARTÃO DOS CHAMADOS É DO FLUXO desde 17/09/2026. Ele era do Chat
+     Interno — os chamados mudaram de casa em 16/09 com a história inteira, e o
+     cartão foi junto. O do Chat, abaixo, ficou só com a conversa. */
+  add(fx.hasChamado || fx.hasTarefa, 'Fluxo', 'fluxo', () => (
+    <Bloco onClick={abrir('fluxo')} dica="Ver os chamados e as tarefas dia a dia">
+      <Titulo nome="Fluxo" sub="chamados entre setores" Icone={ClipboardList} tom="purple" />
       {/* ⚠️ Na folha A4 o cartão é estreito (todos os sistemas numa fileira) e três
           caixas lado a lado sobrepunham "Atendeu"/"Concluiu" — pedido do dono,
           14/09/2026: um abaixo do outro, número à esquerda e o rótulo ao lado. */}
       <div style={impressao
         ? { display: 'flex', flexDirection: 'column', gap: 6 }
         : { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-        {([['Abriu', ch.chamadosAbertos, 'pink', 'pedidos que fez'], ['Atendeu', ch.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', ch.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
+        {([['Abriu', fx.chamadosAbertos, 'purple', 'pedidos que fez'], ['Atendeu', fx.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', fx.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
           impressao ? (
             <div key={rot} style={{ display: 'flex', alignItems: 'center', gap: 10, background: suave(t), borderRadius: 10, padding: '6px 10px', minWidth: 0 }}>
               <span style={{ minWidth: 30, textAlign: 'right' }}><Grande cor={forte(t)} tam={20}>{num(n)}</Grande></span>
@@ -291,25 +290,44 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
           )
         ))}
       </div>
-      {ch.chamadosConcluidos > 0 && (
+      {fx.chamadosConcluidos > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--n-text-2)', marginTop: 8 }}>
-          Tempo médio até concluir: <b style={{ color: 'var(--n-text)' }}>{ch.tempoMedio}</b> <span style={{ color: 'var(--n-text-3)' }}>· só expediente</span>
+          Tempo médio até concluir: <b style={{ color: 'var(--n-text)' }}>{fx.tempoMedio}</b> <span style={{ color: 'var(--n-text-3)' }}>· só expediente</span>
         </div>
       )}
-      {ch.hasConversa && !impressao && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px dashed var(--n-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
-            <Grande cor="var(--n-purple)" tam={18}>{num(ch.mensagens)}</Grande>
-            <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>mensagens · <b>não entram no score</b></span>
-          </div>
-          <Empilhada partes={[
-            { rot: 'Em canais', n: ch.msgCanais, tom: 'purple' },
-            { rot: 'Diretas', n: ch.msgDiretas, tom: 'pink' },
-            { rot: 'Em chamados', n: ch.msgChamados, tom: 'blue' },
-          ]} />
+      {/* ⚠️⚠️ A TAREFA DELEGADA aparece SEPARADA, e não somada aos chamados: ela
+          é trabalho passado dentro do próprio setor, e somá-la faria a pessoa
+          parecer ter pedido a outros setores o que nunca saiu de casa. */}
+      {fx.hasTarefa && (
+        <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px dashed var(--n-border)', display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
+          {([['delegou', fx.tarefasAbertas], ['recebeu', fx.tarefasAssumidas], ['concluiu', fx.tarefasConcluidas]] as [string, number][])
+            .filter(([, n]) => n > 0)
+            .map(([rot, n]) => (
+              <span key={rot} style={{ fontSize: 11, color: 'var(--n-text-2)' }}>
+                <b style={{ color: 'var(--n-text)' }}>{num(n)}</b> {rot}
+              </span>
+            ))}
+          <span style={{ fontSize: 10.5, color: 'var(--n-text-3)', width: '100%' }}>tarefas delegadas no próprio setor</span>
         </div>
       )}
-      {!impressao && <Nota>Só a contagem das mensagens chega aqui — o texto nunca sai do chat.</Nota>}
+    </Bloco>
+  ))
+
+  /* ⚠️ O Chat ficou com a CONVERSA. Ele fica FORA da folha A4 (decisão do dono):
+     mensagem é vitrine, não entra no score e não vai para o papel. */
+  add(ch.hasConversa && !impressao, 'Chat Interno', 'chat', () => (
+    <Bloco onClick={abrir('chat')} dica="Ver as mensagens dia a dia">
+      <Titulo nome="Chat Interno" sub="conversa" Icone={MessageSquareText} tom="pink" />
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+        <Grande cor="var(--n-purple)" tam={18}>{num(ch.mensagens)}</Grande>
+        <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>mensagens · <b>não entram no score</b></span>
+      </div>
+      <Empilhada partes={[
+        { rot: 'Em canais', n: ch.msgCanais, tom: 'purple' },
+        { rot: 'Diretas', n: ch.msgDiretas, tom: 'pink' },
+        { rot: 'Em chamados', n: ch.msgChamados, tom: 'blue' },
+      ]} />
+      <Nota>Só a contagem das mensagens chega aqui — o texto nunca sai do chat.</Nota>
     </Bloco>
   ))
 

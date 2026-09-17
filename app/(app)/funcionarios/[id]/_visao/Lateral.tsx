@@ -28,8 +28,9 @@ export function AntesDeAvaliar({ vm, m, periodo, estado }: { vm: EmployeeVM; m: 
   /* O que PERGUNTAR — escrito como pergunta, nunca como conclusão. */
   const pontos: { texto: string; cor: string }[] = []
   if (m) {
-    const c = m.chat, a = m.assiduidade
-    if (c.hasChamado && c.chamadosConcluidos > 0) pontos.push({ texto: `Concluiu ${c.chamadosConcluidos} ${c.chamadosConcluidos === 1 ? 'chamado' : 'chamados'} de outros setores, em média ${c.tempoMedio}. Isso corresponde ao que você via no dia a dia?`, cor: 'var(--n-pink)' })
+    const c = m.fluxo, a = m.assiduidade
+    if (c.hasChamado && c.chamadosConcluidos > 0) pontos.push({ texto: `Concluiu ${c.chamadosConcluidos} ${c.chamadosConcluidos === 1 ? 'chamado' : 'chamados'} de outros setores, em média ${c.tempoMedio}. Isso corresponde ao que você via no dia a dia?`, cor: 'var(--n-purple)' })
+    if (c.hasTarefa && c.tarefasConcluidas > 0) pontos.push({ texto: `Concluiu ${c.tarefasConcluidas} ${c.tarefasConcluidas === 1 ? 'tarefa delegada' : 'tarefas delegadas'} dentro do setor.`, cor: 'var(--n-purple)' })
     if (m.helpdesk.has && m.helpdesk.resolved > 0) pontos.push({ texto: `Resolveu ${m.helpdesk.resolved} ${m.helpdesk.resolved === 1 ? 'chamado' : 'chamados'} no HelpDesk. Vale reconhecer, ou foi tarefa de rotina?`, cor: 'var(--n-blue)' })
     if (m.classroom.created > 0) pontos.push({ texto: `Criou ${m.classroom.created} ${m.classroom.created === 1 ? 'curso' : 'cursos'} no ClassRoom — ensinar alguém conta como colaboração.`, cor: 'var(--n-green)' })
     if (m.whatsapp.has && m.whatsapp.finalizados > 0) pontos.push({ texto: `Finalizou ${m.whatsapp.finalizados} atendimentos no WhatsApp, em média ${m.whatsapp.tempoMedio}.`, cor: 'var(--n-whats)' })

@@ -35,7 +35,7 @@ const MEDIDAS_SQL = `
   union all
   select 'chat_cham_concluido',
     percentile_cont(0.5) within group (order by segundos_resolucao::numeric/chamados_concluidos/60)
-    from chat_daily where chamados_concluidos>0 and segundos_resolucao>0
+    from fluxo_daily where chamados_concluidos>0 and segundos_resolucao>0
   union all
   select 'ger_servico',
     percentile_cont(0.5) within group (order by jornada_min::numeric/servicos)
