@@ -12,7 +12,8 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 | 5 | HelpDesk | `.77` | `helpdesk_daily` | `:20` |
 | 6 | CIDE — *Cadastro Integrado de Dados Empresariais* | `.74` | `cide_daily` | `:25` |
 | 7 | Gerência (mensageria) | `.72` | `gerencia_daily` | `:30` |
-| 8 | **Chat Interno** | `.69` | `chat_daily` + `chat_dept_daily` | `:35` |
+| 8 | **Chat Interno** — só as MENSAGENS | `.69` | `chat_daily` (as colunas `chamados_*` e `chat_dept_daily` **congelaram em 16/09/2026**) | `:35` |
+| 9 | **Fluxo** — os CHAMADOS entre setores | `.70` | `fluxo_daily` + `fluxo_dept_daily` | `:50` (`--completo` 03:40) |
 | — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |
 | — | Ponto / disciplina | dump do Nexo | `assiduidade_daily`, `disciplina_evento` | import à mão |
 | — | **Controle da LGPD** | Nexus `.75` | `disciplina_evento` (`source='lgpd'`) | push + `:40` |
@@ -52,7 +53,29 @@ lib/mock/data.ts  activityOf()  a produtividade do score
 /api/dept-metrics               o relatório do setor
 /api/sync/run                   o sync disparado na entrada
 + SYSTEMS / sysColor / SYS_INFO se a fonte entra na barra "atividade por sistema"
++ lib/pessoa-sistema.ts          o painel "o que a pessoa fez neste sistema"
++ lib/frescor.ts                 "até quando esta fonte está atualizada"
++ lib/servicos/atividades.ts     a régua de pontuação (⚠️ a CHAVE é gravada no
+  + catalogo-atividades.ts         banco: mudar de fonte NÃO é mudar de chave)
++ lib/ui/menu.ts / JanelaMenu    a área da fonte no menu
 ```
+
+### ⚠️⚠️ Quando uma fonte MUDA DE CASA (Chat → Fluxo, 16/09/2026)
+
+Os chamados entre setores nasceram no Chat Interno e migraram para o Fluxo com a
+história inteira (os 105 foram com a data original). A lição, para a próxima:
+
+1. **Não deixe cópia.** O espelho velho para de ser LIDO e de ser ESCRITO no
+   mesmo dia. Duas fontes para o mesmo fato, uma congelada, é o defeito que
+   ninguém percebe até alguém comparar os dois números.
+2. **A chave da régua fica.** `chat_cham_aberto` continua se chamando assim
+   porque é o id gravado em `pontuacao_regra_geral`; renomear apagaria os pesos
+   que o dono calibrou. Muda a fonte, muda o rótulo, a chave não.
+3. **Confira o novo contra o velho na janela anterior à virada.** Aqui bateu
+   1:1 (100 abertos, 97 assumidos, 83 concluídos até 15/09), pessoa a pessoa e
+   setor a setor. Se não bater, a régua de crédito mudou sem ninguém decidir.
+4. **A tabela velha não se apaga** — vira história, e é o que permite a
+   conferência do item 3.
 
 ---
 

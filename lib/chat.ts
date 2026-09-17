@@ -1,7 +1,13 @@
 import { prisma } from '@/lib/db/prisma'
 
-// Ingestão das métricas reais do CHAT INTERNO (.69) — 8ª fonte. Modelo ESPELHO
-// DIÁRIO + sync INCREMENTAL idempotente, igual às outras sete:
+// Ingestão das MENSAGENS do CHAT INTERNO (.69) — 8ª fonte. Modelo ESPELHO
+// DIÁRIO + sync INCREMENTAL idempotente, igual às outras:
+//
+// ⚠️⚠️ Os CHAMADOS saíram daqui em 16/09/2026 (foram para o Fluxo, `lib/fluxo.ts`).
+// A origem ainda os devolve — a tabela `tickets` do `.69` ficou congelada como
+// mapa dos links antigos —, e é por isso que este sync PARA de gravá-los: um
+// número parado que continua sendo escrito todo dia é indistinguível de um
+// número vivo.
 //   - puxa do .69 a atividade por (pessoa, dia) e por (setor, dia) desde o
 //     último watermark;
 //   - upsert SET nas duas tabelas → re-rodar a mesma janela não duplica;
@@ -19,28 +25,12 @@ interface LinhaPessoa {
   msgCanais: number | string
   msgDiretas: number | string
   msgChamados: number | string
-  chamadosAbertos: number | string
-  chamadosAssumidos: number | string
-  chamadosConcluidos: number | string
-  segundosResolucao: number | string
-}
-
-interface LinhaSetor {
-  deptId: string
-  day: string
-  pedidosAbertos: number | string
-  pedidosConcluidos: number | string
-  recebidosAbertos: number | string
-  recebidosConcluidos: number | string
-  recebidosCancelados: number | string
-  segundosResolucao: number | string
 }
 
 export interface ChatSyncResult {
   pessoas: number
+  /** Sempre 0 desde 16/09/2026 — o espelho por setor do Chat congelou. */
   setores: number
-  /** Chamados cuja função de origem/destino não é um departamento — ver abaixo. */
-  foraDeSetor: { pedidos: number; recebidos: number }
   from: string | null
   to: string
   errors: string[]
@@ -62,7 +52,6 @@ export async function syncChat(): Promise<ChatSyncResult> {
   const result: ChatSyncResult = {
     pessoas: 0,
     setores: 0,
-    foraDeSetor: { pedidos: 0, recebidos: 0 },
     from: from ? from.toISOString() : null,
     to: now.toISOString(),
     errors: [],
@@ -78,11 +67,7 @@ export async function syncChat(): Promise<ChatSyncResult> {
     result.errors.push(`Chat API ${res.status}: ${await res.text()}`)
     return result
   }
-  const data = (await res.json()) as {
-    pessoas: LinhaPessoa[]
-    setores: LinhaSetor[]
-    foraDeSetor?: { pedidos: number; recebidos: number }
-  }
+  const data = (await res.json()) as { pessoas: LinhaPessoa[] }
 
   for (const r of data.pessoas ?? []) {
     if (!r.userId || !r.day) continue
@@ -90,13 +75,6 @@ export async function syncChat(): Promise<ChatSyncResult> {
       msgCanais: n(r.msgCanais),
       msgDiretas: n(r.msgDiretas),
       msgChamados: n(r.msgChamados),
-      chamadosAbertos: n(r.chamadosAbertos),
-      chamadosAssumidos: n(r.chamadosAssumidos),
-      chamadosConcluidos: n(r.chamadosConcluidos),
-      // ⚠️ Segundos de EXPEDIENTE (08h–18h, seg a sex), contados no .69. Nunca
-      // recalcular aqui a partir de datas: seriam duas verdades sobre quanto
-      // tempo um chamado levou, uma no chat e outra neste painel.
-      segundosResolucao: n(r.segundosResolucao),
     }
     try {
       await prisma.chatDaily.upsert({
@@ -110,33 +88,10 @@ export async function syncChat(): Promise<ChatSyncResult> {
     }
   }
 
-  for (const r of data.setores ?? []) {
-    if (!r.deptId || !r.day) continue
-    const dados = {
-      pedidosAbertos: n(r.pedidosAbertos),
-      pedidosConcluidos: n(r.pedidosConcluidos),
-      recebidosAbertos: n(r.recebidosAbertos),
-      recebidosConcluidos: n(r.recebidosConcluidos),
-      recebidosCancelados: n(r.recebidosCancelados),
-      segundosResolucao: n(r.segundosResolucao),
-    }
-    try {
-      await prisma.chatDeptDaily.upsert({
-        where: { nexusDepartmentId_day: { nexusDepartmentId: r.deptId, day: r.day } },
-        create: { nexusDepartmentId: r.deptId, day: r.day, ...dados },
-        update: dados,
-      })
-      result.setores++
-    } catch (e) {
-      result.errors.push(`setor ${r.deptId}/${r.day}: ${(e as Error).message}`)
-    }
-  }
-
-  // ⚠️ Chamado cuja função de origem/destino não É um departamento fica fora do
-  // espelho por setor. Vem contado da origem e sobe no resultado do sync: sem
-  // isso, o painel por setor mostraria menos chamados que o chat e ninguém
-  // saberia por quê — o sync teria "rodado com sucesso" o tempo todo.
-  if (data.foraDeSetor) result.foraDeSetor = data.foraDeSetor
+  /* ⚠️⚠️ O espelho por SETOR (`chat_dept_daily`) também PAROU em 16/09/2026:
+     ele era dos chamados. A origem ainda devolve as linhas, e gravá-las
+     reescreveria todo dia uma tabela congelada — quem conta setor agora é
+     `fluxo_dept_daily`. A tabela fica como história. */
 
   await prisma.syncWatermark.upsert({
     where: { source: SOURCE },

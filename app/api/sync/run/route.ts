@@ -8,16 +8,17 @@ import { syncHelpdesk } from '@/lib/helpdesk'
 import { syncCide } from '@/lib/cide'
 import { syncGerencia } from '@/lib/gerencia'
 import { syncChat } from '@/lib/chat'
+import { syncFluxo } from '@/lib/fluxo'
 
 // Disparado pela animação de entrada ("Estamos preparando o sistema"). Roda o sync
-// incremental das fontes (Rádio + WhatsApp + ClassRoom + Consultoria + HelpDesk + CIDE + Gerência + Chat)
+// incremental das fontes (Rádio + WhatsApp + ClassRoom + Consultoria + HelpDesk + CIDE + Gerência + Chat + Fluxo)
 // a partir do último watermark, em paralelo. Qualquer logado pode chamar (entrada é SSO).
 export async function POST() {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
-  const [radio, whatsapp, classroom, consultoria, helpdesk, cide, gerencia, chat] = await Promise.allSettled([
+  const [radio, whatsapp, classroom, consultoria, helpdesk, cide, gerencia, chat, fluxo] = await Promise.allSettled([
     syncRadio(),
     syncWhatsapp(),
     syncClassroom(),
@@ -26,7 +27,8 @@ export async function POST() {
     syncCide(),
     syncGerencia(),
     syncChat(),
+    syncFluxo(),
   ])
   const val = (r: PromiseSettledResult<unknown>) => (r.status === 'fulfilled' ? r.value : { error: String(r.reason) })
-  return NextResponse.json({ ok: true, radio: val(radio), whatsapp: val(whatsapp), classroom: val(classroom), consultoria: val(consultoria), helpdesk: val(helpdesk), cide: val(cide), gerencia: val(gerencia), chat: val(chat) })
+  return NextResponse.json({ ok: true, radio: val(radio), whatsapp: val(whatsapp), classroom: val(classroom), consultoria: val(consultoria), helpdesk: val(helpdesk), cide: val(cide), gerencia: val(gerencia), chat: val(chat), fluxo: val(fluxo) })
 }

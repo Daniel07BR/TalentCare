@@ -1,5 +1,49 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-17 — Os CHAMADOS agora vêm do FLUXO (9ª fonte), e o Chat ficou com a conversa
+
+Os chamados entre setores saíram do Chat Interno em 16/09/2026 e foram para o Fluxo (`.70`), com
+todas as funções e com a história inteira — os 105 migrados mantiveram a data original. O TalentCare
+seguia lendo o Chat: o número teria congelado no dia da virada, e ninguém veria isso acontecer.
+
+**No Fluxo (`.70`, `plane/fluxo/chamados/talent.py`):** duas rotas novas, com o contrato das outras
+fontes e credencial própria do TalentCare — `GET /api/integrations/talent-daily?from&to` (pessoas ×
+dia e setores × dia) e `GET /api/integrations/talent-pessoa` (a lista, com número, assunto e
+situação). A porta 8081 passou a aceitar o `.78`, com um `location` por rota.
+
+**No TalentCare:**
+- Espelho `fluxo_daily` + `fluxo_dept_daily` e `run-fluxo-sync.mjs` (hora em hora no `:50`,
+  `--completo` às 03:40, com freio). Carga inicial: **158 linhas de pessoa e 86 de setor**, de
+  24/08 a 17/09.
+- **Área "Fluxo"** (`/fluxo`, no menu): KPIs, chamados por departamento nas duas faces, quem mais
+  conclui e quem mais pede, e a tabela por pessoa. É a metade de baixo do antigo resumo do Chat,
+  com casa própria.
+- **Ficha e PDF**: o cartão "Abriu / Atendeu / Concluiu" passou a ser do Fluxo — e continua na folha
+  A4. O do Chat ficou com a conversa e segue fora do papel.
+- Painel principal, relatório do setor, painel da pessoa, linha do tempo, score, régua de atividades
+  e frescor das fontes: todos lendo o Fluxo.
+- **Chat Interno**: só mensagens, em todo lugar — inclusive no sync. `chat_daily.chamados_*` e
+  `chat_dept_daily` **pararam de ser escritos**: número congelado que continua sendo gravado todo
+  dia é indistinguível de número vivo.
+
+⚠️⚠️ **Chamado e TAREFA DELEGADA contam separados.** A tarefa é passada dentro do próprio setor;
+somada, viraria "pedido a outro setor" um trabalho que nunca saiu de casa. A tabela por setor conta
+só os chamados; a pessoa mostra os dois, lado a lado.
+
+⚠️⚠️ **A chave da régua continua `chat_cham_*`.** Ela é o id gravado em `pontuacao_regra_geral`, com
+os pesos que o dono calibrou — renomear para combinar com a casa nova os apagaria em silêncio. Mudou
+a fonte e o rótulo; a chave, não.
+
+⚠️ **O assunto da tarefa delegada FECHADA não sai do Fluxo.** Quem enxerga aquela tarefa é uma lista
+curta (quem está nela, quem delegou, a chefia do setor, Diretoria/T.I) e a régua de quem lê o
+TalentCare não é a mesma. O número vai, o texto fica.
+
+**Conferência (o novo contra o velho, até 15/09 — antes da virada):** bateu **1:1** — 100 abertos,
+97 assumidos, 83 concluídos nos dois espelhos, sem uma pessoa divergente, e 100/100/83 por setor.
+
+⚠️ Tabelas criadas por `prisma migrate diff` + `psql`, nunca por `db push`: o diff dele quer DROPAR
+`chat_daily_bkp_20260911` e `chat_dept_daily_bkp_20260911`.
+
 ## 2026-09-17 — O PDF da ficha cabe numa página só
 
 Pedido do dono, com prints do que sobrava na folha: *"preciso que tudo saia em uma única página,

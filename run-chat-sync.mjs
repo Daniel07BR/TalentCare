@@ -1,4 +1,10 @@
-// Sync incremental do espelho diário do Chat Interno → TalentCare (CLI p/ cron).
+// Sync incremental das MENSAGENS do Chat Interno → TalentCare (CLI p/ cron).
+//
+// ⚠️⚠️ Os CHAMADOS saíram daqui em 16/09/2026 e são do Fluxo
+// (`run-fluxo-sync.mjs`). A origem ainda os devolve — a tabela `tickets` do .69
+// ficou congelada como mapa dos links antigos —, e é por isso que este sync PARA
+// de gravá-los: número parado que continua sendo escrito todo dia é
+// indistinguível de número vivo.
 // Rode: node --env-file=.env run-chat-sync.mjs [--completo]
 import { PrismaClient } from '@prisma/client'
 
@@ -42,10 +48,6 @@ async function main() {
       msgCanais: n(r.msgCanais),
       msgDiretas: n(r.msgDiretas),
       msgChamados: n(r.msgChamados),
-      chamadosAbertos: n(r.chamadosAbertos),
-      chamadosAssumidos: n(r.chamadosAssumidos),
-      chamadosConcluidos: n(r.chamadosConcluidos),
-      segundosResolucao: n(r.segundosResolucao),
     }
     await prisma.chatDaily.upsert({
       where: { nexusUserId_day: { nexusUserId: r.userId, day: r.day } },
@@ -55,26 +57,10 @@ async function main() {
     pessoas++
   }
 
-  let setores = 0
-  const vistasSetor = new Set()
-  for (const r of data.setores ?? []) {
-    if (!r.deptId || !r.day) continue
-    vistasSetor.add(`${r.deptId}|${r.day}`)
-    const dados = {
-      pedidosAbertos: n(r.pedidosAbertos),
-      pedidosConcluidos: n(r.pedidosConcluidos),
-      recebidosAbertos: n(r.recebidosAbertos),
-      recebidosConcluidos: n(r.recebidosConcluidos),
-      recebidosCancelados: n(r.recebidosCancelados),
-      segundosResolucao: n(r.segundosResolucao),
-    }
-    await prisma.chatDeptDaily.upsert({
-      where: { nexusDepartmentId_day: { nexusDepartmentId: r.deptId, day: r.day } },
-      create: { nexusDepartmentId: r.deptId, day: r.day, ...dados },
-      update: dados,
-    })
-    setores++
-  }
+  /* ⚠️ O espelho por SETOR do Chat (`chat_dept_daily`) parou em 16/09/2026: ele
+     era dos chamados, e eles mudaram de casa. A tabela fica como história — quem
+     conta setor agora é `fluxo_dept_daily`. */
+  const setores = 0
 
   /* ⚠️⚠️ No modo completo, a linha que a fonte NÃO devolveu é ZERADA. Quem ficou
      com zero num dia (passou o único chamado adiante) nem aparece na resposta, e
@@ -85,20 +71,18 @@ async function main() {
      linhas que o espelho tem, algo está errado LÁ — não zera nada. */
   let zeradas = 0, freio = null
   if (completo) {
-    const [espP, espS] = await Promise.all([
-      prisma.chatDaily.findMany({ select: { nexusUserId: true, day: true } }),
-      prisma.chatDeptDaily.findMany({ select: { nexusDepartmentId: true, day: true } }),
-    ])
+    /* ⚠️⚠️ SÓ PESSOA. O `chat_dept_daily` ficou congelado em 16/09/2026 e o sync
+       não devolve mais linha de setor — passá-lo por este zerador APAGARIA a
+       história inteira do painel por setor do Chat, e o freio abaixo, que
+       existe para isso, derrubaria junto o zeramento das mensagens. */
+    const espP = await prisma.chatDaily.findMany({ select: { nexusUserId: true, day: true } })
     const soP = espP.filter((r) => !vistasPessoa.has(`${r.nexusUserId}|${r.day}`))
-    const soS = espS.filter((r) => !vistasSetor.has(`${r.nexusDepartmentId}|${r.day}`))
-    if (vistasPessoa.size < espP.length / 2 || vistasSetor.size < espS.length / 2) {
-      freio = `fonte devolveu ${vistasPessoa.size}/${espP.length} linhas de pessoa e ${vistasSetor.size}/${espS.length} de setor — nada zerado`
+    if (vistasPessoa.size < espP.length / 2) {
+      freio = `fonte devolveu ${vistasPessoa.size}/${espP.length} linhas de pessoa — nada zerado`
     } else {
-      const zeroP = { msgCanais: 0, msgDiretas: 0, msgChamados: 0, chamadosAbertos: 0, chamadosAssumidos: 0, chamadosConcluidos: 0, segundosResolucao: 0 }
-      const zeroS = { pedidosAbertos: 0, pedidosConcluidos: 0, recebidosAbertos: 0, recebidosConcluidos: 0, recebidosCancelados: 0, segundosResolucao: 0 }
+      const zeroP = { msgCanais: 0, msgDiretas: 0, msgChamados: 0 }
       for (const r of soP) await prisma.chatDaily.update({ where: { nexusUserId_day: { nexusUserId: r.nexusUserId, day: r.day } }, data: zeroP })
-      for (const r of soS) await prisma.chatDeptDaily.update({ where: { nexusDepartmentId_day: { nexusDepartmentId: r.nexusDepartmentId, day: r.day } }, data: zeroS })
-      zeradas = soP.length + soS.length
+      zeradas = soP.length
     }
   }
 
@@ -107,11 +91,8 @@ async function main() {
     create: { source: SOURCE, lastSyncedAt: now },
     update: { lastSyncedAt: now },
   })
-  // ⚠️ `foraDeSetor` no log de propósito: é o chamado que o painel por setor
-  // NÃO mostra. Ficar em silêncio faria a diferença entre o chat e este painel
-  // parecer erro de conta.
   console.log(JSON.stringify({
-    pessoas, setores, foraDeSetor: data.foraDeSetor ?? null,
+    pessoas, setores,
     ...(completo ? { completo: true, zeradas, freio } : {}),
     from: from ? from.toISOString() : null, to: now.toISOString(),
   }))
