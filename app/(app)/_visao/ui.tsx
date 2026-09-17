@@ -9,10 +9,12 @@ import type { Tom } from './tipos'
 export const forte = (t: Tom) => `var(--n-${t})`
 export const suave = (t: Tom) => `var(--n-${t}-soft)`
 
-export function Cartao({ titulo, sub, Icone, corIcone, acao, children, className, style }: {
+export function Cartao({ titulo, sub, Icone, corIcone, logo, acao, children, className, style }: {
   titulo?: string; sub?: React.ReactNode; Icone?: LucideIcon
   /** A cor do ícone do título (padrão: o azul da paleta). */
   corIcone?: string
+  /** A LOGO de verdade de um sistema, no lugar do ícone de traço (o Fluxo). */
+  logo?: React.ReactNode
   acao?: React.ReactNode
   children: React.ReactNode; className?: string; style?: React.CSSProperties
 }) {
@@ -20,7 +22,7 @@ export function Cartao({ titulo, sub, Icone, corIcone, acao, children, className
     <section className={`${s.cartao} ${className ?? ''}`} style={style}>
       {titulo && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 14 }}>
-          {Icone && <Icone size={18} color={corIcone ?? 'var(--n-blue)'} style={{ flex: 'none', marginTop: 1 }} />}
+          {logo ?? (Icone && <Icone size={18} color={corIcone ?? 'var(--n-blue)'} style={{ flex: 'none', marginTop: 1 }} />)}
           <div style={{ minWidth: 0, flex: 1 }}>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-.2px', color: 'var(--n-text)' }}>{titulo}</h2>
             {sub && <div style={{ fontSize: 11.5, color: 'var(--n-text-3)', marginTop: 2 }}>{sub}</div>}

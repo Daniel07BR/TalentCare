@@ -1,8 +1,9 @@
 'use client'
-import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, ClipboardList, type LucideIcon } from 'lucide-react'
+import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { Sistema } from '@/lib/pessoa-sistema-tipos'
 import { usePainelDaPessoa } from '../../../PainelDaPessoa'
+import LogoFluxo from '../../../LogoFluxo'
 import { Estrelas } from '../../../whatsapp/AvaliacaoClientes'
 import { Cartao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
@@ -27,12 +28,18 @@ import f from './ficha.module.css'
    setor — a lista do que ela fez, dia a dia ou item a item.
    ============================================================ */
 
-function Titulo({ nome, sub, Icone, tom }: { nome: string; sub?: string; Icone: LucideIcon; tom: Tom }) {
+/* ⚠️ `logo`: quando o sistema tem MARCA PRÓPRIA (o Fluxo), ela entra no lugar do
+   quadradinho de cor — a logo já é o quadrado, e pôr uma dentro da outra daria
+   dois quadrados encaixados. Os outros sistemas seguem com o ícone do lucide no
+   tom do cartão. */
+function Titulo({ nome, sub, Icone, tom, logo }: { nome: string; sub?: string; Icone?: LucideIcon; tom: Tom; logo?: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+      {logo ?? (
       <span style={{ width: 30, height: 30, borderRadius: 9, background: suave(tom), color: forte(tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-        <Icone size={16} strokeWidth={2.2} />
+        {Icone && <Icone size={16} strokeWidth={2.2} />}
       </span>
+      )}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text)' }}>{nome}</div>
         {sub && <div style={{ fontSize: 10.5, color: 'var(--n-text-3)' }}>{sub}</div>}
@@ -265,7 +272,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
      cartão foi junto. O do Chat, abaixo, ficou só com a conversa. */
   add(fx.hasChamado || fx.hasTarefa, 'Fluxo', 'fluxo', () => (
     <Bloco onClick={abrir('fluxo')} dica="Ver os chamados e as tarefas dia a dia">
-      <Titulo nome="Fluxo" sub="chamados entre setores" Icone={ClipboardList} tom="purple" />
+      <Titulo nome="Fluxo" sub="chamados entre setores" tom="purple" logo={<LogoFluxo size={30} />} />
       {/* ⚠️ Na folha A4 o cartão é estreito (todos os sistemas numa fileira) e três
           caixas lado a lado sobrepunham "Atendeu"/"Concluiu" — pedido do dono,
           14/09/2026: um abaixo do outro, número à esquerda e o rótulo ao lado. */}

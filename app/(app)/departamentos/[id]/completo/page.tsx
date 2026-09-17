@@ -1,10 +1,11 @@
 'use client'
 import { use, useState } from 'react'
 import CalendarioOcorrencias from '../../../CalendarioOcorrencias'
+import LogoFluxo from '../../../LogoFluxo'
 import { useRouter } from 'next/navigation'
 import {
   GraduationCap, LifeBuoy, Landmark, MessagesSquare, Radio, Truck,
-  MessageSquareText, MessageCircle, ClipboardList, Search,
+  MessageSquareText, MessageCircle, Search,
   FileSpreadsheet, Upload,
 } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
@@ -484,7 +485,7 @@ function Atividade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => v
      FLUXO (para onde os chamados foram em 16/09) e a conversa ficou no Chat. */
   add('Fluxo', tem(m.fluxo.chamadosAbertos, m.fluxo.chamadosConcluidos, m.fluxo.tarefasAbertas, m.fluxo.tarefasConcluidas),
     <CardFonte
-      titulo="Fluxo · chamados" onDetalhe={() => abrir('fluxo')} cor="var(--chart-3)" Icone={ClipboardList}
+      titulo="Fluxo · chamados" onDetalhe={() => abrir('fluxo')} cor="var(--chart-3)" Icone={LogoFluxo}
       ranking={r.fluxo.gente} unidade={r.fluxo.rotulo || "mais concluiu chamado"}
       numeros={[
         { label: 'Chamados abertos por estas pessoas', valor: m.fluxo.chamadosAbertos, cor: 'var(--info)' },

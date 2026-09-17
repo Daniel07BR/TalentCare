@@ -8,6 +8,7 @@ import { fluxoVM, fmtDurUtil, type FluxoPerson, type FluxoSetor } from '@/lib/mo
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
 import EsqueletoResumo from '../EsqueletoResumo'
+import LogoFluxo from '../LogoFluxo'
 
 /* ============================================================
    FLUXO — os CHAMADOS entre setores (9ª fonte), 17/09/2026.
@@ -20,13 +21,6 @@ import EsqueletoResumo from '../EsqueletoResumo'
    ⚠️⚠️ As DUAS FACES do mesmo chamado (o que o setor pediu × o que recebeu para
    atender) continuam sem se somar, e o tempo continua sendo de EXPEDIENTE.
    ============================================================ */
-
-const FluxoIcon = ({ size = 17, color = 'var(--chart-3)' }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-    <rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M17.5 14v3.5M14 17.5h7" />
-  </svg>
-)
 
 const num = (n: number) => n.toLocaleString('pt-BR')
 
@@ -70,7 +64,7 @@ export default function FluxoResumo() {
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Integração · dados reais · {label}</div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FluxoIcon size={24} /> Fluxo · chamados
+            <LogoFluxo size={26} /> Fluxo · chamados
           </h1>
         </div>
       </div>

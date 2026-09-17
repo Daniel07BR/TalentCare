@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeftRight, MessageCircle } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 import s from '../../../_visao/visao.module.css'
+import LogoFluxo from '../../../LogoFluxo'
 import { Cartao, Mini } from '../../../_visao/ui'
 import { BotaoDetalhe } from '../../../_visao/Detalhe'
 import { Estrelas } from '../../../whatsapp/AvaliacaoClientes'
@@ -122,8 +123,11 @@ export function WhatsappEChamados({ m, abrir }: ComDetalhe) {
           abre QUEM, QUANTOS e de/para QUAL setor; ver `JanelaChamados.tsx`. O bloco do
           Chat Interno em "Sistemas e produtividade" saiu: o que ele tinha de chamado
           está aqui. */}
-      <Cartao titulo="Chamados entre setores" Icone={ArrowLeftRight}
-        sub="Duas faces do mesmo pedido — não se somam"
+      {/* ⚠️ Estes números são do FLUXO desde 16/09/2026 (eram do Chat Interno), e
+          o cartão diz de onde vêm com a logo do sistema — quem procura o número
+          na origem sabe onde clicar. */}
+      <Cartao titulo="Chamados entre setores" logo={<LogoFluxo size={26} />}
+        sub="Do Fluxo · duas faces do mesmo pedido, não se somam"
         acao={temChamado ? <BotaoDetalhe onClick={() => janela.abrir('pediu')} titulo="Ver quem pediu e quem atendeu, de e para qual setor" /> : undefined}>
         {!temChamado || !cs ? (
           <div style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>Nenhum chamado entre setores no período.</div>

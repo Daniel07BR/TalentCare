@@ -7,6 +7,7 @@ import { useTalentData } from '@/lib/ui/data'
 import { usePeriod } from '@/lib/ui/period'
 import { deptName } from '@/lib/mock/employee'
 import { NOME_DO_SISTEMA, type Detalhe, type Grupo, type Sistema } from '@/lib/pessoa-sistema-tipos'
+import LogoFluxo from './LogoFluxo'
 
 /* ============================================================
    O PAINEL DA PESSOA — o que ela fez num sistema, no período do filtro.
@@ -80,8 +81,11 @@ function Painel({ sistema, id, onFechar }: { sistema: Sistema; id: string; onFec
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e?.nome ?? '—'}</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{e ? `${e.cargo} · ${deptName(data, e.dept)}` : ''}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 2 }}>
-              <b style={{ color: 'var(--accent)' }}>{NOME_DO_SISTEMA[sistema]}</b> · {label}
+            {/* ⚠️ O sistema que tem marca própria aparece COM ela — é o mesmo
+                cartão que a pessoa clicou na tela anterior. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-mute)', marginTop: 2 }}>
+              {sistema === 'fluxo' && <LogoFluxo size={14} />}
+              <span><b style={{ color: 'var(--accent)' }}>{NOME_DO_SISTEMA[sistema]}</b> · {label}</span>
             </div>
           </div>
           <button type="button" onClick={onFechar} aria-label="Fechar" title="Fechar (Esc)"

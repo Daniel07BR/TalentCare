@@ -1,6 +1,7 @@
 'use client'
 import { Settings2, GraduationCap, Radio, MessagesSquare, Headphones, Landmark, MessageSquareText, Truck } from 'lucide-react'
 import { useTalentData } from '@/lib/ui/data'
+import LogoFluxo from '../../LogoFluxo'
 import { useClassroomPeriod } from '@/lib/ui/classroom-period'
 import { useRadioPeriod } from '@/lib/ui/radio-period'
 import { useConsultoriaPeriod } from '@/lib/ui/consultoria-period'
@@ -42,9 +43,11 @@ type Estado = 'carregando' | 'recarregando' | 'erro' | 'ok'
 const estadoDe = (loading: boolean, temMapa: boolean, erro = false): Estado =>
   erro && !loading ? 'erro' : !temMapa ? 'carregando' : loading ? 'recarregando' : 'ok'
 
-function CartaoSistema({ chave, titulo, sub, Icone, cor, abrir, estado, vazio, className, children }: {
+function CartaoSistema({ chave, titulo, sub, Icone, icone, cor, abrir, estado, vazio, className, children }: {
   chave: ChaveDetalhe; titulo: string; sub: React.ReactNode
-  Icone: typeof GraduationCap; cor: string; abrir: Abrir
+  /* ⚠️ `icone` (pronto) ganha de `Icone` (componente do lucide): é por ele que
+     entra a LOGO de verdade de um sistema que tem marca própria. */
+  Icone?: typeof GraduationCap; icone?: React.ReactNode; cor: string; abrir: Abrir
   estado: Estado; vazio: string | null
   className?: string; children: React.ReactNode
 }) {
@@ -52,7 +55,7 @@ function CartaoSistema({ chave, titulo, sub, Icone, cor, abrir, estado, vazio, c
     <section className={`${v.cartao} ${className ?? ''}`}>
       {/* ⚠️ O subtítulo carrega TOTAIS: na troca de filtro ele apaga junto com o
           corpo — senão os totais da janela anterior ficam em cor cheia. */}
-      <CabecaBotao Icone={Icone} cor={cor} titulo={titulo}
+      <CabecaBotao Icone={Icone} icone={icone} cor={cor} titulo={titulo}
         sub={estado === 'carregando' ? 'carregando…' : estado === 'erro' ? 'não foi possível ler' : <span className={estado === 'recarregando' ? p.recarregando : undefined}>{sub}</span>}
         onClick={() => abrir(chave)} onPreparar={() => precarregarDetalhe(chave)}
         dica={`Abrir o resumo de ${titulo.split(' · ')[0]} (a casa inteira)`} />
@@ -153,7 +156,7 @@ function Fluxo({ abrir }: { abrir: Abrir }) {
   /* ⚠️ Era "Chat Interno · chamados entre setores" até 16/09/2026, quando os
      chamados mudaram de casa. O cartão é o mesmo; a fonte é outra. */
   return (
-    <CartaoSistema chave="fluxo" titulo="Fluxo · chamados entre setores" Icone={MessageSquareText} cor="var(--n-purple)" abrir={abrir}
+    <CartaoSistema chave="fluxo" titulo="Fluxo · chamados entre setores" icone={<LogoFluxo size={20} />} cor="var(--n-purple)" abrir={abrir}
       estado={estadoDe(loading, !!map, erro)} vazio={vm.porSetor.length ? null : 'Sem chamados no período (o chamado entre setores existe desde 21/08/2026).'}
       sub={`${num(t.recebidosAbertos)} abertos · ${num(t.recebidosConcluidos)} concluídos · tempo médio ${vm.tempoMedioSetor}`}>
       {/* ⚠️⚠️ "Pediu" e "Recebeu" são as DUAS FACES do mesmo chamado e não se

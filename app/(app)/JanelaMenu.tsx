@@ -1,11 +1,13 @@
 'use client'
+import type { ComponentType } from 'react'
+import LogoFluxo from './LogoFluxo'
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, ClipboardCheck, Award, TrendingUp, AlarmClock,
   GraduationCap, Radio, MessageCircle, MessagesSquare, LifeBuoy, Landmark, Truck,
-  MessageSquareText, SlidersHorizontal, X, type LucideIcon, ClipboardList,} from 'lucide-react'
+  MessageSquareText, SlidersHorizontal, X, type LucideIcon,} from 'lucide-react'
 import { telaAtiva, type ChaveTela, type GrupoTelas, type Tela } from '@/lib/ui/menu'
 import v from './_visao/visao.module.css'
 import s from './navegacao.module.css'
@@ -25,12 +27,14 @@ import s from './navegacao.module.css'
    Camada 75: acima da lista da busca (70) e abaixo do painel da pessoa (80).
    ============================================================ */
 
-const ICONES: Record<ChaveTela, LucideIcon> = {
+/* ⚠️ `ComponentType`, e não `LucideIcon`: o Fluxo entra com a LOGO DE VERDADE
+   dele, que é um SVG próprio e não um ícone de traço do lucide. */
+const ICONES: Record<ChaveTela, ComponentType<{ size?: number; color?: string }>> = {
   dashboard: LayoutDashboard, funcionarios: Users, departamentos: Building2,
   avaliacoes: ClipboardCheck, 'minha-avaliacao': Award,
   turnover: TrendingUp, assiduidade: AlarmClock, classroom: GraduationCap, radio: Radio,
   whatsapp: MessageCircle, consultoria: MessagesSquare, helpdesk: LifeBuoy, cide: Landmark,
-  gerencia: Truck, fluxo: ClipboardList, chat: MessageSquareText, configuracoes: SlidersHorizontal,
+  gerencia: Truck, fluxo: LogoFluxo, chat: MessageSquareText, configuracoes: SlidersHorizontal,
 }
 
 const corDoIcone = (t: Tela['tom']) =>
@@ -101,7 +105,11 @@ export default function JanelaMenu({ grupos, onFechar }: { grupos: GrupoTelas[];
                     <Link key={t.chave} href={t.href} onClick={onFechar}
                       aria-current={ativo ? 'page' : undefined}
                       className={`${s.cartao} ${ativo ? s.cartaoAtivo : ''}`}>
-                      <span className={s.icone} style={corDoIcone(t.tom)}><Icone size={20} strokeWidth={2.1} /></span>
+                      {/* ⚠️ A logo do Fluxo JÁ É um quadrado com fundo: pô-la
+                          dentro do quadradinho de cor daria dois encaixados. */}
+                      <span className={s.icone} style={t.chave === 'fluxo' ? { background: 'none', border: 'none' } : corDoIcone(t.tom)}>
+                        <Icone size={t.chave === 'fluxo' ? 30 : 20} />
+                      </span>
                       <span className={s.textos}>
                         <span className={s.nomeTela}>
                           {t.label}
