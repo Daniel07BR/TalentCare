@@ -1,5 +1,44 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-18 — O WhatsApp da Imobiliária: por que Imóveis nasce vazio (estudo)
+
+Sessão de diagnóstico, sem mudança de código: o pedido era entender o departamento
+Imóveis vazio nos atendimentos WhatsApp. Causa raiz medida nos dois lados:
+
+- **São DUAS instâncias OneCode.** A imobiliária atende por
+  `api-itamarathyimoveis.onecode.chat`, com chave própria obtida em 17/09 à tarde.
+  O painel espelha as duas (`oc_*` e `imob_*`): o full da imobiliária rodou na noite
+  de 17/09 (670 tickets desde 22/11/2024, 7 filas, 5 atendentes) e o cron `*/3`
+  dispara desde 21:15 — vivo e são (1 ticket novo hoje às 15:15). O volume 1–3/dia
+  é o normal do negócio dela, não fonte parada.
+- **O elo que falta é UM, e mora no painel.** `/api/integrations/whatsapp-overview-daily`
+  agrega só a instância principal (`ocTicket`/`ocUser`). Medido em produção:
+  `whatsapp_daily` tem 11 setores, **zero linhas de Imóveis**. Como o diretório Nexus
+  tem o setor "Imóveis", todo cruzamento WhatsApp × departamento o mostra vazio.
+- **O lado daqui não precisa de código.** O espelho é genérico por string de dept
+  (chave dept+dia), o `?fila=` cruza por nome e o Nexus grafa "Imóveis" exatamente
+  como o dept chegaria. Linhas "Imóveis" na resposta da rota = telas povoadas.
+
+⚠️⚠️ **A instância É o departamento.** 328 dos 670 tickets (49%) estão **sem fila**,
+e os nomes de fila dela ("Financeiro", "Juridico", "SAC") colidem com setores da
+casa — integrar por fila misturaria o Financeiro da imob com o da casa. A recomendação
+registrada: tudo da segunda instância vira `dept="Imóveis"`; fila fina continua no
+dashboard da imobiliária no painel.
+
+⚠️ **Preparo de dados antes de ligar:** 0 de 5 atendentes casados com o Nexus
+(`imob_onecode_user_id` nulo) — sem vínculo, os nomes chegam em CAIXA ALTA e não
+abrem ficha; e a conta "SISTEMAS" (e-mail do dono) é conta de serviço, excluí-la da
+agregação por atendente.
+
+**Decisões pendentes do dono** (o plano de execução está na conversa da sessão):
+(1) dept único "Imóveis" para a instância inteira; (2) snapshot "agora"
+(`pendingNow`/`openNow`) soma as duas instâncias ou segue só a principal; (3)
+histórico completo — zerar o watermark do WhatsApp UMA vez para o pull full trazer
+os 2 anos — ou começar de hoje; (4) avaliação do cliente na segunda instância fica
+para fase 2 (campos ausentes = "—", a semântica certa). Verificação na regra da
+casa: ensaio a seco, e o número de Imóveis daqui tem de bater com o dashboard da
+imobiliária no painel — mesma pergunta, mesma resposta.
+
 ## 2026-09-18 — O T.I passa a ter acesso total (inclusive à Administração)
 
 Pedido do dono: *"o pessoal do T.I vai passar a dar manutenção no sistema, logo, eles vão precisar
