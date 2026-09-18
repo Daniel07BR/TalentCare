@@ -1,5 +1,39 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-18 — O T.I passa a ter acesso total (inclusive à Administração)
+
+Pedido do dono: *"o pessoal do T.I vai passar a dar manutenção no sistema, logo, eles vão precisar
+ter acesso total, que hoje estava restrito à diretoria e para mim adm"*.
+
+- **`mapRole`: setor T.I → ADMIN**, ao lado da Diretoria — nas **duas cópias** da régua
+  (`lib/nexus.ts` e `run-sync.mjs`, que roda node puro e não importa do `lib/`; mexer só numa faria
+  o cron vencer o login).
+- **`podeAdministrar(email)` substitui `isOwnerEmail`** nos 14 guardas da área de Administração e das
+  rotas `/api/admin/*`: passam o **dono** (allowlist) **e o T.I**. A Diretoria segue ADMIN, vendo a
+  casa inteira e **sem** essa área — como sempre foi.
+
+⚠️⚠️ **PELO SETOR, e nunca por `cargo.includes('T.I')`.** Medido no banco: o setor T.I tem **2
+pessoas** (Enzo e Yuri, cargo exato "T.I"); o cargo *"Aux. de T.I"* alcança **12 pessoas** de
+Financeiro, Legal, Fiscal, Imóveis, Contábil, Pessoal e Recepção. Um `includes` entregaria a elas o
+acervo disciplinar da casa inteira — é a pedra que o Nexus já pagou em 09/09/2026.
+
+⚠️ `podeAdministrar` consulta o **banco**, não o token: o setor muda no Nexus e chega pelo sync de
+hora em hora. Uma cópia carimbada na sessão continuaria abrindo a porta para quem saiu do T.I.
+
+**Ensaio** (`scripts/ensaio-acesso-ti.mjs`, sessão forjada de verdade) — **limpo**, em três metades:
+o T.I abrindo `/dashboard`, `/funcionarios`, `/configuracoes` **com** as abas de Administração e
+passando pela permissão da rota que escreve; os *"Aux. de T.I"* de outros setores **barrados** na
+tela e em 403 na API; e a **Diretoria** vendo tudo, **sem** as abas e com 403 na rota que escreve.
+As três rodadas que ele precisou para ficar honesto viraram comentário no próprio arquivo: sem o
+`email` no token forjado até o dono "falhava"; `/usuarios` é um atalho antigo que responde 307 para
+todo mundo; e `GET` numa rota `POST` devolve **405 antes de olhar a permissão** — 405 lido como
+"barrado" esconderia o guarda que se queria medir.
+
+⚠️ **Em aberto, para o dono decidir:** quem SAIR do T.I perde a Administração na hora (ela é lida do
+banco), mas o papel `ADMIN` **não cai sozinho** — o sync nunca rebaixa um ADMIN (decisão antiga, que
+protege elevação manual). Hoje isso significa que um ex-T.I continuaria enxergando a casa inteira
+até alguém mexer no papel dele à mão.
+
 ## 2026-09-17 — O PDF: os sistemas em quatro colunas (o que estava saindo do desenho)
 
 O dono, olhando a impressão: *"alguns cards ficaram com dados se sobrepondo ou saindo do desenho
