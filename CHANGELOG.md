@@ -29,10 +29,33 @@ As três rodadas que ele precisou para ficar honesto viraram comentário no pró
 todo mundo; e `GET` numa rota `POST` devolve **405 antes de olhar a permissão** — 405 lido como
 "barrado" esconderia o guarda que se queria medir.
 
-⚠️ **Em aberto, para o dono decidir:** quem SAIR do T.I perde a Administração na hora (ela é lida do
-banco), mas o papel `ADMIN` **não cai sozinho** — o sync nunca rebaixa um ADMIN (decisão antiga, que
-protege elevação manual). Hoje isso significa que um ex-T.I continuaria enxergando a casa inteira
-até alguém mexer no papel dele à mão.
+### O rebaixamento automático (decidido no mesmo dia)
+
+*"faça o rebaixamento automático de quem saiu do setor"* — e a confirmação da régua: **"aux. não se
+considera do departamento de T.I"**, só Yuri e Enzo (além do dono).
+
+`resolveRole` deixou de tratar ADMIN como vitalício: quem não é mais explicado pela régua (saiu da
+Diretoria, saiu do T.I) volta ao papel calculado, no sync seguinte. Régua derivada que não sabe
+DESFAZER é meia régua — ela resolve a promoção sozinha e cobra da mão humana justamente a saída, que
+é a parte que ninguém lembra.
+
+⚠️⚠️ **Só rebaixa quando a FONTE DISSE o setor.** Ausência de dado não é negação: se o Nexus não
+mandou o setor daquela pessoa (fora do ar, campo vazio, colaborador avulso), o papel de hoje fica de
+pé. Sem isso, uma resposta incompleta da origem rebaixaria a Diretoria inteira numa passagem.
+
+⚠️⚠️ **E tem FREIO: acima de 3 rebaixamentos numa passagem, nenhum é aplicado** — o sync grita no
+log e segue. Três de uma vez não é gente mudando de setor, é a origem vindo torta; e o mesmo sync
+que errou roda de novo em uma hora, repetindo o erro.
+
+⚠️ A outra face, dita para quem for procurar: **elevação manual no banco agora dura até o próximo
+sync**.
+
+**Ensaio** (`scripts/ensaio-rebaixamento.mjs`) — no caminho REAL, o `run-sync.mjs` que o cron roda.
+Não dá para pedir ao Nexus que finja que o Yuri saiu do T.I, então o ensaio planta uma **isca**:
+marca como ADMIN no espelho alguém que a origem diz estar em outro setor — o estado exato de quem
+saiu (papel de ontem, setor de hoje). Resultado **limpo**: com UMA isca ela é rebaixada, o sync a
+anuncia e os **12 ADMIN de verdade continuam de pé**; com QUATRO, o freio segura tudo. A isca se
+desfaz sozinha (o próprio sync devolve o papel), e ainda há `finally`.
 
 ## 2026-09-17 — O PDF: os sistemas em quatro colunas (o que estava saindo do desenho)
 

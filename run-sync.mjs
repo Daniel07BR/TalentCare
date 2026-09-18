@@ -58,7 +58,14 @@ const mapRole = (email, setor, cargo, temVinculo = false) => {
   if (ehChefia) return 'GESTOR'
   return 'COLABORADOR'
 }
-const resolveRole = (computed, current) => (current === 'ADMIN' ? 'ADMIN' : computed)
+/* ⚠️⚠️ CÓPIA de `lib/nexus.ts` — leia o comentário longo de lá. Em uma linha:
+   ADMIN deixou de ser vitalício (18/09/2026), mas só se rebaixa quando a FONTE
+   DISSE o setor; ausência de dado não é negação. */
+const resolveRole = (computed, current, setorConhecido = false) =>
+  (current === 'ADMIN' && computed !== 'ADMIN' && !setorConhecido ? 'ADMIN' : computed)
+
+/** O FREIO do rebaixamento — ver `LIMITE_REBAIXAMENTO` em `lib/nexus.ts`. */
+const LIMITE_REBAIXAMENTO = 3
 
 async function resolveDepartment(name, nexusId) {
   if (!name && !nexusId) return null
@@ -89,6 +96,8 @@ async function main() {
     (await prisma.setorAvaliador.findMany({ select: { userId: true } })).map((v) => v.userId),
   )
   let created = 0, updated = 0, deactivated = 0, admins = 0
+  /* Decididos no laço, aplicados no fim — depois do freio. */
+  const rebaixamentos = []
 
   for (const nu of employees) {
     let local = await prisma.user.findUnique({ where: { nexusUserId: nu.id } })
@@ -109,7 +118,13 @@ async function main() {
     const dept = await resolveDepartment(nu.department, nu.departmentId)
 
     if (local) {
-      const finalRole = resolveRole(computed, local.role)
+      /* ⚠️ O rebaixamento é DECIDIDO aqui e APLICADO no fim: aplicá-lo na hora
+         deixaria metade da casa rebaixada antes de o freio perceber que a fonte
+         veio torta. */
+      const setorConhecido = !!norm(nu.department)
+      const querRebaixar = local.role === 'ADMIN' && computed !== 'ADMIN' && setorConhecido
+      if (querRebaixar) rebaixamentos.push({ id: local.id, nome: local.name, de: local.role, para: computed })
+      const finalRole = querRebaixar ? local.role : resolveRole(computed, local.role, setorConhecido)
       // Data de saída real do Nexus (terminationDate) tem prioridade; sem ela,
       // mantém a inferência antiga (carimba na transição / backfill por updatedAt).
       const nexusLeft = nu.terminationDate ? new Date(nu.terminationDate) : null
@@ -192,8 +207,20 @@ async function main() {
       recebidos: employees.length, ativosAqui, cobertura: Number(cobertura.toFixed(2)),
     }))
     // O `.finally` do rodapé desconecta; sair daqui é só não inativar ninguém.
-    console.log(JSON.stringify({ total: employees.length, created, updated, deactivated: 0, admins, freio: true }))
+    console.log(JSON.stringify({ total: employees.length, created, updated, deactivated: 0, admins, freio: true, rebaixados: 0, freioRebaixa: 'resposta curta: nada rebaixado' }))
     return
+  }
+
+  /* ── O REBAIXAMENTO, depois de saber quantos são ────────────────────────── */
+  let rebaixados = [], freioRebaixa = null
+  if (rebaixamentos.length > LIMITE_REBAIXAMENTO) {
+    freioRebaixa = `${rebaixamentos.length} perderiam o ADMIN (teto ${LIMITE_REBAIXAMENTO}) — nada rebaixado: ${rebaixamentos.map((r) => r.nome).join(', ')}`
+    console.error(JSON.stringify({ alerta: 'rebaixamento_em_massa_segurado', freioRebaixa }))
+  } else {
+    for (const r of rebaixamentos) {
+      await prisma.user.update({ where: { id: r.id }, data: { role: r.para } })
+      rebaixados.push(`${r.nome}: ${r.de} → ${r.para}`)
+    }
   }
 
   const orphans = await prisma.user.findMany({
@@ -210,7 +237,7 @@ async function main() {
     deactivated++
   }
 
-  console.log(JSON.stringify({ total: employees.length, created, updated, deactivated, admins }))
+  console.log(JSON.stringify({ total: employees.length, created, updated, deactivated, admins, rebaixados, ...(freioRebaixa ? { freioRebaixa } : {}) }))
 }
 
 main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

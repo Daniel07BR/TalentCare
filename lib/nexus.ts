@@ -190,21 +190,41 @@ export async function recalcularAcesso(userId: string): Promise<UserRole | null>
   if (!u) return null
   const temVinculo = (await prisma.setorAvaliador.count({ where: { userId } })) > 0
   const computed = mapRole(u.email, u.department?.name ?? null, u.jobTitle, temVinculo)
-  const finalRole = resolveRole(computed, u.role)
+  /* Aqui o setor vem do banco local: `null` é "esta pessoa não tem setor", e não
+     "a origem não respondeu" — mesmo assim vale a mesma prudência. */
+  const finalRole = resolveRole(computed, u.role, !!norm(u.department?.name))
   if (finalRole !== u.role) {
     await prisma.user.update({ where: { id: userId }, data: { role: finalRole } })
   }
   return finalRole
 }
 
-// Preserva elevação manual: nunca rebaixa um ADMIN no sync.
-//
-// ⚠️ Só o ADMIN é preservado. GESTOR e COLABORADOR são recalculados a cada sync
-// de propósito: eles vêm do cargo, e cargo muda no Nexus. Preservar os três
-// deixaria alguém que saiu da chefia com a porta do setor aberta para sempre —
-// e ninguém iria conferir.
-export function resolveRole(computed: UserRole, current: UserRole): UserRole {
-  if (current === 'ADMIN') return 'ADMIN'
+/**
+ * O papel que vai ser gravado.
+ *
+ * ⚠️⚠️ ADMIN DEIXOU DE SER VITALÍCIO (18/09/2026, pedido do Daniel ao liberar o
+ * T.I: *"faça o rebaixamento automático de quem saiu do setor"*). Até aqui o
+ * sync nunca rebaixava um ADMIN — o que protegia elevação manual e, no mesmo
+ * movimento, deixava quem saísse da Diretoria ou do T.I enxergando a casa
+ * inteira para sempre, sem nada acusar. Régua derivada que não sabe DESFAZER é
+ * meia régua: ela resolve a promoção sozinha e cobra a saída de alguém que
+ * ninguém lembrou de avisar.
+ *
+ * ⚠️⚠️ MAS SÓ REBAIXA QUANDO A FONTE DISSE O SETOR (`setorConhecido`). Ausência
+ * de dado não é negação: se o Nexus não mandou o setor daquela pessoa — porque
+ * ficou fora do ar, porque o campo veio vazio, porque o registro é de um
+ * colaborador avulso —, o papel de hoje fica de pé. Sem esta linha, uma resposta
+ * incompleta da origem rebaixaria a Diretoria inteira numa passagem.
+ *
+ * ⚠️ GESTOR e COLABORADOR seguem recalculados sempre: vêm do cargo, e cargo muda
+ * no Nexus.
+ *
+ * ⚠️ Elevação MANUAL no banco (um ADMIN que a régua não explica) agora dura até
+ * o próximo sync. É a outra face do que o dono pediu, e está dito aqui para
+ * quem for procurar por que "o ADMIN que eu marquei sumiu".
+ */
+export function resolveRole(computed: UserRole, current: UserRole, setorConhecido = false): UserRole {
+  if (current === 'ADMIN' && computed !== 'ADMIN' && !setorConhecido) return 'ADMIN'
   return computed
 }
 
@@ -245,8 +265,22 @@ export interface SyncResult {
   created: number
   updated: number
   deactivated: number
+  /** Quem perdeu o ADMIN nesta passagem, e para qual papel foi. */
+  rebaixados: { nome: string; de: string; para: string }[]
+  /** Preenchido quando o FREIO segurou os rebaixamentos — nada foi aplicado. */
+  freioRebaixa?: string
   errors: string[]
 }
+
+/** ⚠️⚠️ O FREIO: acima disto, o sync NÃO rebaixa ninguém.
+ *
+ *  Rebaixar ADMIN é reversível (roda o sync de novo e ele volta), mas rebaixar a
+ *  Diretoria inteira por causa de uma resposta torta da origem tira do ar, de uma
+ *  vez, quem administra a casa — e o mesmo sync que errou vai rodar de novo em
+ *  uma hora, mantendo o erro. A casa tem 12 ADMIN, dos quais 9 são a Diretoria;
+ *  três de uma vez já é "alguma coisa está errada LÁ", não uma mudança de setor.
+ *  Mesma lição do freio de inativação do diretório. */
+const LIMITE_REBAIXAMENTO = 3
 
 async function resolveDepartment(name: string | null, nexusId: string | null) {
   if (!name && !nexusId) return null
@@ -287,7 +321,9 @@ function mapSexo(v: string | null | undefined): string | null {
 }
 
 export async function syncFromNexus(): Promise<SyncResult> {
-  const result: SyncResult = { created: 0, updated: 0, deactivated: 0, errors: [] }
+  const result: SyncResult = { created: 0, updated: 0, deactivated: 0, rebaixados: [], errors: [] }
+  /* Decididos no laço, aplicados no fim — depois do freio. */
+  const rebaixamentos: { id: string; nome: string; de: UserRole; para: UserRole }[] = []
 
   const res = await fetch(`${NEXUS_BASE_URL}/api/integrations/employees?includePassword=true&includeAvatar=true`, {
     headers: { 'X-API-Key': NEXUS_API_KEY },
@@ -333,7 +369,13 @@ export async function syncFromNexus(): Promise<SyncResult> {
       const dept = await resolveDepartment(nu.department, nu.departmentId)
 
       if (local) {
-        const finalRole = resolveRole(computed, local.role)
+        /* ⚠️ O rebaixamento de ADMIN é DECIDIDO aqui e APLICADO no fim, depois do
+           freio — ver `rebaixamentos` abaixo. Aplicá-lo na hora deixaria metade
+           da casa rebaixada antes de o freio perceber que a fonte veio torta. */
+        const setorConhecido = !!norm(nu.department)
+        const querRebaixar = local.role === 'ADMIN' && computed !== 'ADMIN' && setorConhecido
+        if (querRebaixar) rebaixamentos.push({ id: local.id, nome: local.name, de: local.role, para: computed })
+        const finalRole = querRebaixar ? local.role : resolveRole(computed, local.role, setorConhecido)
         // Data de saída (turnover): a data REAL definida no Nexus tem prioridade.
         // Sem ela, mantém o comportamento antigo: carimba na transição ativo→inativo
         // e faz backfill dos já inativos via updatedAt. Limpa se voltou a ativo.
@@ -435,6 +477,17 @@ export async function syncFromNexus(): Promise<SyncResult> {
       }
     } catch (err) {
       result.errors.push(`${nu.name} (${nu.id}): ${(err as Error).message}`)
+    }
+  }
+
+  /* ── O REBAIXAMENTO, depois de saber quantos são ────────────────────────── */
+  if (rebaixamentos.length > LIMITE_REBAIXAMENTO) {
+    result.freioRebaixa = `${rebaixamentos.length} pessoas perderiam o ADMIN nesta passagem (teto ${LIMITE_REBAIXAMENTO}) — nada foi rebaixado: ${rebaixamentos.map((r) => r.nome).join(', ')}`
+    result.errors.push(result.freioRebaixa)
+  } else {
+    for (const r of rebaixamentos) {
+      await prisma.user.update({ where: { id: r.id }, data: { role: r.para } })
+      result.rebaixados.push({ nome: r.nome, de: r.de, para: r.para })
     }
   }
 
