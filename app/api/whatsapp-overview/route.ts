@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
   const meusSetores = alcance.tipo === 'tudo' ? null
     : (await db.department.findMany({ where: { id: { in: alcance.departmentIds } }, select: { name: true } })).map((d) => d.name)
 
-  const [dayRows, attRows, snap] = await Promise.all([
+  const [dayRows, attRows, snaps] = await Promise.all([
     prisma.whatsappDaily.findMany({
       where: meusSetores ? { ...where, dept: { in: meusSetores } } : where,
       select: { day: true, abertos: true, finalizados: true, handleSum: true },
@@ -122,9 +122,20 @@ export async function GET(req: NextRequest) {
     prisma.whatsappAttendantDaily.groupBy({ by: ['dept', 'name'], where: { ...where, ...porNome(alcance) }, _sum: SOMA_ATENDENTE }),
     /* ⚠️ O SNAPSHOT ("pendentes agora") é da casa inteira e não se recorta: ele
        não tem setor nem atendente, é um número só. Fica só para quem alcança
-       tudo — meio-número seria pior que nenhum. */
-    alcance.tipo === 'tudo' ? prisma.whatsappSnapshot.findUnique({ where: { id: 1 } }) : null,
+       tudo — meio-número seria pior que nenhum.
+       ⚠️⚠️ E são DUAS LINHAS desde 18/09/2026, uma por instância do OneCode: a
+       pergunta é "quantos atendimentos estão parados NA CASA", e a casa atende
+       por dois números. Soma as duas; o "atualizado em" é o mais ANTIGO dos
+       dois, que é até quando o número inteiro está garantido. */
+    alcance.tipo === 'tudo' ? prisma.whatsappSnapshot.findMany() : null,
   ])
+  const snap = snaps?.length
+    ? {
+        pendingNow: snaps.reduce((a, s) => a + s.pendingNow, 0),
+        openNow: snaps.reduce((a, s) => a + s.openNow, 0),
+        updatedAt: snaps.reduce((a, s) => (s.updatedAt < a ? s.updatedAt : a), snaps[0].updatedAt),
+      }
+    : null
 
   let abertos = 0, finalizados = 0, handleSum = 0
   const byDay = new Map<string, number>()

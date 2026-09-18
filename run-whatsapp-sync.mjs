@@ -1,11 +1,30 @@
 // Sync incremental do espelho diário do WhatsApp → TalentCare (CLI p/ cron).
 // Rode: node --env-file=.env run-whatsapp-sync.mjs
+//
+// ⚠️⚠️ SÃO DUAS INSTÂNCIAS do OneCode desde 18/09/2026 — a da contabilidade
+// (`itamarathy`) e a da Imobiliária (`imobiliaria`), dois números de WhatsApp,
+// duas rotas no Relatórios e dois watermarks. Sem argumento, roda as DUAS;
+// `--fonte imobiliaria` roda só uma. A régua e o porquê estão em
+// `lib/whatsapp-fontes.ts` (aqui as constantes estão repetidas porque este
+// arquivo é .mjs e não importa TypeScript).
+//
+// ⚠️⚠️ A instância da Imobiliária chega como o setor "Imóveis" — quem resolve
+// isso é o Relatórios, na rota dele. Daqui para baixo as duas são iguais: as
+// linhas do espelho não distinguem de qual número vieram, e não precisam.
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 const BASE = process.env.PAINEL_BASE_URL
 const KEY = process.env.PAINEL_API_KEY
-const SOURCE = 'whatsapp'
+
+// ⚠️⚠️ `inicio` = primeiro dia da instância quando ainda não há watermark. Sem
+// ele, o primeiro pull traz TUDO — e no caso da Imobiliária isso significaria
+// trazer a faxina de 17/09/2026 (466 conversas antigas fechadas de uma vez, com
+// tempo mediano de ~305 dias). O porquê medido está em `lib/whatsapp-fontes.ts`.
+const FONTES = {
+  itamarathy: { caminho: '/api/integrations/whatsapp-overview-daily', watermark: 'whatsapp', snapshotId: 1, inicio: null },
+  imobiliaria: { caminho: '/api/integrations/whatsapp-imob-overview-daily', watermark: 'whatsapp_imob', snapshotId: 2, inicio: '2026-09-18' },
+}
 
 function startOfDayMinusOne(d) {
   const x = new Date(d)
@@ -14,19 +33,31 @@ function startOfDayMinusOne(d) {
   return x
 }
 
+function arg(nome) {
+  const i = process.argv.indexOf(nome)
+  return i > 0 ? process.argv[i + 1] : null
+}
+
+async function buscar(fonte, from, to) {
+  const qs = new URLSearchParams({ to: to.toISOString() })
+  if (from) qs.set('from', from.toISOString())
+  const res = await fetch(`${BASE}${FONTES[fonte].caminho}?${qs.toString()}`, { headers: { 'X-API-Key': KEY } })
+  if (!res.ok) throw new Error(`Painel ${res.status} (${fonte}): ${await res.text()}`)
+  return res.json()
+}
+
 /* ⚠️⚠️ CARGA DO PASSADO DA AVALIAÇÃO (11/09/2026):
      node --env-file=.env run-whatsapp-sync.mjs --so-avaliacao --desde 2026-06-01
    Recuar o watermark faria o sync REESCREVER abertos/finalizados dos meses antigos com
    o que o Painel tem hoje — e em julho o espelho daqui é o melhor registro (a origem
    apaga atendimentos; ver a memória `painel-onecode-reconciliacao-nao-destrutiva`).
    Este modo só ACRESCENTA os quatro campos da avaliação às linhas que já existem: não
-   cria linha, não mexe em número nenhum, e não move o watermark. */
-async function soAvaliacao(desde) {
+   cria linha, não mexe em número nenhum, e não move o watermark.
+   ⚠️ Só a instância da contabilidade confere avaliação (`run-avaliacao-onecode.mjs`
+   no Relatórios) — por isso o padrão aqui é `itamarathy`. */
+async function soAvaliacao(desde, fonte) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(desde ?? '')) throw new Error('--desde AAAA-MM-DD')
-  const qs = new URLSearchParams({ from: new Date(`${desde}T03:00:00Z`).toISOString(), to: new Date().toISOString() })
-  const res = await fetch(`${BASE}/api/integrations/whatsapp-overview-daily?${qs}`, { headers: { 'X-API-Key': KEY } })
-  if (!res.ok) throw new Error(`Painel ${res.status}: ${await res.text()}`)
-  const data = await res.json()
+  const data = await buscar(fonte, new Date(`${desde}T03:00:00Z`), new Date())
   let gravadas = 0, semLinha = 0, semConferencia = 0, conferidosAMais = 0
   for (const a of data.attendants) {
     if (a.verificados == null) { semConferencia++; continue }
@@ -47,32 +78,22 @@ async function soAvaliacao(desde) {
     if (linha && aval.verificados > linha.finalizados) conferidosAMais++
   }
   // `conferidosAMais`: dias em que o Painel tem mais fechados que o espelho daqui guardou.
-  console.log(JSON.stringify({ modo: 'so-avaliacao', desde, gravadas, semLinha, semConferencia, conferidosAMais }))
+  console.log(JSON.stringify({ modo: 'so-avaliacao', fonte, desde, gravadas, semLinha, semConferencia, conferidosAMais }))
 }
 
-async function main() {
-  if (process.argv.includes('--so-avaliacao')) {
-    const i = process.argv.indexOf('--desde')
-    return soAvaliacao(i > 0 ? process.argv[i + 1] : null)
-  }
-  const now = new Date()
-  const wm = await prisma.syncWatermark.findUnique({ where: { source: SOURCE } })
+async function sincronizar(fonte, desde, now) {
+  const { watermark, snapshotId, inicio } = FONTES[fonte]
+  const wm = await prisma.syncWatermark.findUnique({ where: { source: watermark } })
   /* `--desde AAAA-MM-DD` (11/09/2026): relê a partir daquele dia, inteiro — o
      incremental só relê o dia anterior e não traz correção retroativa (a memória
      `sync-incremental-nao-traz-correcao-retroativa`). Usado para refazer SETEMBRO
      depois do conserto do dia parcial no Painel. ⚠️ Reescreve abertos/finalizados
      com o que o Painel tem hoje: não use para meses em que o espelho daqui é o melhor
      registro sem medir antes (ver CHANGELOG (27)). */
-  const iDesde = process.argv.indexOf('--desde')
-  const desde = iDesde > 0 ? process.argv[iDesde + 1] : null
-  if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) throw new Error('--desde AAAA-MM-DD')
-  const from = desde ? new Date(`${desde}T03:00:00Z`) : wm ? startOfDayMinusOne(wm.lastSyncedAt) : null
-
-  const qs = new URLSearchParams({ to: now.toISOString() })
-  if (from) qs.set('from', from.toISOString())
-  const res = await fetch(`${BASE}/api/integrations/whatsapp-overview-daily?${qs.toString()}`, { headers: { 'X-API-Key': KEY } })
-  if (!res.ok) throw new Error(`Painel ${res.status}: ${await res.text()}`)
-  const data = await res.json()
+  const from = desde ? new Date(`${desde}T03:00:00Z`)
+    : wm ? startOfDayMinusOne(wm.lastSyncedAt)
+    : inicio ? new Date(`${inicio}T03:00:00Z`) : null
+  const data = await buscar(fonte, from, now)
 
   let days = 0
   for (const r of data.days) {
@@ -110,15 +131,41 @@ async function main() {
     att++
   }
   await prisma.whatsappSnapshot.upsert({
-    where: { id: 1 },
-    create: { id: 1, pendingNow: data.snapshot.pendingNow, openNow: data.snapshot.openNow },
+    where: { fonte },
+    create: { id: snapshotId, fonte, pendingNow: data.snapshot.pendingNow, openNow: data.snapshot.openNow },
     update: { pendingNow: data.snapshot.pendingNow, openNow: data.snapshot.openNow },
   })
   await prisma.syncWatermark.upsert({
-    where: { source: SOURCE },
-    create: { source: SOURCE, lastSyncedAt: now },
+    where: { source: watermark },
+    create: { source: watermark, lastSyncedAt: now },
     update: { lastSyncedAt: now },
   })
-  console.log(JSON.stringify({ days, att, snapshot: data.snapshot, from: from ? from.toISOString() : null, to: now.toISOString() }))
+  return { fonte, days, att, snapshot: data.snapshot, from: from ? from.toISOString() : null }
+}
+
+async function main() {
+  const fonteArg = arg('--fonte')
+  if (fonteArg && !FONTES[fonteArg]) throw new Error(`--fonte deve ser ${Object.keys(FONTES).join(' ou ')}`)
+  const desde = arg('--desde')
+  if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) throw new Error('--desde AAAA-MM-DD')
+
+  if (process.argv.includes('--so-avaliacao')) return soAvaliacao(desde, fonteArg ?? 'itamarathy')
+
+  const now = new Date()
+  const alvos = fonteArg ? [fonteArg] : Object.keys(FONTES)
+  const saida = []
+  let falhou = false
+  for (const fonte of alvos) {
+    try {
+      saida.push(await sincronizar(fonte, desde, now))
+    } catch (e) {
+      /* ⚠️ Uma instância fora do ar não derruba a outra — e o watermark dela não
+         avança, então ela relê sozinha o que ficou para trás no próximo pull. */
+      falhou = true
+      saida.push({ fonte, erro: e.message })
+    }
+  }
+  console.log(JSON.stringify({ to: now.toISOString(), fontes: saida }))
+  if (falhou) process.exitCode = 1
 }
 main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

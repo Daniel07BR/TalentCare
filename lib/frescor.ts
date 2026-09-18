@@ -1,5 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
+import { SETOR_IMOB } from '@/lib/whatsapp-fontes'
 
 /* ============================================================
    ATÉ QUANDO CADA ESPELHO FOI ALIMENTADO — a conta, num lugar só.
@@ -16,10 +17,16 @@ import { prisma } from '@/lib/db/prisma'
 export type Fonte = { nome: string; ate: string | null; semCron?: boolean }
 
 export async function frescorDasFontes(): Promise<Fonte[]> {
-  const [cls, radio, wpp, cide, hd, cons, ger, chat, fluxo, ponto, disc] = await Promise.all([
+  const [cls, radio, wpp, wppImob, cide, hd, cons, ger, chat, fluxo, ponto, disc] = await Promise.all([
     prisma.classroomDaily.aggregate({ _max: { day: true } }),
     prisma.radioDaily.aggregate({ _max: { day: true } }),
-    prisma.whatsappDaily.aggregate({ _max: { day: true } }),
+    /* ⚠️⚠️ SÃO DUAS INSTÂNCIAS do WhatsApp (18/09/2026) — o número do escritório
+       e o da Imobiliária, que chega como o setor "Imóveis". Um `max(day)` da
+       tabela inteira daria a data da mais fresca às duas: a Imobiliária podia
+       estar parada há uma semana e a tela diria "hoje". Duas linhas, pelo mesmo
+       motivo do Ponto e da Disciplina logo abaixo. */
+    prisma.whatsappDaily.aggregate({ where: { dept: { not: SETOR_IMOB } }, _max: { day: true } }),
+    prisma.whatsappDaily.aggregate({ where: { dept: SETOR_IMOB }, _max: { day: true } }),
     prisma.cideDaily.aggregate({ _max: { day: true } }),
     prisma.helpdeskDaily.aggregate({ _max: { day: true } }),
     prisma.consultoriaDaily.aggregate({ _max: { day: true } }),
@@ -38,6 +45,7 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
     { nome: 'ClassRoom', ate: cls._max.day },
     { nome: 'Rádio', ate: radio._max.day },
     { nome: 'WhatsApp', ate: wpp._max.day },
+    { nome: 'WhatsApp (Imobiliária)', ate: wppImob._max.day },
     { nome: 'CIDE', ate: cide._max.day },
     { nome: 'HelpDesk', ate: hd._max.day },
     { nome: 'Consultoria Plus', ate: cons._max.day },

@@ -327,8 +327,17 @@ model WhatsappAttendantDaily {
 }
 
 // Snapshot "agora" do WhatsApp (não é por período): backlog/abertos atuais.
+// ⚠️⚠️ UMA LINHA POR INSTÂNCIA do OneCode desde 18/09/2026 — a casa atende por
+// dois números (ver `lib/whatsapp-fontes.ts`) e "quantos atendimentos estão
+// parados agora" é pergunta da CASA: a tela soma as duas. Sem a coluna `fonte`,
+// o sync de uma sobrescrevia o número da outra a cada hora, e o painel mostrava
+// o backlog de quem tivesse rodado por último.
 model WhatsappSnapshot {
+  /// Número fixo por instância (`snapshotId` em `lib/whatsapp-fontes.ts`):
+  /// 1 = itamarathy (a linha que já existia), 2 = imobiliária. Quem escreve e
+  /// quem lê usa a `fonte`; o id continua aqui por ser a chave antiga.
   id         Int      @id @default(1)
+  fonte      String   @unique @default("itamarathy")
   pendingNow Int      @default(0) @map("pending_now")
   openNow    Int      @default(0) @map("open_now")
   updatedAt  DateTime @updatedAt @map("updated_at")

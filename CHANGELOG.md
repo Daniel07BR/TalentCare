@@ -1,5 +1,68 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-18 — A Imobiliária entra nos atendimentos (2ª instância do WhatsApp)
+
+Pedido do dono: *"puxamos apenas da equipe da contabilidade, funcionários da
+imobiliária têm os dados de whats vindo de outro número… poderia ver para puxar
+os dados da imóveis também de atendimento?"*. O estudo de mais cedo (seção
+abaixo) achou a causa; esta seção é a execução.
+
+**Relatórios (.70):** rota nova `GET /api/integrations/whatsapp-imob-overview-daily`
+(mesma `X-API-Key`, mesma forma de resposta da rota da contabilidade), sobre as
+tabelas `imob_*`.
+
+⚠️⚠️ **A instância inteira chega como UM setor, `dept = "Imóveis"`** — e isso é
+medição, não atalho: **331 dos 670** atendimentos dela (49%) não têm fila, e as
+filas que ela tem se chamam *Financeiro*, *Juridico*, *SAC* — os mesmos nomes de
+setores da casa. Mandando a fila fina, metade do trabalho da Imobiliária viraria
+"Sem fila" (que o cartão esconde) e a outra metade se somaria ao Financeiro da
+contabilidade, calada. "Imóveis" é o nome do setor no Nexus, igual ao das outras
+barras daquele cartão. A fila fina continua onde ela cabe: o painel da
+Imobiliária, no próprio Relatórios.
+
+⚠️⚠️ **O nome sai resolvido na origem** (vínculo → e-mail → nome sem acento/caixa
+→ nome do OneCode). O OneCode da Imobiliária grava `"BÁRBARA ROCHA"`; as telas
+daqui casam por igualdade EXATA (`name IN (...)` com os nomes do Nexus). Sem
+isso, a pessoa apareceria com os atendimentos na ficha **e atividade ZERO** na
+comparação do setor — as duas contas "funcionando", na mesma tela, na tela que
+decide aumento.
+
+⚠️⚠️ **A fonte começa em 18/09/2026, e não em 2024 — medido antes de ligar.** O
+histórico existe desde 22/11/2024, mas em **17/09**, o dia em que a instância foi
+conectada, **466 conversas antigas foram fechadas de uma vez** (Bárbara 294,
+Fabiana 128, Kaique 44), com tempo de atendimento **mediano de ~305 dias**; de
+18/09 em diante, zero finalizados. Na Imobiliária "finalizar atendimento" não era
+hábito: o passado é uma FAXINA, não trabalho de um dia. Puxá-lo daria à Bárbara
+294 finalizados num dia só e um tempo médio de dez meses. O piso mora no código
+(`inicio` em `lib/whatsapp-fontes.ts`), não no cron — assim não depende de
+ninguém lembrar de rodar o primeiro pull à mão. Trazer o passado mesmo assim é
+uma linha: `run-whatsapp-sync.mjs --fonte imobiliaria --desde 2024-11-22`.
+
+**Aqui:** `lib/whatsapp-fontes.ts` (as duas instâncias num lugar só: rota,
+watermark, linha do snapshot e primeiro dia), `lib/whatsapp.ts` e
+`run-whatsapp-sync.mjs` puxam as DUAS (watermarks separados — `whatsapp` e
+`whatsapp_imob`: uma fora do ar não segura a outra, e a que falhou relê sozinha
+o que ficou). `--fonte imobiliaria` roda só uma.
+
+⚠️ `whatsapp_snapshot` ("pendentes agora") tinha UMA linha para a casa inteira —
+os dois syncs se sobrescreveriam de hora em hora e o painel mostraria o backlog
+de quem tivesse rodado por último. Ganhou `fonte` (ALTER aditivo,
+`scripts/2026-09-18-whatsapp-fonte.sql`) e a tela SOMA as duas, com o "atualizado
+em" do mais ANTIGO — que é até quando o número inteiro está garantido.
+
+⚠️ `/api/frescor` ganhou a linha **"WhatsApp (Imobiliária)"** separada: um
+`max(day)` da tabela inteira daria a data da instância mais fresca às duas, e a
+Imobiliária podia estar parada há uma semana com a tela dizendo "hoje".
+
+**Ensaio:** `node --env-file=.env scripts/ensaio-whatsapp-imob.mjs` — a seco, sem
+escrever. Confere as três formas de isso falhar calado: setor fora de "Imóveis",
+nome que não casa letra por letra com o diretório, e dia com finalizado demais
+(mutirão vazando).
+
+⚠️ **A avaliação do cliente não vale para esta instância** — só a da
+contabilidade é conferida (`run-avaliacao-onecode.mjs`). Os quatro campos chegam
+ausentes e a tela mostra "—", que é a leitura certa: não conferido ≠ não pediu.
+
 ## 2026-09-18 — O WhatsApp da Imobiliária: por que Imóveis nasce vazio (estudo)
 
 Sessão de diagnóstico, sem mudança de código: o pedido era entender o departamento

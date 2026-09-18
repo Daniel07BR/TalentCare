@@ -6,7 +6,7 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 | # | Fonte | Onde | Espelho | Cron |
 |---|---|---|---|---|
 | 1 | Rádio Itamarathy | `.68` | `radio_daily` | `:00` |
-| 2 | WhatsApp / Painel de Atendimento | `.70` | `whatsapp_daily` + `whatsapp_attendant_daily` | `:05` |
+| 2 | WhatsApp / Relatórios — **duas instâncias** do OneCode (escritório + Imobiliária) | `.70` | `whatsapp_daily` + `whatsapp_attendant_daily` + `whatsapp_snapshot` (1 linha por instância) | `:05` |
 | 3 | ClassRoom | `.71` | `classroom_daily` | `:10` |
 | 4 | Consultoria Plus | `.68` | `consultoria_daily` | `:15` |
 | 5 | HelpDesk | `.77` | `helpdesk_daily` | `:20` |
@@ -34,6 +34,18 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 4. /api/<fonte>-metrics + lib/ui/<fonte>-period.ts
    soma o espelho no intervalo pedido
 ```
+
+⚠️⚠️ **O WhatsApp são DUAS fontes vestidas de uma** (18/09/2026). A casa atende
+por dois números, cada um numa instância do OneCode, e o Relatórios espelha as
+duas: a do escritório (`/api/integrations/whatsapp-overview-daily`, filas
+Pessoal/Fiscal/Contábil/…) e a da **Imobiliária**
+(`/api/integrations/whatsapp-imob-overview-daily`), que chega inteira como o
+setor **"Imóveis"** — 49% dos atendimentos dela não têm fila, e as filas que tem
+repetem nomes de setores da casa ("Financeiro", "Juridico", "SAC"). Watermarks
+separados (`whatsapp`, `whatsapp_imob`), e a da Imobiliária **começa em
+18/09/2026**: em 17/09 houve uma faxina de 466 fechamentos antigos, que não é
+trabalho de um dia. O porquê, medido, está em `lib/whatsapp-fontes.ts`; o ensaio
+a seco é `scripts/ensaio-whatsapp-imob.mjs`.
 
 A chave de junção é sempre o **`nexus_user_id`**, nunca o nome — exceto o WhatsApp,
 cuja origem não tem id do Nexus e casa por nome normalizado.
