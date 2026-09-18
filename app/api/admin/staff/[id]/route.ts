@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 import { toDate, resolveDepartment, avatarFromBody } from '../route'
 
@@ -8,7 +8,7 @@ import { toDate, resolveDepartment, avatarFromBody } from '../route'
 // (não toca usuários do Nexus). Inativar carimba a data de saída (leftAt).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!isOwnerEmail(session?.user?.email)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  if (!(await podeAdministrar(session?.user?.email))) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const { id } = await params
   const target = await prisma.user.findUnique({ where: { id }, select: { origin: true, active: true } })

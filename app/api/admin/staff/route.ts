@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { auth } from '@/lib/auth/config'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 
 // Cadastro de colaboradores STAFF: pessoas reais SEM usuário no Nexus
@@ -10,7 +10,7 @@ import { prisma } from '@/lib/db/prisma'
 // ficam zeradas (não usam os sistemas) e o ponto/disciplina casa por nome/CPF.
 
 function isOwner(session: Awaited<ReturnType<typeof auth>>) {
-  return isOwnerEmail(session?.user?.email)
+  return podeAdministrar(session?.user?.email)
 }
 
 // 'YYYY-MM-DD' → meio-dia UTC (não vira o dia por fuso); '' → null.

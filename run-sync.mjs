@@ -45,6 +45,12 @@ const CARGOS_GESTAO = ['gestor', 'sub-encarregado']
 const mapRole = (email, setor, cargo, temVinculo = false) => {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
+  /* ⚠️⚠️ CÓPIA da régua de `lib/nexus.ts` (este CLI roda node puro e não importa
+     do `lib/`). Mexeu numa, mexe na outra — senão o cron vence o login.
+     O T.I entra como ADMIN pelo SETOR (18/09/2026); nunca por
+     `cargo.includes('T.I')`, que alcançaria os 12 "Aux. de T.I" de outros
+     setores. */
+  if (norm(setor).replace(/\./g, '') === 'ti') return 'ADMIN'
   const emEnsaio = !!email && ACESSO_TESTE.includes(email.toLowerCase())
   // O VÍNCULO ganha do cargo: quem avalia alguém alcança a fila.
   const ehChefia = temVinculo || CARGOS_GESTAO.includes(norm(cargo))

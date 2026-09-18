@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 
 function parseBR(s: string | null): Date | null {
@@ -12,7 +12,7 @@ function parseBR(s: string | null): Date | null {
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!isOwnerEmail(session?.user?.email)) {
+  if (!(await podeAdministrar(session?.user?.email))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
   const body = (await req.json().catch(() => null)) as { stagingId?: string; nexusUserId?: string | null } | null

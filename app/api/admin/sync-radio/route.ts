@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { syncRadio } from '@/lib/radio'
 
 export async function POST() {
   const session = await auth()
-  if (!isOwnerEmail(session?.user?.email)) {
+  if (!(await podeAdministrar(session?.user?.email))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
   try {

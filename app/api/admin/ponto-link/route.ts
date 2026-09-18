@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { prisma } from '@/lib/db/prisma'
 
 type Occ = { atrasos?: { day: string; minutos: number; abonado: boolean }[]; adverts?: { sourceId: string; day: string; motivo: string | null }[] }
@@ -12,7 +12,7 @@ type Occ = { atrasos?: { day: string; minutos: number; abonado: boolean }[]; adv
 //   'ignore' → marca a linha como ignorada
 export async function POST(req: Request) {
   const session = await auth()
-  if (!isOwnerEmail(session?.user?.email)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  if (!(await podeAdministrar(session?.user?.email))) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = (await req.json().catch(() => null)) as { stagingId?: string; userId?: string; action?: string } | null
   const stagingId = body?.stagingId

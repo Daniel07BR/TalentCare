@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { isOwnerEmail } from '@/lib/nexus'
+import { podeAdministrar } from '@/lib/nexus'
 import { quemEh } from '@/lib/avaliacoes/regua'
 import FontesDeDados from './Fontes'
 import ReguaGeral from './Regua'
@@ -57,7 +57,9 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
   const uid = (session?.user as { id?: string } | undefined)?.id
   const quem = uid ? await quemEh(uid) : null
   if (!quem || quem.role !== 'ADMIN') redirect('/dashboard')
-  const dono = isOwnerEmail(session?.user?.email)
+  /* ⚠️ `dono` aqui quer dizer "quem administra o sistema": o dono da
+     allowlist e, desde 18/09/2026, o SETOR DE T.I. */
+  const dono = await podeAdministrar(session?.user?.email)
   const visiveis = ABAS.filter((a) => dono || !a.soDono)
 
   const { aba } = await searchParams

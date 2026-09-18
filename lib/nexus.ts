@@ -27,6 +27,49 @@ export function isOwnerEmail(email: string | null | undefined): boolean {
 }
 
 /**
+ * O SETOR de T.I — quem dá manutenção no sistema (decisão do dono, 18/09/2026:
+ * *"o pessoal do T.I vai passar a dar manutenção no sistema, logo, eles vão
+ * precisar ter acesso total"*).
+ *
+ * ⚠️⚠️ PELO SETOR, e NUNCA por `cargo.includes('T.I')`. Medido no banco em
+ * 18/09/2026: o setor T.I tem **2 pessoas** (Enzo e Yuri, cargo exato "T.I")
+ * enquanto o cargo "Aux. de T.I" alcança **12 pessoas espalhadas por Financeiro,
+ * Legal, Fiscal, Imóveis, Contábil, Pessoal e Recepção** — gente que não é do
+ * T.I e que, por um `includes`, ganharia o acervo disciplinar da casa inteira.
+ * É a mesma pedra que o Nexus já pagou (ver `ehDaTi` × `ehTiPleno` lá).
+ *
+ * ⚠️ Derivado, e não lista de e-mails: quem entra no setor passa a administrar e
+ * quem sai perde o acesso no sync seguinte, sem ninguém lembrar de mexer numa
+ * lista — lista nominal envelhece calada nos DOIS sentidos.
+ */
+export function ehSetorTi(setor: string | null | undefined): boolean {
+  const n = norm(setor).replace(/\./g, '')
+  return n === 'ti'
+}
+
+/**
+ * Quem pode entrar na área de ADMINISTRAÇÃO (Equipe interna, Escolaridade, Casar
+ * ponto, Relatórios, Configurações, Usuários) e nas rotas `/api/admin/*`.
+ *
+ * O DONO (allowlist) e o **T.I**, que passou a dar manutenção no sistema. A
+ * Diretoria é ADMIN e enxerga tudo — menos esta área, como sempre foi.
+ *
+ * ⚠️⚠️ Consulta o BANCO de propósito, e não o que veio no token: o setor da
+ * pessoa muda no Nexus e chega aqui pelo sync de hora em hora. Uma cópia
+ * carimbada na sessão continuaria abrindo a porta para quem saiu do T.I até o
+ * dia em que essa pessoa resolvesse sair e entrar de novo.
+ */
+export async function podeAdministrar(email: string | null | undefined): Promise<boolean> {
+  if (isOwnerEmail(email)) return true
+  if (!email) return false
+  const pessoa = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' }, active: true },
+    select: { department: { select: { name: true } } },
+  })
+  return ehSetorTi(pessoa?.department?.name)
+}
+
+/**
  * ⚠️⚠️ A CHAVE QUE ABRE O SISTEMA PARA A EMPRESA INTEIRA.
  *
  * Desligada = só a Diretoria e a allowlist entram, e os outros 86 continuam
@@ -111,6 +154,9 @@ export function mapRole(
 ): UserRole {
   if (email && ADMIN_EMAILS.includes(email.toLowerCase())) return 'ADMIN'
   if (norm(setor).includes('diretoria')) return 'ADMIN'
+  /* ⚠️ O T.I entra como ADMIN desde 18/09/2026: é quem mantém o sistema. Pelo
+     SETOR — ver `ehSetorTi`, e a armadilha do "Aux. de T.I" que ele evita. */
+  if (ehSetorTi(setor)) return 'ADMIN'
   const emEnsaio = !!email && ACESSO_TESTE.includes(email.toLowerCase())
   // ⚠️ O cargo decide só a PORTA (que telas), nunca o conteúdo. Quem avalia quem
   // continua vindo de `setor_avaliador`, confirmado por gente — ver
