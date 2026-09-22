@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh } from '@/lib/avaliacoes/regua'
-import { niveisDoSetor, podeVerDisc } from '@/lib/disc/regua'
+import { podeVerDisc } from '@/lib/disc/regua'
 import { filtroEquipe, vigentes } from '@/lib/disc/leitura'
 
 /* ============================================================
    O DISC do SETOR (GET ?dept=<Department.id>) — o cartão do relatório do setor.
 
    ⚠️⚠️ A lista e a conta saem do MESMO recorte: só as pessoas cujo DISC quem lê
-   pode ver (`podeVerDisc`, pessoa a pessoa). O sub-encarregado vê o setor sem o
-   gestor e sem ele mesmo, e o "de quantos" diz isso. Somar na média quem não
+   pode ver (`podeVerDisc`, pessoa a pessoa), e o "de quantos" diz se alguém
+   ficou fora. Somar na média quem não
    aparece na lista faria a média falar de gente que a tela esconde.
    ============================================================ */
 
@@ -28,15 +28,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const [gente, niveis] = await Promise.all([
-    prisma.user.findMany({
-      where: { departmentId: dept.id, ...filtroEquipe },
-      select: { id: true, name: true, jobTitle: true, avatarUrl: true, departmentId: true },
-      orderBy: { name: 'asc' },
-    }),
-    niveisDoSetor(dept.id),
-  ])
-  const visiveis = gente.filter((p) => podeVerDisc(quem, p, niveis))
+  const gente = await prisma.user.findMany({
+    where: { departmentId: dept.id, ...filtroEquipe },
+    select: { id: true, name: true, jobTitle: true, avatarUrl: true, departmentId: true },
+    orderBy: { name: 'asc' },
+  })
+  const visiveis = gente.filter((p) => podeVerDisc(quem, p))
   const disc = await vigentes(visiveis.map((p) => p.id))
 
   return NextResponse.json({

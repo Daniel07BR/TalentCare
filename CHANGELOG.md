@@ -50,6 +50,13 @@ que ter o nome dos dois"*.
   perfis** da janela da pessoa (`QuadroPerfis`, o mesmo componente), aberto no
   perfil que mais aparece no setor.
 - Ensaio: 141 conferidos, 0 falhas (os 16 chefes leem o próprio: 200).
+- ⚠️⚠️ **Sub-encarregado vê e lança o DISC do GESTOR do setor.** A Joice (sub do
+  Legal) não tinha o botão na ficha do Evandro: a régua seguia a hierarquia da
+  avaliação (DISC do gestor só para a Diretoria). O dono: *"eles, assim como
+  gestores, deveriam ter a liberação"*. Afetava os 6 subs (Débora e Liliane →
+  Priscila, Joice → Evandro, Bianca → Adriana, Renata → Barbara, Juliana →
+  Gabriela). Agora quem tem vínculo de chefia num setor — gestor OU sub — vê e
+  lança o de todos daquele setor. Ensaio: os 6 pares respondem 200.
 
 ## 2026-09-18 — A Imobiliária entra nos atendimentos (2ª instância do WhatsApp)
 

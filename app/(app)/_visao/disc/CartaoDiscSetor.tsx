@@ -84,7 +84,7 @@ export function CartaoDiscSetor({ deptId }: { deptId: string }) {
   const sub = (
     <>
       <b style={{ color: 'var(--n-text-2)' }}>{com.length} de {r.pessoas.length}</b> com DISC registrado · retrato da última aplicação, não acompanha o filtro
-      {r.ocultas > 0 && <> · {r.ocultas === 1 ? '1 pessoa fica' : `${r.ocultas} pessoas ficam`} fora: o DISC do gestor do setor é visto pela Diretoria</>}
+      {r.ocultas > 0 && <> · {r.ocultas === 1 ? '1 pessoa fica' : `${r.ocultas} pessoas ficam`} fora do seu acesso</>}
     </>
   )
 

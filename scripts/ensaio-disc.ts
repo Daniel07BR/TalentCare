@@ -10,7 +10,7 @@
  *   1. a chefia (GESTOR) lê o PRÓPRIO DISC (200); quem não tem chefia, não;
  *   2. gestor/sub lê um colaborador do setor que chefia (200) e NÃO lê o de
  *      outro setor (403);
- *   3. sub-encarregado não lê o gestor do próprio setor (403);
+ *   3. sub-encarregado LÊ o gestor do próprio setor (200) — decisão do dono, 22/09;
  *   4. colaborador comum não lê ninguém, nem a si (403 ou barrado na porta);
  *   5. ADMIN lê qualquer um (200); `/api/disc/grupo` só ADMIN;
  *   6. POST com nota inválida é recusado (400) ANTES de gravar, e POST de quem
@@ -72,7 +72,7 @@ for (const c of chefes) {
     const gestores = vinculos.filter((v) => v.departmentId === dep && v.nivel === 'gestor' && v.userId !== c.id)
     for (const g of gestores) {
       const gu = await prisma.user.findUnique({ where: { id: g.userId }, select: sel })
-      if (gu?.departmentId === dep) { subs++; confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 403) }
+      if (gu?.departmentId === dep) { subs++; confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 200) }
     }
   }
   confere(`${c.name} abre o DISC da casa`, await req(c, '/api/disc/grupo'), 403)

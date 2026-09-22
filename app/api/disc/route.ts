@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh } from '@/lib/avaliacoes/regua'
-import { niveisDoSetor, podeRegistrarDisc, podeVerDisc } from '@/lib/disc/regua'
+import { podeRegistrarDisc, podeVerDisc } from '@/lib/disc/regua'
 import { validarNotas } from '@/lib/disc/calculo'
 
 /* ============================================================
@@ -24,8 +24,7 @@ async function contexto(alvoId: string) {
     prisma.user.findUnique({ where: { id: alvoId }, select: { id: true, name: true, departmentId: true } }),
   ])
   if (!quem || !alvo) return { quem, alvo: null, pode: false }
-  const niveis = await niveisDoSetor(alvo.departmentId)
-  return { quem, alvo, pode: podeVerDisc(quem, alvo, niveis), podeRegistrar: podeRegistrarDisc(quem, alvo, niveis) }
+  return { quem, alvo, pode: podeVerDisc(quem, alvo), podeRegistrar: podeRegistrarDisc(quem, alvo) }
 }
 
 const seletor = {
