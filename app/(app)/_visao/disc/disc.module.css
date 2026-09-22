@@ -1,0 +1,116 @@
+/* ============================================================
+   AS CORES DO DISC — as do treinamento, medidas no slide (22/09/2026):
+   D #cc0000 · I #ffc824 · S #61a25c · C #459ad8.
+
+   ⚠️⚠️ Pedido do dono: "respeite as cores de cada categoria, pois no
+   treinamento ficamos muito nelas". Estas quatro NÃO entram na paleta geral
+   (`visao.module.css`): lá o vermelho quer dizer "atraso" e o verde quer dizer
+   "bom". Aqui vermelho é só "Dominante", e nenhum perfil é bom ou ruim.
+
+   `-ink` é a cor do texto SOBRE a cor cheia: branco no vermelho; quase preto no
+   amarelo, no verde e no azul (branco ali fica abaixo de 3:1, ilegível).
+   ============================================================ */
+.cores {
+  --disc-D: #cc0000; --disc-D-ink: #ffffff;
+  --disc-I: #ffc824; --disc-I-ink: #3a2c00;
+  --disc-S: #61a25c; --disc-S-ink: #0c2a0f;
+  --disc-C: #459ad8; --disc-C-ink: #04223a;
+  /* o texto na cor do perfil, sobre o cartão branco — o amarelo puro some no
+     branco, então a tinta de texto do I é um âmbar escuro da mesma família */
+  --disc-D-text: #b00000; --disc-I-text: #9a6b00; --disc-S-text: #3b7d37; --disc-C-text: #1f73b3;
+  --disc-D-soft: color-mix(in srgb, #cc0000 11%, transparent);
+  --disc-I-soft: color-mix(in srgb, #ffc824 20%, transparent);
+  --disc-S-soft: color-mix(in srgb, #61a25c 15%, transparent);
+  --disc-C-soft: color-mix(in srgb, #459ad8 15%, transparent);
+}
+:global([data-theme="dark"]) .cores {
+  --disc-D-text: #ff6b6b; --disc-I-text: #ffd45a; --disc-S-text: #86cf80; --disc-C-text: #7cbcf0;
+  --disc-D-soft: color-mix(in srgb, #cc0000 24%, transparent);
+  --disc-I-soft: color-mix(in srgb, #ffc824 18%, transparent);
+  --disc-S-soft: color-mix(in srgb, #61a25c 22%, transparent);
+  --disc-C-soft: color-mix(in srgb, #459ad8 22%, transparent);
+}
+
+/* O botão da ficha: a faixa das quatro cores no fundo, o nome num selo por cima. */
+.botao {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 4px;
+  border: none; border-radius: 10px; cursor: pointer; font-family: inherit;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, .16), inset 0 0 0 1px rgba(255, 255, 255, .35);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.botao:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, .22), inset 0 0 0 1px rgba(255, 255, 255, .45); }
+.botao:focus-visible { outline: 2px solid var(--n-blue); outline-offset: 2px; }
+.selo {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 7px;
+  background: rgba(15, 23, 42, .66); color: #fff; font-size: 12.5px; font-weight: 700; white-space: nowrap;
+  backdrop-filter: blur(2px);
+}
+.selo b { font-weight: 800; letter-spacing: .6px; font-size: 11px; opacity: .85; }
+
+.vazio {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px;
+  border: 1.5px dashed var(--n-border); border-radius: 10px; background: var(--n-card);
+  color: var(--n-text-2); font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.vazio:hover { border-color: var(--n-text-3); color: var(--n-text); }
+.pontos { display: inline-flex; gap: 3px; }
+.pontos i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+
+/* A janela */
+.fundo {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 60;
+  display: flex; justify-content: center; align-items: center; padding: min(3vh, 24px) min(2vw, 16px);
+}
+.janela {
+  background: var(--n-bg); border: 1px solid var(--n-border); border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .3); width: min(1040px, 100%); height: min(90vh, 940px);
+  max-height: 100%; display: flex; flex-direction: column; overflow: hidden; outline: none; color: var(--n-text);
+}
+.topo {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 18px 22px; background: var(--n-card); border-bottom: 1px solid var(--n-border);
+}
+.corpo { flex: 1; overflow-y: auto; padding: 18px 22px 24px; }
+.grade { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .grade { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); } }
+.bloco { background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; padding: 16px; min-width: 0; }
+
+.abas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--n-border); margin-bottom: 14px; }
+.aba {
+  border: none; background: none; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--n-text-2);
+  padding: 9px 12px; border-bottom: 3px solid transparent; margin-bottom: -1px; cursor: pointer; min-height: 40px;
+}
+.aba[aria-selected="true"] { color: var(--n-text); font-weight: 800; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 6px; border-radius: 999px;
+  border: 1.5px solid var(--n-border); background: var(--n-card); font-family: inherit; font-size: 12.5px;
+  font-weight: 700; color: var(--n-text-2); cursor: pointer; min-height: 36px;
+}
+.letra {
+  width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 900; flex: none;
+}
+.lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.lista li { display: flex; gap: 9px; font-size: 13.5px; line-height: 1.45; color: var(--n-text); }
+.lista li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--marca, var(--n-text-3)); flex: none; margin-top: 7px; }
+.citacao {
+  border-left: 4px solid var(--marca); background: var(--marca-soft); border-radius: 0 10px 10px 0;
+  padding: 10px 14px; font-size: 13.5px; font-weight: 600; line-height: 1.45;
+}
+.campo { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--n-border); border-radius: 9px; background: var(--n-card); color: var(--n-text); font-family: inherit; font-size: 14px; }
+.campo:focus { outline: 2px solid var(--n-blue); outline-offset: 0; }
+.acao {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 16px; border-radius: 10px;
+  border: none; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.linhaSetor {
+  display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  width: 100%; padding: 8px; border: none; background: none; border-radius: 10px; font-family: inherit;
+  text-align: left; cursor: pointer; color: var(--n-text);
+}
+.linhaSetor:hover { background: var(--n-card-2); }
+.pessoa { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; text-decoration: none; color: var(--n-text); }
+.pessoa:hover { background: var(--n-card-2); }
+
+@media (prefers-reduced-motion: reduce) { .botao { transition: none; } .botao:hover { transform: none; } }

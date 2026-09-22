@@ -1231,3 +1231,40 @@ model PontuacaoTarefaAjuste {
   @@index([departmentId, tarefaNorm])
   @@map("pontuacao_tarefa_ajuste")
 }
+
+// O resultado DISC de UMA pessoa (perfil comportamental) — 22/09/2026, pedido
+// do dono durante o treinamento de liderança com a IN-Formação.
+//
+// ⚠️⚠️ UMA LINHA POR APLICAÇÃO, e nenhuma se edita nem se apaga. "Corrigir" é
+// registrar de novo; o resultado vigente é o mais recente. O DISC é "uma foto
+// do momento" (o próprio material diz) — a foto de 2026 continua existindo
+// quando vier a de 2027, e um número digitado errado não some sem rastro.
+//
+// ⚠️⚠️ QUEM VÊ é a régua de `lib/disc/regua.ts`, e ela é mais fechada que a da
+// ficha: Diretoria/T.I (ADMIN) e a chefia do setor — nunca a própria pessoa,
+// nunca colega. DISC é dado de comportamento, não de desempenho, e fica FORA
+// de score e ranking ("não é julgamento de valor").
+//
+// Chave pelo `User.id` do TalentCare (e não `nexusUserId`): cobre o STAFF, que
+// não tem Nexus, e o id local não muda com o sync.
+model DiscResultado {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  /// As quatro pontuações como vieram do teste (0 a 100). A proporção entre
+  /// elas é calculada na leitura — o que se grava é o que o teste deu.
+  d                 Int
+  i                 Int
+  s                 Int
+  c                 Int
+  /// Dia da aplicação, `AAAA-MM-DD`. Texto de propósito: `new Date('2026-09-10')`
+  /// é meia-noite UTC e a tela mostraria o dia 09.
+  aplicadoEm        String   @map("aplicado_em") @db.VarChar(10)
+  observacao        String?
+  registradoPorId   String   @map("registrado_por_id")
+  /// O nome no instante do registro — a pessoa pode sair e o rastro fica.
+  registradoPorNome String   @map("registrado_por_nome")
+  criadoEm          DateTime @default(now()) @map("criado_em")
+
+  @@index([userId, criadoEm])
+  @@map("disc_resultado")
+}

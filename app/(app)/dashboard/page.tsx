@@ -25,6 +25,7 @@ import { Atendimentos, CurvaTurnover } from './_novo/Linha2'
 import { Destaque, Escolaridade, Geracoes, Genero } from './_novo/Linha3'
 import { Sistemas } from './_novo/Sistemas'
 import { Assiduidade } from './_novo/Assiduidade'
+import { CartaoDiscGrupo } from '../_visao/disc/CartaoDiscGrupo'
 
 /* ============================================================
    O PAINEL PRINCIPAL — no desenho da imagem conceito (11/09/2026).
@@ -243,6 +244,9 @@ function Conteudo() {
       })()}
 
       <Genero retrato={rotuloDoRetrato(toDay)} grupos={gGen} pcts={{ M: gend.mPct, F: gend.fPct }} idades={{ M: gend.avgM, F: gend.avgF }} abrir={abrirGrupo('gen')} />
+
+      {/* O perfil DISC da casa, setor a setor (22/09/2026) — só agregado. */}
+      <div style={{ marginBottom: 14 }}><CartaoDiscGrupo /></div>
 
       <Sistemas periodo={periodo} abrir={detalhe.abrir} />
       </div>

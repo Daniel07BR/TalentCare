@@ -20,6 +20,7 @@ import { Assiduidade } from './_visao/Assiduidade'
 import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
+import { BotaoDisc } from '../../_visao/disc/BotaoDisc'
 
 /* ============================================================
    A FICHA DA PESSOA — no padrão novo (o do relatório do setor e do painel).
@@ -72,13 +73,18 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
           quando a rota respondeu: zerado diria "zero pontos". */}
       <Cabecalho vm={vm} voltar={voltar}
         acoes={
-          /* ⚠️ Só habilita quando os dados do período chegaram: um PDF gerado antes
-             sairia sem os números — e papel não recarrega. */
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* ⚠️⚠️ O DISC mora na TELA e fica fora do PDF (pedido do dono, 22/09/2026).
+              O botão some sozinho para quem não é da régua: a rota responde 403. */}
+          <BotaoDisc pessoaId={vm.id} />
+          {/* ⚠️ Só habilita quando os dados do período chegaram: um PDF gerado antes
+             sairia sem os números — e papel não recarrega. */}
           <button type="button" onClick={gerarPdf} disabled={!m}
             title={m ? `Gerar a ficha em PDF (A4) · ${periodo}` : 'Aguarde os dados do período carregarem'}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 36, padding: '0 16px', border: 'none', borderRadius: 10, background: m ? 'var(--n-blue)' : 'var(--n-card-2)', color: m ? '#fff' : 'var(--n-text-3)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: m ? 'pointer' : 'wait', boxShadow: m ? '0 6px 16px color-mix(in srgb, var(--n-blue) 25%, transparent)' : 'none' }}>
             <FileDown size={16} /> {m ? 'Gerar PDF' : 'Carregando…'}
           </button>
+          </div>
         }
         lado={m?.posicao ? (
           <Placar compacto p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)}

@@ -16,6 +16,7 @@ import { Assiduidade } from './_visao/Assiduidade'
 import { Sistemas } from './_visao/Sistemas'
 import { PainelDoIndicador, type ChavePainel } from './_visao/Paineis'
 import { PainelDaPessoaProvider } from '../../PainelDaPessoa'
+import { CartaoDiscSetor } from '../../_visao/disc/CartaoDiscSetor'
 
 /* ============================================================
    O RELATÓRIO DO SETOR — a visão geral, no desenho da imagem conceito.
@@ -78,6 +79,8 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
         <WhatsappEChamados m={m} abrir={detalhe.abrir} />
         <Assiduidade m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>
+      {/* O perfil DISC do setor (22/09/2026). Some para quem não é da régua. */}
+      <div style={{ marginBottom: 14 }}><CartaoDiscSetor deptId={m.setor.id} /></div>
       <Sistemas m={m} abrir={detalhe.abrir} />
 
       {painel && <PainelDoIndicador chave={painel} m={m} onFechar={() => setPainel(null)} />}
