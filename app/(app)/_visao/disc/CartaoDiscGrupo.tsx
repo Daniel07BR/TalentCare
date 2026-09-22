@@ -11,12 +11,12 @@ import d from './disc.module.css'
 /* ============================================================
    O DISC DA CASA, setor a setor — o cartão do painel principal (Diretoria).
 
-   Só AGREGADO (a rota não manda nome de ninguém): a mistura média de cada setor
-   e quantos de cada perfil predominam. O clique leva ao setor, onde estão as
+   Só AGREGADO (a rota não manda nome de ninguém): quantas pessoas de cada
+   perfil predominante há em cada setor (empate vale meia em cada cor). O clique leva ao setor, onde estão as
    pessoas.
    ============================================================ */
 
-type Setor = { id: string; nome: string; total: number; comDisc: number; empates: number; contagem: Record<Fator, number>; media: Notas }
+type Setor = { id: string; nome: string; total: number; comDisc: number; empates: number; contagem: Record<Fator, number>; pessoas: Notas }
 type Resposta = { setores: Setor[]; total: number; comDisc: number }
 
 export function CartaoDiscGrupo() {
@@ -39,10 +39,9 @@ export function CartaoDiscGrupo() {
   const comDados = r?.setores.filter((s) => s.comDisc > 0) ?? []
   const semDados = r?.setores.filter((s) => s.comDisc === 0) ?? []
 
-  // A mistura da CASA: média ponderada pelo número de pessoas com DISC em cada setor.
+  // A mistura da CASA: pessoas por perfil predominante, somadas de todos os setores.
   const casa = Object.fromEntries(FATORES.map((f) => [f, 0])) as Notas
-  const n = comDados.reduce((a, s) => a + s.comDisc, 0)
-  for (const s of comDados) for (const f of FATORES) casa[f] += (s.media[f] * s.comDisc) / Math.max(1, n)
+  for (const s of comDados) for (const f of FATORES) casa[f] += s.pessoas[f]
 
   return (
     <Cartao titulo="Perfil DISC por departamento" Icone={Shapes} className={d.cores}
@@ -70,7 +69,7 @@ export function CartaoDiscGrupo() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {comDados.map((s) => {
-              const top = fatias(s.media)[0]
+              const top = fatias(s.pessoas)[0]
               return (
                 <Link key={s.id} href={`/departamentos/${s.id}`} className={d.pessoa}
                   style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 170px) minmax(0, 1fr) auto', gap: 12 }}
@@ -79,7 +78,7 @@ export function CartaoDiscGrupo() {
                     <span style={{ display: 'block', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.nome}</span>
                     <span style={{ display: 'block', fontSize: 11, color: 'var(--n-text-3)' }}>{s.comDisc} de {s.total} · mais {PERFIS[top.fator].nome}</span>
                   </span>
-                  <FaixaDisc n={s.media} altura={20} />
+                  <FaixaDisc n={s.pessoas} altura={20} />
                   <span style={{ display: 'flex', gap: 6 }} title="Quantas pessoas predominam em cada perfil (empate conta nos dois)">
                     {FATORES.map((f) => (
                       <span key={f} style={{ minWidth: 26, textAlign: 'center', fontSize: 12, fontWeight: 800, padding: '2px 6px', borderRadius: 7, background: s.contagem[f] ? corDe(f) : 'var(--n-card-2)', color: s.contagem[f] ? tintaSobre(f) : 'var(--n-text-3)' }}>

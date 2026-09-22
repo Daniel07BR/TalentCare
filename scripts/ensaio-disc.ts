@@ -7,7 +7,7 @@
  *
  * Confere, com a sessão de CADA pessoa com vínculo de chefia forjada contra o
  * serviço rodando (a porta e a régua juntas, não só a função):
- *   1. ninguém de fora do ADMIN lê o PRÓPRIO DISC (403);
+ *   1. a chefia (GESTOR) lê o PRÓPRIO DISC (200); quem não tem chefia, não;
  *   2. gestor/sub lê um colaborador do setor que chefia (200) e NÃO lê o de
  *      outro setor (403);
  *   3. sub-encarregado não lê o gestor do próprio setor (403);
@@ -47,7 +47,8 @@ const nivelEm = (uid: string, dep: string | null) => vinculos.find((v) => v.user
 
 for (const c of chefes) {
   const meus = vinculos.filter((v) => v.userId === c.id).map((v) => v.departmentId)
-  confere(`${c.name} lê o próprio`, await req(c, `/api/disc?id=${c.id}`), 403)
+  // ⚠️ Desde 22/09 (tarde): a chefia LÊ e LANÇA o próprio DISC.
+  confere(`${c.name} lê o próprio`, await req(c, `/api/disc?id=${c.id}`), 200)
 
   // um colaborador comum de um setor que ele chefia
   const col = await prisma.user.findFirst({
@@ -71,7 +72,7 @@ for (const c of chefes) {
     const gestores = vinculos.filter((v) => v.departmentId === dep && v.nivel === 'gestor' && v.userId !== c.id)
     for (const g of gestores) {
       const gu = await prisma.user.findUnique({ where: { id: g.userId }, select: sel })
-      if (gu?.departmentId === dep) subs++; confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 403)
+      if (gu?.departmentId === dep) { subs++; confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 403) }
     }
   }
   confere(`${c.name} abre o DISC da casa`, await req(c, '/api/disc/grupo'), 403)

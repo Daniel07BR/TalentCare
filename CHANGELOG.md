@@ -36,6 +36,21 @@ que ter o nome dos dois"*.
 - ⚠️ Schema aplicado com `migrate diff` filtrado (só o `CREATE`): o diff queria
   dropar `chat_daily_bkp_20260911` (11.068 linhas) e o do setor.
 
+### Ajustes da tarde (22/09), depois do primeiro uso
+
+- ⚠️⚠️ **A chefia lança o PRÓPRIO DISC.** O José Roberto lançou o da equipe e, na
+  página dele, não havia botão: a régua fechava o próprio para todos. Agora quem
+  tem papel `GESTOR` vê e lança o seu; o colaborador comum segue fora (nem entra).
+- ⚠️⚠️ **A mistura conta PESSOAS, não a média das notas.** O setor mostrava
+  "D 22%" sem nenhum Dominante: todo mundo tem um pouco de D, e a média das
+  fatias pintava isso de vermelho. Agora a barra é pessoas por perfil
+  predominante (empate vale meia em cada cor) e bate com a lista embaixo. O
+  painel principal passou a contar do mesmo jeito.
+- O lado direito do cartão do setor ("O que a mistura diz") virou o **quadro dos
+  perfis** da janela da pessoa (`QuadroPerfis`, o mesmo componente), aberto no
+  perfil que mais aparece no setor.
+- Ensaio: 141 conferidos, 0 falhas (os 16 chefes leem o próprio: 200).
+
 ## 2026-09-18 — A Imobiliária entra nos atendimentos (2ª instância do WhatsApp)
 
 Pedido do dono: *"puxamos apenas da equipe da contabilidade, funcionários da

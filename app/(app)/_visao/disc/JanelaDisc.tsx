@@ -160,6 +160,49 @@ function Conteudo({ p, aba }: { p: Perfil; aba: Aba }) {
   )
 }
 
+/**
+ * O QUADRO DOS PERFIS: escolher o perfil e ler o tema. É o mesmo na janela da
+ * pessoa e no cartão do setor (pedido do dono, 22/09/2026: "deixe lá o quadro
+ * que já existe dentro do resumo da pessoa, onde os gestores podem rapidamente
+ * selecionar o perfil e ver detalhes").
+ * `destaques` ganham a estrela e abrem primeiro; `notaFora` explica os outros.
+ */
+export function QuadroPerfis({ ordem, destaques, notaFora }: {
+  ordem: Fator[]; destaques: Fator[]; notaFora?: (f: Fator) => string
+}) {
+  const [perfil, setPerfil] = useState<Fator>(destaques[0] ?? ordem[0] ?? 'D')
+  const [aba, setAba] = useState<Aba>('quem')
+  const p = PERFIS[perfil]
+  return (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }} role="tablist" aria-label="Perfil">
+        {ordem.map((f) => {
+          const sel = f === perfil
+          return (
+            <button key={f} type="button" role="tab" aria-selected={sel} className={d.chip} onClick={() => setPerfil(f)}
+              style={sel ? { borderColor: corDe(f), background: corSuaveDe(f), color: 'var(--n-text)' } : undefined}>
+              <Letra f={f} />
+              {PERFIS[f].nome}
+              {destaques.includes(f) && <span style={{ fontSize: 10, fontWeight: 800, color: `var(--disc-${f}-text)` }}>★</span>}
+            </button>
+          )
+        })}
+      </div>
+      <div className={d.abas} role="tablist" aria-label="Tema">
+        {ABAS.map((a) => (
+          <button key={a.k} type="button" role="tab" aria-selected={aba === a.k} className={d.aba} onClick={() => setAba(a.k)}
+            style={aba === a.k ? { borderBottomColor: corDe(perfil) } : undefined}>{a.rotulo}</button>
+        ))}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--n-text-3)', marginBottom: 12 }}>
+        <b style={{ color: `var(--disc-${perfil}-text)` }}>{p.nome} · {p.apelido}</b> — {p.foco}
+        {!destaques.includes(perfil) && notaFora && <> · {notaFora(perfil)}</>}
+      </div>
+      <Conteudo p={p} aba={aba} />
+    </>
+  )
+}
+
 function Formulario({ pessoaId, inicial, onCancelar, onSalvo }: {
   pessoaId: string; inicial: Notas | null; onCancelar: (() => void) | null; onSalvo: () => void
 }) {
@@ -247,8 +290,6 @@ export function JanelaDisc({ dados, onFechar, onSalvo }: { dados: DiscDaPessoa; 
   const pr = n ? predominantes(n) : []
   // A ordem das escolhas: os predominantes primeiro, depois os outros pela nota.
   const ordem: Fator[] = n ? fatias(n).map((x) => x.fator) : FATORES
-  const [perfil, setPerfil] = useState<Fator>(pr[0] ?? 'D')
-  const [aba, setAba] = useState<Aba>('quem')
   const [editando, setEditando] = useState(!dados.atual)
   const [verHistorico, setVerHistorico] = useState(false)
 
@@ -258,8 +299,6 @@ export function JanelaDisc({ dados, onFechar, onSalvo }: { dados: DiscDaPessoa; 
     ref.current?.focus()
     return () => window.removeEventListener('keydown', h)
   }, [onFechar])
-
-  const p = PERFIS[perfil]
 
   return (
     <div className={d.fundo} onClick={onFechar}>
@@ -325,30 +364,8 @@ export function JanelaDisc({ dados, onFechar, onSalvo }: { dados: DiscDaPessoa; 
               </div>
 
               <div className={d.bloco}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }} role="tablist" aria-label="Perfil">
-                  {ordem.map((f) => {
-                    const sel = f === perfil
-                    return (
-                      <button key={f} type="button" role="tab" aria-selected={sel} className={d.chip} onClick={() => setPerfil(f)}
-                        style={sel ? { borderColor: corDe(f), background: corSuaveDe(f), color: 'var(--n-text)' } : undefined}>
-                        <Letra f={f} />
-                        {PERFIS[f].nome}
-                        {pr.includes(f) && <span style={{ fontSize: 10, fontWeight: 800, color: `var(--disc-${f}-text)` }}>★</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className={d.abas} role="tablist" aria-label="Tema">
-                  {ABAS.map((a) => (
-                    <button key={a.k} type="button" role="tab" aria-selected={aba === a.k} className={d.aba} onClick={() => setAba(a.k)}
-                      style={aba === a.k ? { borderBottomColor: corDe(perfil) } : undefined}>{a.rotulo}</button>
-                  ))}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--n-text-3)', marginBottom: 12 }}>
-                  <b style={{ color: `var(--disc-${perfil}-text)` }}>{p.nome} · {p.apelido}</b> — {p.foco}
-                  {!pr.includes(perfil) && <> · não é o predominante desta pessoa ({n[perfil]} pontos)</>}
-                </div>
-                <Conteudo p={p} aba={aba} />
+                <QuadroPerfis ordem={ordem} destaques={pr}
+                  notaFora={(f) => `não é o predominante desta pessoa (${n[f]} pontos)`} />
               </div>
 
               {dados.historico.length > 0 && (

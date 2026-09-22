@@ -6,11 +6,12 @@ import type { Quem } from '@/lib/avaliacoes/regua'
    QUEM VÊ O DISC de quem — a régua, num lugar só.
 
    Decisão do dono (22/09/2026): "a visualização deve ser liberada apenas para
-   Gestor, Diretoria e T.I". O funcionário NÃO vê o próprio, e colega não vê.
+   Gestor, Diretoria e T.I". Colega não vê; o colaborador comum não vê nem o
+   próprio (ele nem entra no sistema). A chefia vê e lança o dela.
 
    ⚠️⚠️ É MAIS FECHADA que a da ficha (`podeVer` de `lib/avaliacoes/regua.ts`),
-   de propósito, em dois pontos:
-   1. A ficha abre para a PRÓPRIA pessoa; o DISC, não.
+   de propósito:
+   1. O PRÓPRIO DISC só para quem tem chefia (GESTOR) — ver abaixo.
    2. A ficha abre o setor inteiro para quem tem vínculo nele; o DISC segue a
       HIERARQUIA do vínculo, a mesma da avaliação: o perfil do GESTOR do setor
       é da Diretoria, o do SUB-ENCARREGADO é do gestor. Sem isso, o sub leria
@@ -35,8 +36,16 @@ export function podeVerDisc(
   niveis: Map<string, string>,
 ): boolean {
   if (quem.role === 'ADMIN') return true
-  // ⚠️⚠️ Antes de tudo: ninguém lê o próprio DISC por aqui — nem o gestor.
-  if (alvo.id === quem.id) return false
+  /* ⚠️⚠️ O PRÓPRIO DISC: liberado desde 22/09/2026, tarde (pedido do dono: "os
+     gestores devem conseguir incluir o próprio resultado do DISC, todos do
+     sistema devem estar com essa opção" — o José Roberto lançou o da equipe e,
+     na página dele, não havia como lançar o seu). A primeira versão fechava o
+     próprio para todos.
+     ⚠️ Só para quem ENTRA no sistema com chefia (GESTOR). O COLABORADOR fica de
+     fora duas vezes: a porta (`proxy.ts`) não o deixa chegar a `/api/disc`, e
+     esta linha também não — no dia em que o acesso abrir, a régua não muda
+     sozinha. */
+  if (alvo.id === quem.id) return quem.role === 'GESTOR'
   if (quem.escopo.tipo !== 'setor') return false
   if (!alvo.departmentId || !quem.escopo.avaliaDepartmentIds.includes(alvo.departmentId)) return false
   const nivelDoAlvo = niveis.get(alvo.id)

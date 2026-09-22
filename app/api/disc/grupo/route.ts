@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { isHiddenDept } from '@/lib/hidden-depts'
 import { filtroEquipe, vigentes } from '@/lib/disc/leitura'
-import { fatias, predominantes, type Notas } from '@/lib/disc/calculo'
+import { predominantes, type Notas } from '@/lib/disc/calculo'
 import { FATORES, type Fator } from '@/lib/disc/perfis'
 
 /* ============================================================
@@ -37,8 +37,9 @@ export async function GET() {
     const n = disc.get(p.id)
     if (!n) continue
     a.comDisc++
-    for (const f of fatias(n as Notas)) a.soma[f.fator] += f.pct
     const pr = predominantes(n as Notas)
+    // Pessoas por perfil predominante, empate dividido — a mesma conta do cartão do setor.
+    for (const f of pr) a.soma[f] += 1 / pr.length
     if (pr.length > 1) a.empates++
     for (const f of pr) a.contagem[f]++
   }
@@ -46,8 +47,9 @@ export async function GET() {
   const setores = [...porSetor.values()]
     .map((a) => ({
       id: a.id, nome: a.nome, total: a.total, comDisc: a.comDisc, empates: a.empates, contagem: a.contagem,
-      /** A MÉDIA das fatias das pessoas do setor — a "cor" do setor. */
-      media: Object.fromEntries(FATORES.map((f) => [f, a.comDisc ? Math.round((a.soma[f] / a.comDisc) * 10) / 10 : 0])) as Record<Fator, number>,
+      /** PESSOAS por perfil predominante (empate vale meia em cada). ⚠️ Não é a
+       *  média das notas: aquela pintava de vermelho setor sem nenhum Dominante. */
+      pessoas: Object.fromEntries(FATORES.map((f) => [f, Math.round(a.soma[f] * 10) / 10])) as Record<Fator, number>,
     }))
     .sort((x, y) => y.comDisc - x.comDisc || x.nome.localeCompare(y.nome))
 
