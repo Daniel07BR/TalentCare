@@ -1,5 +1,41 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-22 — DISC: o perfil comportamental na ficha, no setor e no painel
+
+Pedido do dono, durante o treinamento de liderança com a IN-Formação: *"deixe o
+sistema preparado para os gestores inserirem os resultados na área de cada
+funcionário… respeite as cores de cada categoria… o botão colorido com a
+porcentagem da nota de cada um… quem teve empate em dois quesitos, o botão tem
+que ter o nome dos dois"*.
+
+- **Ficha:** botão **DISC** ao lado do "Gerar PDF". O fundo são as quatro cores
+  do treinamento (D `#cc0000`, I `#ffc824`, S `#61a25c`, C `#459ad8`, medidas no
+  slide) **na proporção das notas**, a maior à esquerda; o selo diz o
+  predominante, e o empate diz os dois ("Dominante e Estável"). Sem resultado, o
+  botão é "DISC · registrar resultado". A janela traz pontuação, predominância,
+  a mistura e seis abas por perfil: Quem é, Como falar, Como elogiar, Como
+  cobrar, Motiva e trava, Pontos de atenção.
+- **Registro:** a chefia digita as 4 notas (0–100), a data e uma observação.
+  ⚠️ Tabela `disc_resultado` **uma linha por aplicação**, nada se edita nem se
+  apaga: "nova aplicação" cria outra linha e a anterior vai para o histórico.
+  Campo vazio não vira zero calado; data futura é recusada.
+- **Setor:** cartão "Perfil DISC do setor" (a mistura média, quantos de cada
+  perfil predominam, quem são ao clicar, quem falta registrar, e o par dos dois
+  fatores mais fortes com a solução do material). **Painel principal:** "Perfil
+  DISC por departamento", só agregado.
+- ⚠️⚠️ **Régua** (`lib/disc/regua.ts`), decisão do dono: chefia do setor,
+  Diretoria e T.I. **Mais fechada que a da ficha**: ninguém lê o próprio DISC, e
+  segue a hierarquia do vínculo (o DISC do gestor é da Diretoria; o do sub, do
+  gestor). Provado em `scripts/ensaio-disc.ts` com a sessão forjada de cada um
+  dos 16 chefes contra o serviço: 142 conferidos, 0 falhas, e nada gravado.
+- ⚠️ **Fora do PDF e da pontuação** ("não é julgamento de valor").
+- ⚠️ Os textos são a **nossa versão** do material (`lib/disc/perfis.ts`): só o
+  trabalho ("em casa" e "relação conjugal" saíram), "loja" virou "setor". **"Como
+  cobrar" não existe no material**: foi montado do que ele diz que trava e
+  motiva, e a tela avisa que é adaptação.
+- ⚠️ Schema aplicado com `migrate diff` filtrado (só o `CREATE`): o diff queria
+  dropar `chat_daily_bkp_20260911` (11.068 linhas) e o do setor.
+
 ## 2026-09-18 — A Imobiliária entra nos atendimentos (2ª instância do WhatsApp)
 
 Pedido do dono: *"puxamos apenas da equipe da contabilidade, funcionários da

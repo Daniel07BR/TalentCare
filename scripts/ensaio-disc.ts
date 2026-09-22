@@ -25,7 +25,7 @@ const BASE = 'http://127.0.0.1:8082'
 const cookie = async (u: { id: string; role: string; email?: string | null }) => `authjs.session-token=${await encode({
   token: { sub: u.id, role: u.role, email: u.email ?? undefined, checadoEm: Date.now() }, secret: process.env.AUTH_SECRET!, salt: 'authjs.session-token',
 })}`
-let ok = 0
+let ok = 0, subs = 0
 const erros: string[] = []
 const confere = (oque: string, obtido: number, esperado: number | number[]) => {
   const e = Array.isArray(esperado) ? esperado : [esperado]
@@ -36,6 +36,7 @@ type U = { id: string; name: string; role: string; email: string; departmentId: 
 const req = async (u: U, path: string, init?: RequestInit) =>
   (await fetch(`${BASE}${path}`, { ...init, headers: { ...(init?.headers ?? {}), cookie: await cookie(u), 'Content-Type': 'application/json' }, redirect: 'manual' })).status
 
+async function main() {
 const antes = await prisma.discResultado.count()
 const sel = { id: true, name: true, role: true, email: true, departmentId: true } as const
 const equipe = { origin: { in: ['nexus', 'staff'] }, foraDoDiretorio: false, active: true }
@@ -70,14 +71,14 @@ for (const c of chefes) {
     const gestores = vinculos.filter((v) => v.departmentId === dep && v.nivel === 'gestor' && v.userId !== c.id)
     for (const g of gestores) {
       const gu = await prisma.user.findUnique({ where: { id: g.userId }, select: sel })
-      if (gu?.departmentId === dep) confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 403)
+      if (gu?.departmentId === dep) subs++; confere(`${c.name} (sub) lê o gestor ${gu.name}`, await req(c, `/api/disc?id=${gu.id}`), 403)
     }
   }
   confere(`${c.name} abre o DISC da casa`, await req(c, '/api/disc/grupo'), 403)
 }
 
 // colaborador comum
-const colabs = await prisma.user.findMany({ where: { ...equipe, role: 'COLABORADOR', id: { notIn: vinculos.map((v) => v.userId) } }, select: sel, take: 5 })
+const colabs = await prisma.user.findMany({ where: { ...equipe, role: { not: 'ADMIN' }, id: { notIn: vinculos.map((v) => v.userId) } }, select: sel, take: 5 })
 for (const u of colabs) {
   confere(`colaborador ${u.name} lê o próprio`, await req(u, `/api/disc?id=${u.id}`), [401, 403])
   const colega = await prisma.user.findFirst({ where: { ...equipe, departmentId: u.departmentId, id: { not: u.id } }, select: sel })
@@ -99,7 +100,9 @@ for (const a of admins) {
 
 const depois = await prisma.discResultado.count()
 if (depois !== antes) erros.push(`✗ O ENSAIO GRAVOU: ${antes} → ${depois} linhas`)
-console.log(`${chefes.length} chefes, ${colabs.length} colaboradores, ${admins.length} admins — ${ok} conferidos, ${erros.length} falhas`)
+console.log(`${chefes.length} chefes, ${colabs.length} colaboradores, ${admins.length} admins, ${subs} pares sub×gestor — ${ok} conferidos, ${erros.length} falhas`)
 for (const e of erros) console.log(e)
 await prisma.$disconnect()
 process.exit(erros.length ? 1 : 0)
+}
+main()
