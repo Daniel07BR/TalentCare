@@ -1,6 +1,7 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Activity, FileSpreadsheet, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
+import { Activity, CalendarCheck, FileSpreadsheet, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
 import { precarregarDetalhe, type ChaveDetalhe } from '../../../_visao/Detalhe'
 import { Cartao, forte, suave } from '../../../_visao/ui'
@@ -44,11 +45,39 @@ function sistemas(m: DeptMetrics): Sis[] {
   ]
 }
 
+/* ============================================================
+   ACESSÓRIAS (30/09/2026) — só VOLUME, e fora da nota.
+   Decisão do dono: "no TalentCare mostra só volume de cada usuário". Os números
+   vêm de `/api/acessorias-metrics` (à parte do `dept-metrics`, que alimenta o
+   score) e nunca dizem "atrasado": em 30/09/2026 o escritório implantava o
+   sistema, e atraso lá media quem ainda não dá baixa.
+   ============================================================ */
+type AcessoriasDoSetor = {
+  total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
+  pessoas: { id: string; nome: string; iniciados: number; concluidos: number; entregas: number }[]
+}
+
+function useAcessoriasDoSetor(deptId: string, fromDay: string, toDay: string) {
+  const [dados, setDados] = useState<AcessoriasDoSetor | null>(null)
+  useEffect(() => {
+    let vivo = true
+    setDados(null)
+    fetch(`/api/acessorias-metrics?dept=${encodeURIComponent(deptId)}&period=custom&from=${fromDay}&to=${toDay}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (vivo) setDados(d) })
+      .catch(() => { if (vivo) setDados(null) })
+    return () => { vivo = false }
+  }, [deptId, fromDay, toDay])
+  return dados
+}
+
 export function Sistemas({ m, abrir }: ComDetalhe) {
   const router = useRouter()
+  const acess = useAcessoriasDoSetor(m.setor.id, m.fromDay, m.toDay)
+  const acessTem = !!acess && acess.pessoas.length > 0
   const todos = sistemas(m)
   const com = todos.filter((x) => x.tem)
-  const sem = todos.filter((x) => !x.tem).map((x) => x.nome)
+  const sem = [...todos.filter((x) => !x.tem).map((x) => x.nome), ...(acess && !acessTem ? ['Acessórias'] : [])]
   return (
     <Cartao titulo="Sistemas e produtividade" Icone={Activity} sub={`Uso dos sistemas no período · ${m.label} · clique num sistema para o detalhe`}>
       <div className={s.sistemas}>
@@ -84,9 +113,36 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
             </span>
           </button>
         ))}
+        {acessTem && (
+          <div title="Volume no Acessórias — fonte em implantação, fora da nota"
+            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, minWidth: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 28, height: 28, borderRadius: 8, background: suave('pink'), color: forte('pink'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><CalendarCheck size={15} /></span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Acessórias</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'var(--n-text-3)', whiteSpace: 'nowrap' }}>fora da nota</span>
+            </span>
+            <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {acess!.pessoas.slice(0, 3).map((p, i) => (
+                <li key={p.id} style={{ display: 'flex', gap: 8, fontSize: 11.5 }}>
+                  <span style={{ color: 'var(--n-text-3)', width: 10 }}>{i + 1}</span>
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
+                  <b className="cnum" style={{ color: forte('pink') }} title={`${p.concluidos} processos concluídos · ${p.entregas} entregas · ${p.iniciados} iniciados`}>{num(p.concluidos + p.entregas)}</b>
+                </li>
+              ))}
+            </ol>
+            <span style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--n-border-2)' }}>
+              {([[acess!.total.concluidos, 'Processos concluídos'], [acess!.total.iniciados, 'Processos iniciados'], [acess!.total.entregas, 'Entregas feitas']] as [number, string][]).map(([v, r]) => (
+                <span key={r}>
+                  <span className="cnum" style={{ display: 'block', fontSize: 15, fontWeight: 800, color: forte('pink') }}>{num(v)}</span>
+                  <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)' }}>{r}</span>
+                </span>
+              ))}
+            </span>
+          </div>
+        )}
       </div>
-      {com.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>Nenhuma atividade registrada nos sistemas medidos neste período.</div>}
-      {sem.length > 0 && com.length > 0 && (
+      {com.length === 0 && !acessTem && <div style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>Nenhuma atividade registrada nos sistemas medidos neste período.</div>}
+      {sem.length > 0 && (com.length > 0 || acessTem) && (
         <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10 }}>Sem registro deste setor no período: {sem.join(', ')}.</div>
       )}
     </Cartao>
