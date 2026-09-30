@@ -77,6 +77,8 @@ const somaDias = (d, n) => new Date(Date.parse(d) + n * 86400000).toISOString().
 const idOuNull = (v) => (v === undefined || v === null || String(v).trim() === '' || String(v) === '0' ? null : String(v))
 
 // ---- normalização ----
+const usuario = (u) => ({ id: String(u.id), email: String(u.email ?? '').trim().toLowerCase(), nome: u.nome ?? '', ativo: u.status === 'Ativo' })
+
 function processo(x, hoje) {
   const inicio = dia(x.ProcInicio)
   const dataFim = dia(x.ProcConclusao)
@@ -169,17 +171,50 @@ async function main() {
   if (!TOKEN) throw new Error('ACESSORIAS_API_TOKEN ausente no .env')
   const hoje = hojeLocal()
 
+  // O banco abre ANTES da coleta: o incremental precisa saber o maior processo
+  // já conhecido e desde quando olhar. No --seco não há banco.
+  let prisma = null
+  if (!seco) prisma = new (await import('@prisma/client')).PrismaClient()
+  const maiorConhecido = prisma
+    ? Number((await prisma.$queryRawUnsafe(`select coalesce(max(id::int), 0) as m from acessorias_processo`))[0].m)
+    : 0
+  const wm = prisma ? await prisma.syncWatermark.findUnique({ where: { source: SOURCE } }) : null
+
   // 1. usuários
-  const usuarios = (await todasPaginas('users/ListAll')).map((u) => ({
-    id: String(u.id), email: String(u.email ?? '').trim().toLowerCase(), nome: u.nome ?? '', ativo: u.status === 'Ativo',
-  }))
+  const usuarios = (await todasPaginas('users/ListAll')).map(usuario)
   const idsEscritorio = new Set(usuarios.map((u) => u.id))
 
-  // 2. processos — a listagem padrão já deixa os EXCLUÍDOS de fora
-  const procs = (await todasPaginas('processes/ListAll')).map((x) => processo(x, hoje))
+  /* 2. processos. ⚠️⚠️ A LISTAGEM PAGINADA DA API NÃO É CONFIÁVEL: repete itens
+     e pula outros (30/09/2026 — 320 linhas, 279 distintas; buscando um por um,
+     320 distintos, e cada filtro errava de um jeito diferente). Página que
+     cabe inteira (≤ 20) não embaralha, mas o Contábil abre ~150 processos no
+     dia 1º, então nem fatiar por dia resolve. O que é determinístico é buscar
+     PELO NÚMERO — os ids são sequenciais:
+       --completo  varre do 1 até 40 números vazios seguidos depois do último;
+       incremental os alterados desde a última passagem (lista curta) + os
+                   números NOVOS acima do maior conhecido (pega a leva do dia 1º). */
+  const procsPorId = new Map()
+  const guarda = (x) => { if (x?.ProcID && x.ProcStatus !== 'Excluído') procsPorId.set(String(x.ProcID), processo(x, hoje)) }
+  const varrer = async (de, folga) => {
+    for (let id = de, vazios = 0; vazios < folga; id++) {
+      const d = await get(`processes/${id}`)
+      const x = Array.isArray(d) ? d[0] : d
+      if (x?.ProcID) { guarda(x); vazios = 0 } else vazios++
+    }
+  }
+  if (completo || !maiorConhecido) {
+    await varrer(1, 40)
+  } else {
+    const desde = new Date(Math.min(Date.now(), wm ? wm.lastSyncedAt.getTime() : Date.now()) - 3600000)
+    const dh = desde.toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+    for (const x of await todasPaginas(`processes/ListAll?DtLastDH=${encodeURIComponent(dh)}`)) guarda(x)
+    await varrer(maiorConhecido + 1, 15)
+  }
+  const procs = [...procsPorId.values()]
 
-  // 3. solicitações
-  const sols = (await todasPaginas('requests/ListAll')).map((x) => solicitacao(x, idsEscritorio))
+  // 3. solicitações — poucas (8 em 30/09/2026), cabem numa página e não embaralham.
+  // ⚠️ Quando passarem de 20, a paginação instável vale aqui também: vai no log.
+  const solsCruas = await todasPaginas('requests/ListAll')
 
   // 4. entregas — só as feitas (`situation=delivered`); a pendência não é trabalho de ninguém ainda
   const ate = somaDias(hoje, 400)
@@ -199,9 +234,25 @@ async function main() {
     for (const bloco of await todasPaginas(`deliveries/ListAll/?${filtroEnt}&DtLastDH=${ontem}%2000:00:00`)) ents.push(...entregas(bloco))
   }
 
+  /* 5. usuário citado que a lista paginada PULOU (mesma instabilidade dos
+     processos) é buscado um por um. Sem isso, o trabalho dele não teria dono. */
+  const citados = new Set([...procs.map((p) => p.gestorId), ...ents.flatMap((e) => [e.respEntregaId, e.respPrazoId]),
+    ...solsCruas.flatMap((s) => [idOuNull(s.SolUsuarioFinalizadorID), ...(s.SolOfficeRespID ?? []).map(String)])])
+  let usuariosResgatados = 0
+  for (const id of citados) {
+    if (!id || idsEscritorio.has(id)) continue
+    const d = await get(`users/${id}`)
+    const u = Array.isArray(d) ? d[0] : d
+    // ⚠️ O finalizador de solicitação pode ser o CLIENTE (LgeID, outra tabela):
+    // só entra se a API de usuários do escritório o reconhecer.
+    if (u?.id && String(u.id) === id) { usuarios.push(usuario(u)); idsEscritorio.add(id); usuariosResgatados++ }
+  }
+  const sols = solsCruas.map((x) => solicitacao(x, idsEscritorio))
+
   const resumo = {
-    usuarios: usuarios.length, processos: procs.length, solicitacoes: sols.length,
+    usuarios: usuarios.length, usuariosResgatados, processos: procs.length, solicitacoes: sols.length,
     entregas: ents.length, empresasVarridas, chamadas, completo,
+    ...(solsCruas.length >= 20 ? { aviso: 'solicitações passaram de 20 — a paginação pode estar pulando itens' } : {}),
   }
 
   if (seco) {
@@ -221,8 +272,6 @@ async function main() {
     return
   }
 
-  const { PrismaClient } = await import('@prisma/client')
-  const prisma = new PrismaClient()
   try {
     // Casamento pelo e-mail do diretório. O `users.email` daqui vem do Nexus.
     const dir = await prisma.user.findMany({ where: { nexusUserId: { not: null } }, select: { email: true, nexusUserId: true } })
@@ -244,8 +293,11 @@ async function main() {
       const alvo = DOMINIOS_DA_CASA.has(dominio) ? porLocal.get(local) : undefined
       return alvo && alvo !== AMBIGUO ? alvo : null
     }
+    // Vínculo decidido à mão (`vinculo_manual`) não se reescreve — ver o schema.
+    const manuais = new Set((await prisma.acessoriasUsuario.findMany({ where: { vinculoManual: true }, select: { id: true } })).map((u) => u.id))
     for (const u of usuarios) {
-      const dados = { email: u.email, nome: u.nome, ativo: u.ativo, nexusUserId: casar(u.email) }
+      const dados = { email: u.email, nome: u.nome, ativo: u.ativo }
+      if (!manuais.has(u.id)) dados.nexusUserId = casar(u.email)
       await prisma.acessoriasUsuario.upsert({ where: { id: u.id }, create: { id: u.id, ...dados }, update: dados })
     }
     const nexusDe = new Map((await prisma.acessoriasUsuario.findMany()).map((u) => [u.id, u.nexusUserId]))
@@ -258,9 +310,9 @@ async function main() {
     for (const e of ents) await prisma.acessoriasEntrega.upsert({ where: { id: e.id }, create: e, update: e })
 
     /* ⚠️⚠️ O que SUMIU da origem sai daqui — processo excluído, entrega
-       desfeita. Só nas listas que vieram INTEIRAS (processos e solicitações
-       sempre; entregas só no --completo) e com FREIO: resposta com menos da
-       metade do que já temos é defeito LÁ, não faxina. */
+       desfeita. Só nas listas que vieram INTEIRAS (solicitações sempre;
+       processos e entregas só no --completo, que varre tudo) e com FREIO:
+       resposta com menos da metade do que já temos é defeito LÁ, não faxina. */
     const freios = []
     const podar = async (modelo, nome, vistos) => {
       const temos = await prisma[modelo].count()
@@ -269,7 +321,7 @@ async function main() {
       return r.count
     }
     const podados = {
-      processos: await podar('acessoriasProcesso', 'processos', new Set(procs.filter((p) => p.inicio).map((p) => p.id))),
+      processos: completo ? await podar('acessoriasProcesso', 'processos', new Set(procs.filter((p) => p.inicio).map((p) => p.id))) : 0,
       solicitacoes: await podar('acessoriasSolicitacao', 'solicitacoes', new Set(sols.map((s) => s.id))),
       entregas: completo ? await podar('acessoriasEntrega', 'entregas', new Set(ents.map((e) => e.id))) : 0,
     }

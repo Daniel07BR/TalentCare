@@ -15,6 +15,12 @@ Pedido do dono: *"os dados é para métricas de atendimentos no TalentCare"*.
   mesma previsão do modelo.
 - ⚠️ Casamento por **e-mail**, aceitando os dois domínios da casa só quando o
   que vem antes do @ dá uma pessoa só. Quem não casa sai no log.
+- ⚠️⚠️ **Paginação da API instável**: 320 linhas, 279 processos distintos — ela
+  repete uns e pula outros. Processos passaram a ser buscados **pelo número**
+  (`processes/{id}`); usuário que a lista pulou, por `users/{id}`.
+- **Vínculo manual** (`vinculo_manual`, `scripts/2026-09-30-acessorias-vinculo-manual.sql`):
+  e-mail curto no Acessórias × completo no diretório. 6 pessoas vinculadas à mão;
+  4 casos duvidosos ficaram para o dono (lista em `docs/FONTES.md`).
 - ⚠️⚠️ **Não entra no score, na régua nem nas telas** ainda: em 30/09/2026 só o
   Contábil usa, e só Processos. Ver `docs/FONTES.md`, seção da 10ª fonte.
 

@@ -1305,6 +1305,12 @@ model AcessoriasUsuario {
   nome        String
   ativo       Boolean
   nexusUserId String?  @map("nexus_user_id")
+  /// ⚠️⚠️ `true` = o vínculo foi decidido por GENTE e o sync não o toca mais.
+  /// Existe porque a turma antiga está no Acessórias com e-mail curto
+  /// (`priscila@`) e no diretório com o completo (`priscila.araujo@`) — o
+  /// e-mail sozinho não resolve, e casar pelo nome automaticamente é proibido.
+  /// Sem esta trava, o cron da hora seguinte desfaria o vínculo à mão.
+  vinculoManual Boolean @default(false) @map("vinculo_manual")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([nexusUserId])

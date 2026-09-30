@@ -446,9 +446,28 @@ estado ATUAL. Por isso o espelho tem duas camadas:
   vem antes do @, só entre domínios da casa e só se der UMA pessoa. Quem não
   casa fica em `acessorias_usuario` com `nexus_user_id` null e sai no log
   (`semCasamento`) — o trabalho dela não aparece no painel.
+- ⚠️⚠️ **A PAGINAÇÃO DA API NÃO É CONFIÁVEL** (medido em 30/09/2026): a lista
+  de processos devolveu 320 linhas e só **279 distintas** — 41 repetidas no
+  lugar de 41 que ela PULOU. Cada filtro errava de um jeito diferente; nenhuma
+  consulta paginada trouxe todos. Buscando **um por um pelo número** (os ids
+  são sequenciais) são 320 distintos. O total batia por coincidência — a conta
+  POR PESSOA é que saía errada, e ninguém veria.
+  Por isso: `--completo` varre `processes/{id}` do 1 até 40 números vazios
+  seguidos; o incremental pega os alterados desde a última passagem + os ids
+  NOVOS acima do maior conhecido. Usuário citado que a lista pulou é buscado
+  por `users/{id}`. Fatiar por dia não resolve: o Contábil abre ~150
+  processos no dia 1º, e página cheia (20) volta a embaralhar.
+- **Vínculo manual** (`acessorias_usuario.vinculo_manual`): a turma antiga está
+  no Acessórias com e-mail curto (`priscila@`) e no diretório com o completo
+  (`priscila.araujo@`). Seis vinculados à mão em 30/09/2026 — só os de nome
+  completo IDÊNTICO e único no diretório, gravados pelo e-mail do diretório. O
+  sync não reescreve vínculo manual. Ficaram SEM vínculo, para o dono decidir:
+  José Roberto Ferreira Da Silva × "José Roberto", Edilaine **Pereira** ×
+  Edilaine **Silva**, Monica **Ozato** × Monica **Kazue**, Jessica Kohatsu ×
+  Jéssica M Kohatsu, e as contas "Teste"/"Teste2".
 - **Limite da API: 100 req/min por token**, somado a qualquer outro uso do mesmo
-  token. O coletor anda a 1 por segundo. O incremental custa ~25 chamadas; o
-  `--completo` varre as ~500 empresas (~9 min).
+  token. O coletor anda a 1 por segundo. O incremental custa ~40 chamadas; o
+  `--completo` varre ~450 processos e ~500 empresas (~17 min).
 - `deliveries/ListAll` só aceita `DtLastDH` de **hoje ou ontem** (regra da API):
   o incremental só vê entregas mexidas desde ontem. Entrega DESFEITA só some no
   `--completo`, que também tem o freio de "origem com menos da metade → não
