@@ -1,5 +1,18 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-30 — Acessórias: o cartão abre o relatório completo
+
+Pedido do dono: *"assim como em todos os demais sistemas no TalentCare, o card precisa
+dar clique para eu ver o relatório completo"*.
+
+- Resumo `app/(app)/acessorias/Resumo.tsx`: janela ao clicar no cartão do setor
+  (recortada para o setor) e página `/acessorias` no menu (casa inteira, só quem
+  enxerga tudo). Top 5, totais e a lista por pessoa — só volume.
+- Painel da pessoa (`pessoa-sistema`, sistema `acessorias`): processos concluídos,
+  iniciados e as ENTREGAS DIA A DIA. ⚠️ É lá que a baixa em lote aparece como lote
+  (Luana Silva: 94 entregas em 01/09/2026, todas de prazo já vencido).
+- O cartão da ficha também abre o painel da pessoa.
+
 ## 2026-09-30 — Acessórias: o VOLUME de cada um no setor e na ficha
 
 Decisão do dono: *"no TalentCare mostra só volume de cada usuário, pois lá são os

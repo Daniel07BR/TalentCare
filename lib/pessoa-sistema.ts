@@ -149,6 +149,47 @@ async function doEspelho(sistema: string, p: Pessoa, de: string, ate: string): P
 }
 
 /**
+ * ACESSÓRIAS (30/09/2026): o que a pessoa fez, da CÓPIA que o coletor guarda
+ * (`run-acessorias-sync.mjs`) — processos e entregas por id, sem nome de empresa
+ * (de propósito: o que atravessa é contagem e data).
+ *
+ * ⚠️⚠️ As entregas vêm AGRUPADAS POR DIA, e isso não é estética: é onde a BAIXA EM
+ * LOTE aparece. A Luana Silva deu 94 baixas em 01/09/2026, todas em prazos já
+ * vencidos — no número solto do cartão, isso se lê "94 entregas"; aqui se lê "94
+ * no mesmo dia, de prazos vencidos há N dias". A tela diz o fato; decidir se lote
+ * conta é do dono.
+ */
+async function doAcessorias(p: Pessoa, de: string, ate: string): Promise<Detalhe> {
+  if (!p.nexusUserId) return { grupos: [], aoVivo: false, semConta: true }
+  const contas = (await prisma.acessoriasUsuario.findMany({ where: { nexusUserId: p.nexusUserId }, select: { id: true } })).map((u) => u.id)
+  if (!contas.length) return { grupos: [], aoVivo: false, semConta: true }
+  const [iniciados, concluidos, entregas] = await Promise.all([
+    prisma.acessoriasProcesso.findMany({ where: { gestorId: { in: contas }, inicio: { gte: de, lte: ate }, status: { not: 'Excluído' } }, orderBy: { inicio: 'desc' } }),
+    prisma.acessoriasProcesso.findMany({ where: { gestorId: { in: contas }, conclusao: { gte: de, lte: ate } }, orderBy: { conclusao: 'desc' } }),
+    prisma.acessoriasEntrega.findMany({ where: { respEntregaId: { in: contas }, entregueEm: { gte: de, lte: ate } }, orderBy: { entregueEm: 'desc' } }),
+  ])
+  const br = (d: string) => d.split('-').reverse().join('/')
+  const dias = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000)
+  const porDia = new Map<string, typeof entregas>()
+  for (const e of entregas) porDia.set(e.entregueEm!, [...(porDia.get(e.entregueEm!) ?? []), e])
+  const mediaConc = concluidos.length ? Math.round(concluidos.reduce((a, x) => a + x.diasCorridos, 0) / concluidos.length) : 0
+  return { aoVivo: false, aviso: 'Cópia do Acessórias, atualizada de hora em hora. Fonte em implantação — fora da nota.', grupos: [
+    { chave: 'concluidos', titulo: 'Processos concluídos', resumo: concluidos.length ? `${concluidos.length} · em média ${mediaConc} dias do início à conclusão` : undefined,
+      itens: concluidos.map((x) => ({ id: `c-${x.id}`, dia: x.conclusao!, titulo: x.matriz, sub: `iniciado em ${br(x.inicio)} · ${plural(x.diasCorridos, 'dia', 'dias')}` })) },
+    { chave: 'iniciados', titulo: 'Processos iniciados', resumo: iniciados.length ? `${iniciados.length} · ${iniciados.filter((x) => x.status === 'Em andamento').length} ainda em andamento` : undefined,
+      itens: iniciados.map((x) => ({ id: `i-${x.id}`, dia: x.inicio, titulo: x.matriz, sub: `${x.status}${x.status === 'Em andamento' ? ` · ${Math.round(x.percentual)}% feito` : ''}` })) },
+    { chave: 'entregas', titulo: 'Entregas de obrigação, dia a dia', resumo: entregas.length ? plural(entregas.length, 'entrega', 'entregas') : undefined,
+      itens: [...porDia].map(([d, es]) => {
+        const vencidas = es.filter((e) => e.prazo < d)
+        const atraso = vencidas.length ? Math.round(vencidas.reduce((a, e) => a + dias(e.prazo, d), 0) / vencidas.length) : 0
+        return { id: `e-${d}`, dia: d, valor: es.length, titulo: plural(es.length, 'entrega', 'entregas'),
+          sub: vencidas.length ? `${vencidas.length} de prazo já vencido (em média há ${atraso} dias)` : 'todas dentro do prazo',
+          filhos: es.map((e) => ({ titulo: `${e.obrigacao}${e.competencia ? ` · comp. ${e.competencia.slice(5, 7)}/${e.competencia.slice(0, 4)}` : ''} · ${e.status}`, dia: d })) }
+      }) },
+  ] }
+}
+
+/**
  * FLUXO: os chamados AO VIVO (a lista, com número, assunto e situação).
  * ⚠️ Se o Fluxo não responder, cai para o dia a dia do espelho, COM AVISO — um
  * painel vazio se leria "não abriu chamado nenhum", que é outra coisa.
@@ -166,6 +207,7 @@ async function doFluxo(p: Pessoa, de: string, ate: string): Promise<Detalhe> {
 
 export async function detalheDaPessoa(sistema: Sistema, p: Pessoa, de: string, ate: string): Promise<Detalhe> {
   if (sistema === 'fluxo') return doFluxo(p, de, ate)
+  if (sistema === 'acessorias') return doAcessorias(p, de, ate)
   if (sistema in EXTERNOS) {
     // Sem conta no Nexus não há como casar com o sistema — não é "não fez nada".
     if (!p.nexusUserId) return { grupos: [], aoVivo: true, semConta: true }
