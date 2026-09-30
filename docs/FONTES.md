@@ -15,7 +15,7 @@ variação (ver a seção dele).
 | 7 | Gerência (mensageria) | `.72` | `gerencia_daily` | `:30` |
 | 8 | **Chat Interno** — só as MENSAGENS | `.69` | `chat_daily` (as colunas `chamados_*` e `chat_dept_daily` **congelaram em 16/09/2026**) | `:35` |
 | 9 | **Fluxo** — os CHAMADOS entre setores | `.70` | `fluxo_daily` + `fluxo_dept_daily` | `:50` (`--completo` 03:40) |
-| 10 | **Acessórias** (SaaS de fora) — processos, entregas de obrigação, solicitações | `api.acessorias.com` | `acessorias_processo` / `_entrega` / `_solicitacao` → `acessorias_daily` (derivada) | `:55` (`--completo` 03:50) — ⚠️ **coletor só; fora do score e das telas** |
+| 10 | **Acessórias** (SaaS de fora) — processos, entregas de obrigação, solicitações | `api.acessorias.com` | `acessorias_processo` / `_entrega` / `_solicitacao` → `acessorias_daily` (derivada) | `:55` (`--completo` 03:50) — ⚠️ **só VOLUME nas telas (setor e ficha), fora do score** |
 | — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |
 | — | Ponto / disciplina | dump do Nexo | `assiduidade_daily`, `disciplina_evento` | import à mão |
 | — | **Controle da LGPD** | Nexus `.75` | `disciplina_evento` (`source='lgpd'`) | push + `:40` |
@@ -484,7 +484,13 @@ estado ATUAL. Por isso o espelho tem duas camadas:
   Martins (122 entregas, ago–set, 7 atrasadas) é o uso real. Antes de qualquer
   tela ou score, decidir a régua do lote (ex.: entrega muito depois do prazo,
   em massa no mesmo dia, não conta como atraso de ninguém).
-- **Fora do score e fora das telas** por decisão explícita: em 30/09/2026 só o
+- **Nas telas, só VOLUME** (decisão do dono, 30/09/2026: *"no TalentCare mostra só volume
+  de cada usuário"*): cartão "Acessórias" na seção Sistemas do setor e da ficha, com processos
+  iniciados/concluídos e entregas feitas — nunca "atrasadas". Rota À PARTE,
+  `/api/acessorias-metrics` (`?dept=` ou `?pessoa=`), com a mesma régua de quem vê quem; o
+  `dept-metrics`/`employee-metrics` não foram tocados porque o que entra neles entra no score.
+  Na ficha o cartão só existe para quem TEM conta no Acessórias.
+- **Fora do score** por decisão explícita: em 30/09/2026 só o
   Contábil usava, e só Processos; 14 de 2.564 prazos marcados como entregues.
   Número de implantação acusa quem ainda não foi treinado — é a face do `null`
   que acusa. Os consumidores da checklist acima ficam para quando o dono decidir.

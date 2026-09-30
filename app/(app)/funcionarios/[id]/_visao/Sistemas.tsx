@@ -1,6 +1,6 @@
 'use client'
-import { Fragment } from 'react'
-import { Activity, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
+import { Fragment, useEffect, useState } from 'react'
+import { Activity, CalendarCheck, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { Sistema } from '@/lib/pessoa-sistema-tipos'
 import { usePainelDaPessoa } from '../../../PainelDaPessoa'
@@ -149,6 +149,25 @@ function Empilhada({ partes }: { partes: { rot: string; n: number; tom: Tom }[] 
   )
 }
 
+/* ACESSÓRIAS (30/09/2026) — só VOLUME, fora da nota (decisão do dono). Os números vêm
+   de `/api/acessorias-metrics`, à parte do `employee-metrics`, e nunca dizem
+   "atrasado": em 30/09/2026 o escritório implantava o sistema. `vinculado` = a
+   pessoa tem conta lá; sem conta, o Acessórias não é assunto dela. */
+type AcessoriasDaPessoa = { vinculado: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
+function useAcessoriasDaPessoa(pessoaId: string, fromDay?: string, toDay?: string) {
+  const [dados, setDados] = useState<AcessoriasDaPessoa | null>(null)
+  useEffect(() => {
+    if (!fromDay || !toDay) return
+    let vivo = true
+    fetch(`/api/acessorias-metrics?pessoa=${encodeURIComponent(pessoaId)}&period=custom&from=${fromDay}&to=${toDay}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (vivo) setDados(d) })
+      .catch(() => { if (vivo) setDados(null) })
+    return () => { vivo = false }
+  }, [pessoaId, fromDay, toDay])
+  return dados
+}
+
 const nota1 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
 export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
@@ -160,6 +179,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   impressao?: boolean
 }) {
   const abrirPainel = usePainelDaPessoa()
+  const ac = useAcessoriasDaPessoa(pessoaId, m?.fromDay, m?.toDay)
   if (!m) {
     return (
       <Cartao titulo="O que os sistemas registraram" Icone={Activity} sub={`Por sistema · ${periodo}`}>
@@ -363,6 +383,17 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
           </div>
         ))}
       </div>
+    </Bloco>
+  ))
+
+  if (ac?.vinculado) add(ac.iniciados + ac.concluidos + ac.entregas + ac.solicitacoes > 0, 'Acessórias', 'acess', () => (
+    <Bloco dica="Volume no Acessórias — fonte em implantação, fora da nota">
+      <Titulo nome="Acessórias" sub="volume no período · fora da nota" Icone={CalendarCheck} tom="pink" />
+      <Colunas colunas={[
+        { rot: 'Processos concluídos', n: ac.concluidos, tom: 'pink' },
+        { rot: 'Processos iniciados', n: ac.iniciados, tom: 'purple' },
+        { rot: 'Entregas feitas', n: ac.entregas, tom: 'blue' },
+      ]} alto={impressao ? 50 : 72} />
     </Bloco>
   ))
 

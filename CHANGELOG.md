@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-30 — Acessórias: o VOLUME de cada um no setor e na ficha
+
+Decisão do dono: *"no TalentCare mostra só volume de cada usuário, pois lá são os
+indicadores dos funcionários dos departamentos"*.
+
+- Cartão **Acessórias** na seção "Sistemas e produtividade" do setor (quem mais
+  concluiu processo + entregas) e na ficha (processos concluídos, iniciados e
+  entregas feitas no período). Segue o filtro de período da tela.
+- Rota própria `/api/acessorias-metrics`, com a régua de sempre (gestor só o setor
+  dele; ficha por `podeVer`). ⚠️ **Nunca "atrasadas" e fora da nota** — o
+  escritório está implantando o sistema.
+
 ## 2026-09-30 — Acessórias: o coletor da 10ª fonte (sem tela, fora do score)
 
 Pedido do dono: *"os dados é para métricas de atendimentos no TalentCare"*.
