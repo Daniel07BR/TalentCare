@@ -1268,3 +1268,132 @@ model DiscResultado {
   @@index([userId, criadoEm])
   @@map("disc_resultado")
 }
+
+// ============================================================
+// ACESSÓRIAS (api.acessorias.com) — 10ª fonte, 30/09/2026.
+//
+// ⚠️⚠️ DIFERENTE das outras nove: o Acessórias é um SaaS de fora, a casa não
+// tem como criar um endpoint `<algo>-daily` nele. Quem chama a API é o próprio
+// `run-acessorias-sync.mjs`, e a API não entrega "por dia" — entrega o
+// processo, a entrega e a solicitação, com datas e estado ATUAIS.
+//
+// Por isso o espelho é em duas camadas:
+//   1. REGISTROS (`acessorias_processo`, `_entrega`, `_solicitacao`) — um por
+//      item da origem, chave = id do Acessórias. Upsert por id: uma entrega que
+//      muda de estado se corrige sozinha, sem a armadilha do "dia pela metade".
+//   2. `acessorias_daily` — DERIVADA inteira dos registros a cada rodada
+//      (apaga e remonta numa transação). Nunca escreva nela à mão.
+//
+// ⚠️⚠️ O que atravessa é CONTAGEM e DATA, nunca conteúdo: sem nome de empresa,
+// CNPJ, título de processo ou assunto de solicitação. `matriz` é o MODELO do
+// processo ("Rotina Contábil - Conciliação…"), o tipo de trabalho — não o caso.
+//
+// ⚠️⚠️ Em implantação (30/09/2026): só o Contábil usa, e só Processos. 14 de
+// 2.564 prazos de 2026 marcados como entregues; 255 processos em andamento, TODOS
+// além da previsão do modelo — e quem conclui leva 24,6 d, a MESMA previsão:
+// o atraso é de quem não andou (ou não marcou), não do modelo. Esta fonte NÃO entra no
+// score nem na régua até o dono decidir — número de implantação acusa quem ainda
+// não foi treinado.
+// ============================================================
+
+// Quem é quem no Acessórias. Casado com o diretório pelo E-MAIL (a origem não
+// tem id do Nexus). `nexusUserId` null = não casou — fica aqui, visível, em vez
+// de sumir; a atividade dele não entra no `acessorias_daily`.
+model AcessoriasUsuario {
+  id          String   @id // id do usuário no Acessórias (LogID)
+  email       String
+  nome        String
+  ativo       Boolean
+  nexusUserId String?  @map("nexus_user_id")
+  /// ⚠️⚠️ `true` = o vínculo foi decidido por GENTE e o sync não o toca mais.
+  /// Existe porque a turma antiga está no Acessórias com e-mail curto
+  /// (`priscila@`) e no diretório com o completo (`priscila.araujo@`) — o
+  /// e-mail sozinho não resolve, e casar pelo nome automaticamente é proibido.
+  /// Sem esta trava, o cron da hora seguinte desfaria o vínculo à mão.
+  vinculoManual Boolean @default(false) @map("vinculo_manual")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([nexusUserId])
+  @@map("acessorias_usuario")
+}
+
+model AcessoriasProcesso {
+  id           String   @id // ProcID
+  matriz       String // ProcNome — o modelo, não o título
+  departamento String
+  /// Andamento | Concluído | Desistência | Suspenso | Agendado | Aguardando
+  status       String
+  gestorId     String?  @map("gestor_id") // ProcGestor (id do Acessórias)
+  inicio       String   @db.VarChar(10) // YYYY-MM-DD
+  /// ⚠️ Na origem é UM campo com dois sentidos: data REAL de conclusão quando
+  /// concluído, PREVISÃO quando não. Separado aqui para ninguém confundir.
+  conclusao    String?  @db.VarChar(10)
+  previsao     String?  @db.VarChar(10)
+  /// ⚠️⚠️ NÃO é o `ProcDiasCorridos` da origem: lá ele CONTINUA CONTANDO depois
+  /// da conclusão (54 de 54 concluídos em 30/09/2026 = início → hoje). Aqui é
+  /// início → conclusão (concluído) ou início → hoje (aberto), pelas datas.
+  diasCorridos Int      @map("dias_corridos")
+  percentual   Float
+  alteradoEm   String?  @map("alterado_em") // DtLastDH da origem, texto
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([gestorId])
+  @@map("acessorias_processo")
+}
+
+model AcessoriasEntrega {
+  id              String   @id // EntID (Config)
+  obrigacao       String // nome da obrigação/tarefa ("DCTFWEB") — o tipo, não o caso
+  tipo            String // O = obrigação, T = tarefa
+  departamento    String
+  respEntregaId   String?  @map("resp_entrega_id")
+  respPrazoId     String?  @map("resp_prazo_id")
+  competencia     String?  @db.VarChar(10)
+  prazo           String   @db.VarChar(10)
+  entregueEm      String?  @map("entregue_em") @db.VarChar(10)
+  /// Status COMO A ORIGEM DIZ ("Ent. atrasada", "Ent. antecipada"…). Nunca
+  /// recalcular atraso a partir das datas aqui — seriam duas verdades.
+  status          String
+  multa           Boolean
+  alteradoEm      String?  @map("alterado_em")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([respEntregaId])
+  @@map("acessorias_entrega")
+}
+
+model AcessoriasSolicitacao {
+  id             String   @id // SolID
+  tipo           String // Interna | Externa
+  departamento   String?
+  status         String
+  abertaEm       String   @map("aberta_em") @db.VarChar(10)
+  finalizadaEm   String?  @map("finalizada_em") @db.VarChar(10)
+  /// Quem finalizou, SÓ quando é gente do escritório. Quando o cliente encerra
+  /// pela avaliação, a origem manda o id DELE (LgeID) — fica null aqui.
+  finalizadorId  String?  @map("finalizador_id")
+  responsaveis   String[] // SolOfficeRespID
+  avaliacao      String?
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("acessorias_solicitacao")
+}
+
+// DERIVADA dos registros acima, por (pessoa, dia do evento). Mesmo formato das
+// outras fontes, para os consumidores somarem por período.
+model AcessoriasDaily {
+  nexusUserId          String   @map("nexus_user_id")
+  day                  String   @db.VarChar(10)
+  processosIniciados   Int      @default(0) @map("processos_iniciados")
+  processosConcluidos  Int      @default(0) @map("processos_concluidos")
+  /// Σ (conclusão − início) dos concluídos no dia — tempo médio = soma ÷ concluídos.
+  diasConclusao        Int      @default(0) @map("dias_conclusao")
+  entregas             Int      @default(0)
+  entregasAtrasadas    Int      @default(0) @map("entregas_atrasadas")
+  solicitacoesFinalizadas Int   @default(0) @map("solicitacoes_finalizadas")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("acessorias_daily")
+}

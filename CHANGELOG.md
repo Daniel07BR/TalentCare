@@ -1,5 +1,29 @@
 # CHANGELOG — TalentCare
 
+## 2026-09-30 — Acessórias: o coletor da 10ª fonte (sem tela, fora do score)
+
+Pedido do dono: *"os dados é para métricas de atendimentos no TalentCare"*.
+
+- **`run-acessorias-sync.mjs`**: lê a API do Acessórias (SaaS de fora — não há
+  endpoint nosso do outro lado) e guarda processos, entregas de obrigação e
+  solicitações **por id**; remonta `acessorias_daily` (pessoa × dia) a cada
+  rodada. `--seco` só lê e imprime; `--completo` varre as ~500 empresas.
+- **Tabelas novas**, só `CREATE`: `scripts/2026-09-30-acessorias-fonte.sql`
+  (gerado por `prisma migrate diff` entre os dois schemas — nunca `db push`).
+- ⚠️⚠️ **`ProcDiasCorridos` da origem segue contando depois da conclusão**; o
+  tempo é calculado pelas datas. Com isso, quem conclui leva **24,6 dias** — a
+  mesma previsão do modelo.
+- ⚠️ Casamento por **e-mail**, aceitando os dois domínios da casa só quando o
+  que vem antes do @ dá uma pessoa só. Quem não casa sai no log.
+- ⚠️⚠️ **Paginação da API instável**: 320 linhas, 279 processos distintos — ela
+  repete uns e pula outros. Processos passaram a ser buscados **pelo número**
+  (`processes/{id}`); usuário que a lista pulou, por `users/{id}`.
+- **Vínculo manual** (`vinculo_manual`, `scripts/2026-09-30-acessorias-vinculo-manual.sql`):
+  e-mail curto no Acessórias × completo no diretório. 6 pessoas vinculadas à mão;
+  4 casos duvidosos ficaram para o dono (lista em `docs/FONTES.md`).
+- ⚠️⚠️ **Não entra no score, na régua nem nas telas** ainda: em 30/09/2026 só o
+  Contábil usa, e só Processos. Ver `docs/FONTES.md`, seção da 10ª fonte.
+
 ## 2026-09-22 — DISC: o perfil comportamental na ficha, no setor e no painel
 
 Pedido do dono, durante o treinamento de liderança com a IN-Formação: *"deixe o
