@@ -114,8 +114,10 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
           </button>
         ))}
         {acessTem && (
-          <div title="Volume no Acessórias — fonte em implantação, fora da nota"
-            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, minWidth: 0 }}>
+          <button type="button" title="Abrir o resumo do Acessórias só com este setor (volume; fora da nota)"
+            onMouseEnter={() => precarregarDetalhe('acessorias')} onFocus={() => precarregarDetalhe('acessorias')}
+            onClick={() => abrir('acessorias')}
+            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 28, height: 28, borderRadius: 8, background: suave('pink'), color: forte('pink'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><CalendarCheck size={15} /></span>
               <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Acessórias</span>
@@ -138,7 +140,7 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
                 </span>
               ))}
             </span>
-          </div>
+          </button>
         )}
       </div>
       {com.length === 0 && !acessTem && <div style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>Nenhuma atividade registrada nos sistemas medidos neste período.</div>}

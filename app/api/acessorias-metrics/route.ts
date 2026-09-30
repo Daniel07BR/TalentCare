@@ -65,21 +65,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ fromDay, toDay, atualizadoEm, vinculado, ...(soma ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) })
   }
 
-  const deptId = sp.get('dept') ?? ''
-  const dept = await prisma.department.findUnique({ where: { id: deptId }, select: { id: true } })
-  if (!dept) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
-  const podeVerSetor =
-    quem.escopo.tipo === 'tudo' || quem.escopo.avaliaDepartmentIds.includes(dept.id) || quem.departmentId === dept.id
-  if (!podeVerSetor) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  /* ?dept= → um setor; sem ?dept= → a casa inteira (a página /acessorias), só para
+     quem enxerga tudo. */
+  const deptId = sp.get('dept')
+  if (deptId) {
+    const dept = await prisma.department.findUnique({ where: { id: deptId }, select: { id: true } })
+    if (!dept) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
+    const podeVerSetor =
+      quem.escopo.tipo === 'tudo' || quem.escopo.avaliaDepartmentIds.includes(dept.id) || quem.departmentId === dept.id
+    if (!podeVerSetor) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  } else if (quem.escopo.tipo !== 'tudo') {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
 
   const gente = await prisma.user.findMany({
-    where: { departmentId: dept.id, origin: { in: ['nexus', 'staff'] }, foraDoDiretorio: false, nexusUserId: { not: null } },
-    select: { id: true, name: true, jobTitle: true, avatarUrl: true, nexusUserId: true },
+    where: { ...(deptId ? { departmentId: deptId } : {}), origin: { in: ['nexus', 'staff'] }, foraDoDiretorio: false, nexusUserId: { not: null } },
+    select: { id: true, name: true, jobTitle: true, avatarUrl: true, nexusUserId: true, department: { select: { name: true } } },
   })
   const somas = await somaPorNexus(gente.map((p) => p.nexusUserId!), fromDay, toDay)
   // ⚠️ Só quem TEM volume — listar o setor inteiro com zeros acusaria quem nem usa o Acessórias.
   const pessoas = gente
-    .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl, ...(somas.get(p.nexusUserId!) ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) }))
+    .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', setor: p.department?.name ?? '—', hasAvatar: !!p.avatarUrl, ...(somas.get(p.nexusUserId!) ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) }))
     .filter((p) => p.iniciados + p.concluidos + p.entregas + p.solicitacoes > 0)
     .sort((a, b) => b.concluidos + b.entregas - (a.concluidos + a.entregas) || b.iniciados - a.iniciados)
   const total = pessoas.reduce(

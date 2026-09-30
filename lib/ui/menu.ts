@@ -22,7 +22,7 @@ export type ChaveTela =
   | 'dashboard' | 'funcionarios' | 'departamentos'
   | 'avaliacoes' | 'minha-avaliacao'
   | 'turnover' | 'assiduidade' | 'classroom' | 'radio' | 'whatsapp'
-  | 'consultoria' | 'helpdesk' | 'cide' | 'gerencia' | 'fluxo' | 'chat'
+  | 'consultoria' | 'helpdesk' | 'cide' | 'gerencia' | 'fluxo' | 'chat' | 'acessorias'
   | 'configuracoes'
 
 export type Tela = { chave: ChaveTela; href: string; label: string; desc: string; tom: Tom | 'neutro' }
@@ -63,6 +63,8 @@ export const GRUPOS_TELAS: GrupoTelas[] = [
          ficou a conversa. Duas entradas, porque são dois sistemas. */
       { chave: 'fluxo', href: '/fluxo', label: 'Fluxo', desc: 'Chamados entre setores e tarefas delegadas', tom: 'purple' },
       { chave: 'chat', href: '/chat', label: 'Chat Interno', desc: 'Conversas em canais e diretas', tom: 'blue' },
+      /* Acessórias (30/09/2026): só volume, fora da nota — fonte em implantação. */
+      { chave: 'acessorias', href: '/acessorias', label: 'Acessórias', desc: 'Processos concluídos e entregas de obrigação', tom: 'pink' },
     ],
   },
   {

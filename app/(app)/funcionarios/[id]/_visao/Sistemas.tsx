@@ -387,7 +387,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   ))
 
   if (ac?.vinculado) add(ac.iniciados + ac.concluidos + ac.entregas + ac.solicitacoes > 0, 'Acessórias', 'acess', () => (
-    <Bloco dica="Volume no Acessórias — fonte em implantação, fora da nota">
+    <Bloco onClick={abrir('acessorias')} dica="Ver processos e entregas no Acessórias (volume; fora da nota)">
       <Titulo nome="Acessórias" sub="volume no período · fora da nota" Icone={CalendarCheck} tom="pink" />
       <Colunas colunas={[
         { rot: 'Processos concluídos', n: ac.concluidos, tom: 'pink' },

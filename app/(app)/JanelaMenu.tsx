@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Building2, ClipboardCheck, Award, TrendingUp, AlarmClock,
   GraduationCap, Radio, MessageCircle, MessagesSquare, LifeBuoy, Landmark, Truck,
-  MessageSquareText, SlidersHorizontal, X, type LucideIcon,} from 'lucide-react'
+  MessageSquareText, SlidersHorizontal, X, CalendarCheck, type LucideIcon,} from 'lucide-react'
 import { telaAtiva, type ChaveTela, type GrupoTelas, type Tela } from '@/lib/ui/menu'
 import v from './_visao/visao.module.css'
 import s from './navegacao.module.css'
@@ -34,7 +34,7 @@ const ICONES: Record<ChaveTela, ComponentType<{ size?: number; color?: string }>
   avaliacoes: ClipboardCheck, 'minha-avaliacao': Award,
   turnover: TrendingUp, assiduidade: AlarmClock, classroom: GraduationCap, radio: Radio,
   whatsapp: MessageCircle, consultoria: MessagesSquare, helpdesk: LifeBuoy, cide: Landmark,
-  gerencia: Truck, fluxo: LogoFluxo, chat: MessageSquareText, configuracoes: SlidersHorizontal,
+  gerencia: Truck, fluxo: LogoFluxo, chat: MessageSquareText, acessorias: CalendarCheck, configuracoes: SlidersHorizontal,
 }
 
 const corDoIcone = (t: Tela['tom']) =>
