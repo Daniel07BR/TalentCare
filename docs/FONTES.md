@@ -1,7 +1,8 @@
 # As fontes de atividade
 
 O TalentCare não mede nada por conta própria: ele **espelha** o que os sistemas da
-casa registram. Oito fontes hoje, todas pela mesma receita.
+casa registram. Dez fontes hoje; nove pela mesma receita, e o Acessórias com uma
+variação (ver a seção dele).
 
 | # | Fonte | Onde | Espelho | Cron |
 |---|---|---|---|---|
@@ -14,6 +15,7 @@ casa registram. Oito fontes hoje, todas pela mesma receita.
 | 7 | Gerência (mensageria) | `.72` | `gerencia_daily` | `:30` |
 | 8 | **Chat Interno** — só as MENSAGENS | `.69` | `chat_daily` (as colunas `chamados_*` e `chat_dept_daily` **congelaram em 16/09/2026**) | `:35` |
 | 9 | **Fluxo** — os CHAMADOS entre setores | `.70` | `fluxo_daily` + `fluxo_dept_daily` | `:50` (`--completo` 03:40) |
+| 10 | **Acessórias** (SaaS de fora) — processos, entregas de obrigação, solicitações | `api.acessorias.com` | `acessorias_processo` / `_entrega` / `_solicitacao` → `acessorias_daily` (derivada) | `:55` (`--completo` 03:50) — ⚠️ **coletor só; fora do score e das telas** |
 | — | Diretório (quem é quem) | Nexus `.75` | a tabela `users` | `:45` |
 | — | Ponto / disciplina | dump do Nexo | `assiduidade_daily`, `disciplina_evento` | import à mão |
 | — | **Controle da LGPD** | Nexus `.75` | `disciplina_evento` (`source='lgpd'`) | push + `:40` |
@@ -415,6 +417,61 @@ julho". Bucket fora da cobertura não entra na série, e o cartão diz "medido a
 
 > ⚠️ Mantenha esta lista em dia. Um mapa de dívida que aponta dívida já quitada faz
 > desconfiar do resto dele — e o resto é o que ainda mente.
+
+---
+
+## ⚠️⚠️ A 10ª fonte é de FORA: Acessórias (30/09/2026)
+
+O Acessórias é um SaaS; a casa não cria endpoint nele. Então a receita muda em
+um ponto: **quem chama a API é o próprio `run-acessorias-sync.mjs`**, e a API
+não devolve "por dia" — devolve o processo, a entrega e a solicitação com o
+estado ATUAL. Por isso o espelho tem duas camadas:
+
+1. **Registros por id** (`acessorias_processo`, `_entrega`, `_solicitacao`):
+   upsert pelo id da origem. Uma entrega que muda de estado se corrige na
+   própria linha — não existe o "dia pela metade" das outras fontes.
+2. **`acessorias_daily` é DERIVADA**: apagada e remontada dos registros a cada
+   rodada, numa transação. Tem o formato das outras (`nexusUserId × dia`) para
+   os consumidores somarem por período.
+
+| O que conta | Quem leva o crédito | Dia |
+|---|---|---|
+| processo iniciado / concluído | o **gestor** do processo | início / conclusão |
+| entrega de obrigação (e se foi atrasada) | `RespEntregaID` | dia da entrega |
+| solicitação finalizada | quem finalizou, **só se for do escritório** | dia da finalização |
+
+- **Pessoa casa pelo E-MAIL** (a origem não tem id do Nexus). A equipe está no
+  Acessórias com **dois domínios da casa** — `@grupoitamarathy.com.br` e
+  `@itamarathyclassroom.com.br` —, então fora do e-mail exato casa pelo que
+  vem antes do @, só entre domínios da casa e só se der UMA pessoa. Quem não
+  casa fica em `acessorias_usuario` com `nexus_user_id` null e sai no log
+  (`semCasamento`) — o trabalho dela não aparece no painel.
+- **Limite da API: 100 req/min por token**, somado a qualquer outro uso do mesmo
+  token. O coletor anda a 1 por segundo. O incremental custa ~25 chamadas; o
+  `--completo` varre as ~500 empresas (~9 min).
+- `deliveries/ListAll` só aceita `DtLastDH` de **hoje ou ontem** (regra da API):
+  o incremental só vê entregas mexidas desde ontem. Entrega DESFEITA só some no
+  `--completo`, que também tem o freio de "origem com menos da metade → não
+  apaga nada".
+- ⚠️⚠️ **`ProcDiasCorridos` da origem MENTE para processo concluído**: continua
+  contando até hoje (54 de 54 em 30/09/2026). O tempo aqui é conclusão − início,
+  pelas datas. Quem usou o campo cru concluiu que o modelo previa 25 d e a
+  rotina levava 60 — na verdade quem conclui leva **24,6 d**, a própria previsão.
+- ⚠️ A origem chama o gestor de `ProcGestor` e **manda o id**, não o nome que a
+  documentação deles mostra.
+- ⚠️⚠️ **Baixa em LOTE existe aqui também** (o mutirão da Gerência): as 94
+  entregas da Luana Silva foram TODAS marcadas em 01/09/2026, e todas saem
+  "Ent. atrasada" — é faxina de prazo velho, não 94 atrasos num dia. A Deborah
+  Martins (122 entregas, ago–set, 7 atrasadas) é o uso real. Antes de qualquer
+  tela ou score, decidir a régua do lote (ex.: entrega muito depois do prazo,
+  em massa no mesmo dia, não conta como atraso de ninguém).
+- **Fora do score e fora das telas** por decisão explícita: em 30/09/2026 só o
+  Contábil usava, e só Processos; 14 de 2.564 prazos marcados como entregues.
+  Número de implantação acusa quem ainda não foi treinado — é a face do `null`
+  que acusa. Os consumidores da checklist acima ficam para quando o dono decidir.
+- O token é de um USUÁRIO do Acessórias (`ACESSORIAS_API_TOKEN`). Para ler,
+  tanto faz de quem é; o recomendado é um usuário "Integração" próprio, para a
+  coleta não parar se alguém regerar o token pessoal.
 
 ## Como entra uma 9ª fonte
 
