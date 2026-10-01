@@ -20,15 +20,16 @@ export type Criterio = {
   sempre: boolean
 }
 
+/* ⚠️⚠️ TRÊS CRITÉRIOS (decisão do Daniel, 01/10/2026: "enxugar só para poucas
+   avaliações"). Eram oito; o que saiu foi FUNDIDO, não perdido — Prazo entrou em
+   Entrega, Iniciativa e Conduta viraram Atitude, Comunicação foi para Equipe.
+   Melhoria e Liderança saíram: eram os dois que pediam "não se aplica", e uma
+   ficha com três perguntas que sempre se aplicam se responde inteira.
+   Trocado antes da primeira avaliação gravada (0 em 01/10/2026). */
 export const CRITERIOS: Criterio[] = [
-  { key: 'entrega', label: 'Entrega', sempre: true, desc: 'O que foi feito, no volume e na qualidade combinados para o cargo.' },
-  { key: 'prazo', label: 'Prazo', sempre: true, desc: 'Cumpriu o que prometeu — e avisou a tempo quando não ia dar.' },
-  { key: 'iniciativa', label: 'Iniciativa', sempre: true, desc: 'Resolve sem precisar ser mandado; traz o problema junto com uma saída.' },
-  { key: 'equipe', label: 'Trabalho em equipe', sempre: true, desc: 'Ajuda, divide o que sabe, não deixa o colega parado esperando.' },
-  { key: 'comunicacao', label: 'Comunicação', sempre: true, desc: 'Responde, informa antes de ser cobrado, escreve de um jeito que o outro entende.' },
-  { key: 'conduta', label: 'Conduta', sempre: true, desc: 'Trata bem quem trabalha com ela e cumpre o combinado da casa.' },
-  { key: 'melhoria', label: 'Melhoria e inovação', sempre: false, desc: 'Propôs ou fez algo que melhorou o trabalho. Mês sem isso não é demérito — marque "não se aplica".' },
-  { key: 'lideranca', label: 'Liderança', sempre: false, desc: 'Só para quem conduz gente: desenvolve o time, dá retorno, decide.' },
+  { key: 'entrega', label: 'Entrega', sempre: true, desc: 'Fez o combinado para o cargo, com qualidade e no prazo — e avisou a tempo quando não ia dar.' },
+  { key: 'atitude', label: 'Atitude', sempre: true, desc: 'Resolve sem precisar ser mandado, traz o problema junto com uma saída e cumpre o combinado da casa.' },
+  { key: 'equipe', label: 'Equipe e comunicação', sempre: true, desc: 'Ajuda e divide o que sabe; responde, informa antes de ser cobrado e se faz entender.' },
 ]
 
 export const CRITERIO_KEYS = CRITERIOS.map((c) => c.key)
@@ -43,10 +44,30 @@ export const ANCORAS = [
   { ate: 4, label: 'Abaixo do esperado', color: 'var(--danger)' },
   { ate: 6, label: 'Atende em parte', color: 'var(--warning)' },
   { ate: 8, label: 'Atende — o esperado', color: 'var(--success)' },
-  { ate: 10, label: 'Acima do esperado', color: 'var(--accent)' },
+  /* ⚠️ Cor própria: `--accent` é o MESMO laranja de `--warning` no tema claro
+     (#b9791a), e "Acima do esperado" saía da cor de "Atende em parte". */
+  { ate: 10, label: 'Acima do esperado', color: 'var(--chart-3)' },
 ]
 
 export const ancoraDe = (n: number) => ANCORAS.find((a) => n <= a.ate) ?? ANCORAS[ANCORAS.length - 1]
+
+/**
+ * ⚠️⚠️ OS QUATRO NÍVEIS que o avaliador escolhe (Daniel, 01/10/2026): um clique
+ * num nome, e não onze botões de 0 a 10. A coluna continua `Int` 0–10: cada
+ * nível grava um número DENTRO da faixa da âncora de mesmo nome, então média,
+ * cor e gráfico das outras telas seguem valendo sem conversão.
+ * ⚠️ 3 e 10 caem na regra da justificativa (< 5 ou > 8); 6 e 8 não — é
+ * exatamente "Abaixo e Acima pedem uma linha explicando".
+ */
+export const NIVEIS = [
+  { key: 'abaixo', nota: 3, label: 'Abaixo do esperado', curto: 'Abaixo', dica: 'Ficou devendo o combinado.' },
+  { key: 'parte', nota: 6, label: 'Atende em parte', curto: 'Em parte', dica: 'Fez uma parte do que se espera.' },
+  { key: 'atende', nota: 8, label: 'Atende — o esperado', curto: 'Atende', dica: 'Fez o que se espera do cargo.' },
+  { key: 'acima', nota: 10, label: 'Acima do esperado', curto: 'Acima', dica: 'Foi além do que o cargo pede.' },
+].map((n) => ({ ...n, color: ancoraDe(n.nota).color }))
+
+/** O nível de uma nota gravada (inclusive as de 0–10 de antes dos níveis). */
+export const nivelDe = (nota: number) => NIVEIS[ANCORAS.indexOf(ancoraDe(nota))]
 
 /**
  * ⚠️⚠️ Nota EXTREMA exige justificativa escrita (decisão do dono, 02/09/2026):

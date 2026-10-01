@@ -3,9 +3,10 @@ import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Avatar from '../../Avatar'
 import {
-  CRITERIOS, ANCORAS, ancoraDe, exigeJustificativa, mediaDe,
+  CRITERIOS, NIVEIS, ancoraDe, nivelDe, exigeJustificativa, mediaDe,
   competenciaLabel, competenciaAnterior,
 } from '@/lib/avaliacoes/criterios'
+import st from './avaliar.module.css'
 
 type NotaEnt = { nota: number | null; justificativa: string | null }
 type Dados = {
@@ -55,11 +56,14 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   const somenteLeitura = !d.posso
   const lista = CRITERIOS.map((c) => ({ c, v: notas[c.key] ?? { nota: null, justificativa: null } }))
   const media = mediaDe(lista.map((l) => ({ nota: l.v.nota })))
-  const preenchidos = lista.filter((l) => l.v.nota !== null).length
   const pendentesJust = lista.filter((l) => exigeJustificativa(l.v.nota) && !(l.v.justificativa ?? '').trim())
 
+  const faltaNivel = lista.filter((l) => l.v.nota === null)
+  const nivelMedia = media != null ? nivelDe(media) : null
+
+  // Clicar de novo no nível escolhido desmarca (o rascunho pode ficar pela metade).
   const setNota = (k: string, n: number | null) =>
-    setNotas((p) => ({ ...p, [k]: { nota: n, justificativa: p[k]?.justificativa ?? null } }))
+    setNotas((p) => ({ ...p, [k]: { nota: p[k]?.nota === n ? null : n, justificativa: p[k]?.justificativa ?? null } }))
   const setJust = (k: string, j: string) =>
     setNotas((p) => ({ ...p, [k]: { nota: p[k]?.nota ?? null, justificativa: j } }))
 
@@ -78,209 +82,206 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
     carregar()
   }
 
+  const primeiro = d.pessoa.nome.split(' ')[0]
+  const voltar = () => router.push(`/avaliacoes?competencia=${competencia}${sp.get('setor') ? `&setor=${sp.get('setor')}` : ''}`)
+
   return (
-    <div className="tc-anim" style={{ maxWidth: 980, margin: '0 auto' }}>
+    <div className={`tc-anim ${st.pagina}`}>
       {/* A volta leva o SETOR de onde se veio — a lista abre dentro do setor (11/09/2026). */}
-      <button onClick={() => router.push(`/avaliacoes?competencia=${competencia}${sp.get('setor') ? `&setor=${sp.get('setor')}` : ''}`)} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 18 }}>‹ Voltar às avaliações</button>
+      <button onClick={voltar} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 16 }}>‹ Voltar às avaliações</button>
 
-      <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22, marginBottom: 16, display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Avatar id={d.pessoa.id} hasAvatar={d.pessoa.hasAvatar} initials={d.pessoa.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={60} radius={16} />
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-.4px' }}>{d.pessoa.nome}</h1>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 3 }}>{d.pessoa.cargo} · {d.pessoa.setor}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 6 }}>Competência de <b>{competenciaLabel(competencia)}</b></div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-mute)', marginBottom: 2 }}>Nota do mês</div>
-          <div className="cnum" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-1.5px', color: media != null ? ancoraDe(media).color : 'var(--text-mute)' }}>
-            {media != null ? media.toFixed(1) : '—'}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>{preenchidos} de {CRITERIOS.length} critérios</div>
-        </div>
-        <button onClick={() => router.push(`/funcionarios/${d.pessoa.id}`)} className="tc-btn" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', padding: '8px 14px', fontSize: 12.5, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}>
-          Ver a ficha completa
-        </button>
-      </div>
+      <div className={st.grade}>
+        {/* ---------- À ESQUERDA: quem e quanto (fica parada ao rolar) ---------- */}
+        <aside className={st.lado}>
+          <div className={`tc-card ${st.cartao} ${st.pessoa}`}>
+            <Avatar id={d.pessoa.id} hasAvatar={d.pessoa.hasAvatar} initials={d.pessoa.nome.split(' ').map((x) => x[0]).slice(0, 2).join('')} color="var(--chart-1)" size={84} radius={22} />
+            <div>
+              <h1 className={st.nome}>{d.pessoa.nome}</h1>
+              <div className={st.cargo}>{d.pessoa.cargo} · {d.pessoa.setor}</div>
+            </div>
+            <span className={st.competencia}>Competência de <b>{competenciaLabel(competencia)}</b></span>
 
-      {/*
-        ⚠️⚠️ O aviso mais importante da tela. O score é calculado da atividade
-        registrada nos 8 sistemas; a nota é julgamento de gente. Sem dizer isto
-        aqui, o gestor lê o score como "a resposta certa" e transcreve — e a
-        avaliação deixa de acrescentar qualquer coisa ao que o sistema já sabia.
-      */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginBottom: 16, fontSize: 11.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
-        <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
-        <span>
-          A <b>ficha</b> mostra a atividade que os sistemas registraram. Esta nota é <b>o que você
-          observou</b> — as duas ficam lado a lado no gráfico de propósito: quando elas discordam,
-          é aí que há algo a conversar.
-        </span>
-      </div>
-
-      {d.aguardandoPublicacao && (
-        <Aviso cor="var(--warning)">Há uma avaliação em rascunho, ainda não publicada. Ela só aparece quando o avaliador publicar.</Aviso>
-      )}
-      {somenteLeitura && !d.aguardandoPublicacao && !d.avaliacao && (
-        <Aviso cor="var(--text-mute)">Ainda não há avaliação nesta competência.</Aviso>
-      )}
-      {somenteLeitura && d.souEu && (
-        <Aviso cor="var(--info)">Esta é a sua avaliação. Você pode registrar ciência e comentar na sua página.</Aviso>
-      )}
-
-      {(d.posso || (d.avaliacao && jaPublicada)) && (
-        <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Avaliação de {competenciaLabel(competencia)}</div>
-            {jaPublicada && (
-              <div style={{ fontSize: 11.5, color: 'var(--text-mute)' }}>
-                Publicada{d.avaliacao!.versao > 1 ? ` · versão ${d.avaliacao!.versao}` : ''}
-                {d.avaliacao!.ciencia?.cienteEm ? ' · a pessoa já leu' : ' · aguardando ciência'}
-              </div>
-            )}
-          </div>
-
-          {/* As âncoras: sem elas o 0–10 vira 8 para todo mundo em três meses. */}
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20, fontSize: 11, color: 'var(--text-mute)' }}>
-            {ANCORAS.map((a, i) => (
-              <span key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: a.color }} />
-                {i === 0 ? '0' : ANCORAS[i - 1].ate + 1}–{a.ate} {a.label}
+            <div className={st.nota}>
+              <span className={st.notaRotulo}>Nota do mês</span>
+              <span className="cnum" style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
+                <span className={st.notaValor}>{media != null ? media.toFixed(1) : '—'}</span>
               </span>
-            ))}
+              <span className={st.notaNivel} style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
+                {nivelMedia ? ancoraDe(media!).label : 'escolha os níveis ao lado'}
+              </span>
+              <div className={st.progresso}>
+                {lista.map(({ c, v }) => {
+                  const nv = v.nota != null ? nivelDe(v.nota) : null
+                  return (
+                    <div key={c.key} className={st.progressoLinha}>
+                      <span className={st.ponto} style={{ background: nv ? nv.color : 'var(--surface-3)' }} />
+                      <span className={st.progressoNome}>{c.label}</span>
+                      <span className={st.progressoNivel} style={{ color: nv ? nv.color : 'var(--text-mute)' }}>{nv ? nv.curto : 'falta'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button onClick={() => router.push(`/funcionarios/${d.pessoa.id}`)} className={`tc-btn ${st.botaoFicha}`}>Ver a ficha completa</button>
           </div>
 
-          {lista.map(({ c, v }) => {
-            const precisa = exigeJustificativa(v.nota)
-            return (
-              <div key={c.key} style={{ padding: '14px 0', borderTop: '1px solid var(--border-soft)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ minWidth: 220, flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>
-                      {c.label}
-                      {!c.sempre && <span style={{ fontSize: 10.5, color: 'var(--text-mute)', fontWeight: 500, marginLeft: 7 }}>pode não se aplicar</span>}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2, lineHeight: 1.5 }}>{c.desc}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {Array.from({ length: 11 }, (_, n) => (
-                      <button key={n} disabled={somenteLeitura} onClick={() => setNota(c.key, n)}
-                        title={ancoraDe(n).label}
-                        style={{
-                          width: 27, height: 30, borderRadius: 6, cursor: somenteLeitura ? 'default' : 'pointer',
-                          fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
-                          border: `1px solid ${v.nota === n ? ancoraDe(n).color : 'var(--border)'}`,
-                          background: v.nota === n ? ancoraDe(n).color : 'var(--surface-2)',
-                          color: v.nota === n ? '#fff' : 'var(--text-dim)',
-                        }}>{n}</button>
-                    ))}
-                    {/* ⚠️ "Não se aplica" é um botão de verdade, e não o campo em
-                        branco: um 7 inventado para preencher entra na média como
-                        se fosse observação. */}
-                    <button disabled={somenteLeitura} onClick={() => setNota(c.key, null)}
-                      style={{
-                        marginLeft: 6, padding: '0 10px', height: 30, borderRadius: 6, cursor: somenteLeitura ? 'default' : 'pointer',
-                        fontFamily: 'inherit', fontSize: 11, fontWeight: 600,
-                        border: `1px solid ${v.nota === null ? 'var(--text-mute)' : 'var(--border)'}`,
-                        background: v.nota === null ? 'var(--surface-3, var(--surface-2))' : 'transparent',
-                        color: 'var(--text-mute)',
-                      }}>não se aplica</button>
+          {/*
+            ⚠️⚠️ O aviso mais importante da tela. O score é calculado da atividade
+            registrada nos sistemas; a nota é julgamento de gente. Sem dizer isto
+            aqui, o gestor lê o score como "a resposta certa" e transcreve — e a
+            avaliação deixa de acrescentar qualquer coisa ao que o sistema já sabia.
+          */}
+          <div className={st.lembrete}>
+            <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
+            <span>A <b>ficha</b> mostra o que os sistemas registraram. Esta nota é <b>o que você observou</b>. Quando as duas discordam, é aí que há algo a conversar.</span>
+          </div>
+        </aside>
+
+        {/* ---------- À DIREITA: o que se avalia ---------- */}
+        <main className={st.principal}>
+          {d.aguardandoPublicacao && (
+            <Aviso cor="var(--warning)">Há uma avaliação em rascunho, ainda não publicada. Ela só aparece quando o avaliador publicar.</Aviso>
+          )}
+          {somenteLeitura && !d.aguardandoPublicacao && !d.avaliacao && (
+            <Aviso cor="var(--text-mute)">Ainda não há avaliação nesta competência.</Aviso>
+          )}
+          {somenteLeitura && d.souEu && (
+            <Aviso cor="var(--info)">Esta é a sua avaliação. Você pode registrar ciência e comentar na sua página.</Aviso>
+          )}
+
+          {(d.posso || (d.avaliacao && jaPublicada)) && (
+            <>
+              <div className={st.cabecalho}>
+                <div>
+                  <h2 className={st.titulo}>Avaliação de {competenciaLabel(competencia)}</h2>
+                  <div className={st.subtitulo}>
+                    {somenteLeitura ? 'O que o avaliador escolheu em cada ponto.' : `Escolha um nível em cada um dos ${CRITERIOS.length} pontos, pensando em como ${primeiro} trabalhou no mês.`}
                   </div>
                 </div>
-                {(precisa || (v.justificativa ?? '').trim()) && (
-                  <div style={{ marginTop: 9 }}>
-                    <textarea
-                      disabled={somenteLeitura}
-                      value={v.justificativa ?? ''}
-                      onChange={(e) => setJust(c.key, e.target.value)}
-                      placeholder={precisa ? `Nota ${v.nota} precisa de uma linha explicando — é o que sustenta essa nota daqui a seis meses.` : 'Observação (opcional)'}
-                      rows={2}
-                      style={{
-                        width: '100%', background: 'var(--surface-2)', color: 'var(--text)',
-                        border: `1px solid ${precisa && !(v.justificativa ?? '').trim() ? 'var(--warning)' : 'var(--border)'}`,
-                        borderRadius: 'var(--radius-sm)', padding: '8px 11px', fontSize: 12.5,
-                        fontFamily: 'inherit', resize: 'vertical',
-                      }} />
+                {jaPublicada && (
+                  <div className={st.situacao}>
+                    Publicada{d.avaliacao!.versao > 1 ? ` · versão ${d.avaliacao!.versao}` : ''}
+                    {d.avaliacao!.ciencia?.cienteEm ? ' · a pessoa já leu' : ' · aguardando ciência'}
                   </div>
                 )}
               </div>
-            )
-          })}
 
-          <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-soft)' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 7 }}>Recado do mês <span style={{ fontWeight: 500, color: 'var(--text-mute)' }}>· opcional, a pessoa vai ler</span></div>
-            <textarea disabled={somenteLeitura} value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3}
-              placeholder="O que ela fez bem, e o que você espera dela no mês que vem."
-              style={{ width: '100%', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
-          </div>
+              {lista.map(({ c, v }, i) => {
+                const precisa = exigeJustificativa(v.nota)
+                const escolhido = v.nota != null ? nivelDe(v.nota) : null
+                return (
+                  <section key={c.key} className={`tc-card ${st.cartao} ${st.criterio}`}>
+                    <div className={st.criterioTopo}>
+                      <span className={st.numero}>{i + 1}</span>
+                      <div>
+                        <div className={st.criterioNome}>{c.label}</div>
+                        <div className={st.criterioDesc}>{c.desc}</div>
+                      </div>
+                    </div>
+                    <div className={st.niveis} role="radiogroup" aria-label={c.label}>
+                      {NIVEIS.map((n) => {
+                        const on = escolhido?.key === n.key
+                        return (
+                          <button key={n.key} type="button" role="radio" aria-checked={on} disabled={somenteLeitura}
+                            onClick={() => setNota(c.key, n.nota)}
+                            className={`${st.nivel} ${on ? st.nivelEscolhido : ''}`}
+                            style={{ '--cor': n.color } as React.CSSProperties}>
+                            {on && <span className={st.marca}>✓</span>}
+                            <span className={st.nivelNome}>{n.curto}</span>
+                            <span className={st.nivelDica}>{n.dica}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {/* ⚠️ Abaixo e Acima pedem uma linha (decisão do dono, 02/09/2026): é o
+                        que sustenta a nota seis meses depois, na conversa de aumento. */}
+                    {(precisa || (v.justificativa ?? '').trim()) && (
+                      <textarea
+                        disabled={somenteLeitura}
+                        value={v.justificativa ?? ''}
+                        onChange={(e) => setJust(c.key, e.target.value)}
+                        placeholder={precisa ? `"${escolhido!.label}" precisa de uma linha explicando: o que ${primeiro} fez para merecer isso?` : 'Observação (opcional)'}
+                        rows={2}
+                        className={`${st.campo} ${precisa && !(v.justificativa ?? '').trim() ? st.campoAlerta : ''}`} />
+                    )}
+                  </section>
+                )
+              })}
 
-          {/* Correção de publicada exige motivo — as duas versões ficam visíveis. */}
-          {jaPublicada && !somenteLeitura && (
-            <div style={{ marginTop: 14, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-soft)' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 3 }}>Corrigir uma avaliação já publicada</div>
-              <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 8, lineHeight: 1.5 }}>
-                A pessoa pode já ter lido. A versão anterior <b>continua visível para ela</b>, junto com o motivo — uma nota que se reescreve em silêncio não é registro.
-              </div>
-              <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="O que mudou e por quê"
-                style={{ width: '100%', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 11px', fontSize: 12.5, fontFamily: 'inherit' }} />
-            </div>
-          )}
+              <section className={`tc-card ${st.cartao}`}>
+                <div className={st.campoRotulo}>Recado do mês <span>· opcional, {primeiro} vai ler</span></div>
+                <textarea disabled={somenteLeitura} value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3}
+                  placeholder={`O que ${primeiro} fez bem, e o que você espera no mês que vem.`}
+                  className={st.campo} />
 
-          {erro && <Aviso cor="var(--danger)">{erro}</Aviso>}
-          {ok && <Aviso cor="var(--success)">{ok}</Aviso>}
+                {/* Correção de publicada exige motivo — as duas versões ficam visíveis. */}
+                {jaPublicada && !somenteLeitura && (
+                  <div style={{ marginTop: 16 }}>
+                    <div className={st.campoRotulo}>Motivo da correção <span>· a versão anterior continua visível para {primeiro}, junto com este motivo</span></div>
+                    <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="O que mudou e por quê" className={st.campo} />
+                  </div>
+                )}
+              </section>
 
-          {!somenteLeitura && (
-            <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button onClick={() => salvar('rascunho')} disabled={!!salvando} className="tc-btn"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', padding: '9px 18px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                {salvando === 'rascunho' ? 'Salvando…' : 'Salvar rascunho'}
-              </button>
-              <button onClick={() => salvar('publicar')} disabled={!!salvando || preenchidos === 0} className="tc-btn"
-                style={{ background: 'var(--accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', padding: '9px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: preenchidos === 0 ? 'not-allowed' : 'pointer', opacity: preenchidos === 0 ? 0.5 : 1 }}>
-                {salvando === 'publicar' ? 'Publicando…' : jaPublicada ? 'Publicar correção' : 'Publicar avaliação'}
-              </button>
-              <span style={{ fontSize: 11.5, color: pendentesJust.length ? 'var(--warning)' : 'var(--text-mute)' }}>
-                {pendentesJust.length > 0
-                  ? `Falta justificar: ${pendentesJust.map((p) => p.c.label).join(', ')}`
-                  : 'Rascunho fica invisível para a pessoa. Publicar mostra a ela.'}
-              </span>
-            </div>
-          )}
+              {erro && <Aviso cor="var(--danger)">{erro}</Aviso>}
+              {ok && <Aviso cor="var(--success)">{ok}</Aviso>}
 
-          {/* Histórico de correções */}
-          {d.avaliacao && d.avaliacao.versoes.length > 0 && (
-            <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: 'var(--text-dim)' }}>Versões anteriores</div>
-              {d.avaliacao.versoes.map((v) => (
-                <div key={v.versao} style={{ fontSize: 11.5, color: 'var(--text-mute)', padding: '5px 0', display: 'flex', gap: 10 }}>
-                  <b>v{v.versao}</b>
-                  <span>média {v.media?.toFixed(1) ?? '—'}</span>
-                  <span style={{ flex: 1 }}>{v.motivo}</span>
-                  <span>{v.publishedAt ? new Date(v.publishedAt).toLocaleDateString('pt-BR') : ''}</span>
+              {!somenteLeitura && (
+                <div className={st.acoes}>
+                  <span className={st.acoesTexto} style={{ color: pendentesJust.length || faltaNivel.length ? 'var(--warning)' : undefined }}>
+                    {faltaNivel.length > 0
+                      ? `Falta escolher: ${faltaNivel.map((p) => p.c.label).join(', ')}`
+                      : pendentesJust.length > 0
+                        ? `Falta explicar: ${pendentesJust.map((p) => p.c.label).join(', ')}`
+                        : `Pronto. O rascunho fica invisível para ${primeiro}; publicar mostra a avaliação.`}
+                  </span>
+                  <button onClick={() => salvar('rascunho')} disabled={!!salvando} className={`tc-btn ${st.botao} ${st.botaoSecundario}`}>
+                    {salvando === 'rascunho' ? 'Salvando…' : 'Salvar rascunho'}
+                  </button>
+                  <button onClick={() => salvar('publicar')} disabled={!!salvando || faltaNivel.length > 0 || pendentesJust.length > 0} className={`tc-btn ${st.botao} ${st.botaoPrincipal}`}>
+                    {salvando === 'publicar' ? 'Publicando…' : jaPublicada ? 'Publicar correção' : 'Publicar avaliação'}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* O que a pessoa respondeu */}
-          {d.avaliacao?.ciencia && (
-            <div style={{ marginTop: 18, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--info)' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-                {d.pessoa.nome.split(' ')[0]} deu ciência em {new Date(d.avaliacao.ciencia.cienteEm).toLocaleDateString('pt-BR')}
-                {d.avaliacao.ciencia.versaoCiente < d.avaliacao.versao && <span style={{ color: 'var(--warning)', fontWeight: 500 }}> · da versão {d.avaliacao.ciencia.versaoCiente}, anterior à correção</span>}
-              </div>
-              {d.avaliacao.ciencia.comentario && (
-                <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{d.avaliacao.ciencia.comentario}</div>
               )}
-            </div>
+
+              {/* Histórico de correções */}
+              {d.avaliacao && d.avaliacao.versoes.length > 0 && (
+                <section className={`tc-card ${st.cartao}`}>
+                  <div className={st.campoRotulo}>Versões anteriores</div>
+                  {d.avaliacao.versoes.map((v) => (
+                    <div key={v.versao} style={{ fontSize: 12, color: 'var(--text-mute)', padding: '5px 0', display: 'flex', gap: 10 }}>
+                      <b>v{v.versao}</b>
+                      <span>média {v.media?.toFixed(1) ?? '—'}</span>
+                      <span style={{ flex: 1 }}>{v.motivo}</span>
+                      <span>{v.publishedAt ? new Date(v.publishedAt).toLocaleDateString('pt-BR') : ''}</span>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* O que a pessoa respondeu */}
+              {d.avaliacao?.ciencia && (
+                <section className={`tc-card ${st.cartao}`} style={{ borderLeft: '3px solid var(--info)' }}>
+                  <div className={st.campoRotulo}>
+                    {primeiro} deu ciência em {new Date(d.avaliacao.ciencia.cienteEm).toLocaleDateString('pt-BR')}
+                    {d.avaliacao.ciencia.versaoCiente < d.avaliacao.versao && <span style={{ color: 'var(--warning)' }}> · da versão {d.avaliacao.ciencia.versaoCiente}, anterior à correção</span>}
+                  </div>
+                  {d.avaliacao.ciencia.comentario && (
+                    <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{d.avaliacao.ciencia.comentario}</div>
+                  )}
+                </section>
+              )}
+            </>
           )}
-        </div>
-      )}
+        </main>
+      </div>
     </div>
   )
 }
 
 const Aviso = ({ cor, children }: { cor: string; children: React.ReactNode }) => (
-  <div style={{ display: 'flex', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderLeft: `3px solid ${cor}`, borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginTop: 14, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
+  <div style={{ display: 'flex', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderLeft: `3px solid ${cor}`, borderRadius: 'var(--radius-sm)', padding: '10px 13px', fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.55 }}>
     {children}
   </div>
 )

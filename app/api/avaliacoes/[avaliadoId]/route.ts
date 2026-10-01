@@ -138,8 +138,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({
       error: 'justificativa_obrigatoria',
       // A mensagem diz QUAIS, senão o gestor procura o campo pela tela inteira.
-      detalhe: `Nota abaixo de 5 ou acima de 8 precisa de uma linha explicando: ${faltando.join(', ')}.`,
+      detalhe: `"Abaixo do esperado" e "Acima do esperado" precisam de uma linha explicando: ${faltando.join(', ')}.`,
       criterios: faltando,
+    }, { status: 422 })
+  }
+  /* ⚠️ Com três critérios que sempre se aplicam (01/10/2026), publicar exige os
+     três: média de dois deles seria lida como a avaliação inteira. */
+  const semNota = notas.filter((n) => n.nota === null)
+  if (acao === 'publicar' && semNota.length > 0 && semNota.length < notas.length) {
+    return NextResponse.json({
+      error: 'criterio_sem_nota',
+      detalhe: `Falta escolher o nível de: ${semNota.map((n) => CRITERIOS.find((c) => c.key === n.criterio)?.label).join(', ')}.`,
     }, { status: 422 })
   }
   if (acao === 'publicar' && notas.every((n) => n.nota === null)) {
