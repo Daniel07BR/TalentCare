@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Activity, CalendarCheck, FileSpreadsheet, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
 import { precarregarDetalhe, type ChaveDetalhe } from '../../../_visao/Detalhe'
@@ -11,7 +10,7 @@ import type { ComDetalhe, Tom } from './tipos'
 import { textoDoLote, type Lote } from '@/lib/acessorias-lote'
 import LogoFluxo from '../../../LogoFluxo'
 
-type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][]; logo?: boolean }
+type Sis = { chave: ChaveDetalhe; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][]; logo?: boolean }
 
 /* Um cartão por sistema COM registro no período — a mesma regra do relatório
    atual (fonte sem nada do setor fica fora, e a tela diz quais). */
@@ -20,8 +19,9 @@ function sistemas(m: DeptMetrics): Sis[] {
   const sv = m.servicos
   return [
     /* ⚠️ A PLANILHA DO SETOR vem primeiro quando existe — é a fonte que o setor
-       mantém à mão e reconhece. Não tem janela de detalhe: o clique leva à tela
-       dela, onde também se atualiza o arquivo. */
+       mantém à mão e reconhece. ⚠️ Desde 01/10/2026 ela ABRE A JANELA como os
+       outros cartões (o Legal achou que o clique estava quebrado quando ele
+       levava direto à tela da planilha); a planilha fica a um botão, lá dentro. */
     { chave: 'servicos', nome: 'Serviços do setor', Icone: FileSpreadsheet, tom: 'blue', tem: !!sv?.temFonte, gente: r.servicos?.gente ?? [],
       stats: [[num(sv?.concluidos ?? 0), 'Concluídos'], [num(sv?.abertos ?? 0), 'Em aberto']] },
     /* ⚠️ O WHATSAPP SAIU daqui (pedido do dono, 11/09/2026): virou o cartão próprio
@@ -82,7 +82,6 @@ function useAcessoriasDoSetor(deptId: string, fromDay: string, toDay: string) {
 }
 
 export function Sistemas({ m, abrir }: ComDetalhe) {
-  const router = useRouter()
   const acess = useAcessoriasDoSetor(m.setor.id, m.fromDay, m.toDay)
   const acessTem = !!acess && acess.pessoas.length > 0
   const todos = sistemas(m)
@@ -93,10 +92,10 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
       <div className={s.sistemas}>
         {com.map((x) => (
           <button key={x.chave} type="button"
-            onMouseEnter={x.chave !== 'servicos' ? () => precarregarDetalhe(x.chave as ChaveDetalhe) : undefined}
-            onFocus={x.chave !== 'servicos' ? () => precarregarDetalhe(x.chave as ChaveDetalhe) : undefined}
-            onClick={() => (x.chave === 'servicos' ? router.push(`/servicos?setor=${m.setor.id}`) : abrir(x.chave))}
-            title={x.chave === 'servicos' ? 'Abrir a planilha de serviços do setor' : `Abrir o resumo de ${x.nome} só com este setor`}
+            onMouseEnter={() => precarregarDetalhe(x.chave)}
+            onFocus={() => precarregarDetalhe(x.chave)}
+            onClick={() => abrir(x.chave)}
+            title={`Abrir o resumo de ${x.nome} só com este setor`}
             style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {x.logo
