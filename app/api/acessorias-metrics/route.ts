@@ -109,5 +109,35 @@ export async function GET(req: NextRequest) {
     (t, p) => ({ iniciados: t.iniciados + p.iniciados, concluidos: t.concluidos + p.concluidos, entregas: t.entregas + p.entregas, solicitacoes: t.solicitacoes + p.solicitacoes }),
     { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 },
   )
-  return NextResponse.json({ fromDay, toDay, atualizadoEm, total, pessoas })
+  /* ⚠️ O SERVIÇO FEITO, por tipo (pedido do dono, 01/10/2026: "gráfico pizza com a
+     quantidade de cada tipo de serviço feito no mês"). Do que o Acessórias diz com
+     DATA e DONO: a obrigação entregue (`obrigacao`) e o processo concluído (o modelo,
+     `matriz`). Os PASSOS de dentro do processo ficam fora — a API diz que estão OK,
+     mas não quando nem quem. Mesmas pessoas da lista acima. */
+  const contas = (await prisma.acessoriasUsuario.findMany({
+    where: { nexusUserId: { in: gente.map((p) => p.nexusUserId!) } },
+    select: { id: true },
+  })).map((u) => u.id)
+  const [porObrigacao, porModelo] = contas.length
+    ? await Promise.all([
+        prisma.acessoriasEntrega.groupBy({
+          by: ['obrigacao'],
+          where: { respEntregaId: { in: contas }, entregueEm: { gte: fromDay, lte: toDay } },
+          _count: { _all: true },
+        }),
+        prisma.acessoriasProcesso.groupBy({
+          by: ['matriz'],
+          where: { gestorId: { in: contas }, conclusao: { gte: fromDay, lte: toDay } },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []]
+  const servicos = {
+    obrigacoes: porObrigacao.map((r) => ({ tipo: r.obrigacao || '(sem nome)', n: r._count._all })).sort((a, b) => b.n - a.n),
+    processos: porModelo.map((r) => ({ tipo: r.matriz || '(sem modelo)', n: r._count._all })).sort((a, b) => b.n - a.n),
+    // O lote entra na pizza também (conta, com aviso): quantas entregas dela vieram de lote.
+    entregasEmLote: pessoas.reduce((a, p) => a + p.lotes.reduce((b, l) => b + l.entregas, 0), 0),
+  }
+
+  return NextResponse.json({ fromDay, toDay, atualizadoEm, total, pessoas, servicos })
 }
