@@ -37,9 +37,11 @@ export type PlanilhaLida = {
   hash: string
   servicos: LinhaServico[]
   pontos: LinhaPontos[]
-  /** A janela que o ARQUIVO cobriu — não a que alguém pediu. */
+  /** A janela do envio: o PERÍODO INFORMADO por quem subiu (01/10/2026). */
   diaDe: string | null
   diaAte: string | null
+  /** O arquivo trazia data por linha? Sem ela, todas caem no fim do período. */
+  temData: boolean
   /** Competência mais antiga e mais nova da aba de pontos. */
   pontosDe: string | null
   pontosAte: string | null
@@ -115,6 +117,26 @@ export function diaDoSerial(serial: number): string | null {
 }
 
 /**
+ * A célula de data, venha como vier: serial do Excel ou texto `dd/mm/aaaa`.
+ *
+ * ⚠️⚠️ ANO ANTES DE 2000 É RECUSADO (01/10/2026). Uma coluna "Data" escrita como
+ * TEXTO ("09/2026") passava por `parseFloat` = 9 → serial 9 → **08/01/1900**, e
+ * as 205 linhas do Legal entraram num dia que não existe para a casa, sem erro
+ * nenhum: o cartão de setembro ficou em 0. Data absurda é linha sem data.
+ */
+export function diaDaCelula(bruto: string | null | undefined): string | null {
+  const t = (bruto ?? '').trim()
+  if (!t) return null
+  let dia: string | null = null
+  const br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t)
+  if (br) dia = `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`
+  else if (/^\d{4}-\d{2}-\d{2}/.test(t)) dia = t.slice(0, 10)
+  else if (/^\d+(\.\d+)?$/.test(t)) dia = diaDoSerial(parseFloat(t))
+  if (!dia || dia < '2000-01-01' || isNaN(Date.parse(dia))) return null
+  return dia
+}
+
+/**
  * Fração de dia do Excel → minutos.
  *
  * A coluna `Tempo` vem como fração (0,0073148… = 10,5 min). Converter aqui, uma
@@ -144,7 +166,10 @@ function indiceDe(cabecalho: (string | null)[], ...nomes: string[]): number {
 
 /* ── a leitura ──────────────────────────────────────────────────────────── */
 
-export function lerPlanilha(buf: Buffer): PlanilhaLida {
+/** O período que a pessoa informou na janela do envio (AAAA-MM-DD). */
+export type Periodo = { de: string; ate: string }
+
+export function lerPlanilha(buf: Buffer, periodo?: Periodo): PlanilhaLida {
   const hash = createHash('sha256').update(buf).digest('hex')
   const zip = lerZip(buf)
   const ler = (p: string) => (zip[p] ? zip[p].toString('utf8') : null)
@@ -171,48 +196,82 @@ export function lerPlanilha(buf: Buffer): PlanilhaLida {
   }
 
   const avisos: string[] = []
-  const servicos = lerAbaServicos(abas, avisos)
+  const { linhas: servicos, temData } = lerAbaServicos(abas, avisos, periodo)
   const pontos = lerAbaPontos(abas, avisos)
 
   const dias = servicos.map((s) => s.dia).sort()
   const comps = pontos.map((p) => p.competencia).sort()
 
   return {
-    hash, servicos, pontos, avisos,
-    diaDe: dias[0] ?? null,
-    diaAte: dias[dias.length - 1] ?? null,
+    hash, servicos, pontos, avisos, temData,
+    /* ⚠️ Com período informado, a janela É o período, e não a primeira e a
+       última linha: é ela que diz o que este envio substitui. Um mês com
+       serviço só até o dia 28 continua sendo o mês inteiro. */
+    diaDe: periodo?.de ?? dias[0] ?? null,
+    diaAte: periodo?.ate ?? dias[dias.length - 1] ?? null,
     pontosDe: comps[0] ?? null,
     pontosAte: comps[comps.length - 1] ?? null,
   }
 }
 
-function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[]): LinhaServico[] {
+/* ⚠️⚠️ OS DOIS RELATÓRIOS DO GESTTA (01/10/2026). O "Controle Indicadores" tem
+   cabeçalho na linha 1 (Nome, Tempo, Status, Tarefa, Cliente, Data). O "Tarefas
+   por Colaborador" tem três linhas de FILTROS em cima, cabeçalho na linha 5 com
+   outros nomes (Tarefa - Responsável, Tarefa - Status, Tarefa - Nome, Cliente -
+   Nome) e **nenhuma data**. Os dois são o mesmo dado; aceitar os dois custa a
+   lista de apelidos abaixo. */
+const COL = {
+  nome: ['Nome', 'Tarefa - Responsável', 'Responsável'],
+  status: ['Status', 'Tarefa - Status'],
+  tarefa: ['Tarefa', 'Tarefa - Nome'],
+  cliente: ['Cliente', 'Cliente - Nome'],
+  data: ['Data', 'Tarefa - Data de conclusão', 'Data de conclusão', 'Concluída em'],
+  tempo: ['Tempo'],
+}
+
+function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[], periodo?: Periodo): { linhas: LinhaServico[]; temData: boolean } {
   /* A aba de serviços é a que TEM as colunas, não a que se chama "legal": o
      próximo setor vai chamar a dele de outra coisa, e amarrar no nome faria a
-     importação do Contábil falhar com "aba não encontrada" sem dizer por quê. */
+     importação do Contábil falhar com "aba não encontrada" sem dizer por quê.
+     ⚠️ E o cabeçalho é a primeira linha (das 20 de cima) que tem Nome e Status —
+     não necessariamente a linha 1. */
   let grade: (string | null)[][] | null = null
-  for (const [, g] of abas) {
-    if (!g.length) continue
-    const h = g[0]
-    if (indiceDe(h, 'Nome') >= 0 && indiceDe(h, 'Status') >= 0 && indiceDe(h, 'Data') >= 0) { grade = g; break }
+  let linhaCab = 0
+  busca: for (const [, g] of abas) {
+    for (let r = 0; r < Math.min(g.length, 20); r++) {
+      const h = g[r] ?? []
+      if (indiceDe(h, ...COL.nome) >= 0 && indiceDe(h, ...COL.status) >= 0) { grade = g; linhaCab = r; break busca }
+    }
   }
   if (!grade) {
-    avisos.push('Nenhuma aba com as colunas Nome, Status e Data — os serviços não foram lidos.')
-    return []
+    avisos.push('Nenhuma aba com as colunas de responsável e status — os serviços não foram lidos.')
+    return { linhas: [], temData: false }
   }
-  const h = grade[0]
-  const iNome = indiceDe(h, 'Nome'), iTempo = indiceDe(h, 'Tempo'), iStatus = indiceDe(h, 'Status')
-  const iTarefa = indiceDe(h, 'Tarefa'), iCliente = indiceDe(h, 'Cliente'), iData = indiceDe(h, 'Data')
+  const h = grade[linhaCab]
+  const iNome = indiceDe(h, ...COL.nome), iTempo = indiceDe(h, ...COL.tempo), iStatus = indiceDe(h, ...COL.status)
+  const iTarefa = indiceDe(h, ...COL.tarefa), iCliente = indiceDe(h, ...COL.cliente), iData = indiceDe(h, ...COL.data)
+  const temData = iData >= 0
+
+  /* ⚠️ Sem data por linha, sem período não há onde pôr o serviço. A rota exige o
+     período; isto é o freio de quem chamar o leitor sem ele. */
+  if (!temData && !periodo) {
+    avisos.push('O arquivo não tem coluna de data — é preciso informar o período que ele cobre.')
+    return { linhas: [], temData }
+  }
 
   const out: LinhaServico[] = []
-  let semData = 0, semNome = 0, statusEstranho = new Set<string>()
-  for (let r = 1; r < grade.length; r++) {
+  let semData = 0, semNome = 0, foraDoPeriodo = 0, statusEstranho = new Set<string>()
+  for (let r = linhaCab + 1; r < grade.length; r++) {
     const linha = grade[r]
     if (!linha || linha.every((c) => c == null || c === '')) continue
     const nome = (linha[iNome] ?? '').trim()
     if (!nome) { semNome++; continue }
-    const dia = iData >= 0 ? diaDoSerial(parseFloat(linha[iData] ?? '')) : null
+    /* ⚠️⚠️ Sem coluna de data, a linha cai no ÚLTIMO dia do período informado:
+       é quando se sabe que ela estava naquele estado. Fica dentro do mês
+       certo, que é o que a pontuação e o painel leem. */
+    const dia = temData ? diaDaCelula(linha[iData]) : periodo!.ate
     if (!dia) { semData++; continue }
+    if (periodo && (dia < periodo.de || dia > periodo.ate)) { foraDoPeriodo++; continue }
     const bruto = normalizarNome(linha[iStatus] ?? '')
     const status = STATUS[bruto]
     if (!status) { if (bruto) statusEstranho.add(bruto); continue }
@@ -226,9 +285,11 @@ function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[]
   /* ⚠️ Linha descartada é NOTÍCIA, não detalhe. Um arquivo que perde 300 linhas
      em silêncio produz um total menor e ninguém sabe de onde veio a diferença. */
   if (semData) avisos.push(`${semData} ${semData === 1 ? 'linha ficou' : 'linhas ficaram'} de fora por não ter data válida.`)
+  if (foraDoPeriodo) avisos.push(`${foraDoPeriodo} ${foraDoPeriodo === 1 ? 'linha ficou' : 'linhas ficaram'} de fora por ter data fora do período informado.`)
+  if (!temData) avisos.push('O arquivo não tem data por linha: todos os serviços entram no último dia do período informado.')
   if (semNome) avisos.push(`${semNome} ${semNome === 1 ? 'linha ficou' : 'linhas ficaram'} de fora por não ter nome.`)
   if (statusEstranho.size) avisos.push(`Status que não reconheço e ficaram de fora: ${[...statusEstranho].join(', ')}.`)
-  return out
+  return { linhas: out, temData }
 }
 
 function lerAbaPontos(abas: Map<string, (string | null)[][]>, avisos: string[]): LinhaPontos[] {
@@ -247,7 +308,7 @@ function lerAbaPontos(abas: Map<string, (string | null)[][]>, avisos: string[]):
     const linha = grade[r]
     if (!linha || linha.every((c) => c == null || c === '')) continue
     const nome = (linha[iNome] ?? '').trim()
-    const dia = iData >= 0 ? diaDoSerial(parseFloat(linha[iData] ?? '')) : null
+    const dia = iData >= 0 ? diaDaCelula(linha[iData]) : null
     const pts = parseFloat(linha[iPontos] ?? '')
     if (!nome || !dia || !isFinite(pts)) continue
     out.push({ nomeOrigem: nome, competencia: dia.slice(0, 7), pontos: Math.round(pts) })
