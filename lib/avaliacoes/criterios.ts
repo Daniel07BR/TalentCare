@@ -10,6 +10,8 @@ export type Criterio = {
   label: string
   /** O que observar. Aparece embaixo do critério, no formulário. */
   desc: string
+  /** A pergunta que o critério responde, ao lado do nome no formulário. */
+  sub?: string
   /**
    * `false` = o critério aceita "não se aplica" com naturalidade e o formulário
    * já sugere isso. São os dois que matam a avaliação se forem obrigatórios:
@@ -27,8 +29,12 @@ export type Criterio = {
    ficha com três perguntas que sempre se aplicam se responde inteira.
    Trocado antes da primeira avaliação gravada (0 em 01/10/2026). */
 export const CRITERIOS: Criterio[] = [
-  { key: 'entrega', label: 'Entrega', sempre: true, desc: 'Fez o combinado para o cargo, com qualidade e no prazo — e avisou a tempo quando não ia dar.' },
-  { key: 'atitude', label: 'Atitude', sempre: true, desc: 'Resolve sem precisar ser mandado, traz o problema junto com uma saída e cumpre o combinado da casa.' },
+  /* ⚠️ Entrega é O QUÊ, Atitude é COMO (Daniel, 01/10/2026: "entrega e atitude
+     não se confundem?"). Os textos de antes diziam "o combinado" nas duas e
+     ninguém sabia onde marcar o atraso. Não fundir: quem entrega só sob cobrança
+     e quem se esforça mas entrega pouco pedem conversas opostas. */
+  { key: 'entrega', label: 'Entrega', sub: 'o resultado', sempre: true, desc: 'O que ficou pronto no mês: volume, qualidade e prazo.' },
+  { key: 'atitude', label: 'Atitude', sub: 'o jeito de trabalhar', sempre: true, desc: 'Age sem esperar ser cobrado, assume o problema e segue as regras da casa.' },
   { key: 'equipe', label: 'Equipe e comunicação', sempre: true, desc: 'Ajuda e divide o que sabe; responde, informa antes de ser cobrado e se faz entender.' },
 ]
 

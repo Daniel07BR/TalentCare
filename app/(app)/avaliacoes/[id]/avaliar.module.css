@@ -87,6 +87,7 @@
   background: var(--surface-2); color: var(--text-dim); font-size: 13px; font-weight: 800;
 }
 .criterioNome { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+.criterioSub { font-weight: 500; color: var(--text-mute); }
 .criterioDesc { font-size: 13px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
 
 /* Os quatro níveis: quatro botões largos, lado a lado. */

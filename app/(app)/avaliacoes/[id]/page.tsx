@@ -175,7 +175,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                     <div className={st.criterioTopo}>
                       <span className={st.numero}>{i + 1}</span>
                       <div>
-                        <div className={st.criterioNome}>{c.label}</div>
+                        <div className={st.criterioNome}>{c.label}{c.sub && <span className={st.criterioSub}> — {c.sub}</span>}</div>
                         <div className={st.criterioDesc}>{c.desc}</div>
                       </div>
                     </div>
