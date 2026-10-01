@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
   const pessoaPorNexus = new Map(gente.map((p) => [p.nexusUserId!, p]))
   const pessoaDaConta = new Map(contas.map((c) => [c.id, pessoaPorNexus.get(c.nexusUserId!)!]))
   const ids = contas.map((c) => c.id)
-  const [ents, procs] = ids.length
+  const [ents, procs, procsIni] = ids.length
     ? await Promise.all([
         prisma.acessoriasEntrega.findMany({
           where: { respEntregaId: { in: ids }, entregueEm: { gte: fromDay, lte: toDay } },
@@ -146,8 +146,16 @@ export async function GET(req: NextRequest) {
           where: { gestorId: { in: ids }, conclusao: { gte: fromDay, lte: toDay } },
           select: { id: true, matriz: true, gestorId: true, conclusao: true, inicio: true, alteradoEm: true },
         }),
+        /* ⚠️ Os INICIADOS também (01/10/2026): a tabela tinha a coluna "Processos iniciados"
+           e nenhuma pizza/etiqueta para ela — quem só iniciou sumia do gráfico, e o dono
+           leu (com razão) que a pizza não batia com a lista. Mesma régua do
+           `acessorias_daily.processos_iniciados`: data de início, menos os excluídos. */
+        prisma.acessoriasProcesso.findMany({
+          where: { gestorId: { in: ids }, inicio: { gte: fromDay, lte: toDay }, status: { not: 'Excluído' } },
+          select: { id: true, matriz: true, gestorId: true, inicio: true, status: true, percentual: true, alteradoEm: true },
+        }),
       ])
-    : [[], []]
+    : [[], [], []]
 
   const conta = (lista: string[]) => {
     const m = new Map<string, number>()
@@ -160,12 +168,19 @@ export async function GET(req: NextRequest) {
   /* A clicar numa fatia: QUEM fez, em que DIA e HORA. ⚠️ Sem o cliente, por decisão do dono. */
   const detalhe = sp.get('detalhe')
   const tipo = sp.get('tipo') ?? ''
-  if (detalhe === 'obrigacao' || detalhe === 'processo') {
+  if (detalhe === 'obrigacao' || detalhe === 'processo' || detalhe === 'iniciado') {
     const quem = (contaId: string | null) => {
       const p = contaId ? pessoaDaConta.get(contaId) : undefined
       return p ? { id: p.id, nome: p.name, hasAvatar: !!p.avatarUrl } : { id: '', nome: '—', hasAvatar: false }
     }
-    const itens = detalhe === 'obrigacao'
+    const itens = detalhe === 'iniciado'
+      ? procsIni.filter((p) => tipoDoProcesso(p) === tipo).map((p) => ({
+          id: p.id, pessoa: quem(p.gestorId), dia: p.inicio,
+          // ⚠️ Sem hora: a última alteração de um processo em andamento é de DEPOIS do início.
+          hora: null as string | null, status: p.status === 'Em andamento' ? `Em andamento · ${Math.round(p.percentual)}% feito` : p.status,
+          competencia: null,
+        }))
+      : detalhe === 'obrigacao'
       ? ents.filter((e) => tipoDaEntrega(e) === tipo).map((e) => ({
           id: e.id, pessoa: quem(e.respEntregaId), dia: e.entregueEm!,
           hora: horaNoDia(e.alteradoEm, e.entregueEm!), status: e.status,
@@ -183,14 +198,28 @@ export async function GET(req: NextRequest) {
   const servicos = {
     obrigacoes: conta(ents.map(tipoDaEntrega)),
     processos: conta(procs.map(tipoDoProcesso)),
+    iniciados: conta(procsIni.map(tipoDoProcesso)),
     // O lote entra na pizza também (conta, com aviso): quantas entregas dela vieram de lote.
     entregasEmLote: pessoas.reduce((a, p) => a + p.lotes.reduce((b, l) => b + l.entregas, 0), 0),
   }
   /* As ATIVIDADES de cada pessoa (não só a quantidade): o que ela entregou e concluiu, por tipo. */
+  /* Cada atividade com a AÇÃO na frente — "Entregou", "Concluiu", "Iniciou" —, porque o
+     mesmo modelo de processo pode ter sido iniciado por um e concluído por outro. */
   const atividadesPorPessoa = new Map<string, string[]>()
-  for (const e of ents) { const p = pessoaDaConta.get(e.respEntregaId!); if (p) atividadesPorPessoa.set(p.id, [...(atividadesPorPessoa.get(p.id) ?? []), tipoDaEntrega(e)]) }
-  for (const x of procs) { const p = x.gestorId ? pessoaDaConta.get(x.gestorId) : undefined; if (p) atividadesPorPessoa.set(p.id, [...(atividadesPorPessoa.get(p.id) ?? []), tipoDoProcesso(x)]) }
-  const pessoasComAtividades = pessoas.map((p) => ({ ...p, atividades: conta(atividadesPorPessoa.get(p.id) ?? []) }))
+  const anota = (contaId: string | null, rotulo: string) => {
+    const p = contaId ? pessoaDaConta.get(contaId) : undefined
+    if (p) atividadesPorPessoa.set(p.id, [...(atividadesPorPessoa.get(p.id) ?? []), rotulo])
+  }
+  for (const e of ents) anota(e.respEntregaId, `Entregou\u0000${tipoDaEntrega(e)}`)
+  for (const x of procs) anota(x.gestorId, `Concluiu\u0000${tipoDoProcesso(x)}`)
+  for (const x of procsIni) anota(x.gestorId, `Iniciou\u0000${tipoDoProcesso(x)}`)
+  const pessoasComAtividades = pessoas.map((p) => ({
+    ...p,
+    atividades: conta(atividadesPorPessoa.get(p.id) ?? []).map(({ tipo, n }) => {
+      const [acao, nome] = tipo.split('\u0000')
+      return { acao, tipo: nome, n }
+    }),
+  }))
 
   return NextResponse.json({ fromDay, toDay, atualizadoEm, total, pessoas: pessoasComAtividades, servicos })
 }

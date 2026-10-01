@@ -20,17 +20,19 @@ import { textoDoLote, LOTE_MINIMO, type Lote } from '@/lib/acessorias-lote'
    DIA A DIA: é lá que a baixa em lote aparece como lote.
    ============================================================ */
 
-type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[]; atividades?: Servico[] }
+type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[]; atividades?: Atividade[] }
+type Atividade = { acao: string; tipo: string; n: number }
 
 /* Baixa em lote: o número CONTA, a tela avisa (decisão do dono, 01/10/2026). */
 const Aviso = ({ lotes }: { lotes: Lote[] }) =>
   lotes.length ? <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--warning, #b45309)', marginTop: 2 }}>{textoDoLote(lotes)}</div> : null
 type Servico = { tipo: string; n: number }
+type Detalhe = 'obrigacao' | 'processo' | 'iniciado'
 type Dados = {
   atualizadoEm: string | null
   total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
   pessoas: Linha[]
-  servicos?: { obrigacoes: Servico[]; processos: Servico[]; entregasEmLote: number }
+  servicos?: { obrigacoes: Servico[]; processos: Servico[]; iniciados?: Servico[]; entregasEmLote: number }
 }
 
 /* A pizza de um tipo de serviço: os 6 maiores com cor (a paleta tem 6), o resto em
@@ -79,7 +81,7 @@ export default function AcessoriasResumo() {
   const { fromDay, toDay, label } = usePeriod()
   const [dados, setDados] = useState<Dados | null>(null)
   const [erro, setErro] = useState<string | null>(null)
-  const [aberta, setAberta] = useState<{ detalhe: 'obrigacao' | 'processo'; tipo: string } | null>(null)
+  const [aberta, setAberta] = useState<{ detalhe: Detalhe; tipo: string } | null>(null)
 
   useEffect(() => {
     if (!fromDay || !toDay) return
@@ -157,11 +159,16 @@ export default function AcessoriasResumo() {
       </div>
 
       {dados.servicos && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 16 }}>
-          <Pizza titulo="Serviço feito · obrigações entregues" unidade="entregas" itens={dados.servicos.obrigacoes} onAbrir={(tipo) => setAberta({ detalhe: 'obrigacao', tipo })}
-            sub={`Por tipo de obrigação, no período${dados.servicos.entregasEmLote ? ` · inclui ${dados.servicos.entregasEmLote} de baixa em lote` : ''}`} />
-          <Pizza titulo="Serviço feito · processos concluídos" unidade="processos" itens={dados.servicos.processos} onAbrir={(tipo) => setAberta({ detalhe: 'processo', tipo })}
-            sub="Por modelo de processo, no período (os passos de dentro não têm data na API)" />
+        /* ⚠️⚠️ UMA PIZZA POR COLUNA DA TABELA (01/10/2026): sem a dos INICIADOS, quem só
+           iniciou processo sumia do gráfico, e o dono leu que a pizza não batia com a lista.
+           O subtítulo diz de qual coluna é a soma, para conferir na hora. */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <Pizza titulo="Obrigações entregues" unidade="entregas" itens={dados.servicos.obrigacoes} onAbrir={(tipo) => setAberta({ detalhe: 'obrigacao', tipo })}
+            sub={`${dados.total.entregas} = soma da coluna Entregas · por tipo de obrigação${dados.servicos.entregasEmLote ? ` · inclui ${dados.servicos.entregasEmLote} de baixa em lote` : ''}`} />
+          <Pizza titulo="Processos concluídos" unidade="processos" itens={dados.servicos.processos} onAbrir={(tipo) => setAberta({ detalhe: 'processo', tipo })}
+            sub={`${dados.total.concluidos} = soma da coluna Processos concluídos · por modelo`} />
+          <Pizza titulo="Processos iniciados" unidade="processos" itens={dados.servicos.iniciados ?? []} onAbrir={(tipo) => setAberta({ detalhe: 'iniciado', tipo })}
+            sub={`${dados.total.iniciados} = soma da coluna Processos iniciados · por modelo`} />
         </div>
       )}
 
@@ -198,8 +205,13 @@ export default function AcessoriasResumo() {
                           {!!p.atividades?.length && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                               {p.atividades.slice(0, 4).map((a) => (
-                                <span key={a.tipo} title={a.tipo} style={{ fontSize: 10.5, padding: '1px 7px', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-dim)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {a.tipo} <b style={{ color: 'var(--text)' }}>{a.n}</b>
+                                /* ⚠️ O NÚMERO fica FORA do trecho que corta: com o nome longo
+                                   ("Rotina Contábil - Conciliação…") o "…" comia a quantidade. */
+                                <span key={a.acao + a.tipo} title={`${a.acao}: ${a.tipo} (${a.n})`}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, padding: '1px 7px', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-dim)', maxWidth: 300 }}>
+                                  <span style={{ fontWeight: 600, color: COR }}>{a.acao}</span>
+                                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.tipo}</span>
+                                  <b style={{ color: 'var(--text)', flex: 'none' }}>{a.n}</b>
                                 </span>
                               ))}
                               {p.atividades.length > 4 && <span style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>+{p.atividades.length - 4} tipos</span>}
@@ -234,7 +246,7 @@ export default function AcessoriasResumo() {
 type ItemAtividade = { id: string; pessoa: { id: string; nome: string; hasAvatar: boolean }; dia: string; hora: string | null; status: string; competencia: string | null }
 
 function JanelaAtividade({ detalhe, tipo, setorId, fromDay, toDay, label, onFechar }: {
-  detalhe: 'obrigacao' | 'processo'; tipo: string; setorId: string | null; fromDay: string; toDay: string; label: string; onFechar: () => void
+  detalhe: Detalhe; tipo: string; setorId: string | null; fromDay: string; toDay: string; label: string; onFechar: () => void
 }) {
   const abrirPessoa = usePainelDaPessoa()
   const [itens, setItens] = useState<ItemAtividade[] | null>(null)
@@ -273,7 +285,7 @@ function JanelaAtividade({ detalhe, tipo, setorId, fromDay, toDay, label, onFech
         <div style={{ padding: '18px 22px', background: `linear-gradient(120deg, color-mix(in srgb, ${COR} 12%, var(--surface)) 0%, var(--surface) 70%)`, borderBottom: '1px solid var(--border)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <span style={{ width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${COR} 16%, transparent)`, color: COR, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><CalendarCheck size={20} /></span>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{detalhe === 'obrigacao' ? 'Obrigação entregue' : 'Processo concluído'} · {label}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{detalhe === 'obrigacao' ? 'Obrigação entregue' : detalhe === 'iniciado' ? 'Processo iniciado' : 'Processo concluído'} · {label}</div>
             <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-.3px' }}>{tipo}</div>
             {itens && <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 2 }}>{itens.length} {detalhe === 'obrigacao' ? (itens.length === 1 ? 'entrega' : 'entregas') : (itens.length === 1 ? 'processo' : 'processos')} · {ranking.length} {ranking.length === 1 ? 'pessoa' : 'pessoas'}</div>}
           </div>
@@ -303,10 +315,10 @@ function JanelaAtividade({ detalhe, tipo, setorId, fromDay, toDay, label, onFech
                   <colgroup><col /><col style={{ width: 110 }} /><col style={{ width: 70 }} /><col style={{ width: 210 }} /></colgroup>
                   <thead>
                     <tr style={{ color: 'var(--text-dim)', fontSize: 11.5 }}>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Quem fez</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>{detalhe === 'iniciado' ? 'Quem iniciou' : 'Quem fez'}</th>
                       <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Data</th>
                       <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Hora</th>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>{detalhe === 'obrigacao' ? 'Situação' : 'Início'}</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>{detalhe === 'processo' ? 'Início' : 'Situação'}</th>
                     </tr>
                   </thead>
                   <tbody>
