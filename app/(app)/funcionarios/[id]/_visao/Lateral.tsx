@@ -47,8 +47,8 @@ export function AntesDeAvaliar({ vm, m, periodo, estado }: { vm: EmployeeVM; m: 
     <Cartao titulo="Antes de avaliar" Icone={ClipboardCheck} sub={`O que os sistemas registraram · ${periodo}`}>
       {(recemAdmitida || saiuNoPeriodo) && (
         <div style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--n-text-2)', background: 'var(--n-amber-soft)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
-          {recemAdmitida && admissao && <>Admitida em <b>{fmtD(admissao)}</b> — o período cobre só parte do tempo de casa dela.</>}
-          {saiuNoPeriodo && saida && <>{recemAdmitida ? ' ' : ''}Desligada em <b>{fmtD(saida)}</b> — os números param aí.</>}
+          {recemAdmitida && admissao && <>Admissão em <b>{fmtD(admissao)}</b> — o período cobre só parte do tempo de casa.</>}
+          {saiuNoPeriodo && saida && <>{recemAdmitida ? ' ' : ''}Saída em <b>{fmtD(saida)}</b> — os números param aí.</>}
         </div>
       )}
       {!m && (

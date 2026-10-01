@@ -112,7 +112,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
 
           {!soNumeros && servicos.porTarefa.length > 0 && (
             <div style={{ marginBottom: mostraPonto ? 18 : 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>O que ela mais fez</div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>O que mais fez</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {servicos.porTarefa.map((t) => (
                   <div key={t.tarefa} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11.5 }}>
