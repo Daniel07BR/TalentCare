@@ -4,7 +4,6 @@ import { FileSpreadsheet, Scale } from 'lucide-react'
 type Servicos = NonNullable<{
   temFonte: boolean
   concluidos: number; abertos: number; desconsiderados: number; minutos: number
-  minutosEstimados?: number; estimados?: number; medidos?: number
   porMes: { mes: string; concluidos: number; minutos: number }[]
   porTarefa: { tarefa: string; n: number; minutos: number }[]
   totalConcluidos?: number
@@ -46,12 +45,6 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
   const mostraPonto = temPonto && !semPontuacao
   if (!temServico && !mostraPonto) return null
 
-  const estimadoMin = servicos?.minutosEstimados ?? 0
-  const temEstimado = estimadoMin > 0
-  const tempoTotal = (servicos?.minutos ?? 0) + estimadoMin
-  /* A média divide pelos serviços que TÊM tempo (medido ou estimado); um tipo sem
-     média nenhuma não pode puxá-la para baixo como se tivesse levado 0 min. */
-  const comTempo = servicos ? (servicos.medidos ?? (servicos.minutos > 0 ? servicos.concluidos : 0)) + (servicos.estimados ?? 0) : 0
   const maxMes = Math.max(1, ...(servicos?.porMes ?? []).map((m) => m.concluidos))
   const maxTarefa = Math.max(1, ...(servicos?.porTarefa ?? []).map((t) => t.n))
   const serie = (pontuacao ?? []).slice(-15)
@@ -90,21 +83,15 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 12, marginBottom: 18 }}>
             <Num label="Concluídos" valor={servicos.concluidos.toLocaleString('pt-BR')} cor="var(--success)" />
             <Num label="Em aberto" valor={servicos.abertos.toLocaleString('pt-BR')} cor="var(--warning)" />
-            {/* ⚠️ "0 min" lia como "não trabalhou": o "Tarefas por Colaborador" do
-                Gestta não traz tempo. O concluído sem tempo vale a MÉDIA DO TIPO dele
-                (Daniel, 01/10/2026) — e o "≈" diz que é estimado, não medido. */}
-            <Num label="Tempo somado" valor={tempoTotal > 0 ? `${temEstimado ? '≈ ' : ''}${horas(tempoTotal)}` : '—'} />
+            {/* ⚠️ "0 min" lia como "não trabalhou": o relatório "Tarefas por
+                Colaborador" do Gestta não traz a coluna de tempo. Sem tempo, "—". */}
+            <Num label="Tempo somado" valor={servicos.minutos > 0 ? horas(servicos.minutos) : '—'} />
             <Num label="Média por serviço"
-              valor={comTempo > 0 && tempoTotal > 0 ? `${temEstimado ? '≈ ' : ''}${horas(Math.round(tempoTotal / comTempo))}` : '—'} />
+              valor={servicos.concluidos && servicos.minutos > 0 ? horas(Math.round(servicos.minutos / servicos.concluidos)) : '—'} />
           </div>
-          {temEstimado && (
+          {servicos.concluidos > 0 && servicos.minutos === 0 && (
             <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: -10, marginBottom: 16 }}>
-              ≈ tempo estimado: a planilha deste período não traz o tempo de cada serviço, então {servicos.estimados === servicos.concluidos ? 'cada um' : `${servicos.estimados} de ${servicos.concluidos}`} vale a média do seu tipo de serviço.
-            </div>
-          )}
-          {!temEstimado && servicos.concluidos > 0 && servicos.minutos === 0 && (
-            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: -10, marginBottom: 16 }}>
-              A planilha deste período não traz o tempo, e estes tipos de serviço ainda não têm média — por isso o tempo fica em branco.
+              A planilha deste período não traz o tempo de cada serviço — por isso o tempo fica em branco.
             </div>
           )}
 

@@ -160,8 +160,7 @@ const temValor = (a: ValoresDoAjuste) =>
  *   crédito do parcial de setembro, e agosto (gravado) mudaria no próximo
  *   "Gravar". O cálculo do mês passa a competência dele; a tela, o mês corrente.
  */
-/** `opts.soLeitura`: não grava as âncoras de revisão — para quem só quer LER o catálogo (as médias da ficha). */
-export async function calcularCatalogo(departmentId: string, competencia: string = competenciaAtual(), opts?: { soLeitura?: boolean }) {
+export async function calcularCatalogo(departmentId: string, competencia: string = competenciaAtual()) {
   const [linhas, ajustes, versoes, usuariosDoSetor] = await Promise.all([
     /* ⚠️ SÓ CONCLUÍDO. Um serviço "aberto" tem tempo PARCIAL — o relógio dele
        ainda está correndo —, e "desconsiderado" o próprio setor descartou.
@@ -391,7 +390,7 @@ export async function calcularCatalogo(departmentId: string, competencia: string
      silêncio exatamente a mudança que o aviso existe para mostrar. */
   const marcos = [ultimoLote?.enviadoEm, regra?.criadoEm].filter((d): d is Date => !!d)
   const ultimaMudanca = marcos.length ? new Date(Math.max(...marcos.map((d) => d.getTime()))) : null
-  if (!opts?.soLeitura) await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimaMudanca)
+  await ancorarOQueDaParaSaber(departmentId, ajustes, tarefas, ultimaMudanca)
 
   return {
     fatorPorMinuto: fator, fatorDecidido,
@@ -451,28 +450,3 @@ async function ancorarOQueDaParaSaber(
   }
 }
 
-
-/**
- * O TEMPO MÉDIO DE CADA TIPO DE SERVIÇO de um setor — o mesmo `mediaEmUso` que
- * a tela de tipos mostra e que dá os pontos (a média que a liderança escolheu,
- * ou a medida nos meses que vieram com tempo).
- *
- * ⚠️⚠️ Existe para o arquivo SEM TEMPO (Daniel, 01/10/2026: "por que o sistema
- * não colocou o tempo médio do serviço, uma vez que tem quanto tempo leva em
- * média cada serviço concluído?"). O "Tarefas por Colaborador" do Gestta não
- * traz a coluna, e a ficha mostrava "—". A linha sem tempo passa a valer a
- * média do tipo dela — e a tela diz que é ESTIMADO, porque não foi medido.
- *
- * Devolve `null` para tipo sem média (ninguém cronometrou e ninguém informou):
- * aí não há o que estimar, e inventar seria pior que o "—".
- */
-export async function mediasDosTipos(departmentId: string): Promise<(tarefa: string) => number | null> {
-  const { tarefas } = await calcularCatalogo(departmentId, competenciaAtual(), { soLeitura: true })
-  const porNorm = new Map<string, number>()
-  for (const t of tarefas) {
-    const media = t.mediaAjustada ?? (t.semAmostraNaMedia ? null : t.mediaEmUso)
-    if (media == null || media <= 0) continue
-    for (const g of [t.tarefa, ...t.grafias]) porNorm.set(normalizarTarefa(g), media)
-  }
-  return (tarefa) => porNorm.get(normalizarTarefa(tarefa)) ?? null
-}

@@ -23,7 +23,7 @@ import Donut, { type DonutSeg } from '../Donut'
 type Pessoa = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; tipos: { tipo: string; n: number }[] }
 type Dados = {
   setor: string
-  total: { concluidos: number; abertos: number; desconsiderados: number; minutos: number; minutosEstimados: number; estimados: number; semDono: number }
+  total: { concluidos: number; abertos: number; desconsiderados: number; minutos: number; semDono: number }
   ultimoDiaComDado: string | null
   pessoas: Pessoa[]
   tipos: { tipo: string; concluidos: number; abertos: number }[]
@@ -111,10 +111,7 @@ export default function ServicosResumo() {
             <Numero valor={dados.pessoas.filter((p) => p.concluidos > 0).length} rotulo="Pessoas que concluíram" cor={COR} />
             {/* ⚠️ Tempo só quando a planilha trouxe: o "Tarefas por Colaborador" não tem
                 a coluna, e "0 min" diria que o serviço não levou tempo nenhum. */}
-            {t.minutos + t.minutosEstimados > 0 && (
-              <Numero valor={`${t.minutosEstimados ? '≈ ' : ''}${horas(t.minutos + t.minutosEstimados)}`}
-                rotulo={t.minutosEstimados ? 'Tempo dos concluídos (estimado pela média do tipo)' : 'Tempo registrado nos concluídos'} cor="var(--text)" />
-            )}
+            {t.minutos > 0 && <Numero valor={horas(t.minutos)} rotulo="Tempo registrado nos concluídos" cor="var(--text)" />}
           </div>
           {t.semDono > 0 && (
             <div style={{ fontSize: 12, color: 'var(--warning)' }}>
