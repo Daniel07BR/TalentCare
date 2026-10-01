@@ -69,19 +69,13 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
         <FileSpreadsheet size={16} color="var(--chart-2)" />
         <div style={{ fontSize: 14, fontWeight: 600 }}>Serviços do setor</div>
       </div>
-      {/* ⚠️⚠️ O período E o total, lado a lado. Sem o segundo, quem subiu 18
-          meses de planilha lê o recorte de 30 dias como se fosse tudo. */}
       {/* ⚠️ Na folha A4 o período NÃO se repete aqui: a faixa do topo já o traz, e
-          era a mesma data escrita pela terceira vez. O "na planilha inteira"
-          fica: sem ele, quem subiu 18 meses lê o recorte como se fosse tudo. */}
+          era a mesma data escrita pela terceira vez. */}
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: soNumeros ? 12 : 16, lineHeight: 1.5 }}>
         Da planilha que o setor envia{!soNumeros && <> · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b></>}
-        {servicos?.totalConcluidos != null && servicos.totalConcluidos > servicos.concluidos && (
-          /* ⚠️ "na planilha inteira são 160" se lia como o total do SETOR (Daniel,
-             01/10/2026, na ficha do Marcos: "160 concluídos e depois apresenta 0?").
-             É o total DA PESSOA em todos os envios — e agora diz isso. */
-          <> · em todos os envios, esta pessoa soma <b style={{ color: 'var(--text)' }}>{servicos.totalConcluidos.toLocaleString('pt-BR')} concluídos</b></>
-        )}
+        {/* ⚠️ SÓ O PERÍODO (Daniel, 01/10/2026: "não tem por que apresentar dados
+            cumulativos… não mostre o total de todos os envios porque confunde").
+            O "em todos os envios soma 160" ao lado de "Concluídos 21" saiu. */}
       </div>
 
       {temServico && servicos && (
