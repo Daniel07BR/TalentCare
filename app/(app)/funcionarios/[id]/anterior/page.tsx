@@ -410,9 +410,9 @@ export default function FichaPage({ params }: { params: Promise<{ id: string }> 
                               abre pede, quem assume entrega. */}
                           <Medidor valor={fx.chamadosConcluidos} de={fx.chamadosAssumidos || null}
                             rotulo="Concluídos" nota={fx.chamadosAssumidos ? undefined : 'no período'} cor="var(--success)" />
-                          <Medidor valor={fx.chamadosAbertos} rotulo="Abertos por ela" nota="pedidos que ela fez" cor="var(--info)" />
+                          <Medidor valor={fx.chamadosAbertos} rotulo="Abriu" nota="pedidos que fez" cor="var(--info)" />
                           {fx.chamadosAssumidos > 0 && (
-                            <Medidor valor={fx.chamadosAssumidos} rotulo="Assumidos" nota="que ela pegou" cor="var(--chart-2)" />
+                            <Medidor valor={fx.chamadosAssumidos} rotulo="Assumidos" nota="que pegou" cor="var(--chart-2)" />
                           )}
                           {fx.chamadosConcluidos > 0 && (
                             <Medidor valor={null} texto={fx.tempoMedio} rotulo="Tempo médio" nota="só expediente" cor="var(--chart-4)" />
@@ -851,8 +851,8 @@ function PainelDoAvaliador({ vm, m, periodo, estado }: {
 
       {(recemAdmitida || saiuNoPeriodo) && (
         <div style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--text-dim)', background: 'var(--surface-2)', borderLeft: '3px solid var(--warning)', borderRadius: 'var(--radius-sm)', padding: '10px 13px', marginBottom: 12 }}>
-          {recemAdmitida && admissao && <>Admitida em <b>{fmtD(admissao)}</b> — o período cobre só parte do tempo de casa dela.</>}
-          {saiuNoPeriodo && saida && <>{recemAdmitida ? ' ' : ''}Desligada em <b>{fmtD(saida)}</b> — os números param aí.</>}
+          {recemAdmitida && admissao && <>Admissão em <b>{fmtD(admissao)}</b> — o período cobre só parte do tempo de casa.</>}
+          {saiuNoPeriodo && saida && <>{recemAdmitida ? ' ' : ''}Saída em <b>{fmtD(saida)}</b> — os números param aí.</>}
         </div>
       )}
 

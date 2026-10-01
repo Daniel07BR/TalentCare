@@ -245,7 +245,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   add(hd.has && hd.opened + hd.resolved > 0, 'HelpDesk', 'hd', () => (
     <Bloco onClick={abrir('helpdesk')} dica="Ver os chamados do HelpDesk">
       <Titulo nome="HelpDesk" sub="chamados" Icone={LifeBuoy} tom="blue" />
-      <Barras linhas={[{ rot: 'Abertos por ela', n: hd.opened, tom: 'blue' }, { rot: hd.formalized > 0 ? `Resolvidos · ${hd.formalized} formalizados` : 'Resolvidos por ela', n: hd.resolved, tom: 'green' }]} />
+      <Barras linhas={[{ rot: 'Abriu', n: hd.opened, tom: 'blue' }, { rot: hd.formalized > 0 ? `Resolveu · ${hd.formalized} formalizados` : 'Resolveu', n: hd.resolved, tom: 'green' }]} />
       <div style={{ marginTop: 12 }}><Grande tam={17}>{hd.tempoMedio}</Grande><Rotulo>tempo médio de resolução</Rotulo></div>
       {/* ⚠️ Sem anel: quem abre é a casa toda e quem resolve é o T.I. */}
       <Nota>Sem taxa de resolução: abrir e resolver não são a mesma fila.</Nota>
