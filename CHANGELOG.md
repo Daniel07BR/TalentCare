@@ -1,5 +1,34 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-01 — Serviços: período informado no envio e janela de resumo
+
+- **Envio da planilha** (`/servicos`): depois de anexar, uma janela pede o **período**
+  que o arquivo cobre (atalhos: mês passado inteiro, mês atual até hoje). O período é
+  a janela que o envio substitui; sem data por linha, o serviço entra no último dia.
+  ⚠️ O "Tarefas por Colaborador" do Gestta não tem data — uma coluna "Data" em texto
+  virou **08/01/1900** e as 205 linhas de setembro do Legal sumiram do cartão.
+  O leitor agora aceita os dois relatórios do Gestta, lê `dd/mm/aaaa` e recusa ano
+  antes de 2000. O envio errado foi apagado (backup no `.78`).
+- **Cartão "Serviços do setor"** abre a janela de resumo como os outros (quem fez,
+  em aberto, tipos de serviço, de que envio vem o número), com o botão para a
+  planilha. Sem o nome do cliente — mesma regra do Acessórias.
+
+## 2026-10-01 — Avaliação mensal enxuta
+
+- **3 critérios** (Entrega — o resultado; Atitude — o jeito de trabalhar; Equipe e
+  comunicação) no lugar de 8, e **4 níveis com nome** (Abaixo, Em parte, Atende,
+  Acima → gravados 3/6/8/10) no lugar dos botões 0–10. Abaixo e Acima pedem
+  justificativa; publicar exige os três.
+- Tela em duas colunas, usando a largura toda; barra de ações presa embaixo.
+- "Acima do esperado" ganhou cor própria (`--accent` era o laranja de `--warning`).
+
+## 2026-10-01 — Fluxo no setor e ponto incremental
+
+- O cartão **Fluxo** entrou em "Sistemas e produtividade" do setor: quem concluiu
+  chamados. Faltava desde 17/09 (a rota já mandava `rankings.fluxo`).
+- `run-ponto-import.mjs` passou a ser **incremental**: só do último dia gravado em
+  diante (`--desde=` força outro corte). Carga de 01/10: 08/09 → 01/10.
+
 ## 2026-09-30 — Acessórias: o cartão abre o relatório completo
 
 Pedido do dono: *"assim como em todos os demais sistemas no TalentCare, o card precisa
