@@ -76,6 +76,7 @@ export type EmployeeMetrics = {
     /** `false` = este setor não manda planilha. NÃO é "fez zero serviços". */
     temFonte: boolean
     concluidos: number; abertos: number; desconsiderados: number; minutos: number
+    minutosEstimados?: number; estimados?: number; medidos?: number
     porMes: { mes: string; concluidos: number; minutos: number }[]
     porTarefa: { tarefa: string; n: number; minutos: number }[]
     /** Concluídos na planilha inteira, sem filtro de período. */
