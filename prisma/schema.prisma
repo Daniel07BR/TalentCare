@@ -725,7 +725,7 @@ model Avaliacao {
 // mecanismo do `Factor.nota = null` do score.
 model AvaliacaoNota {
   avaliacaoId   String  @map("avaliacao_id")
-  // entrega | prazo | iniciativa | equipe | comunicacao | conduta | melhoria | lideranca
+  // entrega | atitude | equipe (até 01/10/2026 eram 8; ver lib/avaliacoes/criterios.ts)
   criterio      String  @db.VarChar(20)
   nota          Int?
   // ⚠️ Obrigatória para nota < 5 ou > 8 (decisão do dono, 02/09/2026). É o freio

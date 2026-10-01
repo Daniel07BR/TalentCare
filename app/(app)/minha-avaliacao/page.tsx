@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Avatar from '../Avatar'
-import { CRITERIOS, criterioDe, ancoraDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
+import { CRITERIOS, criterioDe, ancoraDe, nivelDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
 
 type Nota = { criterio: string; nota: number | null; justificativa: string | null }
 type Av = {
@@ -168,7 +168,8 @@ function Detalhe({ av, souEu, texto, setTexto, enviando, onCiencia }: {
                   <div style={{ width: 130, height: 6, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${n.nota * 10}%`, background: ancoraDe(n.nota).color, borderRadius: 4 }} />
                   </div>
-                  <span className="cnum" style={{ width: 28, textAlign: 'right', fontSize: 15, fontWeight: 700, color: ancoraDe(n.nota).color }}>{n.nota}</span>
+                  {/* O NOME do nível, que é o que o avaliador escolheu (01/10/2026) — e não o 8 que ele grava. */}
+                  <span style={{ width: 120, textAlign: 'right', fontSize: 13, fontWeight: 700, color: ancoraDe(n.nota).color }}>{nivelDe(n.nota).label}</span>
                 </>
               ) : (
                 <span style={{ fontSize: 11.5, color: 'var(--text-mute)' }}>não se aplica</span>
