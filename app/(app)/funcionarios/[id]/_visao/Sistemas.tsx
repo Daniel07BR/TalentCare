@@ -297,49 +297,30 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
      cartão foi junto. O do Chat, abaixo, ficou só com a conversa. */
   add(fx.hasChamado || fx.hasTarefa, 'Fluxo', 'fluxo', () => (
     <Bloco onClick={abrir('fluxo')} dica="Ver os chamados e as tarefas dia a dia">
-      <Titulo nome="Fluxo" sub="chamados entre setores" tom="purple" logo={<LogoFluxo size={30} />} />
-      {/* ⚠️ Na folha A4 o cartão é estreito (todos os sistemas numa fileira) e três
-          caixas lado a lado sobrepunham "Atendeu"/"Concluiu" — pedido do dono,
-          14/09/2026: um abaixo do outro, número à esquerda e o rótulo ao lado. */}
-      <div style={impressao
-        ? { display: 'flex', flexDirection: 'column', gap: 6 }
-        : { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-        {([['Abriu', fx.chamadosAbertos, 'purple', 'pedidos que fez'], ['Atendeu', fx.chamadosAssumidos, 'blue', 'que assumiu'], ['Concluiu', fx.chamadosConcluidos, 'green', 'que finalizou']] as [string, number, Tom, string][]).map(([rot, n, t, sub]) => (
-          impressao ? (
-            <div key={rot} style={{ display: 'flex', alignItems: 'center', gap: 10, background: suave(t), borderRadius: 10, padding: '6px 10px', minWidth: 0 }}>
-              <span style={{ minWidth: 30, textAlign: 'right' }}><Grande cor={forte(t)} tam={20}>{num(n)}</Grande></span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.2 }}>{rot}</div>
-                <div style={{ fontSize: 10, color: 'var(--n-text-2)', lineHeight: 1.2 }}>{sub}</div>
-              </div>
-            </div>
-          ) : (
-            <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
-              <Grande cor={forte(t)} tam={22}>{num(n)}</Grande>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)' }}>{rot}</div>
-              <div style={{ fontSize: 10, color: 'var(--n-text-2)' }}>{sub}</div>
-            </div>
-          )
-        ))}
-      </div>
+      <Titulo nome="Fluxo" sub="chamados e tarefas" tom="purple" logo={<LogoFluxo size={30} />} />
+      {/* ⚠️⚠️ DOIS GRUPOS, MESMO PADRÃO (Daniel, 01/10/2026: "deixe os dois com o
+          mesmo padrão do de cima, com cores e bem definido o que é cada coisa").
+          As tarefas eram uma linha cinza "1 delegou 8 recebeu 7 concluiu" embaixo
+          das caixas, e a Joice leu "Concluiu 0" como se as tarefas não contassem.
+          ⚠️ Continuam SEPARADOS, nunca somados: tarefa é trabalho passado dentro
+          do próprio setor, e somá-la faria parecer pedido a outro setor. */}
+      <GrupoFluxo titulo="Chamados entre setores" impressao={impressao} itens={[
+        ['Abriu', fx.chamadosAbertos, 'purple', 'pedidos que fez'],
+        ['Atendeu', fx.chamadosAssumidos, 'blue', 'que assumiu'],
+        ['Concluiu', fx.chamadosConcluidos, 'green', 'que finalizou'],
+      ]} />
       {fx.chamadosConcluidos > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--n-text-2)', marginTop: 8 }}>
           Tempo médio até concluir: <b style={{ color: 'var(--n-text)' }}>{fx.tempoMedio}</b> <span style={{ color: 'var(--n-text-3)' }}>· só expediente</span>
         </div>
       )}
-      {/* ⚠️⚠️ A TAREFA DELEGADA aparece SEPARADA, e não somada aos chamados: ela
-          é trabalho passado dentro do próprio setor, e somá-la faria a pessoa
-          parecer ter pedido a outros setores o que nunca saiu de casa. */}
       {fx.hasTarefa && (
-        <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px dashed var(--n-border)', display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
-          {([['delegou', fx.tarefasAbertas], ['recebeu', fx.tarefasAssumidas], ['concluiu', fx.tarefasConcluidas]] as [string, number][])
-            .filter(([, n]) => n > 0)
-            .map(([rot, n]) => (
-              <span key={rot} style={{ fontSize: 11, color: 'var(--n-text-2)' }}>
-                <b style={{ color: 'var(--n-text)' }}>{num(n)}</b> {rot}
-              </span>
-            ))}
-          <span style={{ fontSize: 10.5, color: 'var(--n-text-3)', width: '100%' }}>tarefas delegadas no próprio setor</span>
+        <div style={{ marginTop: 12 }}>
+          <GrupoFluxo titulo="Tarefas delegadas no setor" impressao={impressao} itens={[
+            ['Delegou', fx.tarefasAbertas, 'purple', 'tarefas que passou'],
+            ['Recebeu', fx.tarefasAssumidas, 'blue', 'que chegaram'],
+            ['Concluiu', fx.tarefasConcluidas, 'green', 'que finalizou'],
+          ]} />
         </div>
       )}
     </Bloco>
@@ -424,5 +405,36 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
         <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10 }}>Sem registro no período: {sem.join(', ')}.</div>
       )}
     </Cartao>
+  )
+}
+
+/** Um grupo do cartão do Fluxo: título pequeno + três caixas coloridas. Na folha
+ *  A4 (`impressao`) as caixas vão uma abaixo da outra — pedido do dono, 14/09/2026. */
+function GrupoFluxo({ titulo, itens, impressao }: { titulo: string; itens: [string, number, Tom, string][]; impressao?: boolean }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.5px', textTransform: 'uppercase', color: 'var(--n-text-3)', marginBottom: 6 }}>{titulo}</div>
+      <div style={impressao
+        ? { display: 'flex', flexDirection: 'column', gap: 6 }
+        : { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {itens.map(([rot, n, t, sub]) => (
+          impressao ? (
+            <div key={rot} style={{ display: 'flex', alignItems: 'center', gap: 10, background: suave(t), borderRadius: 10, padding: '6px 10px', minWidth: 0 }}>
+              <span style={{ minWidth: 30, textAlign: 'right' }}><Grande cor={forte(t)} tam={20}>{num(n)}</Grande></span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)', lineHeight: 1.2 }}>{rot}</div>
+                <div style={{ fontSize: 10, color: 'var(--n-text-2)', lineHeight: 1.2 }}>{sub}</div>
+              </div>
+            </div>
+          ) : (
+            <div key={rot} style={{ background: suave(t), borderRadius: 10, padding: '9px 10px', minWidth: 0 }}>
+              <Grande cor={forte(t)} tam={22}>{num(n)}</Grande>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text)' }}>{rot}</div>
+              <div style={{ fontSize: 10, color: 'var(--n-text-2)' }}>{sub}</div>
+            </div>
+          )
+        ))}
+      </div>
+    </div>
   )
 }
