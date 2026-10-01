@@ -6,6 +6,7 @@ import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
 import EsqueletoResumo from '../EsqueletoResumo'
+import { textoDoLote, LOTE_MINIMO, type Lote } from '@/lib/acessorias-lote'
 
 /* ============================================================
    ACESSÓRIAS — o resumo (30/09/2026). Abre ao clicar no cartão do setor e é a
@@ -18,7 +19,11 @@ import EsqueletoResumo from '../EsqueletoResumo'
    DIA A DIA: é lá que a baixa em lote aparece como lote.
    ============================================================ */
 
-type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
+type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[] }
+
+/* Baixa em lote: o número CONTA, a tela avisa (decisão do dono, 01/10/2026). */
+const Aviso = ({ lotes }: { lotes: Lote[] }) =>
+  lotes.length ? <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--warning, #b45309)', marginTop: 2 }}>{textoDoLote(lotes)}</div> : null
 type Dados = { atualizadoEm: string | null; total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }; pessoas: Linha[] }
 
 const COR = 'var(--n-pink, #ec4899)'
@@ -71,6 +76,7 @@ export default function AcessoriasResumo() {
         Só volume, e fora da nota: o escritório está implantando o Acessórias.
         {dados.atualizadoEm && <> Cópia atualizada em {new Date(dados.atualizadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</>}
         {' '}Clique na pessoa para ver as entregas dia a dia.
+        {dados.pessoas.some((p) => p.lotes.length > 0) && <> <b>Baixa em lote</b> = {LOTE_MINIMO} ou mais baixas da mesma pessoa no mesmo dia, quase todas com atraso — conta no volume, mas não é produção daquele dia.</>}
       </div>
 
       <div className="tc-card" style={{ ...card, marginBottom: 16 }}>
@@ -90,6 +96,7 @@ export default function AcessoriasResumo() {
                 </div>
                 <div className="cnum" style={{ fontSize: 24, fontWeight: 800, color: COR }}>{(p.concluidos + p.entregas).toLocaleString('pt-BR')}</div>
                 <div style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>{p.concluidos} processos · {p.entregas} entregas</div>
+                <Aviso lotes={p.lotes} />
               </div>
             ))}
           </div>
@@ -130,6 +137,7 @@ export default function AcessoriasResumo() {
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 600 }}>{p.nome}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{p.cargo}{setor ? '' : ` · ${p.setor}`}</div>
+                          <Aviso lotes={p.lotes} />
                         </div>
                       </div>
                     </td>

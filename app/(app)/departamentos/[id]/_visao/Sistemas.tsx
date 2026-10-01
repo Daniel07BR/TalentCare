@@ -8,6 +8,7 @@ import { Cartao, forte, suave } from '../../../_visao/ui'
 import { dur, num } from './derivar'
 import s from '../../../_visao/visao.module.css'
 import type { ComDetalhe, Tom } from './tipos'
+import { textoDoLote, type Lote } from '@/lib/acessorias-lote'
 
 type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][] }
 
@@ -54,7 +55,7 @@ function sistemas(m: DeptMetrics): Sis[] {
    ============================================================ */
 type AcessoriasDoSetor = {
   total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
-  pessoas: { id: string; nome: string; iniciados: number; concluidos: number; entregas: number }[]
+  pessoas: { id: string; nome: string; iniciados: number; concluidos: number; entregas: number; lotes: Lote[] }[]
 }
 
 function useAcessoriasDoSetor(deptId: string, fromDay: string, toDay: string) {
@@ -128,6 +129,8 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
                 <li key={p.id} style={{ display: 'flex', gap: 8, fontSize: 11.5 }}>
                   <span style={{ color: 'var(--n-text-3)', width: 10 }}>{i + 1}</span>
                   <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
+                  {/* Baixa em lote: CONTA, mas avisa (decisão do dono, 01/10/2026). */}
+                  {p.lotes.length > 0 && <span title={textoDoLote(p.lotes)} style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--n-amber)', background: 'var(--n-amber-soft)', borderRadius: 4, padding: '0 4px' }}>lote</span>}
                   <b className="cnum" style={{ color: forte('pink') }} title={`${p.concluidos} processos concluídos · ${p.entregas} entregas · ${p.iniciados} iniciados`}>{num(p.concluidos + p.entregas)}</b>
                 </li>
               ))}
