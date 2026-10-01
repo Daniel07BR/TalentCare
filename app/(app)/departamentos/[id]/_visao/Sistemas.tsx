@@ -9,8 +9,9 @@ import { dur, num } from './derivar'
 import s from '../../../_visao/visao.module.css'
 import type { ComDetalhe, Tom } from './tipos'
 import { textoDoLote, type Lote } from '@/lib/acessorias-lote'
+import LogoFluxo from '../../../LogoFluxo'
 
-type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][] }
+type Sis = { chave: ChaveDetalhe | 'servicos'; nome: string; Icone: LucideIcon; tom: Tom; tem: boolean; gente: PessoaRank[]; stats: [string, string][]; logo?: boolean }
 
 /* Um cartão por sistema COM registro no período — a mesma regra do relatório
    atual (fonte sem nada do setor fica fora, e a tela diz quais). */
@@ -29,6 +30,14 @@ function sistemas(m: DeptMetrics): Sis[] {
     /* ⚠️ O CHAT INTERNO SAIU daqui (pedido do dono, 11/09/2026): o que ele tinha de
        chamado está no cartão "Chamados entre setores", que agora abre quem pediu e
        quem atendeu, de/para qual setor. Mensagem é vitrine e não entra na nota. */
+    /* ⚠️⚠️ O FLUXO FALTAVA AQUI (Daniel, 01/10/2026: "os usuários do T.I atendem
+       diversos chamados por meio do Fluxo, verifique por que isso não está sendo
+       computado"). O Chat saiu desta lista em 11/09 e o Fluxo, que herdou os
+       chamados em 17/09, nunca entrou — a rota já mandava `rankings.fluxo` e
+       ninguém desenhava. O cartão "Chamados entre setores" mostra as duas faces
+       do SETOR; este mostra QUEM atendeu, como os outros sistemas. */
+    { chave: 'fluxo', nome: 'Fluxo', Icone: Activity, logo: true, tom: 'purple', tem: t(m.fluxo.chamadosAbertos, m.fluxo.chamadosConcluidos, m.fluxo.tarefasAbertas, m.fluxo.tarefasConcluidas), gente: r.fluxo.gente,
+      stats: [[num(m.fluxo.chamadosConcluidos), 'Chamados concluídos'], [num(m.fluxo.tarefasConcluidas), 'Tarefas concluídas']] },
     { chave: 'helpdesk', nome: 'HelpDesk', Icone: LifeBuoy, tom: 'blue', tem: t(m.helpdesk.abertos, m.helpdesk.resolvidos), gente: r.helpdesk.gente,
       stats: [[num(m.helpdesk.abertos), 'Chamados abertos'], [num(m.helpdesk.resolvidos), 'Resolvidos']] },
     { chave: 'classroom', nome: 'ClassRoom', Icone: GraduationCap, tom: 'green', tem: t(m.classroom.criados, m.classroom.assistidos, m.classroom.videos), gente: r.classroom.gente,
@@ -90,7 +99,9 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
             title={x.chave === 'servicos' ? 'Abrir a planilha de serviços do setor' : `Abrir o resumo de ${x.nome} só com este setor`}
             style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 28, height: 28, borderRadius: 8, background: suave(x.tom), color: forte(x.tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><x.Icone size={15} /></span>
+              {x.logo
+                ? <LogoFluxo size={28} />
+                : <span style={{ width: 28, height: 28, borderRadius: 8, background: suave(x.tom), color: forte(x.tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><x.Icone size={15} /></span>}
               <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.nome}</span>
             </span>
             {x.gente.length > 0 && (
