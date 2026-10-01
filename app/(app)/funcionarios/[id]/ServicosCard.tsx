@@ -77,7 +77,10 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: soNumeros ? 12 : 16, lineHeight: 1.5 }}>
         Da planilha que o setor envia{!soNumeros && <> · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b></>}
         {servicos?.totalConcluidos != null && servicos.totalConcluidos > servicos.concluidos && (
-          <> · na planilha inteira são <b style={{ color: 'var(--text)' }}>{servicos.totalConcluidos.toLocaleString('pt-BR')} concluídos</b></>
+          /* ⚠️ "na planilha inteira são 160" se lia como o total do SETOR (Daniel,
+             01/10/2026, na ficha do Marcos: "160 concluídos e depois apresenta 0?").
+             É o total DA PESSOA em todos os envios — e agora diz isso. */
+          <> · em todos os envios, esta pessoa soma <b style={{ color: 'var(--text)' }}>{servicos.totalConcluidos.toLocaleString('pt-BR')} concluídos</b></>
         )}
       </div>
 
@@ -86,10 +89,17 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 12, marginBottom: 18 }}>
             <Num label="Concluídos" valor={servicos.concluidos.toLocaleString('pt-BR')} cor="var(--success)" />
             <Num label="Em aberto" valor={servicos.abertos.toLocaleString('pt-BR')} cor="var(--warning)" />
-            <Num label="Tempo somado" valor={horas(servicos.minutos)} />
+            {/* ⚠️ "0 min" lia como "não trabalhou": o relatório "Tarefas por
+                Colaborador" do Gestta não traz a coluna de tempo. Sem tempo, "—". */}
+            <Num label="Tempo somado" valor={servicos.minutos > 0 ? horas(servicos.minutos) : '—'} />
             <Num label="Média por serviço"
-              valor={servicos.concluidos ? horas(Math.round(servicos.minutos / servicos.concluidos)) : '—'} />
+              valor={servicos.concluidos && servicos.minutos > 0 ? horas(Math.round(servicos.minutos / servicos.concluidos)) : '—'} />
           </div>
+          {servicos.concluidos > 0 && servicos.minutos === 0 && (
+            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: -10, marginBottom: 16 }}>
+              A planilha deste período não traz o tempo de cada serviço — por isso o tempo fica em branco.
+            </div>
+          )}
 
           {!soNumeros && servicos.porMes.length > 1 && (
             <div style={{ marginBottom: 18 }}>
@@ -117,7 +127,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
                       <div style={{ width: `${(t.n / maxTarefa) * 100}%`, height: '100%', background: 'var(--chart-2)', borderRadius: 20 }} />
                     </div>
                     <span style={{ width: 34, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{t.n}</span>
-                    <span style={{ width: 52, textAlign: 'right', color: 'var(--text-mute)' }}>{horas(t.minutos)}</span>
+                    <span style={{ width: 52, textAlign: 'right', color: 'var(--text-mute)' }}>{t.minutos > 0 ? horas(t.minutos) : '—'}</span>
                   </div>
                 ))}
               </div>
