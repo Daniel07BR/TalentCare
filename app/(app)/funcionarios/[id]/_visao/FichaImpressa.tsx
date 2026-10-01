@@ -4,12 +4,10 @@ import { createPortal } from 'react-dom'
 import { Home, CalendarPlus, CalendarX, Cake, Briefcase, BadgeCheck, BookOpen, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { EmployeeVM } from '@/lib/mock/employee'
-import { competenciaLabel } from '@/lib/avaliacoes/criterios'
 import Avatar from '../../../Avatar'
 import { forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
 import s from '../../../_visao/visao.module.css'
-import { Placar } from '../Placar'
 import ServicosCard from '../ServicosCard'
 import f from './ficha.module.css'
 import { Indicadores } from './Indicadores'
@@ -268,15 +266,10 @@ function Folha({ vm, m, periodo }: Props) {
           )) : <div style={{ fontSize: 11.5, color: 'var(--n-text-3)' }}>Sem cursos informados no cadastro.</div>}
         </div>
 
-        <div style={{ gridColumn: 3, gridRow: '1 / span 2', alignSelf: 'center' }}>
-          {m.posicao && (
-            /* ⚠️ `semPosicao`: a COLOCAÇÃO no setor não vai ao papel (pedido do
-               dono, 17/09/2026). Ficam os pontos do período — o que a pessoa
-               produziu, e não o lugar dela numa fila que a folha levaria
-               sozinha para fora da tela. */
-            <Placar compacto enxuto semPosicao p={m.posicao} meses={m.posicao.mesesDoPlacar} setor={vm.dept} competenciaLabel={competenciaLabel(m.posicao.competencia)} />
-          )}
-        </div>
+        {/* ⚠️⚠️ SEM PONTUAÇÃO NO PAPEL, "por hora" (pedido do Daniel, 01/10/2026: "na
+            impressão de PDF por hora não apresente a pontuação"). Saiu o círculo
+            "Pontos no período" (o `Placar`); a tela continua mostrando. Para voltar,
+            é o `<Placar compacto enxuto semPosicao …/>` que estava aqui, na coluna 3. */}
 
         <div style={{ gridColumn: '1 / span 2', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <Pilula Icone={BadgeCheck} tom="purple" rotulo="Cargo" valor={vm.cargoOficial} />
