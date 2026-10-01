@@ -6,6 +6,7 @@ import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
 import Avatar from '../Avatar'
 import { usePainelDaPessoa } from '../PainelDaPessoa'
 import EsqueletoResumo from '../EsqueletoResumo'
+import Donut, { type DonutSeg } from '../Donut'
 import { textoDoLote, LOTE_MINIMO, type Lote } from '@/lib/acessorias-lote'
 
 /* ============================================================
@@ -24,7 +25,47 @@ type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar
 /* Baixa em lote: o número CONTA, a tela avisa (decisão do dono, 01/10/2026). */
 const Aviso = ({ lotes }: { lotes: Lote[] }) =>
   lotes.length ? <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--warning, #b45309)', marginTop: 2 }}>{textoDoLote(lotes)}</div> : null
-type Dados = { atualizadoEm: string | null; total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }; pessoas: Linha[] }
+type Servico = { tipo: string; n: number }
+type Dados = {
+  atualizadoEm: string | null
+  total: { iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
+  pessoas: Linha[]
+  servicos?: { obrigacoes: Servico[]; processos: Servico[]; entregasEmLote: number }
+}
+
+/* A pizza de um tipo de serviço: os 6 maiores com cor (a paleta tem 6), o resto em
+   "Outros" — e a LISTA COMPLETA ao lado, para nenhum tipo sumir dentro de "Outros". */
+const CORES = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)']
+function Pizza({ titulo, sub, itens, unidade }: { titulo: string; sub: string; itens: Servico[]; unidade: string }) {
+  const total = itens.reduce((a, i) => a + i.n, 0)
+  const seg: DonutSeg[] = itens.slice(0, 6).map((i, k) => ({ id: i.tipo, nome: i.tipo, value: i.n, color: CORES[k] }))
+  const resto = itens.slice(6).reduce((a, i) => a + i.n, 0)
+  if (resto) seg.push({ id: '__outros', nome: `Outros (${itens.length - 6} tipos)`, value: resto, color: 'var(--text-mute)' })
+  const corDe = (k: number) => (k < 6 ? CORES[k] : 'var(--text-mute)')
+  return (
+    <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, minWidth: 0 }}>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{titulo}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>{sub}</div>
+      {total === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nada no período.</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <Donut segments={seg} total={total} centerLabel={unidade} />
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0, flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 240, overflowY: 'auto' }}>
+            {itens.map((i, k) => (
+              <li key={i.tipo} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', gap: 8, alignItems: 'center', fontSize: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: corDe(k) }} />
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={i.tipo}>{i.tipo}</span>
+                <b className="cnum" style={{ textAlign: 'right' }}>{i.n.toLocaleString('pt-BR')}</b>
+                <span className="cnum" style={{ width: 38, textAlign: 'right', color: 'var(--text-mute)', fontSize: 11 }}>{Math.round((i.n / total) * 100)}%</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const COR = 'var(--n-pink, #ec4899)'
 const iniciais = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
@@ -112,6 +153,15 @@ export default function AcessoriasResumo() {
         ))}
       </div>
 
+      {dados.servicos && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <Pizza titulo="Serviço feito · obrigações entregues" unidade="entregas" itens={dados.servicos.obrigacoes}
+            sub={`Por tipo de obrigação, no período${dados.servicos.entregasEmLote ? ` · inclui ${dados.servicos.entregasEmLote} de baixa em lote` : ''}`} />
+          <Pizza titulo="Serviço feito · processos concluídos" unidade="processos" itens={dados.servicos.processos}
+            sub="Por modelo de processo, no período (os passos de dentro não têm data na API)" />
+        </div>
+      )}
+
       <div className="tc-card" style={card}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Por pessoa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Só quem tem volume no período — quem não usa o Acessórias não aparece com zero</div>
@@ -119,13 +169,17 @@ export default function AcessoriasResumo() {
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Sem volume no período.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            {/* ⚠️ Cada coluna com largura FIXA e o título no MESMO lado do número (01/10/2026,
+                o dono viu os títulos à esquerda e os números à direita). O alinhamento vai em
+                cada `th` — no `tr` ele não chega, a folha global manda o `th` para a esquerda. */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, tableLayout: 'fixed' }}>
+              <colgroup><col /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 120 }} /></colgroup>
               <thead>
-                <tr style={{ color: 'var(--text-dim)', fontSize: 11.5, textAlign: 'right' }}>
+                <tr style={{ color: 'var(--text-dim)', fontSize: 11.5 }}>
                   <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Pessoa</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 500 }}>Processos concluídos</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 500 }}>Processos iniciados</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 500 }}>Entregas</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 500 }}>Processos concluídos</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 500 }}>Processos iniciados</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 500 }}>Entregas</th>
                 </tr>
               </thead>
               <tbody>
