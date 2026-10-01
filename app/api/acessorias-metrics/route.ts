@@ -52,6 +52,18 @@ async function lotesPorNexus(nx: string[], fromDay: string, toDay: string): Prom
   return m
 }
 
+/* A HORA da baixa. ⚠️ O Acessórias não guarda a hora da entrega: guarda a hora da
+   ÚLTIMA ALTERAÇÃO do registro (`EntLastDH` / `DtLastDH`). Ela só diz a hora da baixa
+   quando cai no MESMO dia da entrega — noutro dia, alguém mexeu depois, e a hora
+   mentiria. Aí sai `null` e a tela mostra só a data. */
+function horaNoDia(alteradoEm: string | null, dia: string): string | null {
+  if (!alteradoEm) return null
+  const m = alteradoEm.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/) ?? alteradoEm.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/)
+  if (!m) return null
+  const iso = m[1].length === 4 ? `${m[1]}-${m[2]}-${m[3]}` : `${m[3]}-${m[2]}-${m[1]}`
+  return iso === dia ? `${m[4]}:${m[5]}` : null
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -110,34 +122,75 @@ export async function GET(req: NextRequest) {
     { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 },
   )
   /* ⚠️ O SERVIÇO FEITO, por tipo (pedido do dono, 01/10/2026: "gráfico pizza com a
-     quantidade de cada tipo de serviço feito no mês"). Do que o Acessórias diz com
-     DATA e DONO: a obrigação entregue (`obrigacao`) e o processo concluído (o modelo,
-     `matriz`). Os PASSOS de dentro do processo ficam fora — a API diz que estão OK,
-     mas não quando nem quem. Mesmas pessoas da lista acima. */
-  const contas = (await prisma.acessoriasUsuario.findMany({
+     quantidade de cada tipo de serviço feito no mês" e, no mesmo dia, "não só a
+     quantidade mas as atividades… lista de funcionários, de qual cliente, data e
+     hora" — e, logo depois, "mantenha o cliente de fora": o TalentCare segue sem
+     nome de empresa, só QUEM, O QUÊ e QUANDO). Do que o Acessórias diz com DATA e DONO: a obrigação entregue
+     (`obrigacao`) e o processo concluído (o modelo, `matriz`). Os PASSOS de dentro
+     do processo ficam fora — a API diz que estão OK, mas não quando nem quem.
+     Mesmas pessoas da lista acima. */
+  const contas = await prisma.acessoriasUsuario.findMany({
     where: { nexusUserId: { in: gente.map((p) => p.nexusUserId!) } },
-    select: { id: true },
-  })).map((u) => u.id)
-  const [porObrigacao, porModelo] = contas.length
+    select: { id: true, nexusUserId: true },
+  })
+  const pessoaPorNexus = new Map(gente.map((p) => [p.nexusUserId!, p]))
+  const pessoaDaConta = new Map(contas.map((c) => [c.id, pessoaPorNexus.get(c.nexusUserId!)!]))
+  const ids = contas.map((c) => c.id)
+  const [ents, procs] = ids.length
     ? await Promise.all([
-        prisma.acessoriasEntrega.groupBy({
-          by: ['obrigacao'],
-          where: { respEntregaId: { in: contas }, entregueEm: { gte: fromDay, lte: toDay } },
-          _count: { _all: true },
+        prisma.acessoriasEntrega.findMany({
+          where: { respEntregaId: { in: ids }, entregueEm: { gte: fromDay, lte: toDay } },
+          select: { id: true, obrigacao: true, respEntregaId: true, entregueEm: true, status: true, alteradoEm: true, competencia: true },
         }),
-        prisma.acessoriasProcesso.groupBy({
-          by: ['matriz'],
-          where: { gestorId: { in: contas }, conclusao: { gte: fromDay, lte: toDay } },
-          _count: { _all: true },
+        prisma.acessoriasProcesso.findMany({
+          where: { gestorId: { in: ids }, conclusao: { gte: fromDay, lte: toDay } },
+          select: { id: true, matriz: true, gestorId: true, conclusao: true, inicio: true, alteradoEm: true },
         }),
       ])
     : [[], []]
+
+  const conta = (lista: string[]) => {
+    const m = new Map<string, number>()
+    for (const t of lista) m.set(t, (m.get(t) ?? 0) + 1)
+    return [...m].map(([tipo, n]) => ({ tipo, n })).sort((a, b) => b.n - a.n)
+  }
+  const tipoDaEntrega = (e: { obrigacao: string }) => e.obrigacao || '(sem nome)'
+  const tipoDoProcesso = (p: { matriz: string }) => p.matriz || '(sem modelo)'
+
+  /* A clicar numa fatia: QUEM fez, em que DIA e HORA. ⚠️ Sem o cliente, por decisão do dono. */
+  const detalhe = sp.get('detalhe')
+  const tipo = sp.get('tipo') ?? ''
+  if (detalhe === 'obrigacao' || detalhe === 'processo') {
+    const quem = (contaId: string | null) => {
+      const p = contaId ? pessoaDaConta.get(contaId) : undefined
+      return p ? { id: p.id, nome: p.name, hasAvatar: !!p.avatarUrl } : { id: '', nome: '—', hasAvatar: false }
+    }
+    const itens = detalhe === 'obrigacao'
+      ? ents.filter((e) => tipoDaEntrega(e) === tipo).map((e) => ({
+          id: e.id, pessoa: quem(e.respEntregaId), dia: e.entregueEm!,
+          hora: horaNoDia(e.alteradoEm, e.entregueEm!), status: e.status,
+          competencia: e.competencia,
+        }))
+      : procs.filter((p) => tipoDoProcesso(p) === tipo).map((p) => ({
+          id: p.id, pessoa: quem(p.gestorId), dia: p.conclusao!,
+          hora: horaNoDia(p.alteradoEm, p.conclusao!), status: `iniciado em ${p.inicio.split('-').reverse().join('/')}`,
+          competencia: null,
+        }))
+    itens.sort((a, b) => b.dia.localeCompare(a.dia) || (b.hora ?? '').localeCompare(a.hora ?? ''))
+    return NextResponse.json({ fromDay, toDay, detalhe, tipo, itens })
+  }
+
   const servicos = {
-    obrigacoes: porObrigacao.map((r) => ({ tipo: r.obrigacao || '(sem nome)', n: r._count._all })).sort((a, b) => b.n - a.n),
-    processos: porModelo.map((r) => ({ tipo: r.matriz || '(sem modelo)', n: r._count._all })).sort((a, b) => b.n - a.n),
+    obrigacoes: conta(ents.map(tipoDaEntrega)),
+    processos: conta(procs.map(tipoDoProcesso)),
     // O lote entra na pizza também (conta, com aviso): quantas entregas dela vieram de lote.
     entregasEmLote: pessoas.reduce((a, p) => a + p.lotes.reduce((b, l) => b + l.entregas, 0), 0),
   }
+  /* As ATIVIDADES de cada pessoa (não só a quantidade): o que ela entregou e concluiu, por tipo. */
+  const atividadesPorPessoa = new Map<string, string[]>()
+  for (const e of ents) { const p = pessoaDaConta.get(e.respEntregaId!); if (p) atividadesPorPessoa.set(p.id, [...(atividadesPorPessoa.get(p.id) ?? []), tipoDaEntrega(e)]) }
+  for (const x of procs) { const p = x.gestorId ? pessoaDaConta.get(x.gestorId) : undefined; if (p) atividadesPorPessoa.set(p.id, [...(atividadesPorPessoa.get(p.id) ?? []), tipoDoProcesso(x)]) }
+  const pessoasComAtividades = pessoas.map((p) => ({ ...p, atividades: conta(atividadesPorPessoa.get(p.id) ?? []) }))
 
-  return NextResponse.json({ fromDay, toDay, atualizadoEm, total, pessoas, servicos })
+  return NextResponse.json({ fromDay, toDay, atualizadoEm, total, pessoas: pessoasComAtividades, servicos })
 }
