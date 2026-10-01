@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
+import { ehLote, LOTE_MINIMO, type Lote } from '@/lib/acessorias-lote'
 
 /* ============================================================
    ACESSÓRIAS — o VOLUME de cada pessoa no período (30/09/2026).
@@ -37,6 +38,20 @@ async function somaPorNexus(nx: string[], fromDay: string, toDay: string): Promi
   }]))
 }
 
+/* Os dias de BAIXA EM LOTE de cada pessoa no período — o número conta, a tela
+   avisa (decisão do dono, 01/10/2026). Regra em `lib/acessorias-lote.ts`. */
+async function lotesPorNexus(nx: string[], fromDay: string, toDay: string): Promise<Map<string, Lote[]>> {
+  if (!nx.length) return new Map()
+  const dias = await prisma.acessoriasDaily.findMany({
+    where: { nexusUserId: { in: nx }, day: { gte: fromDay, lte: toDay }, entregas: { gte: LOTE_MINIMO } },
+    select: { nexusUserId: true, day: true, entregas: true, entregasAtrasadas: true },
+    orderBy: { day: 'asc' },
+  })
+  const m = new Map<string, Lote[]>()
+  for (const d of dias) if (ehLote(d.entregas, d.entregasAtrasadas)) m.set(d.nexusUserId, [...(m.get(d.nexusUserId) ?? []), { dia: d.day, entregas: d.entregas }])
+  return m
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -62,7 +77,8 @@ export async function GET(req: NextRequest) {
     const vinculado = user.nexusUserId
       ? (await prisma.acessoriasUsuario.count({ where: { nexusUserId: user.nexusUserId } })) > 0
       : false
-    return NextResponse.json({ fromDay, toDay, atualizadoEm, vinculado, ...(soma ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) })
+    const lotes = user.nexusUserId ? (await lotesPorNexus([user.nexusUserId], fromDay, toDay)).get(user.nexusUserId) ?? [] : []
+    return NextResponse.json({ fromDay, toDay, atualizadoEm, vinculado, lotes, ...(soma ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) })
   }
 
   /* ?dept= → um setor; sem ?dept= → a casa inteira (a página /acessorias), só para
@@ -83,9 +99,10 @@ export async function GET(req: NextRequest) {
     select: { id: true, name: true, jobTitle: true, avatarUrl: true, nexusUserId: true, department: { select: { name: true } } },
   })
   const somas = await somaPorNexus(gente.map((p) => p.nexusUserId!), fromDay, toDay)
+  const lotes = await lotesPorNexus(gente.map((p) => p.nexusUserId!), fromDay, toDay)
   // ⚠️ Só quem TEM volume — listar o setor inteiro com zeros acusaria quem nem usa o Acessórias.
   const pessoas = gente
-    .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', setor: p.department?.name ?? '—', hasAvatar: !!p.avatarUrl, ...(somas.get(p.nexusUserId!) ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) }))
+    .map((p) => ({ id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', setor: p.department?.name ?? '—', hasAvatar: !!p.avatarUrl, lotes: lotes.get(p.nexusUserId!) ?? [], ...(somas.get(p.nexusUserId!) ?? { iniciados: 0, concluidos: 0, entregas: 0, solicitacoes: 0 }) }))
     .filter((p) => p.iniciados + p.concluidos + p.entregas + p.solicitacoes > 0)
     .sort((a, b) => b.concluidos + b.entregas - (a.concluidos + a.entregas) || b.iniciados - a.iniciados)
   const total = pessoas.reduce(

@@ -11,6 +11,7 @@ import type { Tom } from '../../../_visao/tipos'
 import s from '../../../_visao/visao.module.css'
 import { num } from './derivar'
 import f from './ficha.module.css'
+import { textoDoLote, type Lote } from '@/lib/acessorias-lote'
 
 /* ============================================================
    O QUE OS SISTEMAS REGISTRARAM — UMA ilustração por número (14/09/2026).
@@ -153,7 +154,7 @@ function Empilhada({ partes }: { partes: { rot: string; n: number; tom: Tom }[] 
    de `/api/acessorias-metrics`, à parte do `employee-metrics`, e nunca dizem
    "atrasado": em 30/09/2026 o escritório implantava o sistema. `vinculado` = a
    pessoa tem conta lá; sem conta, o Acessórias não é assunto dela. */
-type AcessoriasDaPessoa = { vinculado: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number }
+type AcessoriasDaPessoa = { vinculado: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[] }
 function useAcessoriasDaPessoa(pessoaId: string, fromDay?: string, toDay?: string) {
   const [dados, setDados] = useState<AcessoriasDaPessoa | null>(null)
   useEffect(() => {
@@ -394,6 +395,8 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
         { rot: 'Processos iniciados', n: ac.iniciados, tom: 'purple' },
         { rot: 'Entregas feitas', n: ac.entregas, tom: 'blue' },
       ]} alto={impressao ? 50 : 72} />
+      {/* Baixa em lote: conta, mas avisa (decisão do dono, 01/10/2026). */}
+      {ac.lotes?.length > 0 && <Nota><b style={{ color: 'var(--n-amber)' }}>{textoDoLote(ac.lotes)}</b> — baixa de prazos antigos, não produção daquele dia.</Nota>}
     </Bloco>
   ))
 

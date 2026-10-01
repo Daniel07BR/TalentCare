@@ -24,6 +24,7 @@ import { prisma } from '@/lib/db/prisma'
    ============================================================ */
 
 import type { Item, Grupo, Detalhe, Sistema } from '@/lib/pessoa-sistema-tipos'
+import { ehLote } from '@/lib/acessorias-lote'
 export { SISTEMAS, type Sistema } from '@/lib/pessoa-sistema-tipos'
 
 type Pessoa = { id: string; name: string; nexusUserId: string | null }
@@ -173,17 +174,21 @@ async function doAcessorias(p: Pessoa, de: string, ate: string): Promise<Detalhe
   const porDia = new Map<string, typeof entregas>()
   for (const e of entregas) porDia.set(e.entregueEm!, [...(porDia.get(e.entregueEm!) ?? []), e])
   const mediaConc = concluidos.length ? Math.round(concluidos.reduce((a, x) => a + x.diasCorridos, 0) / concluidos.length) : 0
-  return { aoVivo: false, aviso: 'Cópia do Acessórias, atualizada de hora em hora. Fonte em implantação — fora da nota.', grupos: [
+  const temLote = [...porDia.values()].some((es) => ehLote(es.length, es.filter((e) => /atrasad/i.test(e.status)).length))
+  return { aoVivo: false, aviso: `Cópia do Acessórias, atualizada de hora em hora. Fonte em implantação — fora da nota.${temLote ? ' "Baixa em lote" = 20 ou mais baixas no mesmo dia, quase todas com atraso: conta no volume, mas não é produção daquele dia.' : ''}`, grupos: [
     { chave: 'concluidos', titulo: 'Processos concluídos', resumo: concluidos.length ? `${concluidos.length} · em média ${mediaConc} dias do início à conclusão` : undefined,
       itens: concluidos.map((x) => ({ id: `c-${x.id}`, dia: x.conclusao!, titulo: x.matriz, sub: `iniciado em ${br(x.inicio)} · ${plural(x.diasCorridos, 'dia', 'dias')}` })) },
     { chave: 'iniciados', titulo: 'Processos iniciados', resumo: iniciados.length ? `${iniciados.length} · ${iniciados.filter((x) => x.status === 'Em andamento').length} ainda em andamento` : undefined,
       itens: iniciados.map((x) => ({ id: `i-${x.id}`, dia: x.inicio, titulo: x.matriz, sub: `${x.status}${x.status === 'Em andamento' ? ` · ${Math.round(x.percentual)}% feito` : ''}` })) },
     { chave: 'entregas', titulo: 'Entregas de obrigação, dia a dia', resumo: entregas.length ? plural(entregas.length, 'entrega', 'entregas') : undefined,
       itens: [...porDia].map(([d, es]) => {
-        const vencidas = es.filter((e) => e.prazo < d)
-        const atraso = vencidas.length ? Math.round(vencidas.reduce((a, e) => a + dias(e.prazo, d), 0) / vencidas.length) : 0
-        return { id: `e-${d}`, dia: d, valor: es.length, titulo: plural(es.length, 'entrega', 'entregas'),
-          sub: vencidas.length ? `${vencidas.length} de prazo já vencido (em média há ${atraso} dias)` : 'todas dentro do prazo',
+        /* ⚠️ "Atrasada" = a marcação do Acessórias, a MESMA régua do `acessorias_daily`
+           e do aviso de lote (`lib/acessorias-lote.ts`) — nunca a data. */
+        const atrasadas = es.filter((e) => /atrasad/i.test(e.status))
+        const atraso = atrasadas.length ? Math.round(atrasadas.reduce((a, e) => a + dias(e.prazo, d), 0) / atrasadas.length) : 0
+        const lote = ehLote(es.length, atrasadas.length)
+        return { id: `e-${d}`, dia: d, valor: es.length, titulo: `${lote ? 'Baixa em lote · ' : ''}${plural(es.length, 'entrega', 'entregas')}`,
+          sub: atrasadas.length ? `${atrasadas.length} entregues com atraso (prazo vencido havia ${atraso} dias, em média)` : 'nenhuma com atraso',
           filhos: es.map((e) => ({ titulo: `${e.obrigacao}${e.competencia ? ` · comp. ${e.competencia.slice(5, 7)}/${e.competencia.slice(0, 4)}` : ''} · ${e.status}`, dia: d })) }
       }) },
   ] }
