@@ -6,6 +6,7 @@ import RegraEditor from './RegraEditor'
 import TarefasEditor from './TarefasEditor'
 import PontuacaoMes from './PontuacaoMes'
 import AtividadesEditor from './AtividadesEditor'
+import JanelaPeriodo, { type Periodo } from './JanelaPeriodo'
 
 export type Setor = { id: string; name: string }
 export type Lote = {
@@ -58,6 +59,9 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
   const [setorId, setSetorId] = useState(inicial)
   const [previa, setPrevia] = useState<Previa | null>(null)
   const [arquivo, setArquivo] = useState<File | null>(null)
+  /* O período que a pessoa informou na janela que abre depois de anexar. */
+  const [periodo, setPeriodo] = useState<Periodo | null>(null)
+  const [perguntando, setPerguntando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [gravado, setGravado] = useState(false)
@@ -74,10 +78,12 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
      ela trocar o seletor aqui, a volta continua sendo para onde ela estava. */
   const setorDeOrigem = setores.find((s) => s.id === daUrl) ?? null
 
-  async function enviar(f: File, confirmar: boolean) {
+  async function enviar(f: File, confirmar: boolean, per: Periodo | null = periodo) {
+    if (!per) { setPerguntando(true); return }
     setOcupado(true); setErro(null)
     const fd = new FormData()
     fd.append('arquivo', f); fd.append('departmentId', setorId)
+    fd.append('periodoDe', per.de); fd.append('periodoAte', per.ate)
     if (confirmar) fd.append('confirmar', 'true')
     try {
       const r = await fetch('/api/servicos/importar', { method: 'POST', body: fd })
@@ -151,13 +157,18 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Enviar a planilha do Gestta — {setor.name}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
-          <b>Hoje o sistema aceita apenas a planilha exportada do Gestta</b>: o arquivo <b>.xlsx</b> com as colunas Nome, Tempo,
-          Status, Tarefa, Cliente e Data. Planilha de outro sistema não é lida.
+          <b>Hoje o sistema aceita apenas a planilha exportada do Gestta</b> (.xlsx): o "Controle Indicadores" ou o "Tarefas por
+          Colaborador". Depois de escolher o arquivo, você informa o <b>período</b> que ele cobre.
           {' '}<b>Nada é gravado no envio</b> — você vê primeiro o que vai entrar e confirma depois.
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input ref={inputRef} type="file" accept=".xlsx" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) { setArquivo(f); setGravado(false); enviar(f, false) } }} />
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              // ⚠️ Zera o input: escolher o MESMO arquivo de novo não dispararia o onChange.
+              e.target.value = ''
+              if (f) { setArquivo(f); setGravado(false); setPrevia(null); setErro(null); setPerguntando(true) }
+            }} />
           <button onClick={() => inputRef.current?.click()} disabled={ocupado}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 16px', background: 'var(--accent)', color: '#1a1205', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: ocupado ? 'wait' : 'pointer' }}>
             <Upload size={15} /> {ocupado ? 'Lendo…' : 'Escolher arquivo'}
@@ -165,7 +176,19 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
           {arquivo && (
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <FileSpreadsheet size={14} /> {arquivo.name} · {(arquivo.size / 1024).toFixed(0)} KB
+              {periodo && <> · período <b style={{ color: 'var(--text)' }}>{br(periodo.de)} a {br(periodo.ate)}</b></>}
+              {!gravado && !ocupado && (
+                <button type="button" onClick={() => setPerguntando(true)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, padding: 0 }}>
+                  trocar período
+                </button>
+              )}
             </span>
+          )}
+          {perguntando && arquivo && (
+            <JanelaPeriodo arquivo={arquivo} setor={setor.name} inicial={periodo}
+              onCancelar={() => setPerguntando(false)}
+              onConfirmar={(p) => { setPeriodo(p); setPerguntando(false); enviar(arquivo, false, p) }} />
           )}
         </div>
         {erro && (

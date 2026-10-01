@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
   const departmentId = String(form.get('departmentId') ?? '')
   const confirmar = String(form.get('confirmar') ?? '') === 'true'
   const arquivo = form.get('arquivo')
+  /* ⚠️⚠️ O PERÍODO É INFORMADO POR GENTE (Daniel, 01/10/2026). O "Tarefas por
+     Colaborador" do Gestta não traz data nenhuma, e um arquivo com data pode
+     cobrir menos do que o mês. Quem exportou sabe que período pediu ao Gestta;
+     a janela que se abre depois de anexar pergunta isso, e é ela que decide o
+     que este envio substitui. */
+  const periodoDe = String(form.get('periodoDe') ?? '')
+  const periodoAte = String(form.get('periodoAte') ?? '')
 
   if (!departmentId) return NextResponse.json({ error: 'Falta o setor.' }, { status: 400 })
   /* ⚠️ A régua roda no SERVIDOR e antes de qualquer leitura. Confiar na tela
@@ -45,12 +52,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Arquivo grande demais (${(arquivo.size / 1048576).toFixed(1)} MB). O limite é 20 MB.` }, { status: 413 })
   }
 
+  const iso = /^\d{4}-\d{2}-\d{2}$/
+  if (!iso.test(periodoDe) || !iso.test(periodoAte)) {
+    return NextResponse.json({ error: 'Informe o período que o arquivo cobre (de e até).' }, { status: 400 })
+  }
+  if (periodoDe > periodoAte) return NextResponse.json({ error: 'O início do período está depois do fim.' }, { status: 400 })
+  if (periodoDe < '2020-01-01') return NextResponse.json({ error: 'O período começa antes de 2020 — confira as datas.' }, { status: 400 })
+  if (periodoAte > new Date().toISOString().slice(0, 10)) {
+    return NextResponse.json({ error: 'O período termina no futuro. Informe até o último dia que o arquivo cobre.' }, { status: 400 })
+  }
+
   const setor = await prisma.department.findUnique({ where: { id: departmentId }, select: { name: true } })
   if (!setor) return NextResponse.json({ error: 'Setor não encontrado.' }, { status: 404 })
 
   let lida
   try {
-    lida = lerPlanilha(Buffer.from(await arquivo.arrayBuffer()))
+    lida = lerPlanilha(Buffer.from(await arquivo.arrayBuffer()), { de: periodoDe, ate: periodoAte })
   } catch (e) {
     /* ⚠️ A mensagem tem de dizer o que fazer. "Erro ao processar" manda a pessoa
        tentar de novo com o mesmo arquivo errado. */
@@ -61,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   if (!lida.servicos.length && !lida.pontos.length) {
     return NextResponse.json({
-      error: 'A planilha abriu, mas não achei nem serviços nem pontos nela. A aba de serviços precisa das colunas Nome, Status e Data.',
+      error: 'A planilha abriu, mas não achei serviços dentro do período informado. Confira o período e se o arquivo tem as colunas de responsável e status.',
       avisos: lida.avisos,
     }, { status: 400 })
   }
@@ -70,7 +87,10 @@ export async function POST(req: NextRequest) {
   /* ⚠️ Por SETOR + hash, não só hash. O mesmo arquivo importado para o setor
      errado precisa poder ir para o certo — e com a chave global ele ficava
      preso, sem saída pela tela. */
-  const jaImportado = await prisma.importLote.findFirst({ where: { departmentId, hash: lida.hash } })
+  /* ⚠️ O mesmo arquivo com OUTRO período é outro envio: sem o período na
+     chave, quem errou a data não conseguia corrigir subindo de novo. */
+  const hashLote = `${lida.hash}:${periodoDe}:${periodoAte}`
+  const jaImportado = await prisma.importLote.findFirst({ where: { departmentId, hash: hashLote } })
   if (jaImportado && !confirmar) {
     return NextResponse.json({
       jaImportado: {
@@ -96,7 +116,7 @@ export async function POST(req: NextRequest) {
   const lote = await prisma.$transaction(async (tx) => {
     const l = await tx.importLote.create({
       data: {
-        departmentId, arquivo: arquivo.name, hash: lida.hash,
+        departmentId, arquivo: arquivo.name, hash: hashLote,
         diaDe: lida.diaDe ?? '', diaAte: lida.diaAte ?? '',
         linhas: lida.servicos.length,
         linhasSemVinculo: previa.linhasSemVinculo,
@@ -276,7 +296,7 @@ async function montarPrevia(departmentId: string, setorNome: string, lida: Await
   return {
     setor: setorNome,
     hash: lida.hash,
-    diaDe: lida.diaDe, diaAte: lida.diaAte,
+    diaDe: lida.diaDe, diaAte: lida.diaAte, temData: lida.temData,
     pontosDe: lida.pontosDe, pontosAte: lida.pontosAte,
     totalServicos: lida.servicos.length,
     totalPontos: lida.pontos.length,
