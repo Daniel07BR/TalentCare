@@ -34,7 +34,6 @@ const COR = 'var(--chart-4)'
 const CORES = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)']
 const br = (d: string) => d.split('-').reverse().join('/')
 const iniciais = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
-const horas = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`)
 
 const Numero = ({ valor, rotulo, cor }: { valor: string | number; rotulo: string; cor: string }) => (
   <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
@@ -109,9 +108,7 @@ export default function ServicosResumo() {
             <Numero valor={t.concluidos.toLocaleString('pt-BR')} rotulo="Serviços concluídos" cor="var(--success)" />
             <Numero valor={t.abertos.toLocaleString('pt-BR')} rotulo="Em aberto" cor="var(--warning)" />
             <Numero valor={dados.pessoas.filter((p) => p.concluidos > 0).length} rotulo="Pessoas que concluíram" cor={COR} />
-            {/* ⚠️ Tempo só quando a planilha trouxe: o "Tarefas por Colaborador" não tem
-                a coluna, e "0 min" diria que o serviço não levou tempo nenhum. */}
-            {t.minutos > 0 && <Numero valor={horas(t.minutos)} rotulo="Tempo registrado nos concluídos" cor="var(--text)" />}
+            {/* Sem tempo na tela (Daniel, 01/10/2026) — só quantidades. */}
           </div>
           {t.semDono > 0 && (
             <div style={{ fontSize: 12, color: 'var(--warning)' }}>

@@ -141,9 +141,9 @@ export function Hero({ m }: { m: DeptMetrics }) {
               <Sinal
                 Icone={FileSpreadsheet} rotulo="Serviços concluídos"
                 valor={m.servicos.concluidos.toLocaleString('pt-BR')}
-                /* ⚠️ Só o período (Daniel, 01/10/2026): o total "na planilha inteira"
-                   ao lado do número do período confundia. */
-                nota={m.servicos.minutos ? `no período · ${Math.round(m.servicos.minutos / 60)} h somadas` : 'no período'}
+                /* ⚠️ Só o período e só a quantidade (Daniel, 01/10/2026): o total "na
+                   planilha inteira" confundia, e o tempo saiu das telas. */
+                nota="no período"
                 dica={m.servicos.cobertura
                   ? `Da planilha do setor, que cobre de ${m.servicos.cobertura.de.split('-').reverse().join('/')} a ${m.servicos.cobertura.ate.split('-').reverse().join('/')}. Fora dessa janela o setor não mediu — não é zero.`
                   : 'Da planilha que o setor envia.'}

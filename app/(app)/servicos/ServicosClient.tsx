@@ -237,7 +237,6 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
               <Num label="Concluídos" valor={previa.porStatus.concluida.toLocaleString('pt-BR')} cor="var(--success)" />
               <Num label="Abertos" valor={previa.porStatus.aberta.toLocaleString('pt-BR')} cor="var(--warning)" />
               <Num label="Desconsiderados" valor={previa.porStatus.desconsiderada.toLocaleString('pt-BR')} cor="var(--text-mute)" />
-              <Num label="Horas concluídas" valor={(previa.minutosConcluidos / 60).toFixed(0) + ' h'} />
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.7 }}>
               {/* ⚠️ A JANELA É O QUE O ARQUIVO COBRIU. É o que permite a tela dizer
