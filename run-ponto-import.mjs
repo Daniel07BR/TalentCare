@@ -10,8 +10,16 @@
 // `users`) e o DEPARTAMENTO como desempatador. Atrasos ABONADOS (nexo_abonos) não
 // punem a assiduidade — entram separados.
 //
-// Uso: node --env-file=.env run-ponto-import.mjs [<dir-com-os-.sql> | <arquivo.sql>]
+// Uso: node --env-file=.env run-ponto-import.mjs [<dir-com-os-.sql> | <arquivo.sql>] [--desde=AAAA-MM-DD] [--ensaio]
 //   default: /home/suporte/ponto-dump/extracted
+//
+// ⚠️⚠️ INCREMENTAL DESDE 01/10/2026 (pedido do Daniel: "apenas dos dados do último
+// dia que subimos para frente e não subir os dados do banco todo"). O corte é o
+// ÚLTIMO DIA já gravado em `assiduidade_daily` — ele é refeito, porque o dump
+// anterior pode tê-lo pegado pela metade (o dump sai durante o expediente).
+// Antes do corte nada é apagado nem regravado. `--desde=` força outro corte.
+// O dump inteiro continua sendo LIDO: a advertência é ordinal no mês ("2º
+// atraso do mês"), e o 1º atraso de setembro pode estar antes do corte.
 //
 // ⚠️ ACEITA OS DOIS FORMATOS (08/09/2026). O primeiro dump veio como quatro
 // arquivos, um por tabela, e com `axis_db_users.sql` junto — o roster do Nexo,
@@ -366,6 +374,28 @@ async function main() {
   }
   const advertNaTabela = adverts.filter((a) => matchOf.has(a.userId)).length
 
+  /* ---------- O CORTE: daqui para frente, e só daqui ---------- */
+  const argDesde = process.argv.find((a) => a.startsWith('--desde='))?.slice(8)
+  if (argDesde && !/^\d{4}-\d{2}-\d{2}$/.test(argDesde)) { console.error('--desde= espera AAAA-MM-DD'); process.exit(1) }
+  const ultimoGravado = (await prisma.assiduidadeDaily.aggregate({ _max: { day: true } }))._max.day
+  const corte = argDesde ?? ultimoGravado ?? '0000-00-00'
+  for (const k of [...daily.keys()]) if (k.split('\0')[1] < corte) daily.delete(k)
+  const eventosNovos = eventos.filter((e) => e.data >= corte)
+  eventos.length = 0
+  eventos.push(...eventosNovos)
+
+  /* O que o corte DEIXA DE FORA: um abono lançado hoje sobre um atraso de antes
+     do corte não chega ao TalentCare. Não se corrige em silêncio (seria regravar
+     o passado, o que o Daniel não pediu) — só se mostra, no ensaio e no fim. */
+  const abonoAntesDoCorte = atrasos.filter((a) => a.day < corte && abonadoIds.has(a.id) && matchOf.has(a.userId))
+  const dailyAntigo = new Map((await prisma.assiduidadeDaily.findMany({
+    where: { day: { lt: corte } }, select: { personKey: true, day: true, atrasosAbon: true },
+  })).map((r) => [r.personKey + '\0' + r.day, r.atrasosAbon]))
+  const abonosNaoRefletidos = abonoAntesDoCorte.filter((a) => {
+    const k = matchOf.get(a.userId).personKey + '\0' + a.day
+    return !(dailyAntigo.get(k) > 0)
+  }).map((a) => ({ dia: a.day, nome: a.nome }))
+
   /* ---------- TRAVA ANTI-PERDA (antes de qualquer delete) ----------
      Este import é wipe+rebuild: ele APAGA assiduidade_daily e as advertências
      do Nexo e regrava a partir do dump. Se o dump não estiver no lugar (o
@@ -375,7 +405,8 @@ async function main() {
      Regra: nunca encolher sozinho. Só passa se o que vai gravar for pelo menos
      90% do que já existe, ou se vier `--forcar` explícito. */
   const forcar = process.argv.includes('--forcar')
-  const jaTem = await prisma.assiduidadeDaily.count()
+  // Compara só a janela que será apagada: o que está antes do corte não é tocado.
+  const jaTem = await prisma.assiduidadeDaily.count({ where: { day: { gte: corte } } })
   const vaiGravar = daily.size
   if (!forcar && jaTem > 0 && vaiGravar < jaTem * 0.9) {
     console.error(JSON.stringify({
@@ -403,15 +434,17 @@ async function main() {
     }
     console.log(JSON.stringify({
       ENSAIO: 'nada foi gravado',
+      corte: { aPartirDe: corte, ultimoDiaJaGravado: ultimoGravado, ultimoDiaDoDump: atrasos.reduce((m, a) => (a.day > m ? a.day : m), '') },
+      abonosAntesDoCorteNaoRefletidos: abonosNaoRefletidos,
       atrasosLidos: atrasos.length, abonados: abonadoIds.size,
       usuariosNoDump: occByNexo.size,
       pessoasCasadas: new Set([...matchOf.values()].map((m) => m.personKey)).size,
-      linhasDeAssiduidade: { vaiGravar: daily.size, jaExistem: await prisma.assiduidadeDaily.count() },
+      linhasDeAssiduidade: { vaiGravar: daily.size, jaExistemDesdeOCorte: jaTem, intocadasAntesDoCorte: await prisma.assiduidadeDaily.count({ where: { day: { lt: corte } } }) },
       advertencias: {
         naTabelaDoAxis: adverts.filter((a) => matchOf.has(a.userId)).length,
         pelaRegraDo2oAtraso: eventos.length,
         puladasPorTerSuspensaoNoMesmoDia: puladasPorSuspensao,
-        jaExistem: await prisma.disciplinaEvento.count({ where: { source: 'nexo' } }),
+        jaExistemDesdeOCorte: await prisma.disciplinaEvento.count({ where: { source: 'nexo', data: { gte: corte } } }),
       },
       vinculos: {
         manuais: stagingRows.filter((r) => r.confidence === 'manual').length,
@@ -433,10 +466,12 @@ async function main() {
     return
   }
 
-  /* ---------- grava (wipe + rebuild = idempotente) ---------- */
+  /* ---------- grava: refaz só do corte em diante (idempotente) ----------
+     ⚠️ O `ponto_staging` continua sendo refeito inteiro: é a auditoria do
+     casamento de nomes (tela /ponto), não histórico de assiduidade. */
   await prisma.$transaction([
-    prisma.assiduidadeDaily.deleteMany({}),
-    prisma.disciplinaEvento.deleteMany({ where: { source: 'nexo' } }),
+    prisma.assiduidadeDaily.deleteMany({ where: { day: { gte: corte } } }),
+    prisma.disciplinaEvento.deleteMany({ where: { source: 'nexo', data: { gte: corte } } }),
     prisma.pontoStaging.deleteMany({}),
   ])
 
@@ -458,7 +493,8 @@ async function main() {
   const review = stagingRows.filter((s) => s.confidence === 'review')
   const none = stagingRows.filter((s) => s.confidence === 'none')
   console.log(JSON.stringify({
-    atrasosLidos: atrasos.length, advertLidas: adverts.length, abonados: abonadoIds.size,
+    corte, atrasosLidos: atrasos.length, advertLidas: adverts.length, abonados: abonadoIds.size,
+    abonosAntesDoCorteNaoRefletidos: abonosNaoRefletidos.length,
     rosterNexo: roster.size, usuariosComOcorrencia: occByNexo.size,
     pessoasCasadas: matchedPeople, dailyLinhas: dailyN,
     advertenciasNaTabelaDoAxis: advertNaTabela,
