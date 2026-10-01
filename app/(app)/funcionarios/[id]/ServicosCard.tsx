@@ -4,7 +4,6 @@ import { FileSpreadsheet, Scale } from 'lucide-react'
 type Servicos = NonNullable<{
   temFonte: boolean
   concluidos: number; abertos: number; desconsiderados: number; minutos: number
-  minutosEstimados?: number; estimados?: number; medidos?: number
   porMes: { mes: string; concluidos: number; minutos: number }[]
   porTarefa: { tarefa: string; n: number; minutos: number }[]
   totalConcluidos?: number
@@ -16,7 +15,6 @@ const rotuloMes = (c: string) => {
   const [a, m] = c.split('-')
   return `${MES_CURTO[parseInt(m, 10) - 1] ?? m}/${a.slice(2)}`
 }
-const horas = (min: number) => (min >= 60 ? `${Math.round(min / 60)} h` : `${min} min`)
 
 /**
  * Os serviços que o setor registra em planilha, e a pontuação do mês.
@@ -46,12 +44,6 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
   const mostraPonto = temPonto && !semPontuacao
   if (!temServico && !mostraPonto) return null
 
-  const estimadoMin = servicos?.minutosEstimados ?? 0
-  const temEstimado = estimadoMin > 0
-  const tempoTotal = (servicos?.minutos ?? 0) + estimadoMin
-  /* A média divide pelos serviços que TÊM tempo (medido ou estimado); um tipo sem
-     média nenhuma não pode puxá-la para baixo como se tivesse levado 0 min. */
-  const comTempo = servicos ? (servicos.medidos ?? (servicos.minutos > 0 ? servicos.concluidos : 0)) + (servicos.estimados ?? 0) : 0
   const maxMes = Math.max(1, ...(servicos?.porMes ?? []).map((m) => m.concluidos))
   const maxTarefa = Math.max(1, ...(servicos?.porTarefa ?? []).map((t) => t.n))
   const serie = (pontuacao ?? []).slice(-15)
@@ -87,33 +79,20 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
 
       {temServico && servicos && (
         <>
+          {/* ⚠️ SEM TEMPO na tela (Daniel, 01/10/2026: "tire a apresentação do tempo
+              somado e da média de tempo de serviço"). O tempo segue na planilha e
+              no catálogo de tipos, onde dá os pontos; aqui só a quantidade. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 12, marginBottom: 18 }}>
             <Num label="Concluídos" valor={servicos.concluidos.toLocaleString('pt-BR')} cor="var(--success)" />
             <Num label="Em aberto" valor={servicos.abertos.toLocaleString('pt-BR')} cor="var(--warning)" />
-            {/* ⚠️ "0 min" lia como "não trabalhou": o "Tarefas por Colaborador" do
-                Gestta não traz tempo. O concluído sem tempo vale a MÉDIA DO TIPO dele
-                (Daniel, 01/10/2026) — e o "≈" diz que é estimado, não medido. */}
-            <Num label="Tempo somado" valor={tempoTotal > 0 ? `${temEstimado ? '≈ ' : ''}${horas(tempoTotal)}` : '—'} />
-            <Num label="Média por serviço"
-              valor={comTempo > 0 && tempoTotal > 0 ? `${temEstimado ? '≈ ' : ''}${horas(Math.round(tempoTotal / comTempo))}` : '—'} />
           </div>
-          {temEstimado && (
-            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: -10, marginBottom: 16 }}>
-              ≈ tempo estimado: a planilha deste período não traz o tempo de cada serviço, então {servicos.estimados === servicos.concluidos ? 'cada um' : `${servicos.estimados} de ${servicos.concluidos}`} vale a média do seu tipo de serviço.
-            </div>
-          )}
-          {!temEstimado && servicos.concluidos > 0 && servicos.minutos === 0 && (
-            <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: -10, marginBottom: 16 }}>
-              A planilha deste período não traz o tempo, e estes tipos de serviço ainda não têm média — por isso o tempo fica em branco.
-            </div>
-          )}
 
           {!soNumeros && servicos.porMes.length > 1 && (
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Concluídos por mês</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 90 }}>
                 {servicos.porMes.map((m) => (
-                  <div key={m.mes} title={`${rotuloMes(m.mes)}: ${m.concluidos} concluídos · ${horas(m.minutos)}`}
+                  <div key={m.mes} title={`${rotuloMes(m.mes)}: ${m.concluidos} concluídos`}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
                     <div style={{ width: '100%', height: `${(m.concluidos / maxMes) * 68}px`, background: 'var(--chart-2)', borderRadius: '3px 3px 0 0', minHeight: 2 }} />
                     <span style={{ fontSize: 9.5, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>{rotuloMes(m.mes)}</span>
@@ -134,7 +113,6 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
                       <div style={{ width: `${(t.n / maxTarefa) * 100}%`, height: '100%', background: 'var(--chart-2)', borderRadius: 20 }} />
                     </div>
                     <span style={{ width: 34, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{t.n}</span>
-                    <span style={{ width: 52, textAlign: 'right', color: 'var(--text-mute)' }}>{t.minutos > 0 ? horas(t.minutos) : '—'}</span>
                   </div>
                 ))}
               </div>

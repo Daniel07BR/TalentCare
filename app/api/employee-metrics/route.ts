@@ -5,7 +5,6 @@ import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh, podeVer } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { montar } from '@/lib/servicos/calcular-mes'
-import { mediasDosTipos } from '@/lib/servicos/catalogo'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import type { Period } from '@/lib/mock/dashboard'
@@ -144,7 +143,7 @@ export async function GET(req: NextRequest) {
        não credita ninguém, então não pode aparecer na ficha de alguém. */
     prisma.servicoDepto.findMany({
       where: { personKey, dia: { gte: fromDay, lte: toDay } },
-      select: { dia: true, status: true, tarefa: true, minutos: true, departmentId: true },
+      select: { dia: true, status: true, tarefa: true, minutos: true },
     }),
     /* ⚠️⚠️ O TOTAL da pessoa na planilha, sem filtro. Sem ele a ficha mostra o
        recorte de 30 dias e quem subiu 18 meses de arquivo pergunta onde foram
@@ -514,28 +513,19 @@ export async function GET(req: NextRequest) {
        manda planilha" de "esta pessoa não fez nada": sem ele, todo mundo dos
        outros 14 setores apareceria com "0 serviços", que é a mesma falta do
        ponto com outra roupa. */
-    servicos: await (async () => {
-      /* ⚠️⚠️ TEMPO ESTIMADO para o concluído que veio SEM tempo (Daniel,
-         01/10/2026): vale a média do tipo dele no catálogo do setor — a mesma
-         que dá os pontos. Fica SEPARADO do medido (`minutosEstimados`) para a
-         tela dizer que é estimativa. Ver `mediasDosTipos`. */
-      const semTempo = servicos.filter((x) => x.status === 'concluida' && x.minutos === 0)
-      const mediaDe = new Map<string, Awaited<ReturnType<typeof mediasDosTipos>>>()
-      for (const d of new Set(semTempo.map((x) => x.departmentId))) mediaDe.set(d, await mediasDosTipos(d))
-      const estimado = (x: (typeof servicos)[number]) =>
-        x.status === 'concluida' && x.minutos === 0 ? (mediaDe.get(x.departmentId)?.(x.tarefa) ?? 0) : 0
+    servicos: (() => {
       const concl = servicos.filter((x) => x.status === 'concluida')
       const porMesMap = new Map<string, { concluidos: number; minutos: number }>()
       for (const x of concl) {
         const mes = x.dia.slice(0, 7)
         const a = porMesMap.get(mes) ?? { concluidos: 0, minutos: 0 }
-        a.concluidos++; a.minutos += x.minutos + estimado(x)
+        a.concluidos++; a.minutos += x.minutos
         porMesMap.set(mes, a)
       }
       const porTarefa = new Map<string, { n: number; minutos: number }>()
       for (const x of concl) {
         const a = porTarefa.get(x.tarefa) ?? { n: 0, minutos: 0 }
-        a.n++; a.minutos += x.minutos + estimado(x)
+        a.n++; a.minutos += x.minutos
         porTarefa.set(x.tarefa, a)
       }
       return {
@@ -544,12 +534,6 @@ export async function GET(req: NextRequest) {
         abertos: servicos.filter((x) => x.status === 'aberta').length,
         desconsiderados: servicos.filter((x) => x.status === 'desconsiderada').length,
         minutos: concl.reduce((a, x) => a + x.minutos, 0),
-        /** Tempo ESTIMADO pela média do tipo, só dos concluídos que vieram sem tempo. */
-        minutosEstimados: concl.reduce((a, x) => a + estimado(x), 0),
-        /** Quantos concluídos tiveram o tempo estimado (os sem média ficam fora). */
-        estimados: concl.filter((x) => estimado(x) > 0).length,
-        /** Quantos concluídos vieram COM tempo medido na planilha. */
-        medidos: concl.filter((x) => x.minutos > 0).length,
         porMes: [...porMesMap].sort((a, b) => a[0].localeCompare(b[0])).map(([mes, v]) => ({ mes, ...v })),
         porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).slice(0, 8).map(([tarefa, v]) => ({ tarefa, ...v })),
         /** Concluídos na planilha INTEIRA — o contexto que faz o recorte se ler. */

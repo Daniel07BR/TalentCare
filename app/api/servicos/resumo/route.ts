@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { quemEh } from '@/lib/avaliacoes/regua'
-import { mediasDosTipos } from '@/lib/servicos/catalogo'
 
 /* ============================================================
    SERVIÇOS DO SETOR — o resumo da janela (01/10/2026).
@@ -49,8 +48,6 @@ export async function GET(req: NextRequest) {
       orderBy: { enviadoEm: 'desc' },
     }),
   ])
-  /* Concluído sem tempo vale a média do tipo (Daniel, 01/10/2026) — à parte, como estimado. */
-  const mediaDoTipo = linhas.some((l) => l.status === 'concluida' && l.minutos === 0) ? await mediasDosTipos(dept.id) : () => null
   const ultimoDia = await prisma.servicoDepto.aggregate({ where: { departmentId: dept.id }, _max: { dia: true } })
 
   // personKey = nexusUserId ?? id (o mesmo do vínculo).
@@ -69,13 +66,12 @@ export async function GET(req: NextRequest) {
   type P = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; tipos: Map<string, number> }
   const pessoas = new Map<string, P>()
   const tipos = new Map<string, { tipo: string; concluidos: number; abertos: number }>()
-  const total = { concluidos: 0, abertos: 0, desconsiderados: 0, minutos: 0, minutosEstimados: 0, estimados: 0, semDono: 0 }
+  const total = { concluidos: 0, abertos: 0, desconsiderados: 0, minutos: 0, semDono: 0 }
 
   for (const l of linhas) {
     if (l.status === 'desconsiderada') { total.desconsiderados++; continue }
     const concl = l.status === 'concluida'
-    const est = concl && l.minutos === 0 ? (mediaDoTipo(l.tarefa) ?? 0) : 0
-    if (concl) { total.concluidos++; total.minutos += l.minutos; total.minutosEstimados += est; if (est) total.estimados++ } else total.abertos++
+    if (concl) { total.concluidos++; total.minutos += l.minutos } else total.abertos++
     if (!l.personKey) total.semDono++
 
     const t = tipos.get(l.tarefa) ?? { tipo: l.tarefa, concluidos: 0, abertos: 0 }
@@ -90,7 +86,7 @@ export async function GET(req: NextRequest) {
       id: u?.id ?? null, nome: u?.name ?? l.nomeOrigem, cargo: u ? (u.jobTitle ?? 'Colaborador') : 'sem vínculo no TalentCare',
       hasAvatar: !!u?.avatarUrl, ativo: u?.active ?? true, concluidos: 0, abertos: 0, minutos: 0, tipos: new Map(),
     }
-    if (concl) { p.concluidos++; p.minutos += l.minutos + est; p.tipos.set(l.tarefa, (p.tipos.get(l.tarefa) ?? 0) + 1) } else p.abertos++
+    if (concl) { p.concluidos++; p.minutos += l.minutos; p.tipos.set(l.tarefa, (p.tipos.get(l.tarefa) ?? 0) + 1) } else p.abertos++
     pessoas.set(k, p)
   }
 
