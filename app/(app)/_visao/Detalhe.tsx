@@ -44,6 +44,7 @@ const MODULOS = {
   consultoria: () => import('../consultoria/Resumo'),
   cide: () => import('../cide/Resumo'),
   acessorias: () => import('../acessorias/Resumo'),
+  servicos: () => import('../servicos/Resumo'),
   radio: () => import('../radio/Resumo'),
   assiduidade: () => import('../assiduidade/Resumo'),
   turnover: () => import('../turnover/Resumo'),
@@ -60,6 +61,7 @@ export const DETALHES = {
   consultoria: { titulo: 'Consultoria Plus', C: dynamic(MODULOS.consultoria, { loading: carregando }) },
   cide: { titulo: 'CIDE', C: dynamic(MODULOS.cide, { loading: carregando }) },
   acessorias: { titulo: 'Acessórias · volume (fora da nota)', C: dynamic(MODULOS.acessorias, { loading: carregando }) },
+  servicos: { titulo: 'Serviços do setor', C: dynamic(MODULOS.servicos, { loading: carregando }) },
   radio: { titulo: 'Rádio Itamarathy', C: dynamic(MODULOS.radio, { loading: carregando }) },
   assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(MODULOS.assiduidade, { loading: carregando }) },
   turnover: { titulo: 'Turnover e movimentação', C: dynamic(MODULOS.turnover, { loading: carregando }) },
@@ -174,6 +176,8 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, fila =
                 : setor
                 ? (chave === 'turnover'
                     ? `todas as pessoas que passaram por ${setor.nome}, inclusive quem saiu`
+                    : chave === 'servicos'
+                    ? `a planilha que o ${setor.nome} envia do Gestta — todas as linhas do período`
                     : comQuemSaiu
                       ? `as pessoas de ${setor.nome} no período, inclusive quem já saiu — as mesmas da barra do painel`
                       : `só as pessoas ativas de ${setor.nome} — as mesmas do cartão`)
