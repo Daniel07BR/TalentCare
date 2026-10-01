@@ -7,7 +7,8 @@ export type DonutSeg = { id: string; nome: string; value: number; color: string 
 const R = 46
 const C = 2 * Math.PI * R
 
-export default function Donut({ segments, total, centerLabel }: { segments: DonutSeg[]; total: number; centerLabel: string }) {
+/* `onSegmentClick` (01/10/2026, Acessórias): opcional — quem não passa, segue igual. */
+export default function Donut({ segments, total, centerLabel, onSegmentClick }: { segments: DonutSeg[]; total: number; centerLabel: string; onSegmentClick?: (seg: DonutSeg) => void }) {
   const [hi, setHi] = useState<number | null>(null)
   let acc = 0
   const arcs = segments.map((s) => {
@@ -34,6 +35,7 @@ export default function Donut({ segments, total, centerLabel }: { segments: Donu
             strokeLinecap="butt"
             onMouseEnter={() => setHi(i)}
             onMouseLeave={() => setHi(null)}
+            onClick={onSegmentClick ? () => onSegmentClick(segments[i]) : undefined}
             style={{ cursor: 'pointer', opacity: hi === null || hi === i ? 1 : 0.28, transition: 'opacity .15s, stroke-width .15s' }}
           >
             <title>{a.nome}: {a.value}</title>

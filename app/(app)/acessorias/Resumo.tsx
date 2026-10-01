@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { CalendarCheck } from 'lucide-react'
+import { CalendarCheck, X } from 'lucide-react'
 import { usePeriod } from '@/lib/ui/period'
 import { useRecorteSetor, useEmJanela } from '@/lib/ui/recorte-setor'
 import Avatar from '../Avatar'
@@ -20,7 +20,7 @@ import { textoDoLote, LOTE_MINIMO, type Lote } from '@/lib/acessorias-lote'
    DIA A DIA: é lá que a baixa em lote aparece como lote.
    ============================================================ */
 
-type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[] }
+type Linha = { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; iniciados: number; concluidos: number; entregas: number; solicitacoes: number; lotes: Lote[]; atividades?: Servico[] }
 
 /* Baixa em lote: o número CONTA, a tela avisa (decisão do dono, 01/10/2026). */
 const Aviso = ({ lotes }: { lotes: Lote[] }) =>
@@ -36,7 +36,7 @@ type Dados = {
 /* A pizza de um tipo de serviço: os 6 maiores com cor (a paleta tem 6), o resto em
    "Outros" — e a LISTA COMPLETA ao lado, para nenhum tipo sumir dentro de "Outros". */
 const CORES = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)']
-function Pizza({ titulo, sub, itens, unidade }: { titulo: string; sub: string; itens: Servico[]; unidade: string }) {
+function Pizza({ titulo, sub, itens, unidade, onAbrir }: { titulo: string; sub: string; itens: Servico[]; unidade: string; onAbrir: (tipo: string) => void }) {
   const total = itens.reduce((a, i) => a + i.n, 0)
   const seg: DonutSeg[] = itens.slice(0, 6).map((i, k) => ({ id: i.tipo, nome: i.tipo, value: i.n, color: CORES[k] }))
   const resto = itens.slice(6).reduce((a, i) => a + i.n, 0)
@@ -50,10 +50,12 @@ function Pizza({ titulo, sub, itens, unidade }: { titulo: string; sub: string; i
         <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nada no período.</div>
       ) : (
         <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <Donut segments={seg} total={total} centerLabel={unidade} />
+          {/* Clicar numa cor abre QUEM fez aquela atividade. "Outros" junta vários tipos: abra pela lista. */}
+          <Donut segments={seg} total={total} centerLabel={unidade} onSegmentClick={(g) => { if (g.id !== '__outros') onAbrir(g.id) }} />
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 240, overflowY: 'auto' }}>
             {itens.map((i, k) => (
-              <li key={i.tipo} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', gap: 8, alignItems: 'center', fontSize: 12 }}>
+              <li key={i.tipo} className="tc-row" onClick={() => onAbrir(i.tipo)} title={`Ver quem fez: ${i.tipo}`}
+                style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', gap: 8, alignItems: 'center', fontSize: 12, cursor: 'pointer', borderRadius: 6, padding: '2px 4px', margin: '0 -4px' }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: corDe(k) }} />
                 <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={i.tipo}>{i.tipo}</span>
                 <b className="cnum" style={{ textAlign: 'right' }}>{i.n.toLocaleString('pt-BR')}</b>
@@ -77,6 +79,7 @@ export default function AcessoriasResumo() {
   const { fromDay, toDay, label } = usePeriod()
   const [dados, setDados] = useState<Dados | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [aberta, setAberta] = useState<{ detalhe: 'obrigacao' | 'processo'; tipo: string } | null>(null)
 
   useEffect(() => {
     if (!fromDay || !toDay) return
@@ -155,9 +158,9 @@ export default function AcessoriasResumo() {
 
       {dados.servicos && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 16 }}>
-          <Pizza titulo="Serviço feito · obrigações entregues" unidade="entregas" itens={dados.servicos.obrigacoes}
+          <Pizza titulo="Serviço feito · obrigações entregues" unidade="entregas" itens={dados.servicos.obrigacoes} onAbrir={(tipo) => setAberta({ detalhe: 'obrigacao', tipo })}
             sub={`Por tipo de obrigação, no período${dados.servicos.entregasEmLote ? ` · inclui ${dados.servicos.entregasEmLote} de baixa em lote` : ''}`} />
-          <Pizza titulo="Serviço feito · processos concluídos" unidade="processos" itens={dados.servicos.processos}
+          <Pizza titulo="Serviço feito · processos concluídos" unidade="processos" itens={dados.servicos.processos} onAbrir={(tipo) => setAberta({ detalhe: 'processo', tipo })}
             sub="Por modelo de processo, no período (os passos de dentro não têm data na API)" />
         </div>
       )}
@@ -191,6 +194,17 @@ export default function AcessoriasResumo() {
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 600 }}>{p.nome}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{p.cargo}{setor ? '' : ` · ${p.setor}`}</div>
+                          {/* AS ATIVIDADES, não só a quantidade (pedido do dono, 01/10/2026). */}
+                          {!!p.atividades?.length && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                              {p.atividades.slice(0, 4).map((a) => (
+                                <span key={a.tipo} title={a.tipo} style={{ fontSize: 10.5, padding: '1px 7px', borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-dim)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {a.tipo} <b style={{ color: 'var(--text)' }}>{a.n}</b>
+                                </span>
+                              ))}
+                              {p.atividades.length > 4 && <span style={{ fontSize: 10.5, color: 'var(--text-mute)' }}>+{p.atividades.length - 4} tipos</span>}
+                            </div>
+                          )}
                           <Aviso lotes={p.lotes} />
                         </div>
                       </div>
@@ -204,6 +218,121 @@ export default function AcessoriasResumo() {
             </table>
           </div>
         )}
+      </div>
+      {aberta && <JanelaAtividade {...aberta} setorId={setor?.id ?? null} fromDay={fromDay} toDay={toDay} label={label} onFechar={() => setAberta(null)} />}
+    </div>
+  )
+}
+
+/* ============================================================
+   A JANELA DE UMA ATIVIDADE — clique numa cor da pizza (pedido do dono, 01/10/2026):
+   "abra uma janela estilizada mostrando a lista de funcionários que realizaram as
+   atividades… data e hora". ⚠️ SEM o cliente: "mantenha o cliente de fora" (no
+   TalentCare). ⚠️ A hora é a da última alteração no Acessórias, e só aparece quando
+   cai no mesmo dia da entrega — ver `horaNoDia` na rota.
+   ============================================================ */
+type ItemAtividade = { id: string; pessoa: { id: string; nome: string; hasAvatar: boolean }; dia: string; hora: string | null; status: string; competencia: string | null }
+
+function JanelaAtividade({ detalhe, tipo, setorId, fromDay, toDay, label, onFechar }: {
+  detalhe: 'obrigacao' | 'processo'; tipo: string; setorId: string | null; fromDay: string; toDay: string; label: string; onFechar: () => void
+}) {
+  const abrirPessoa = usePainelDaPessoa()
+  const [itens, setItens] = useState<ItemAtividade[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  useEffect(() => {
+    const qs = new URLSearchParams({ period: 'custom', from: fromDay, to: toDay, detalhe, tipo })
+    if (setorId) qs.set('dept', setorId)
+    fetch(`/api/acessorias-metrics?${qs}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Não foi possível carregar.'))))
+      .then((d) => setItens(d.itens))
+      .catch((e) => setErro(e.message))
+  }, [detalhe, tipo, setorId, fromDay, toDay])
+
+  /* ⚠️ Esta janela abre POR CIMA da janela do sistema, que também fecha com Esc. Captura
+     o Esc antes e para nele — senão um Esc fecharia as duas. */
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onFechar() } }
+    window.addEventListener('keydown', h, { capture: true })
+    return () => window.removeEventListener('keydown', h, { capture: true })
+  }, [onFechar])
+
+  const porPessoa = new Map<string, { nome: string; id: string; hasAvatar: boolean; n: number }>()
+  for (const i of itens ?? []) {
+    const c = porPessoa.get(i.pessoa.id) ?? { ...i.pessoa, n: 0 }
+    c.n++; porPessoa.set(i.pessoa.id, c)
+  }
+  const ranking = [...porPessoa.values()].sort((a, b) => b.n - a.n)
+  const br = (d: string) => d.split('-').reverse().join('/')
+  const comp = (d: string | null) => (d ? `${d.slice(5, 7)}/${d.slice(0, 4)}` : '')
+
+  return (
+    <div onClick={onFechar} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="tc-anim"
+        style={{ width: 'min(820px, 100%)', maxHeight: 'min(80vh, 760px)', display: 'flex', flexDirection: 'column', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-2)', overflow: 'hidden' }}>
+        <div style={{ padding: '18px 22px', background: `linear-gradient(120deg, color-mix(in srgb, ${COR} 12%, var(--surface)) 0%, var(--surface) 70%)`, borderBottom: '1px solid var(--border)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <span style={{ width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${COR} 16%, transparent)`, color: COR, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><CalendarCheck size={20} /></span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{detalhe === 'obrigacao' ? 'Obrigação entregue' : 'Processo concluído'} · {label}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-.3px' }}>{tipo}</div>
+            {itens && <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 2 }}>{itens.length} {detalhe === 'obrigacao' ? (itens.length === 1 ? 'entrega' : 'entregas') : (itens.length === 1 ? 'processo' : 'processos')} · {ranking.length} {ranking.length === 1 ? 'pessoa' : 'pessoas'}</div>}
+          </div>
+          <button onClick={onFechar} aria-label="Fechar" title="Fechar (Esc)" className="tc-btn"
+            style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-dim)', cursor: 'pointer', flex: 'none' }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: '16px 22px 20px' }}>
+          {erro ? <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{erro}</div>
+            : !itens ? <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Carregando…</div>
+            : (
+              <>
+                {/* Quem fez, e quantas — clicar abre o painel da pessoa. */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {ranking.map((p) => (
+                    <button key={p.id || p.nome} type="button" onClick={() => p.id && abrirPessoa('acessorias', p.id)} className="tc-row"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 5px', border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface)', cursor: p.id ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit' }}>
+                      <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color={COR} size={24} />
+                      <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.nome}</span>
+                      <b className="cnum" style={{ fontSize: 12.5, color: COR }}>{p.n}</b>
+                    </button>
+                  ))}
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, tableLayout: 'fixed' }}>
+                  <colgroup><col /><col style={{ width: 110 }} /><col style={{ width: 70 }} /><col style={{ width: 210 }} /></colgroup>
+                  <thead>
+                    <tr style={{ color: 'var(--text-dim)', fontSize: 11.5 }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Quem fez</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Data</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>Hora</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 500 }}>{detalhe === 'obrigacao' ? 'Situação' : 'Início'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itens.map((i) => (
+                      <tr key={i.id} style={{ borderTop: '1px solid var(--border-soft)' }}>
+                        <td style={{ padding: '6px 8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <Avatar id={i.pessoa.id} hasAvatar={i.pessoa.hasAvatar} initials={iniciais(i.pessoa.nome)} color={COR} size={22} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.pessoa.nome}</span>
+                          </div>
+                        </td>
+                        <td className="cnum" style={{ padding: '6px 8px' }}>{br(i.dia)}</td>
+                        <td className="cnum" style={{ padding: '6px 8px', color: i.hora ? 'var(--text)' : 'var(--text-mute)' }} title={i.hora ? 'Hora registrada no Acessórias' : 'O Acessórias só guarda a hora da última alteração, e ela foi em outro dia'}>{i.hora ?? '—'}</td>
+                        <td style={{ padding: '6px 8px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i.status}{i.competencia ? ` · comp. ${comp(i.competencia)}` : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 10 }}>
+                  A hora é a última alteração registrada no Acessórias; aparece só quando foi no mesmo dia da entrega. Sem o nome do cliente, de propósito.
+                </div>
+              </>
+            )}
+        </div>
       </div>
     </div>
   )
