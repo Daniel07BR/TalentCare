@@ -87,13 +87,35 @@ export const nivelDe = (nota: number) => NIVEIS[ANCORAS.indexOf(ancoraDe(nota))]
 export const exigeJustificativa = (nota: number | null | undefined): boolean =>
   typeof nota === 'number' && (nota < 5 || nota > 8)
 
-/** Média das notas que EXISTEM. Critério "não se aplica" sai da conta e o peso
- *  se redistribui sozinho — é a divisão pelo número de notas aplicáveis. */
-export function mediaDe(notas: { nota: number | null }[]): number | null {
-  const aplicaveis = notas.filter((n): n is { nota: number } => typeof n.nota === 'number')
-  if (aplicaveis.length === 0) return null
-  return Math.round((aplicaveis.reduce((a, n) => a + n.nota, 0) / aplicaveis.length) * 10) / 10
+/**
+ * O RESULTADO de um conjunto de níveis — o da avaliação (os três pontos) e o do
+ * setor (as pessoas).
+ *
+ * ⚠️⚠️ É o nível que MAIS SE REPETE, e não a média (Daniel, 02/10/2026: "dois
+ * Atende e um Acima — o sistema deve considerar o que se repetir mais"). A média
+ * dava "Acima" para Atende·Atende·Acima (8,7), quando dois dos três pontos dizem
+ * "Atende". Empate (três níveis diferentes, ou 2 × 2 no setor): o nível DO MEIO
+ * da lista ordenada (o de baixo, se forem dois no meio) — nem o extremo de cima
+ * nem o de baixo decide sozinho.
+ *
+ * Devolve a NOTA de referência do nível (3/6/8/10), para `ancoraDe`/`nivelDe` e
+ * a coluna `avaliacao.media` seguirem valendo sem conversão. "Não se aplica"
+ * (nulo) fica fora. Valores antigos de 0–10 caem no nível da âncora deles.
+ */
+export function resultadoDe(valores: (number | null | undefined)[]): number | null {
+  const idx = valores.filter((v): v is number => typeof v === 'number').map((v) => ANCORAS.indexOf(ancoraDe(v))).sort((a, b) => a - b)
+  if (idx.length === 0) return null
+  const freq = new Map<number, number>()
+  for (const i of idx) freq.set(i, (freq.get(i) ?? 0) + 1)
+  const max = Math.max(...freq.values())
+  const modas = [...freq.entries()].filter(([, f]) => f === max).map(([i]) => i)
+  const escolhido = modas.length === 1 ? modas[0] : idx[Math.floor((idx.length - 1) / 2)]
+  return NIVEIS[escolhido].nota
 }
+
+/** O resultado dos pontos de UMA avaliação (ver `resultadoDe`). Nome antigo:
+ *  até 02/10/2026 era a média aritmética, e a coluna se chama `media` por isso. */
+export const mediaDe = (notas: { nota: number | null }[]): number | null => resultadoDe(notas.map((n) => n.nota))
 
 /** AAAA-MM da competência de um mês atrás (o mês fechado). */
 export function competenciaAnterior(hoje = new Date()): string {

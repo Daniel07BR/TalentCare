@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
 import { quemEh, filtroDeAvaliaveis, gestoresDaCasa, podeGerirServicos } from '@/lib/avaliacoes/regua'
-import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
+import { competenciaAnterior, resultadoDe } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
@@ -465,13 +465,12 @@ export async function GET(req: NextRequest) {
 
   // ── Avaliação do setor na competência ──────────────────────────────────────
   const medias = avals.map((a) => a.media).filter((v): v is number => v != null)
-  const porCriterio = new Map<string, { soma: number; n: number }>()
+  // Os níveis de cada ponto no setor — o resultado é o que mais se repete (`resultadoDe`).
+  const porCriterio = new Map<string, number[]>()
   for (const a of avals) {
     for (const nt of a.notas) {
-      if (nt.nota == null) continue // "não se aplica" fica fora da média
-      const c = porCriterio.get(nt.criterio) ?? { soma: 0, n: 0 }
-      c.soma += nt.nota; c.n++
-      porCriterio.set(nt.criterio, c)
+      if (nt.nota == null) continue // "não se aplica" fica fora
+      porCriterio.set(nt.criterio, [...(porCriterio.get(nt.criterio) ?? []), nt.nota])
     }
   }
 
@@ -955,9 +954,10 @@ export async function GET(req: NextRequest) {
       competencia: compAtual,
       publicadas: avals.length,
       avaliaveis,
-      media: medias.length ? Math.round((medias.reduce((a, b) => a + b, 0) / medias.length) * 10) / 10 : null,
-      porCriterio: [...porCriterio.entries()].map(([criterio, c]) => ({
-        criterio, media: Math.round((c.soma / c.n) * 10) / 10, n: c.n,
+      // ⚠️ O nível que mais se repete, não a média (02/10/2026). O campo segue `media`.
+      media: resultadoDe(medias),
+      porCriterio: [...porCriterio.entries()].map(([criterio, notas]) => ({
+        criterio, media: resultadoDe(notas)!, n: notas.length,
       })),
     },
   })

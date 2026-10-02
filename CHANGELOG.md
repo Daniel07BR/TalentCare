@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Resultado do mês: o nível que mais se repete
+
+Pedido do Daniel: *"dois Atende e um Acima — o sistema deve considerar o que se repetir mais"*.
+A média dava "Acima" para Atende·Atende·Acima.
+
+- `resultadoDe` (`lib/avaliacoes/criterios.ts`): o nível **mais frequente**; empate (três
+  diferentes, ou 2 × 2 no setor) → o **do meio** da lista ordenada (o de baixo, se forem dois).
+  Vale para a avaliação (os três pontos), para o setor (as pessoas) e para cada ponto no setor
+  (relatório completo, área do setor, lista de pessoas).
+- A coluna `avaliacao.media` passa a guardar a nota de referência do nível (3/6/8/10); o nome
+  ficou por compatibilidade. As avaliações já gravadas foram recalculadas pela regra nova.
+
 ## 2026-10-02 — Avaliação: observação aberta em todos os níveis
 
 - O campo de observação de cada ponto abre em **qualquer** nível escolhido: **opcional** em
