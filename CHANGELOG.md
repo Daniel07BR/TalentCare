@@ -1,5 +1,14 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: base científica à vista e PDF sempre achável
+
+- **"Avaliação com base científica"**: faixa no topo das duas telas com os métodos e, num
+  clique, a fonte de cada um, o que a tela faz por causa dele e o que garante ao avaliado
+  (BARS, tarefa × contextual, SBI, nível em destaque; perguntas de intenção só para a
+  gestão). Na página do avaliado nasce aberta. O PDF ganhou a linha das fontes.
+- **Botão do PDF** no cartão da pessoa, sempre visível: antes de publicar aparece
+  desligado, com "Disponível depois de publicar a avaliação" (rascunho não se assina).
+
 ## 2026-10-02 — Avaliação mensal: o método, a régua da T.I e o PDF para assinar
 
 Pedido do Daniel: um método reconhecido, que a Diretoria aprove e que se defenda numa

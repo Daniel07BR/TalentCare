@@ -6,11 +6,10 @@ import {
   CRITERIOS, NIVEIS, ancoraDe, nivelDe, exigeJustificativa, mediaDe,
   competenciaLabel, competenciaAnterior,
 } from '@/lib/avaliacoes/criterios'
-import {
-  significado, METODO_PONTOS, METODO_REFERENCIA, PERGUNTAS_GESTAO,
-  type ReguaDoSetor, type Gestao,
-} from '@/lib/avaliacoes/metodo'
+import { FileDown } from 'lucide-react'
+import { significado, PERGUNTAS_GESTAO, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../TermoImpresso'
+import { MetodoCientifico } from '../MetodoCientifico'
 import st from './avaliar.module.css'
 
 const GESTAO_VAZIA: Gestao = { querNaEquipe: null, prontoParaMais: null, emRisco: null, anotacao: null }
@@ -138,6 +137,21 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
             </div>
 
             <button onClick={() => router.push(`/funcionarios/${d.pessoa.id}`)} className={`tc-btn ${st.botaoFicha}`}>Ver a ficha completa</button>
+
+            {/* ⚠️ O botão do PDF fica SEMPRE à vista (02/10/2026): só no topo e só
+                depois de publicar, "não achei o botão". Rascunho não se assina —
+                então antes de publicar ele aparece desligado, dizendo por quê. */}
+            {jaPublicada
+              ? <BotaoTermo avaliadoId={d.pessoa.id} competencia={competencia} estilo={{ width: '100%', justifyContent: 'center', marginTop: 8 }} />
+              : (
+                <div style={{ width: '100%', marginTop: 8 }}>
+                  <button type="button" disabled className="tc-btn" title="Publique a avaliação para gerar o PDF"
+                    style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 16px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)', background: 'transparent', color: 'var(--text-mute)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, cursor: 'not-allowed' }}>
+                    <FileDown size={15} /> Gerar PDF para assinar
+                  </button>
+                  <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 5 }}>Disponível depois de publicar a avaliação.</div>
+                </div>
+              )}
           </div>
 
           {/*
@@ -151,18 +165,6 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
             <span>A <b>ficha</b> mostra o que os sistemas registraram. Esta nota é <b>o que você observou</b>. Quando as duas discordam, é aí que há algo a conversar.</span>
           </div>
 
-          {/* O MÉTODO, à vista de quem avalia (02/10/2026): é o que se responde
-              quando a nota é questionada. */}
-          <details className={st.metodo}>
-            <summary>Como funciona esta avaliação</summary>
-            <ul>
-              {METODO_PONTOS.map((p) => <li key={p.titulo}><b>{p.titulo}.</b> {p.texto}</li>)}
-            </ul>
-            <p>{d.regua.propria
-              ? `Os textos dos níveis são a régua escrita do setor ${d.regua.setor}.`
-              : 'Este setor ainda usa a régua genérica; a régua escrita do setor entra quando for definida.'}</p>
-            <p className={st.metodoRef}>{METODO_REFERENCIA}</p>
-          </details>
         </aside>
 
         {/* ---------- À DIREITA: o que se avalia ---------- */}
@@ -179,6 +181,11 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
 
           {(d.posso || (d.avaliacao && jaPublicada)) && (
             <>
+              <MetodoCientifico paraGestao />
+              {!d.regua.propria && (
+                <Aviso cor="var(--text-mute)">Este setor ainda usa a régua genérica. A régua escrita do setor entra quando for definida.</Aviso>
+              )}
+
               <div className={st.cabecalho}>
                 <div>
                   <h2 className={st.titulo}>Avaliação de {competenciaLabel(competencia)}</h2>
@@ -190,7 +197,6 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   <div className={st.situacao}>
                     Publicada{d.avaliacao!.versao > 1 ? ` · versão ${d.avaliacao!.versao}` : ''}
                     {d.avaliacao!.ciencia?.cienteEm ? ' · a pessoa já leu' : ' · aguardando ciência'}
-                    <BotaoTermo avaliadoId={d.pessoa.id} competencia={competencia} />
                   </div>
                 )}
               </div>

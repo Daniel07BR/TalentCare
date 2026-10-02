@@ -2,8 +2,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import Avatar from '../Avatar'
 import { CRITERIOS, criterioDe, ancoraDe, nivelDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
-import { significado, METODO_RESUMO, METODO_PONTOS, METODO_REFERENCIA, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
+import { significado, METODO_RESUMO, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../avaliacoes/TermoImpresso'
+import { MetodoCientifico } from '../avaliacoes/MetodoCientifico'
 
 type Nota = { criterio: string; nota: number | null; justificativa: string | null }
 type Av = {
@@ -98,14 +99,12 @@ export default function MinhaAvaliacaoPage() {
         </div>
       )}
 
-      <details style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 16, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text)' }}>Como funciona a sua avaliação</summary>
-        <p style={{ margin: '10px 0 6px' }}>{METODO_RESUMO}</p>
-        <ul style={{ margin: '0 0 6px', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {METODO_PONTOS.map((p) => <li key={p.titulo}><b>{p.titulo}.</b> {p.texto}</li>)}
-        </ul>
-        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontStyle: 'italic' }}>{METODO_REFERENCIA}</div>
-      </details>
+      {/* A base científica nasce ABERTA aqui: é na página de quem é avaliado que a
+          resistência mora (02/10/2026). */}
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>{METODO_RESUMO}</p>
+        <MetodoCientifico abertoDeInicio />
+      </div>
 
       {d.avaliacoes.length === 0 ? (
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
