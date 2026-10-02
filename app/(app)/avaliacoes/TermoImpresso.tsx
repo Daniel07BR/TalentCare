@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FileDown } from 'lucide-react'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import { METODO_RESUMO, METODO_REFERENCIA } from '@/lib/avaliacoes/metodo'
+import { METODO_RESUMO, METODO_REFERENCIA, FONTES_CURTAS } from '@/lib/avaliacoes/metodo'
 
 /* ============================================================
    O TERMO EM A4 — a avaliação do mês para assinar (02/10/2026).
@@ -140,7 +140,7 @@ function Folha({ t }: { t: Termo }) {
 
       <div className="tr-metodo">
         {METODO_RESUMO} Você pode registrar a sua observação abaixo; ela fica junto da avaliação e não altera o resultado.
-        <i>{METODO_REFERENCIA}</i>
+        <i>{METODO_REFERENCIA} Base científica: {FONTES_CURTAS}</i>
       </div>
 
       <table className="tr-tab">

@@ -100,3 +100,50 @@ export const PERGUNTAS_GESTAO = [
 ] as const
 export type GestaoKey = (typeof PERGUNTAS_GESTAO)[number]['key']
 export type Gestao = Record<GestaoKey, boolean | null> & { anotacao: string | null }
+
+/* ── A BASE CIENTÍFICA, com as fontes (02/10/2026) ──────────────────────────
+   Pedido do Daniel: "deixar mais claro os métodos científicos usados para já
+   quebrarmos resistências". Cada item diz a FONTE, o que a tela faz por causa
+   dela e o que isso garante a quem é avaliado.
+   ⚠️ Só entra aqui o que o sistema REALMENTE faz. Citar um estudo para uma
+   regra que a tela não cumpre é o jeito mais rápido de perder a confiança que
+   esta lista existe para ganhar. `soGestao` = o avaliado não vê o item (as
+   perguntas de intenção ficam fora da página dele). */
+export const BASE_CIENTIFICA: {
+  metodo: string; fonte: string; naPratica: string; garante: string; soGestao?: boolean
+}[] = [
+  {
+    metodo: 'Escala ancorada em comportamento (BARS)',
+    fonte: 'Smith & Kendall, 1963 — Journal of Applied Psychology',
+    naPratica: 'Cada nível descreve o que a pessoa faz no cargo, escrito antes do mês começar.',
+    garante: 'O avaliador compara o que viu com o que está escrito, e não com a impressão dele.',
+  },
+  {
+    metodo: 'Desempenho de tarefa e contextual',
+    fonte: 'Borman & Motowidlo, 1993 — Personnel Selection in Organizations',
+    naPratica: 'Entrega mede o resultado; Atitude e Equipe medem o jeito de trabalhar.',
+    garante: 'Avalia o que se faz e como se faz. Personalidade não entra.',
+  },
+  {
+    metodo: 'Feedback Situação → Comportamento → Impacto (SBI)',
+    fonte: 'Center for Creative Leadership — Weitzel, 2000',
+    naPratica: '"Abaixo" e "Acima" só se publicam com o fato que levou a eles.',
+    garante: 'Nenhuma nota extrema sem um exemplo concreto que se possa conversar.',
+  },
+  {
+    metodo: 'O nível em destaque, o número discreto',
+    fonte: 'Kluger & DeNisi, 1996 — Psychological Bulletin (meta-análise)',
+    naPratica: 'A página mostra o nome do nível e o exemplo; a média aparece pequena.',
+    garante: 'A conversa fica no que fazer no próximo mês, e não na disputa por décimos.',
+  },
+  {
+    metodo: 'Perguntas sobre o que o avaliador faria',
+    fonte: 'Buckingham & Goodall, 2015 — Harvard Business Review (Deloitte); Scullen, Mount & Goff, 2000',
+    naPratica: '"Quero na equipe", "pronto para mais", "corre risco" — só a gestão vê.',
+    garante: 'Julgar a própria intenção varia menos de avaliador para avaliador do que julgar a pessoa.',
+    soGestao: true,
+  },
+]
+
+/** As fontes em uma linha, para o rodapé do PDF. */
+export const FONTES_CURTAS = 'Smith & Kendall (1963); Borman & Motowidlo (1993); Weitzel / Center for Creative Leadership (2000); Kluger & DeNisi (1996).'

@@ -147,16 +147,6 @@
 .botaoPrincipal { background: var(--accent); border: none; color: #fff; }
 .botao:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ---------- O MÉTODO (02/10/2026) ---------- */
-.metodo {
-  padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  font-size: 12px; color: var(--text-dim); line-height: 1.55;
-}
-.metodo summary { cursor: pointer; font-weight: 700; color: var(--text); font-size: 12.5px; }
-.metodo ul { margin: 10px 0 8px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
-.metodo p { margin: 6px 0 0; }
-.metodoRef { font-size: 11px; color: var(--text-mute); font-style: italic; }
-
 /* ---------- SÓ DA GESTÃO ---------- */
 .gestao { border-left: 3px solid var(--text-mute); }
 .gestaoSub { font-size: 12px; color: var(--text-dim); margin: -2px 0 10px; }
