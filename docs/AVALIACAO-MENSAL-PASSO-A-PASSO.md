@@ -91,8 +91,22 @@ sorriso no rosto") vale mais que qualquer contador.
 | 4 | 3 |
 
 Escrever "3 advertências e 4 atrasos" como se fossem 7 coisas é erro — e o funcionário
-contesta com razão. Escreva: *"houve 4 atrasos, e pela regra da casa o segundo atraso do
-mês em diante gera advertência"*.
+contesta com razão. Ligue os dois: os atrasos **geraram** as advertências.
+
+### ⚠️⚠️ O PADRÃO DO TEXTO (definido pelo Daniel em 02/10/2026 — siga sempre)
+
+**Só a contagem do mês — sem dias, sem horários, sem minutos.** O script de insumos mostra
+o detalhe para VOCÊ conferir; ele não vai para o texto. O modelo, como o Daniel escreveu:
+
+> *"O critério deste ponto inclui seguir as regras da casa, e a pontualidade é uma delas.
+> Em setembro foram 4 atrasos na entrada e isso gerou 3 advertências. Por outro lado, houve
+> comprometimento: em vários dias você adiou o seu almoço para não deixar demandas urgentes
+> paradas."*
+
+A estrutura: **regra da casa → contagem do mês ("X atrasos e isso gerou Y advertências") →
+o lado positivo do mesmo ponto**, quando houver. Com 1 atraso só, não há advertência: diga
+"houve 1 atraso na entrada". Mesmo para o perfil Conforme (C), que gosta de dados, a
+precisão vem do **critério** e da contagem — não da lista de datas.
 
 Outros cuidados:
 - **Abonado não conta contra** — não cite.
@@ -178,17 +192,21 @@ dia 30, 105 min) → 1 advertência.
   clima do atendimento melhora para todos. Esse jeito de tratar as pessoas vai além do que
   o cargo pede."* — elogia o efeito nas pessoas (I) e a confiabilidade (S).
 - **Atitude (Atende), com os atrasos:** *"Você assume o que é seu e está sempre disposto a
-  ajudar. Em setembro houve 2 atrasos (dia 8, de 3 minutos, e dia 30, de 105 minutos), e
-  pela regra da casa o segundo atraso do mês gera uma advertência. Sabemos que imprevistos
-  acontecem; o que pedimos é chegar no horário e, quando não for possível, avisar antes,
-  para que a equipe possa se organizar."* — cobra com calma e explica o porquê (S).
+  ajudar. Em setembro foram 2 atrasos na entrada e isso gerou 1 advertência. Sabemos que
+  imprevistos acontecem; o que pedimos é chegar no horário e, quando não for possível, avisar
+  antes, para que a equipe possa se organizar."* — cobra com calma e explica o porquê (S).
+  (Sem dias nem minutos: o padrão de §4.)
 - **Combinados:** (1) organizar o departamento; (2) atualizar o HelpDesk com todos os
   equipamentos; (3) começar a atender chamados de programação, pelos mais simples e com
   acompanhamento — a mudança vem com por onde começar e apoio (S).
 
 ### Yuri — Entrega: Acima · Atitude: Atende · Equipe e comunicação: Em parte → **Atende**
-4 atrasos → 3 advertências (o mesmo fato). Começou com Atitude "Acima"; com os atrasos, o
-"Acima" ficou indefensável e foi corrigido (versão com motivo).
+DISC: **Conforme** (C 29%) — elogio específico (o QUE ficou bom e por quê), cobrança pelo
+critério e pelo fato, falando do trabalho e nunca da pessoa. 4 atrasos → 3 advertências (o
+mesmo fato). Começou com Atitude "Acima"; com os atrasos, o "Acima" ficou indefensável e foi
+corrigido (versão com motivo).
+
+- **Atitude (Atende):** o modelo de §4, escrito pelo Daniel.
 
 - **Equipe e comunicação (Em parte):** *"Dentro da T.I você colabora bem: divide o que sabe e
   ajuda os colegas quando aparece um problema. O ponto a melhorar é o atendimento aos outros
