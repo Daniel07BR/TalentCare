@@ -99,6 +99,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           documento: av.documento
             ? {
                 temFrente: !!av.documento.frenteTipo, temVerso: !!av.documento.versoTipo,
+                // O PDF é pesado: pergunta só se existe, sem trazer os bytes.
+                temPdf: (await prisma.avaliacaoDocumento.count({ where: { avaliacaoId: av.id, pdf: { not: null } } })) > 0,
                 concluidaEm: av.documento.concluidaEm, versaoAssinada: av.documento.versaoAssinada,
                 concluidaPor: av.documento.concluidaPorId
                   ? (await prisma.user.findUnique({ where: { id: av.documento.concluidaPorId }, select: { name: true } }))?.name ?? null

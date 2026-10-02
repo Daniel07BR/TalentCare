@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FileDown } from 'lucide-react'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import { METODO_RESUMO, METODO_REFERENCIA, FONTES_CURTAS } from '@/lib/avaliacoes/metodo'
+import { FONTES_CURTAS } from '@/lib/avaliacoes/metodo'
 
 /* ============================================================
    O TERMO EM A4 — a avaliação do mês para assinar (02/10/2026).
@@ -29,46 +29,79 @@ type Termo = {
   publicadaEm: string | null
   versao: number
   reguaPropria: boolean
-  resultado: { nivel: string; media: number } | null
-  pontos: { criterio: string; sub: string | null; nivel: string; significado: string; exemplo: string | null }[]
+  resultado: { nivel: string; nivelKey: string; media: number } | null
+  pontos: { criterio: string; sub: string | null; nivel: string; nivelKey: string | null; significado: string; exemplo: string | null }[]
   recado: string | null
   combinado: string | null
   ciencia: { em: string; comentario: string | null } | null
 }
 
+/* As cores dos quatro níveis no papel — as mesmas da tela, em tons que imprimem. */
+const COR: Record<string, { forte: string; fundo: string }> = {
+  abaixo: { forte: '#dc2626', fundo: '#fdecec' },
+  parte: { forte: '#b45309', fundo: '#fef3c7' },
+  atende: { forte: '#15803d', fundo: '#dcfce7' },
+  acima: { forte: '#6d28d9', fundo: '#ede9fe' },
+}
+const NIVEIS_PAPEL = [['abaixo', 'Abaixo'], ['parte', 'Em parte'], ['atende', 'Atende'], ['acima', 'Acima']] as const
+
+/* ⚠️⚠️ UMA PÁGINA (02/10/2026 — "preciso imprimir tudo em 1 página"). A folha é
+   desenhada no tamanho do A4 (794 × 1123 px a 96 dpi) e, antes de imprimir, é
+   MEDIDA: se passar da altura, a redução (`zoom`) cai o tanto que for preciso —
+   e a largura cresce na mesma proporção, para o texto se redistribuir em vez de
+   deixar uma faixa branca à direita. Recado longo encolhe a letra, não cria a
+   página 2.
+   ⚠️ `@page { margin: 0 }` some com o cabeçalho e o rodapé do navegador (data,
+   título, endereço) — a margem do papel é o padding da folha. */
+const A4_L = 794
+const A4_A = 1123
 const CSS = `
 .tr-root { display: none; }
 @media print {
-  @page { size: A4 portrait; margin: 12mm 13mm 12mm; }
-  html, body { background: #fff !important; }
+  @page { size: A4 portrait; margin: 0; }
+  html, body { background: #fff !important; margin: 0 !important; }
   body > *:not(.tr-root) { display: none !important; }
   .tr-root { display: block !important; }
 }
 .tr-root, .tr-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-.tr-folha { color: #0f172a; font-family: Inter, 'Segoe UI', system-ui, sans-serif; font-size: 10.5pt; line-height: 1.4; }
-.tr-topo { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; }
-.tr-topo h1 { margin: 0; font-size: 16pt; letter-spacing: -.3px; }
-.tr-topo small { color: #475569; font-size: 9pt; }
-.tr-ident { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 4px 14px; margin-bottom: 10px; font-size: 9.5pt; }
-.tr-ident b { display: block; font-size: 7.5pt; color: #64748b; text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
-.tr-metodo { background: #f1f5f9; border-radius: 6px; padding: 7px 10px; font-size: 8.5pt; color: #334155; margin-bottom: 10px; }
-.tr-metodo i { display: block; margin-top: 3px; color: #64748b; }
-table.tr-tab { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9pt; }
-.tr-tab th { text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .4px; color: #64748b; border-bottom: 1px solid #cbd5e1; padding: 4px 6px; }
-.tr-tab td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; }
-.tr-tab td.tr-nivel { font-weight: 700; white-space: nowrap; }
-.tr-sub { color: #64748b; font-weight: 400; }
+.tr-folha { width: ${A4_L}px; padding: 34px 40px 26px; color: #0f172a; font-family: Inter, 'Segoe UI', system-ui, sans-serif; font-size: 12px; line-height: 1.42; background: #fff; }
+.tr-faixa { background: #0f172a; color: #fff; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #f59e0b; }
+.tr-faixa h1 { margin: 0; font-size: 19px; letter-spacing: -.3px; }
+.tr-faixa .tr-comp { color: #fbbf24; font-weight: 700; }
+.tr-faixa small { color: #cbd5e1; font-size: 10.5px; text-align: right; line-height: 1.35; }
+.tr-ident { display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 1fr; gap: 6px 14px; margin: 12px 2px; }
+.tr-ident b { display: block; font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+.tr-ident span { font-weight: 600; }
+.tr-tit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #f59e0b; margin: 0 0 6px; }
+.tr-metodo { display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: 8px; margin-bottom: 12px; }
+.tr-passo { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; background: #f8fafc; font-size: 10.5px; color: #334155; }
+.tr-passo h3 { margin: 0 0 4px; font-size: 11.5px; color: #0f172a; display: flex; gap: 6px; align-items: center; }
+.tr-passo h3 i { font-style: normal; background: #0f172a; color: #fff; border-radius: 50%; width: 17px; height: 17px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; }
+.tr-chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 2px 0 3px; }
+.tr-chip { border-radius: 999px; padding: 1px 8px; font-size: 10px; font-weight: 700; }
+table.tr-tab { width: 100%; border-collapse: separate; border-spacing: 0 5px; margin: -5px 0 4px; }
+.tr-tab th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; padding: 0 8px; }
+.tr-tab td { padding: 8px; vertical-align: top; background: #f8fafc; font-size: 11px; }
+.tr-tab td:first-child { border-radius: 8px 0 0 8px; border-left: 5px solid var(--c); }
+.tr-tab td:last-child { border-radius: 0 8px 8px 0; }
+.tr-tab .tr-nivel { display: inline-block; border-radius: 6px; padding: 3px 8px; font-weight: 800; font-size: 11px; white-space: nowrap; background: var(--f); color: var(--c); }
+.tr-sub { color: #64748b; font-weight: 400; display: block; font-size: 10px; }
 .tr-mute { color: #475569; }
-.tr-resultado { font-size: 9.5pt; margin-bottom: 10px; }
-.tr-bloco { margin-bottom: 9px; break-inside: avoid; }
-.tr-bloco h2 { margin: 0 0 3px; font-size: 8pt; text-transform: uppercase; letter-spacing: .4px; color: #64748b; }
-.tr-bloco p { margin: 0; white-space: pre-wrap; font-size: 9.5pt; }
-.tr-linha { border-bottom: 1px solid #94a3b8; height: 22px; }
-.tr-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 26px; break-inside: avoid; }
-.tr-assin div { font-size: 9pt; }
-.tr-assin .tr-traco { border-top: 1px solid #0f172a; padding-top: 4px; margin-top: 34px; }
-.tr-assin .tr-data { margin-top: 12px; color: #334155; }
-.tr-rodape { margin-top: 14px; font-size: 7.5pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 4px; }
+.tr-resultado { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; padding: 9px 12px; border-radius: 8px; background: var(--f); border: 1px solid var(--c); }
+.tr-resultado b { color: var(--c); font-size: 14px; }
+.tr-dois { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.tr-caixa { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; border-top: 3px solid var(--c, #0f172a); }
+.tr-caixa h2 { margin: 0 0 3px; font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--c, #64748b); }
+.tr-caixa p { margin: 0; white-space: pre-wrap; font-size: 11px; }
+.tr-obs { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px 4px; border-top: 3px solid #0ea5e9; margin-bottom: 4px; }
+.tr-obs h2 { margin: 0; font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: #0369a1; }
+.tr-obs small { color: #64748b; font-size: 10px; }
+.tr-linha { border-bottom: 1px solid #94a3b8; height: 24px; }
+.tr-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 30px; }
+.tr-assin .tr-traco { border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; }
+.tr-assin .tr-papel { color: #64748b; font-size: 10px; }
+.tr-assin .tr-data { margin-top: 10px; color: #334155; font-size: 11px; }
+.tr-rodape { margin-top: 16px; font-size: 8.5px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; gap: 12px; }
 `
 
 const data = (s: string | null) => (s ? new Date(s).toLocaleDateString('pt-BR') : '—')
@@ -89,9 +122,32 @@ export function BotaoTermo({ avaliadoId, competencia, estilo }: { avaliadoId: st
     document.title = `Avaliação - ${termo.pessoa.nome} - ${competenciaLabel(termo.competencia)}`
     const volta = () => { document.title = antes; window.removeEventListener('afterprint', volta) }
     window.addEventListener('afterprint', volta)
-    const t = setTimeout(() => window.print(), 50)
+    const t = setTimeout(() => { caber(); window.print() }, 50)
     return () => clearTimeout(t)
   }, [termo])
+
+  /** Mede a folha fora da tela e reduz até caber numa página A4. */
+  function caber() {
+    const root = document.querySelector<HTMLElement>('.tr-root')
+    const folha = root?.querySelector<HTMLElement>('.tr-folha')
+    if (!root || !folha) return
+    const antes = root.getAttribute('style') ?? ''
+    root.setAttribute('style', 'display:block;position:absolute;left:-20000px;top:0;')
+    let z = 1
+    folha.style.zoom = '1'; folha.style.width = `${A4_L}px`
+    for (let i = 0; i < 4; i++) {
+      const h = folha.scrollHeight
+      const alvo = Math.min(1, (A4_A - 4) / (h * z) * z)
+      if (Math.abs(alvo - z) < 0.005) break
+      z = alvo
+      folha.style.width = `${A4_L / z}px`
+    }
+    // Trava final: com a largura que ficou, se ainda passar, reduz sem mexer na largura.
+    const h = folha.scrollHeight
+    if (h * z > A4_A - 4) z = (A4_A - 4) / h
+    folha.style.zoom = String(z)
+    root.setAttribute('style', antes)
+  }
 
   async function gerar() {
     setErro(null); setCarregando(true)
@@ -122,74 +178,104 @@ export function BotaoTermo({ avaliadoId, competencia, estilo }: { avaliadoId: st
 }
 
 function Folha({ t }: { t: Termo }) {
+  const res = t.resultado ? COR[t.resultado.nivelKey] : null
   return (
     <div className="tr-folha">
-      <div className="tr-topo">
-        <h1>Avaliação de desempenho · {competenciaLabel(t.competencia)}</h1>
-        <small>TalentCare · Grupo Itamarathy</small>
+      <div className="tr-faixa">
+        <div>
+          <h1>Avaliação de desempenho</h1>
+          <div className="tr-comp">{competenciaLabel(t.competencia)}</div>
+        </div>
+        <small>TalentCare<br />Grupo Itamarathy</small>
       </div>
 
       <div className="tr-ident">
-        <div><b>Funcionário</b>{t.pessoa.nome}</div>
-        <div><b>Cargo</b>{t.pessoa.cargo}</div>
-        <div><b>Setor</b>{t.pessoa.setor}</div>
-        <div><b>Avaliador</b>{t.avaliador.nome}{t.avaliador.cargo ? ` · ${t.avaliador.cargo}` : ''}</div>
-        <div><b>Publicada em</b>{data(t.publicadaEm)}{t.versao > 1 ? ` · versão ${t.versao}` : ''}</div>
-        <div><b>Competência</b>{competenciaLabel(t.competencia)}</div>
+        <div><b>Funcionário</b><span>{t.pessoa.nome}</span></div>
+        <div><b>Cargo · Setor</b><span>{t.pessoa.cargo} · {t.pessoa.setor}</span></div>
+        <div><b>Avaliador</b><span>{t.avaliador.nome}</span></div>
+        <div><b>Publicada em</b><span>{data(t.publicadaEm)}{t.versao > 1 ? ` · v${t.versao}` : ''}</span></div>
       </div>
 
+      {/* O MÉTODO em três quadros — "mais resumida, simples e direta". */}
+      <div className="tr-tit">Como você foi avaliado</div>
       <div className="tr-metodo">
-        {METODO_RESUMO} Você pode registrar a sua observação abaixo; ela fica junto da avaliação e não altera o resultado.
-        <i>{METODO_REFERENCIA} Base científica: {FONTES_CURTAS}</i>
+        <div className="tr-passo">
+          <h3><i>1</i>3 pontos</h3>
+          <b>Entrega</b> (o resultado), <b>Atitude</b> (o jeito de trabalhar) e <b>Equipe e comunicação</b>.
+        </div>
+        <div className="tr-passo">
+          <h3><i>2</i>4 níveis</h3>
+          <div className="tr-chips">
+            {NIVEIS_PAPEL.map(([k, r]) => <span key={k} className="tr-chip" style={{ background: COR[k].fundo, color: COR[k].forte }}>{r}</span>)}
+          </div>
+          Cada nível tem uma descrição escrita para o seu {t.reguaPropria ? 'setor' : 'cargo'}, conhecida antes do mês.
+        </div>
+        <div className="tr-passo">
+          <h3><i>3</i>Fatos e a sua voz</h3>
+          &quot;Abaixo&quot; e &quot;Acima&quot; sempre vêm com o fato que levou a eles. Você escreve a sua observação abaixo: ela fica registrada e não muda o resultado.
+        </div>
       </div>
 
+      <div className="tr-tit">O resultado do mês</div>
       <table className="tr-tab">
         <thead>
-          <tr><th style={{ width: '20%' }}>Ponto</th><th style={{ width: '16%' }}>Nível</th><th>O que este nível significa{t.reguaPropria ? ` no setor` : ''}</th><th style={{ width: '30%' }}>Exemplo do avaliador</th></tr>
+          <tr><th style={{ width: '19%' }}>Ponto</th><th style={{ width: '15%' }}>Nível</th><th style={{ width: '30%' }}>O que este nível significa</th><th>Exemplo do avaliador</th></tr>
         </thead>
         <tbody>
-          {t.pontos.map((p) => (
-            <tr key={p.criterio}>
-              <td><b>{p.criterio}</b>{p.sub && <span className="tr-sub"> — {p.sub}</span>}</td>
-              <td className="tr-nivel">{p.nivel}</td>
-              <td className="tr-mute">{p.significado}</td>
-              <td>{p.exemplo ?? <span className="tr-mute">—</span>}</td>
-            </tr>
-          ))}
+          {t.pontos.map((p) => {
+            const c = p.nivelKey ? COR[p.nivelKey] : { forte: '#94a3b8', fundo: '#f1f5f9' }
+            return (
+              <tr key={p.criterio} style={{ ['--c' as string]: c.forte, ['--f' as string]: c.fundo }}>
+                <td><b>{p.criterio}</b>{p.sub && <span className="tr-sub">{p.sub}</span>}</td>
+                <td><span className="tr-nivel">{p.nivel}</span></td>
+                <td className="tr-mute">{p.significado}</td>
+                <td>{p.exemplo ?? <span className="tr-mute">—</span>}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
 
-      {t.resultado && (
-        <div className="tr-resultado">Resultado geral do mês: <b>{t.resultado.nivel}</b> <span className="tr-mute">(média {t.resultado.media.toFixed(1).replace('.', ',')})</span></div>
-      )}
-
-      {t.recado && <div className="tr-bloco"><h2>Recado do avaliador</h2><p>{t.recado}</p></div>}
-      {t.combinado && <div className="tr-bloco"><h2>Combinado para o próximo mês</h2><p>{t.combinado}</p></div>}
-      {t.ciencia && (
-        <div className="tr-bloco">
-          <h2>Ciência registrada no sistema em {data(t.ciencia.em)}</h2>
-          {t.ciencia.comentario ? <p>{t.ciencia.comentario}</p> : <p className="tr-mute">Sem comentário.</p>}
+      {t.resultado && res && (
+        <div className="tr-resultado" style={{ ['--c' as string]: res.forte, ['--f' as string]: res.fundo }}>
+          Resultado geral: <b>{t.resultado.nivel}</b>
+          <span className="tr-mute" style={{ marginLeft: 'auto', fontSize: 10.5 }}>média {t.resultado.media.toFixed(1).replace('.', ',')} de 10</span>
         </div>
       )}
 
-      <div className="tr-bloco">
-        <h2>Observações do funcionário</h2>
-        {Array.from({ length: 5 }, (_, i) => <div key={i} className="tr-linha" />)}
+      {(t.recado || t.combinado) && (
+        <div className="tr-dois" style={!t.recado || !t.combinado ? { gridTemplateColumns: '1fr' } : undefined}>
+          {t.recado && <div className="tr-caixa" style={{ ['--c' as string]: '#6d28d9' }}><h2>Recado do avaliador</h2><p>{t.recado}</p></div>}
+          {t.combinado && <div className="tr-caixa" style={{ ['--c' as string]: '#15803d' }}><h2>Combinado para o próximo mês</h2><p>{t.combinado}</p></div>}
+        </div>
+      )}
+
+      {t.ciencia?.comentario && (
+        <div className="tr-caixa" style={{ ['--c' as string]: '#0369a1', marginBottom: 10 }}>
+          <h2>O que você registrou no sistema em {data(t.ciencia.em)}</h2><p>{t.ciencia.comentario}</p>
+        </div>
+      )}
+
+      <div className="tr-obs">
+        <h2>Suas observações</h2>
+        <small>Concorda? Discorda de algum ponto? Quer contar algo que o mês não mostrou?</small>
+        {Array.from({ length: 4 }, (_, i) => <div key={i} className="tr-linha" />)}
       </div>
 
       <div className="tr-assin">
         <div>
-          <div className="tr-traco"><b>{t.pessoa.nome}</b><br />Funcionário</div>
+          <div className="tr-traco"><b>{t.pessoa.nome}</b><div className="tr-papel">Funcionário</div></div>
           <div className="tr-data">Data: ____/____/________</div>
         </div>
         <div>
-          <div className="tr-traco"><b>{t.avaliador.nome}</b><br />Gestor do departamento</div>
+          <div className="tr-traco"><b>{t.avaliador.nome}</b><div className="tr-papel">Gestor do departamento</div></div>
           <div className="tr-data">Data: ____/____/________</div>
         </div>
       </div>
 
       <div className="tr-rodape">
-        Gerado pelo TalentCare em {new Date().toLocaleString('pt-BR')}. Este documento contém apenas o que foi mostrado ao funcionário na avaliação publicada.
+        <span>Método: escala ancorada em comportamento (BARS) e feedback Situação → Comportamento → Impacto. Fontes: {FONTES_CURTAS}</span>
+        <span style={{ whiteSpace: 'nowrap' }}>Gerado em {new Date().toLocaleDateString('pt-BR')}</span>
       </div>
     </div>
   )
