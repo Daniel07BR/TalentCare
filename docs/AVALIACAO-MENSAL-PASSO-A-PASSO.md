@@ -46,7 +46,10 @@ dele: separar itens de texto sem mudar conteúdo — e mesmo assim gravando a ve
 7. **"Só para a gestão"** (quero na equipe / pronto para mais / corre risco + anotação):
    **nunca** vai para o funcionário nem para o PDF. Responde-se pelo que o gestor
    **faria**, não pelo que acha.
-8. **Depois de publicar, ainda se corrige** (com motivo, a versão anterior fica). **Depois
+8. **Só a T.I está liberada** (piloto, desde 02/10/2026). Os outros setores não aparecem na
+   fila nem na área de avaliações. Liberar um setor = acrescentar o nome em
+   `SETORES_COM_AVALIACAO` (`lib/avaliacoes/criterios.ts`) — só com a palavra do Daniel.
+9. **Depois de publicar, ainda se corrige** (com motivo, a versão anterior fica). **Depois
    de anexar o documento assinado e concluir, nada muda mais.**
 
 O método por trás (para explicar a quem perguntar): escala ancorada em comportamento
