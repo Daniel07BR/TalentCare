@@ -6,7 +6,14 @@ import {
   CRITERIOS, NIVEIS, ancoraDe, nivelDe, exigeJustificativa, mediaDe,
   competenciaLabel, competenciaAnterior,
 } from '@/lib/avaliacoes/criterios'
+import {
+  significado, METODO_PONTOS, METODO_REFERENCIA, PERGUNTAS_GESTAO,
+  type ReguaDoSetor, type Gestao,
+} from '@/lib/avaliacoes/metodo'
+import { BotaoTermo } from '../TermoImpresso'
 import st from './avaliar.module.css'
+
+const GESTAO_VAZIA: Gestao = { querNaEquipe: null, prontoParaMais: null, emRisco: null, anotacao: null }
 
 type NotaEnt = { nota: number | null; justificativa: string | null }
 type Dados = {
@@ -15,9 +22,12 @@ type Dados = {
   posso: boolean
   souEu: boolean
   aguardandoPublicacao: boolean
+  regua: ReguaDoSetor
+  gestaoVisivel: boolean
   avaliacao: null | {
     id: string; status: string; versao: number; media: number | null
-    comentario: string | null; publishedAt: string | null; avaliadorId: string
+    comentario: string | null; combinado: string | null; publishedAt: string | null; avaliadorId: string
+    gestao: Gestao | null
     notas: Record<string, NotaEnt>
     ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
     versoes: { versao: number; motivo: string | null; media: number | null; publishedAt: string | null }[]
@@ -33,6 +43,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   const [d, setD] = useState<Dados | null>(null)
   const [notas, setNotas] = useState<Record<string, NotaEnt>>({})
   const [comentario, setComentario] = useState('')
+  const [combinado, setCombinado] = useState('')
+  const [gestao, setGestao] = useState<Gestao>(GESTAO_VAZIA)
   const [motivo, setMotivo] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState<'' | 'rascunho' | 'publicar'>('')
@@ -45,6 +57,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
         setD(j)
         setNotas(j?.avaliacao?.notas ?? {})
         setComentario(j?.avaliacao?.comentario ?? '')
+        setCombinado(j?.avaliacao?.combinado ?? '')
+        setGestao(j?.avaliacao?.gestao ?? GESTAO_VAZIA)
       })
   }, [id, competencia])
 
@@ -72,7 +86,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
     const r = await fetch(`/api/avaliacoes/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ competencia, acao, notas, comentario, motivo }),
+      body: JSON.stringify({ competencia, acao, notas, comentario, combinado, motivo, gestao }),
     })
     const j = await r.json()
     setSalvando('')
@@ -136,6 +150,19 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
             <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
             <span>A <b>ficha</b> mostra o que os sistemas registraram. Esta nota é <b>o que você observou</b>. Quando as duas discordam, é aí que há algo a conversar.</span>
           </div>
+
+          {/* O MÉTODO, à vista de quem avalia (02/10/2026): é o que se responde
+              quando a nota é questionada. */}
+          <details className={st.metodo}>
+            <summary>Como funciona esta avaliação</summary>
+            <ul>
+              {METODO_PONTOS.map((p) => <li key={p.titulo}><b>{p.titulo}.</b> {p.texto}</li>)}
+            </ul>
+            <p>{d.regua.propria
+              ? `Os textos dos níveis são a régua escrita do setor ${d.regua.setor}.`
+              : 'Este setor ainda usa a régua genérica; a régua escrita do setor entra quando for definida.'}</p>
+            <p className={st.metodoRef}>{METODO_REFERENCIA}</p>
+          </details>
         </aside>
 
         {/* ---------- À DIREITA: o que se avalia ---------- */}
@@ -163,6 +190,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   <div className={st.situacao}>
                     Publicada{d.avaliacao!.versao > 1 ? ` · versão ${d.avaliacao!.versao}` : ''}
                     {d.avaliacao!.ciencia?.cienteEm ? ' · a pessoa já leu' : ' · aguardando ciência'}
+                    <BotaoTermo avaliadoId={d.pessoa.id} competencia={competencia} />
                   </div>
                 )}
               </div>
@@ -189,7 +217,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                             style={{ '--cor': n.color } as React.CSSProperties}>
                             {on && <span className={st.marca}>✓</span>}
                             <span className={st.nivelNome}>{n.curto}</span>
-                            <span className={st.nivelDica}>{n.dica}</span>
+                            <span className={st.nivelDica}>{significado(d.regua, c.key, n.key)}</span>
                           </button>
                         )
                       })}
@@ -215,6 +243,10 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   placeholder={`O que ${primeiro} fez bem, e o que você espera no mês que vem.`}
                   className={st.campo} />
 
+                <div className={st.campoRotulo} style={{ marginTop: 16 }}>Combinado para o próximo mês <span>· uma coisa só, {primeiro} vai ler e vai no PDF</span></div>
+                <input disabled={somenteLeitura} value={combinado} onChange={(e) => setCombinado(e.target.value)}
+                  placeholder={`O que ${primeiro} e você combinam para o mês que vem`} className={st.campo} />
+
                 {/* Correção de publicada exige motivo — as duas versões ficam visíveis. */}
                 {jaPublicada && !somenteLeitura && (
                   <div style={{ marginTop: 16 }}>
@@ -223,6 +255,34 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   </div>
                 )}
               </section>
+
+              {/* ⚠️⚠️ SÓ DA GESTÃO (02/10/2026): não vai para a página de quem é
+                  avaliado nem para o PDF. Se o avaliador soubesse que a pessoa
+                  vai ler "corre risco: sim", suavizaria — e a resposta perderia
+                  o valor. A rota nem devolve isto para quem não pode ler. */}
+              {d.gestaoVisivel && (
+                <section className={`tc-card ${st.cartao} ${st.gestao}`}>
+                  <div className={st.campoRotulo}>🔒 Só para a gestão <span>· não aparece para {primeiro} nem no PDF</span></div>
+                  <div className={st.gestaoSub}>Responda pelo que você <b>faria</b>, não pelo que acha da pessoa.</div>
+                  {PERGUNTAS_GESTAO.map((q) => (
+                    <div key={q.key} className={st.gestaoLinha}>
+                      <span>{q.texto}</span>
+                      <div className={st.simNao} role="radiogroup" aria-label={q.texto}>
+                        {([true, false] as const).map((v) => (
+                          <button key={String(v)} type="button" role="radio" aria-checked={gestao[q.key] === v} disabled={somenteLeitura}
+                            onClick={() => setGestao((g) => ({ ...g, [q.key]: g[q.key] === v ? null : v }))}
+                            className={gestao[q.key] === v ? st.simNaoOn : ''}>
+                            {v ? 'Sim' : 'Não'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <textarea disabled={somenteLeitura} value={gestao.anotacao ?? ''} rows={2}
+                    onChange={(e) => setGestao((g) => ({ ...g, anotacao: e.target.value }))}
+                    placeholder="Anotação privada para preparar a conversa (opcional)" className={st.campo} style={{ marginTop: 10 }} />
+                </section>
+              )}
 
               {erro && <Aviso cor="var(--danger)">{erro}</Aviso>}
               {ok && <Aviso cor="var(--success)">{ok}</Aviso>}

@@ -1,5 +1,25 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação mensal: o método, a régua da T.I e o PDF para assinar
+
+Pedido do Daniel: um método reconhecido, que a Diretoria aprove e que se defenda numa
+conversa — e um PDF só com o que o funcionário vê, com observação e assinaturas.
+
+- **Método** à vista nas duas telas ("Como funciona esta avaliação"): escala ancorada em
+  comportamento (BARS) + exemplo no formato Situação → Comportamento → Impacto (SBI).
+  Os textos moram em `lib/avaliacoes/metodo.ts` — tela, página do avaliado e PDF leem dali.
+- **Régua escrita da T.I** (piloto): cada nível de cada ponto diz o que significa no setor.
+  Setor sem régua própria segue com a genérica.
+- **Combinado para o próximo mês** (`avaliacao.combinado`): o avaliado lê e vai no PDF.
+- **Só para a gestão** (`avaliacao_gestao`, tabela própria): "quero na equipe", "pronto
+  para mais", "corre risco" + anotação privada. ⚠️⚠️ Nunca vai para `/minha-avaliacao`
+  nem para o PDF — a rota nem devolve para quem não avalia (nem para o próprio, mesmo ADMIN).
+- **PDF para assinar** (`/api/avaliacoes/[id]/termo` + `TermoImpresso`): rota própria que
+  monta campo a campo só o que o avaliado vê; linhas para a observação do funcionário,
+  assinatura e data do funcionário e do gestor do departamento.
+- Página do avaliado: o **nome do nível** em destaque e a média discreta.
+- Schema: `scripts/2026-10-02-avaliacao-metodo.sql` (só aditivo; não use `db push` no .78).
+
 ## 2026-10-01 — Serviços: período informado no envio e janela de resumo
 
 - **Envio da planilha** (`/servicos`): depois de anexar, uma janela pede o **período**

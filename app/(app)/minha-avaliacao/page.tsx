@@ -2,12 +2,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import Avatar from '../Avatar'
 import { CRITERIOS, criterioDe, ancoraDe, nivelDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
+import { significado, METODO_RESUMO, METODO_PONTOS, METODO_REFERENCIA, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
+import { BotaoTermo } from '../avaliacoes/TermoImpresso'
 
 type Nota = { criterio: string; nota: number | null; justificativa: string | null }
 type Av = {
   id: string; competencia: string; media: number | null; versao: number
-  comentario: string | null; publishedAt: string | null
+  comentario: string | null; combinado: string | null; publishedAt: string | null
   avaliador: string; avaliadorCargo: string | null
+  regua: ReguaDoSetor
   notas: Nota[]
   ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
   precisaCienciaNova: boolean
@@ -79,15 +82,30 @@ export default function MinhaAvaliacaoPage() {
             <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{d.pessoa.cargo} · {d.pessoa.setor}</div>
           </div>
           {comNota.length > 0 && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Média de {comNota.length} {comNota.length === 1 ? 'mês' : 'meses'}</div>
-              <div className="cnum" style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-1px', color: 'var(--accent)' }}>
-                {(comNota.reduce((a, s) => a + (s.media ?? 0), 0) / comNota.length).toFixed(1)}
-              </div>
-            </div>
+            (() => {
+              /* ⚠️ O NOME do nível em destaque e o número discreto (02/10/2026): quem lê
+                 um número reage ao número e esquece o conteúdo (Kluger & DeNisi, 1996). */
+              const m = comNota.reduce((a, s) => a + (s.media ?? 0), 0) / comNota.length
+              return (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Em {comNota.length} {comNota.length === 1 ? 'mês' : 'meses'}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: ancoraDe(m).color }}>{ancoraDe(m).label}</div>
+                  <div className="cnum" style={{ fontSize: 11, color: 'var(--text-mute)' }}>média {m.toFixed(1)}</div>
+                </div>
+              )
+            })()
           )}
         </div>
       )}
+
+      <details style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 16, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text)' }}>Como funciona a sua avaliação</summary>
+        <p style={{ margin: '10px 0 6px' }}>{METODO_RESUMO}</p>
+        <ul style={{ margin: '0 0 6px', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {METODO_PONTOS.map((p) => <li key={p.titulo}><b>{p.titulo}.</b> {p.texto}</li>)}
+        </ul>
+        <div style={{ fontSize: 11, color: 'var(--text-mute)', fontStyle: 'italic' }}>{METODO_REFERENCIA}</div>
+      </details>
 
       {d.avaliacoes.length === 0 ? (
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
@@ -126,15 +144,15 @@ export default function MinhaAvaliacaoPage() {
             </div>
           </div>
 
-          {atual && <Detalhe av={atual} souEu={d.souEu} texto={texto} setTexto={setTexto} enviando={enviando} onCiencia={() => darCiencia(atual)} />}
+          {atual && <Detalhe av={atual} pessoaId={d.pessoa!.id} souEu={d.souEu} texto={texto} setTexto={setTexto} enviando={enviando} onCiencia={() => darCiencia(atual)} />}
         </>
       )}
     </div>
   )
 }
 
-function Detalhe({ av, souEu, texto, setTexto, enviando, onCiencia }: {
-  av: Av; souEu: boolean; texto: string; setTexto: (s: string) => void
+function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: {
+  av: Av; pessoaId: string; souEu: boolean; texto: string; setTexto: (s: string) => void
   enviando: boolean; onCiencia: () => void
 }) {
   const precisaResponder = souEu && (!av.ciencia || av.precisaCienciaNova)
@@ -149,8 +167,14 @@ function Detalhe({ av, souEu, texto, setTexto, enviando, onCiencia }: {
             {av.versao > 1 ? ` · versão ${av.versao}` : ''}
           </div>
         </div>
-        <div className="cnum" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-1.4px', color: av.media != null ? ancoraDe(av.media).color : 'var(--text-mute)' }}>
-          {av.media != null ? av.media.toFixed(1) : '—'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <BotaoTermo avaliadoId={pessoaId} competencia={av.competencia} />
+          {av.media != null && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: ancoraDe(av.media).color }}>{ancoraDe(av.media).label}</div>
+              <div className="cnum" style={{ fontSize: 11, color: 'var(--text-mute)' }}>média {av.media.toFixed(1)}</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -175,6 +199,10 @@ function Detalhe({ av, souEu, texto, setTexto, enviando, onCiencia }: {
                 <span style={{ fontSize: 11.5, color: 'var(--text-mute)' }}>não se aplica</span>
               )}
             </div>
+            {/* O que o nível escolhido SIGNIFICA no setor — a régua que a pessoa conhecia. */}
+            {n.nota != null && (
+              <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>{significado(av.regua, c.key, nivelDe(n.nota).key)}</div>
+            )}
             {n.justificativa && (
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.55, paddingLeft: 2, borderLeft: '2px solid var(--border-soft)', paddingInlineStart: 9 }}>
                 {n.justificativa}
@@ -188,6 +216,13 @@ function Detalhe({ av, souEu, texto, setTexto, enviando, onCiencia }: {
         <div style={{ marginTop: 16, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--accent)' }}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>Recado do mês</div>
           <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{av.comentario}</div>
+        </div>
+      )}
+
+      {av.combinado && (
+        <div style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--success)' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>Combinado para o próximo mês</div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{av.combinado}</div>
         </div>
       )}
 

@@ -5,8 +5,17 @@ import { quemEh, podeVer, podeAvaliar, type Setor } from '@/lib/avaliacoes/regua
 import {
   CRITERIOS, competenciaAnterior, exigeJustificativa, mediaDe,
 } from '@/lib/avaliacoes/criterios'
+import type { Prisma } from '@prisma/client'
+import { reguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
 
 type Ctx = { params: Promise<{ avaliadoId: string }> }
+
+/**
+ * ⚠️⚠️ Quem LÊ o que é só da gestão: quem avalia a pessoa, ou a Diretoria — e
+ * NUNCA a própria pessoa, nem quando ela é ADMIN olhando a si mesma.
+ */
+const leGestao = (quem: { id: string; role: string }, alvoId: string, posso: boolean) =>
+  alvoId !== quem.id && (posso || quem.role === 'ADMIN')
 
 /**
  * O contexto do setor da pessoa: quem avalia ali, em que nível, e se o setor
@@ -49,6 +58,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!podeVer(quem, alvo)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const posso = podeAvaliar(quem, alvo, await contextoDoSetor(alvo.departmentId))
+  const gestaoVisivel = leGestao(quem, alvo.id, posso)
 
   const av = await prisma.avaliacao.findUnique({
     where: { competencia_avaliadoId: { competencia, avaliadoId } },
@@ -56,6 +66,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       notas: true,
       ciencia: true,
       versoes: { orderBy: { versao: 'desc' } },
+      gestao: gestaoVisivel,
     },
   })
 
@@ -75,10 +86,17 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     },
     posso,
     souEu: alvo.id === quem.id,
+    // A régua escrita do setor: o que cada nível significa no cargo.
+    regua: reguaDoSetor(alvo.department?.name),
+    // `null` = esta pessoa não lê a parte da gestão (o bloco nem aparece).
+    gestaoVisivel,
     avaliacao: av && podeLerConteudo
       ? {
           id: av.id, status: av.status, versao: av.versao, media: av.media,
-          comentario: av.comentario, publishedAt: av.publishedAt,
+          comentario: av.comentario, combinado: av.combinado, publishedAt: av.publishedAt,
+          gestao: gestaoVisivel && av.gestao
+            ? { querNaEquipe: av.gestao.querNaEquipe, prontoParaMais: av.gestao.prontoParaMais, emRisco: av.gestao.emRisco, anotacao: av.gestao.anotacao }
+            : null,
           avaliadorId: av.avaliadorId,
           notas: Object.fromEntries(av.notas.map((n) => [n.criterio, { nota: n.nota, justificativa: n.justificativa }])),
           ciencia: av.ciencia,
@@ -104,6 +122,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     comentario?: string | null
     motivo?: string | null
     notas?: Record<string, { nota: number | null; justificativa?: string | null }>
+    combinado?: string | null
+    gestao?: Partial<Gestao> | null
   }
   const competencia = body.competencia || competenciaAnterior()
   const acao = body.acao === 'publicar' ? 'publicar' : 'rascunho'
@@ -157,6 +177,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const media = mediaDe(notas)
   const comentario = (body.comentario ?? '').trim() || null
+  const combinado = (body.combinado ?? '').trim() || null
+
+  // A parte da gestão, normalizada. Só quem AVALIA grava (a régua acima já
+  // barrou quem não avalia); booleano ou nulo, nada além disso.
+  const g = body.gestao ?? {}
+  const sn = (v: unknown) => (typeof v === 'boolean' ? v : null)
+  const gestao = {
+    querNaEquipe: sn(g.querNaEquipe), prontoParaMais: sn(g.prontoParaMais), emRisco: sn(g.emRisco),
+    anotacao: (typeof g.anotacao === 'string' ? g.anotacao.trim() : '') || null,
+    updatedById: quem.id,
+  }
+  const gravarGestao = (tx: Prisma.TransactionClient, avaliacaoId: string) =>
+    tx.avaliacaoGestao.upsert({ where: { avaliacaoId }, create: { avaliacaoId, ...gestao }, update: gestao })
   const existente = await prisma.avaliacao.findUnique({
     where: { competencia_avaliadoId: { competencia, avaliadoId } },
     include: { notas: true },
@@ -183,16 +216,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           publishedAt: existente.publishedAt,
           motivo,
           comentario: existente.comentario,
+          combinado: existente.combinado,
           media: existente.media,
           notas: existente.notas.map((n) => ({ criterio: n.criterio, nota: n.nota, justificativa: n.justificativa })),
         },
       })
       await tx.avaliacaoNota.deleteMany({ where: { avaliacaoId: existente.id } })
       await tx.avaliacaoNota.createMany({ data: notas.map((n) => ({ ...n, avaliacaoId: existente.id })) })
+      await gravarGestao(tx, existente.id)
       return tx.avaliacao.update({
         where: { id: existente.id },
         data: {
-          avaliadorId: quem.id, comentario, media,
+          avaliadorId: quem.id, comentario, combinado, media,
           versao: existente.versao + 1, publishedAt: new Date(),
         },
       })
@@ -208,6 +243,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     avaliadorId: quem.id,
     departmentId: alvo.departmentId, // congelado no setor de agora
     comentario,
+    combinado,
     media,
     status: acao === 'publicar' ? 'publicada' : 'rascunho',
     publishedAt: acao === 'publicar' ? new Date() : null,
@@ -220,6 +256,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
     await tx.avaliacaoNota.deleteMany({ where: { avaliacaoId: row.id } })
     await tx.avaliacaoNota.createMany({ data: notas.map((n) => ({ ...n, avaliacaoId: row.id })) })
+    await gravarGestao(tx, row.id)
     return row
   })
 
