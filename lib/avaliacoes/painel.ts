@@ -13,10 +13,12 @@ import { podeAvaliar, type Quem, type Setor } from './regua'
    ⚠️⚠️ QUEM VÊ: a Diretoria (tudo) e quem AVALIA o setor (vínculo gravado) —
    a mesma régua da fila. Colaborador não chega aqui: ele tem a página dele.
 
-   ⚠️⚠️ O NÚMERO É DA GESTÃO, e não de quem é avaliado (Daniel, 02/10/2026). Um
-   gestor abrindo o painel do PRÓPRIO setor se acha na lista: na linha dele vai
-   o NOME do nível, sem a média, e sem a parte da gestão — a mesma regra de
-   `/minha-avaliacao`, para o painel não virar a porta dos fundos dela.
+   ⚠️⚠️ NENHUM NÚMERO SAI DAQUI (Daniel, 02/10/2026, orientação dos psicólogos
+   que acompanham a empresa: "não são a favor de nota em número"). A média
+   existe no banco e decide o NÍVEL do mês e o rumo (↑↓), mas o que viaja é o
+   nome do nível — para todos, gestão inclusive.
+   ⚠️ Um gestor abrindo o painel do PRÓPRIO setor se acha na lista: na linha
+   dele não vai a parte da gestão — a mesma regra de `/minha-avaliacao`.
 
    ⚠️ Só avaliação PUBLICADA entra nas contas. Rascunho é o gestor pensando em
    voz alta; aparece como "rascunho" na linha da pessoa e em nenhum gráfico.
@@ -107,7 +109,8 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
       avaliados: pubs.length,
       quadro: gente.filter((p) => noQuadro(p, c)).length,
       concluidas: pubs.filter((a) => a.documento?.concluidaEm).length,
-      media: mediaDe(pubs.map((a) => ({ nota: a.media }))),
+      // O nível do SETOR no mês: o da média das médias — só o nome sai daqui.
+      nivel: nivelKey(mediaDe(pubs.map((a) => ({ nota: a.media })))),
     }
   })
 
@@ -128,14 +131,13 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
 
   const pessoas = gente.map((p) => {
     const souEu = p.id === quem.id
-    const linha: Record<string, { nivel: NivelKey | null; media: number | null; status: string; concluida: boolean; ciente: boolean } | null> = {}
+    const linha: Record<string, { nivel: NivelKey | null; status: string; concluida: boolean; ciente: boolean } | null> = {}
     for (const c of meses) {
       const a = porPessoaMes.get(`${p.id}|${c}`)
-      if (!a) { linha[c] = noQuadro(p, c) ? null : { nivel: null, media: null, status: 'fora', concluida: false, ciente: false }; continue }
+      if (!a) { linha[c] = noQuadro(p, c) ? null : { nivel: null, status: 'fora', concluida: false, ciente: false }; continue }
       const pub = a.status === 'publicada'
       linha[c] = {
         nivel: pub ? nivelKey(a.media) : null,
-        media: pub && !souEu ? a.media : null,
         status: a.status,
         concluida: !!a.documento?.concluidaEm,
         ciente: !!a.ciencia && a.ciencia.versaoCiente === a.versao,
@@ -144,7 +146,9 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
     // Tendência: o último mês publicado contra o anterior publicado.
     const pubs = meses.map((c) => porPessoaMes.get(`${p.id}|${c}`)).filter((a) => a?.status === 'publicada' && a.media != null)
     const [ant, atu] = pubs.slice(-2)
-    const tendencia = atu && ant ? (atu.media! > ant.media! ? 'sobe' : atu.media! < ant.media! ? 'desce' : 'igual') : null
+    // ⚠️ Pelo NÍVEL, e não pela média: sem número na tela, "↑" com o mesmo nível dos dois lados não se explica.
+    const ord = (m: number | null) => ['abaixo', 'parte', 'atende', 'acima'].indexOf(nivelKey(m) ?? '')
+    const tendencia = atu && ant ? (ord(atu.media) > ord(ant.media) ? 'sobe' : ord(atu.media) < ord(ant.media) ? 'desce' : 'igual') : null
     // A gestão do último mês em que ela foi respondida — nunca na linha do próprio.
     const g = souEu ? null : [...pubs].reverse().find((a) => a?.gestao)?.gestao ?? null
     return {
@@ -205,7 +209,6 @@ export async function painelDaPessoa(quem: Quem, setor: { id: string; nome: stri
     avaliacoes: visiveis.map((a) => ({
       competencia: a.competencia,
       nivel: nivelKey(a.media),
-      media: souEu ? null : a.media,
       versao: a.versao,
       publicadaEm: a.publishedAt,
       avaliador: nomeDe.get(a.avaliadorId) ?? 'Avaliador',

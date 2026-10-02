@@ -16,10 +16,9 @@ import { Legenda, Selo, cor, mesCurto, NIVEIS_UI, type Contagem, type NivelKey }
    do painel. Gestor de outro setor não chega aqui, colaborador nem à página.
    ============================================================ */
 
-type Resumo = { competencia: string; niveis: Contagem; avaliados: number; quadro: number; concluidas: number; media: number | null }
+type Resumo = { competencia: string; niveis: Contagem; avaliados: number; quadro: number; concluidas: number; nivel: NivelKey | null }
 type Painel = { setor: { endereco: string }; ultimo: string | null; resumo: Resumo[] }
 
-const nivelDaMedia = (m: number | null): NivelKey | null => (m == null ? null : m <= 4 ? 'abaixo' : m <= 6 ? 'parte' : m <= 8 ? 'atende' : 'acima')
 
 export function CartaoAvaliacoes({ deptId }: { deptId: string }) {
   const [d, setD] = useState<Painel | null>(null)
@@ -52,7 +51,7 @@ export function CartaoAvaliacoes({ deptId }: { deptId: string }) {
               <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--n-text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
                 {ult ? <>Resultado em <span style={{ textTransform: 'capitalize' }}>{competenciaLabel(ult.competencia)}</span></> : 'Resultado do mês'}
               </span>
-              {ult ? <Selo nivel={nivelDaMedia(ult.media)} grande /> : <span style={{ fontSize: 13, color: 'var(--n-text-3)' }}>Nenhuma avaliação publicada ainda</span>}
+              {ult ? <Selo nivel={ult.nivel} grande /> : <span style={{ fontSize: 13, color: 'var(--n-text-3)' }}>Nenhuma avaliação publicada ainda</span>}
               {ult && (
                 <span style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>
                   <b style={{ color: 'var(--n-text)' }}>{ult.avaliados}</b> de {ult.quadro} avaliados · <b style={{ color: 'var(--n-text)' }}>{ult.concluidas}</b> assinadas

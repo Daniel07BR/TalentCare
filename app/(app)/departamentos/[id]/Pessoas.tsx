@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PessoaDoSetor, DeptMetrics } from '@/lib/ui/dept-period'
-import { ancoraDe } from '@/lib/avaliacoes/criterios'
+import { ancoraDe, nivelDe } from '@/lib/avaliacoes/criterios'
 import { ChevronRight } from 'lucide-react'
 import Avatar from '../../Avatar'
 
@@ -24,7 +24,8 @@ const COLUNAS: { key: Coluna; label: string; dica: string }[] = [
   // ⚠️ A nota é da COMPETÊNCIA (mês fechado) e não do filtro. Sem dizer isso na
   // própria coluna, quem troca para "7 dias" acha que vê a nota daquela semana —
   // e a nota é o maior número da linha.
-  { key: 'nota', label: 'Nota', dica: 'Avaliação do gestor (0–10) da competência mensal — não acompanha o filtro' },
+  // ⚠️ Sem número (02/10/2026 — orientação dos psicólogos): a coluna mostra o NOME do nível.
+  { key: 'nota', label: 'Avaliação', dica: 'Nível da avaliação do gestor na competência mensal — não acompanha o filtro' },
   { key: 'pontuacao', label: 'Pontuação', dica: 'Pontuação do mês: disciplina + serviços + atividades da competência — não acompanha o filtro' },
   // ⚠️ A dica muda quando o mês está em curso (ver `dicaPontuacao`).
 
@@ -181,7 +182,7 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
              significa, e some quando não há do que se orgulhar. */
           const selo = pessoas.length < 2 || p.semFonte ? null
             : i !== 0 ? null
-            : ordem === 'nota' ? (p.nota != null ? { texto: 'MAIOR NOTA', cor: 'var(--accent)' } : null)
+            : ordem === 'nota' ? null // sem "maior nota": avaliação não vira pódio
             : ordem === 'pontuacao' ? (p.pontuacao != null && p.pontuacao > 0 ? { texto: 'MAIS PONTOS', cor: 'var(--accent)' } : null)
             : (p.atrasos > 0 ? { texto: 'MAIS ATRASOS', cor: 'var(--warning)' } : null)
           return (
@@ -223,12 +224,12 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
               {/* NOTA — o número que decide, e por isso o mais legível da linha */}
               <div style={{ textAlign: 'center' }}>
                 {p.nota != null ? (
-                  <span className="cnum" style={{ fontSize: 19, fontWeight: 800, color: ancoraDe(p.nota).color, letterSpacing: '-.5px' }}>
-                    {p.nota.toFixed(1)}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: ancoraDe(p.nota).color, whiteSpace: 'nowrap' }}>
+                    {nivelDe(p.nota).curto}
                   </span>
                 ) : (
                   <span style={{ fontSize: 10.5, color: 'var(--text-mute)', border: '1px dashed var(--border)', borderRadius: 20, padding: '2px 8px' }}>
-                    sem nota
+                    sem avaliação
                   </span>
                 )}
               </div>
@@ -331,7 +332,7 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginTop: 14, fontSize: 11, color: 'var(--text-mute)', lineHeight: 1.6 }}>
         {mediaNota != null && (
           <span>
-            Média do setor: <b style={{ color: ancoraDe(mediaNota).color }}>{mediaNota.toFixed(1)}</b>
+            Resultado do setor: <b style={{ color: ancoraDe(mediaNota).color }}>{ancoraDe(mediaNota).label}</b>
             {' · '}{comNota.length} de {avaliaveis} avaliadas
             {/* ⚠️ Quando a competência alcança menos gente que o setor tem hoje,
                 dizer POR QUÊ — senão o leitor vê 21 num setor de 22 e não sabe

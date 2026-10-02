@@ -9,7 +9,7 @@ import { Cartao } from '../../../_visao/ui'
 import s from '../../../_visao/visao.module.css'
 import p from '../_painel/painel.module.css'
 import {
-  BarrasCriterio, ColunasMes, Legenda, LinhaMedia, Selo, cor, mesCurto, nivelUi,
+  BarrasCriterio, ColunasMes, Legenda, LinhaNivel, Selo, cor, mesCurto, nivelUi,
   type Contagem, type NivelKey,
 } from '../_painel/graficos'
 import { JanelaPessoa } from '../_painel/JanelaPessoa'
@@ -26,7 +26,7 @@ import { JanelaPessoa } from '../_painel/JanelaPessoa'
    mudou, a página troca para o endereço novo sem quebrar o link antigo.
    ============================================================ */
 
-type Celula = { nivel: NivelKey | null; media: number | null; status: string; concluida: boolean; ciente: boolean } | null
+type Celula = { nivel: NivelKey | null; status: string; concluida: boolean; ciente: boolean } | null
 type Pessoa = {
   id: string; nome: string; cargo: string; hasAvatar: boolean; endereco: string; souEu: boolean; ativo: boolean
   meses: Record<string, Celula>; tendencia: 'sobe' | 'desce' | 'igual' | null; posso: boolean
@@ -35,13 +35,12 @@ type Pessoa = {
 type Painel = {
   setor: { id: string; nome: string; endereco: string }
   meses: string[]; ultimo: string | null
-  resumo: { competencia: string; niveis: Contagem; avaliados: number; quadro: number; concluidas: number; media: number | null }[]
+  resumo: { competencia: string; niveis: Contagem; avaliados: number; quadro: number; concluidas: number; nivel: NivelKey | null }[]
   criterios: { key: string; label: string; niveis: Contagem }[]
   pessoas: Pessoa[]
 }
 
 const iniciais = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join('').toUpperCase()
-const nivelDaMedia = (m: number | null): NivelKey | null => (m == null ? null : m <= 4 ? 'abaixo' : m <= 6 ? 'parte' : m <= 8 ? 'atende' : 'acima')
 
 export default function PainelDoSetor({ params }: { params: Promise<{ setor: string }> }) {
   const { setor } = use(params)
@@ -84,7 +83,7 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
   const trocarPeriodo = (n: number) => router.push(`/avaliacoes/setor/${d.setor.endereco}${n !== 12 ? `?meses=${n}` : ''}`)
   const ult = d.resumo.find((r) => r.competencia === d.ultimo) ?? null
   const atencao = d.pessoas.filter((x) => !x.souEu && (x.gestao?.emRisco || (d.ultimo && x.meses[d.ultimo]?.nivel === 'abaixo')))
-  const comMedia = d.resumo.some((r) => r.media != null)
+  const comNivel = d.resumo.some((r) => r.nivel != null)
 
   return (
     <div className={`tc-anim ${s.raiz} ${p.niveis}`}>
@@ -115,9 +114,9 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
       <div className={p.tiles}>
         <div className={p.tile}>
           <span className={p.tileRotulo}>Resultado do setor</span>
-          {ult ? <Selo nivel={nivelDaMedia(ult.media)} grande /> : <span className={p.tileValor}>—</span>}
+          {ult ? <Selo nivel={ult.nivel} grande /> : <span className={p.tileValor}>—</span>}
           <span className={p.tileNota}>
-            {ult ? <>em <span style={{ textTransform: 'capitalize' }}>{competenciaLabel(ult.competencia)}</span>{ult.media != null && <> · média {ult.media.toFixed(1).replace('.', ',')}</>}</> : 'nenhuma avaliação publicada no período'}
+            {ult ? <>em <span style={{ textTransform: 'capitalize' }}>{competenciaLabel(ult.competencia)}</span></> : 'nenhuma avaliação publicada no período'}
           </span>
         </div>
         <div className={p.tile}>
@@ -142,12 +141,12 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
         <Cartao titulo="Como o setor foi avaliado, mês a mês" sub="Quantas pessoas em cada nível. Passe o mouse num mês para ver os números." Icone={BarChart3} corIcone="var(--n-purple)">
           <ColunasMes resumo={d.resumo} />
         </Cartao>
-        {comMedia ? (
-          <Cartao titulo="A média do setor" sub="Sobre as faixas dos níveis. Só a gestão vê o número." Icone={LineChart} corIcone="var(--n-blue)">
-            <LinhaMedia pontos={d.resumo.map((r) => ({ competencia: r.competencia, media: r.media }))} rotulo="Média do setor" />
+        {comNivel ? (
+          <Cartao titulo="A evolução do setor" sub="O nível do setor em cada mês. Passe o mouse para ver o mês." Icone={LineChart} corIcone="var(--n-blue)">
+            <LinhaNivel pontos={d.resumo.map((r) => ({ competencia: r.competencia, nivel: r.nivel }))} rotulo="Nível do setor" />
           </Cartao>
         ) : (
-          <Cartao titulo="A média do setor" Icone={LineChart}><div className={p.vazio}>Ainda sem avaliação publicada no período.</div></Cartao>
+          <Cartao titulo="A evolução do setor" Icone={LineChart}><div className={p.vazio}>Ainda sem avaliação publicada no período.</div></Cartao>
         )}
       </div>
 
@@ -209,7 +208,7 @@ function Linha({ x, meses, onAbrir }: { x: Pessoa; meses: string[]; onAbrir: () 
         const n = nivelUi(v.nivel)
         return (
           <span key={c} className={p.celula} style={{ ['--c' as string]: cor(v.nivel) }}
-            title={`${competenciaLabel(c)}: ${n?.label ?? ''}${v.media != null ? ` (${v.media.toFixed(1)})` : ''}${v.concluida ? ' · assinada' : ''}${v.ciente ? ' · deu ciência' : ''}`}>
+            title={`${competenciaLabel(c)}: ${n?.label ?? ''}${v.concluida ? ' · assinada' : ''}${v.ciente ? ' · deu ciência' : ''}`}>
             {v.concluida && <span className={p.marcaAssinada}>🔒</span>}
             {n?.curto}
             {v.ciente && <small>·</small>}

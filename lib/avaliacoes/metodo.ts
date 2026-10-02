@@ -80,7 +80,7 @@ export const METODO_PONTOS = [
   { titulo: 'Critérios conhecidos antes', texto: 'Cada nível tem o que significa no seu setor. Ninguém é avaliado por uma regra que não conhecia.' },
   { titulo: 'Exemplo nos extremos', texto: '"Abaixo" e "Acima" sempre vêm com o fato que levou a eles: a situação, o que foi feito e o efeito.' },
   { titulo: 'Sistema e observação, lado a lado', texto: 'A ficha mostra o que os sistemas registraram; a avaliação mostra o que o avaliador observou. Quando discordam, há algo a conversar.' },
-  { titulo: 'Você é ouvido', texto: 'Você lê, dá ciência e pode comentar. O comentário fica registrado junto da avaliação — não muda a nota, fica ao lado dela.' },
+  { titulo: 'Você é ouvido', texto: 'Você lê, dá ciência e pode comentar. O comentário fica registrado junto da avaliação — não muda o resultado, fica ao lado dele.' },
   { titulo: 'Nada se apaga', texto: 'Uma avaliação publicada só muda por correção com motivo, e a versão anterior continua registrada.' },
 ]
 
@@ -94,7 +94,7 @@ export const METODO_REFERENCIA =
    formato da Deloitte (Buckingham & Goodall, HBR 2015), porque julgar a própria
    intenção varia menos de avaliador para avaliador do que julgar a pessoa. */
 export const PERGUNTAS_GESTAO = [
-  { key: 'querNaEquipe', texto: 'Eu quero esta pessoa na minha equipe.', serve: 'Mede retenção: se a resposta é "não", a nota alta não está contando a história toda.' },
+  { key: 'querNaEquipe', texto: 'Eu quero esta pessoa na minha equipe.', serve: 'Mede retenção: se a resposta é "não", um nível alto não está contando a história toda.' },
   { key: 'prontoParaMais', texto: 'Está pronta para mais responsabilidade.', serve: 'Aponta quem pode crescer: base para promoção, treinamento ou nova função.' },
   { key: 'emRisco', texto: 'Corre risco de baixo desempenho.', serve: 'Alerta cedo: permite agir com conversa e apoio antes de virar problema.' },
 ] as const
@@ -102,8 +102,8 @@ export const PERGUNTAS_GESTAO = [
 /* O texto que abre o bloco da gestão na tela (02/10/2026 — pedido do Daniel:
    "descreva o que significa esse questionário, qual o método e a intenção"). */
 export const GESTAO_EXPLICA = {
-  oQueE: 'Três perguntas sobre o que VOCÊ faria com esta pessoa, e não sobre o que você acha dela. Elas não entram na nota e servem para as decisões da gestão: retenção, crescimento e acompanhamento.',
-  metodo: 'Instantâneo de desempenho (Performance Snapshot) da Deloitte — Buckingham & Goodall, Harvard Business Review, 2015. Ele parte do estudo de Scullen, Mount & Goff (2000): mais da metade da variação de uma nota reflete o jeito de quem avalia, e não quem é avaliado. Perguntar pela sua própria intenção reduz esse efeito, porque você responde sobre o que conhece melhor: a sua decisão.',
+  oQueE: 'Três perguntas sobre o que VOCÊ faria com esta pessoa, e não sobre o que você acha dela. Elas não entram no resultado e servem para as decisões da gestão: retenção, crescimento e acompanhamento.',
+  metodo: 'Instantâneo de desempenho (Performance Snapshot) da Deloitte — Buckingham & Goodall, Harvard Business Review, 2015. Ele parte do estudo de Scullen, Mount & Goff (2000): mais da metade da variação de uma avaliação reflete o jeito de quem avalia, e não quem é avaliado. Perguntar pela sua própria intenção reduz esse efeito, porque você responde sobre o que conhece melhor: a sua decisão.',
   intencao: 'Separar o feedback (o que a pessoa lê e assina) das decisões de gestão (o que fazer com ela). Fica fora da página dela e do PDF de propósito: se o avaliador souber que a pessoa vai ler "corre risco: sim", ele suaviza a resposta, e ela perde o valor.',
 }
 export type GestaoKey = (typeof PERGUNTAS_GESTAO)[number]['key']
@@ -136,13 +136,13 @@ export const BASE_CIENTIFICA: {
     metodo: 'Feedback Situação → Comportamento → Impacto (SBI)',
     fonte: 'Center for Creative Leadership — Weitzel, 2000',
     naPratica: '"Abaixo" e "Acima" só se publicam com o fato que levou a eles.',
-    garante: 'Nenhuma nota extrema sem um exemplo concreto que se possa conversar.',
+    garante: 'Nenhum "Abaixo" ou "Acima" sem um exemplo concreto que se possa conversar.',
   },
   {
-    metodo: 'O nível em destaque, o número discreto',
+    metodo: 'Nível com nome, sem nota em número',
     fonte: 'Kluger & DeNisi, 1996 — Psychological Bulletin (meta-análise)',
-    naPratica: 'A página mostra o nome do nível e o exemplo; a média aparece pequena.',
-    garante: 'A conversa fica no que fazer no próximo mês, e não na disputa por décimos.',
+    naPratica: 'Nenhuma tela, relatório ou PDF mostra número: só o nome do nível e o exemplo escrito.',
+    garante: 'A conversa fica no que fazer no próximo mês, e não na disputa por pontos.',
   },
   {
     metodo: 'Perguntas sobre o que o avaliador faria',

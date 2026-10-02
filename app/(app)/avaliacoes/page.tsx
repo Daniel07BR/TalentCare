@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import { ancoraDe } from '@/lib/avaliacoes/criterios'
+import { ancoraDe, nivelDe } from '@/lib/avaliacoes/criterios'
 import Avatar from '../Avatar'
 
 type Linha = {
@@ -144,7 +144,7 @@ export default function AvaliacoesPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px,1fr))', gap: 14, marginBottom: 16 }}>
         <Kpi label="Avaliados" value={`${kpi.publicadas}`} sub={`de ${kpi.total} pessoas${setorUrl ? ' do setor' : ''}`} color="var(--success)" />
         <Kpi label="Faltam avaliar" value={`${kpi.faltam}`}
-          sub={kpi.faltam === 0 ? 'mês em dia' : setorUrl ? (kpi.meus ? `destas, ${kpi.meus} cabem a você` : 'nenhuma cabe a você') : 'ainda sem nota publicada'}
+          sub={kpi.faltam === 0 ? 'mês em dia' : setorUrl ? (kpi.meus ? `destas, ${kpi.meus} cabem a você` : 'nenhuma cabe a você') : 'ainda sem avaliação publicada'}
           color={kpi.faltam > 0 ? 'var(--warning)' : 'var(--text-mute)'} />
         <Kpi label="Progresso" value={`${pct}%`} sub="da competência" color="var(--accent)" bar={pct} />
         {kpi.orfaos > 0 && (
@@ -178,7 +178,7 @@ export default function AvaliacoesPage() {
 
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 140px 110px 70px', gap: 12, padding: '4px 12px 9px', borderBottom: '1px solid var(--border-soft)' }}>
-          {['Pessoa', 'Quem avalia', 'Situação', '', 'Nota'].map((c, i) => (
+          {['Pessoa', 'Quem avalia', 'Situação', '', 'Resultado'].map((c, i) => (
             <div key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mute)', textAlign: i === 4 ? 'right' : 'left' }}>{c}</div>
           ))}
         </div>
@@ -223,9 +223,10 @@ export default function AvaliacoesPage() {
               {l.status === 'publicada' && !l.concluida && <div>falta o documento assinado</div>}
             </div>
             <div style={{ textAlign: 'right' }}>
+              {/* O NOME do nível, não o número (02/10/2026 — sem nota numérica). */}
               {l.media != null ? (
-                <span className="cnum" style={{ fontSize: 19, fontWeight: 800, color: ancoraDe(l.media).color }}>
-                  {l.media.toFixed(1)}
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: ancoraDe(l.media).color, whiteSpace: 'nowrap' }}>
+                  {nivelDe(l.media).curto}
                 </span>
               ) : <span style={{ fontSize: 12, color: 'var(--text-mute)' }}>—</span>}
             </div>
