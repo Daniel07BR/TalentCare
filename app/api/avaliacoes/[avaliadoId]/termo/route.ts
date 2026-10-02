@@ -68,6 +68,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ avaliadoId:
     publicadaEm: av.publishedAt,
     versao: av.versao,
     reguaPropria: regua.propria,
+    // O setor pelo nome da casa ("T.I", e não o "TI" do cadastro) quando a régua o conhece.
+    setorNome: regua.setor,
     // ⚠️⚠️ Sem o número (02/10/2026): o papel mostra o NOME do nível; a média fica com a gestão.
     resultado: av.media != null ? { nivel: ancoraDe(av.media).label, nivelKey: nivelDe(av.media).key } : null,
     pontos: CRITERIOS.map((c) => {
