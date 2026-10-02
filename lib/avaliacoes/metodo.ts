@@ -1,0 +1,102 @@
+/* ============================================================
+   O MÉTODO da avaliação mensal (02/10/2026) — e a RÉGUA ESCRITA de cada setor.
+
+   Pedido do Daniel: um método reconhecido, que a Diretoria aprove e que se
+   defenda numa conversa. A base é a escala ancorada em comportamento (BARS,
+   Smith & Kendall, 1963): cada nível vem com o que ele SIGNIFICA no cargo, e
+   não com um adjetivo. O exemplo que sustenta Abaixo e Acima segue o formato
+   Situação → Comportamento → Impacto (SBI, Center for Creative Leadership).
+
+   ⚠️⚠️ A régua do setor é o que torna a nota defensável: ninguém é avaliado por
+   uma regra que não conhecia. Ela aparece nos botões de quem avalia, na página
+   do avaliado e no PDF — os TRÊS leem daqui, e de nenhum outro lugar.
+
+   ⚠️ Setor sem régua própria cai na genérica (as dicas de `NIVEIS`). A régua
+   é escrita UMA vez por setor e vale para todos os meses.
+
+   ⚠️ Arquivo sem `server-only`: a tela e o PDF importam os mesmos textos.
+   ============================================================ */
+
+import { CRITERIOS, NIVEIS } from './criterios'
+
+export type NivelKey = 'abaixo' | 'parte' | 'atende' | 'acima'
+/** critério → nível → o que aquele nível significa no setor. */
+export type Regua = Record<string, Record<NivelKey, string>>
+
+const norm = (s: string | null | undefined) =>
+  (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/* ⚠️ A RÉGUA DA T.I — rascunho de 02/10/2026, para o Daniel revisar. O setor é o
+   piloto do método: três meses rodando antes de levar à Diretoria. */
+const REGUA_TI: Regua = {
+  entrega: {
+    abaixo: 'Chamado parado além do prazo sem retorno, entrega refeita, ou problema que voltou porque a causa não foi resolvida.',
+    parte: 'Resolveu o que chegou, mas com atraso ou retrabalho; precisou ser lembrado de pendências.',
+    atende: 'Chamados e tarefas no prazo combinado; o que entregou funcionou e não voltou.',
+    acima: 'Foi além do pedido: resolveu a causa, automatizou ou documentou algo que evita chamados futuros.',
+  },
+  atitude: {
+    abaixo: 'Esperou ser cobrado, sabia de um problema e não avisou, ou descumpriu regra da casa (acesso, segurança, publicar fora do git).',
+    parte: 'Age quando é cobrado; segue as regras na maior parte do tempo.',
+    atende: 'Assume o que é dele, avisa antes quando vai atrasar e segue as regras.',
+    acima: 'Viu o problema antes de virar chamado e resolveu ou levou uma proposta.',
+  },
+  equipe: {
+    abaixo: 'Usuário ou colega ficou sem retorno; a informação ficou só com ele.',
+    parte: 'Responde, mas não explica o que fez nem registra.',
+    atende: 'Dá retorno em linguagem simples e registra no chamado o que fez.',
+    acima: 'Ensinou alguém ou deixou documentação que o time passou a usar.',
+  },
+}
+
+/** Setor (nome normalizado, sem pontos nem espaços) → régua. */
+const REGUAS: Record<string, { nome: string; regua: Regua }> = {
+  ti: { nome: 'T.I', regua: REGUA_TI },
+}
+
+export type ReguaDoSetor = { propria: boolean; setor: string | null; regua: Regua }
+
+/** A régua que vale para quem é do setor `nomeSetor` — a própria, ou a genérica. */
+export function reguaDoSetor(nomeSetor: string | null | undefined): ReguaDoSetor {
+  const achada = REGUAS[norm(nomeSetor)]
+  if (achada) return { propria: true, setor: achada.nome, regua: achada.regua }
+  const generica = Object.fromEntries(NIVEIS.map((n) => [n.key, n.dica])) as Record<NivelKey, string>
+  return { propria: false, setor: null, regua: Object.fromEntries(CRITERIOS.map((c) => [c.key, generica])) }
+}
+
+/** O texto de UM nível de UM critério. */
+export function significado(r: ReguaDoSetor, criterio: string, nivel: string): string {
+  return r.regua[criterio]?.[nivel as NivelKey] ?? NIVEIS.find((n) => n.key === nivel)?.dica ?? ''
+}
+
+/* ── O texto do método — o mesmo na tela, na página do avaliado e no PDF ── */
+
+export const METODO_RESUMO =
+  'Todo mês, quem avalia o setor escolhe um nível em 3 pontos: Entrega, Atitude e Equipe e comunicação. ' +
+  'Cada nível tem uma descrição do que ele significa no seu cargo, conhecida antes de o mês começar. ' +
+  'Quando o nível é "Abaixo" ou "Acima", o avaliador escreve o exemplo que levou a ele.'
+
+export const METODO_PONTOS = [
+  { titulo: 'Critérios conhecidos antes', texto: 'Cada nível tem o que significa no seu setor. Ninguém é avaliado por uma regra que não conhecia.' },
+  { titulo: 'Exemplo nos extremos', texto: '"Abaixo" e "Acima" sempre vêm com o fato que levou a eles: a situação, o que foi feito e o efeito.' },
+  { titulo: 'Sistema e observação, lado a lado', texto: 'A ficha mostra o que os sistemas registraram; a avaliação mostra o que o avaliador observou. Quando discordam, há algo a conversar.' },
+  { titulo: 'Você é ouvido', texto: 'Você lê, dá ciência e pode comentar. O comentário fica registrado junto da avaliação — não muda a nota, fica ao lado dela.' },
+  { titulo: 'Nada se apaga', texto: 'Uma avaliação publicada só muda por correção com motivo, e a versão anterior continua registrada.' },
+]
+
+export const METODO_REFERENCIA =
+  'Método: escala ancorada em comportamento (BARS), com feedback no formato Situação → Comportamento → Impacto (SBI).'
+
+/* ── As perguntas SÓ DA GESTÃO ──────────────────────────────────────────────
+   ⚠️⚠️ Ficam fora da página do avaliado e do PDF, de propósito: se o avaliador
+   souber que a pessoa vai ler "corre risco: sim", ele suaviza a resposta e ela
+   perde o valor. Perguntam o que o avaliador FARIA, e não o que ele acha — o
+   formato da Deloitte (Buckingham & Goodall, HBR 2015), porque julgar a própria
+   intenção varia menos de avaliador para avaliador do que julgar a pessoa. */
+export const PERGUNTAS_GESTAO = [
+  { key: 'querNaEquipe', texto: 'Eu quero esta pessoa na minha equipe.' },
+  { key: 'prontoParaMais', texto: 'Está pronta para mais responsabilidade.' },
+  { key: 'emRisco', texto: 'Corre risco de baixo desempenho.' },
+] as const
+export type GestaoKey = (typeof PERGUNTAS_GESTAO)[number]['key']
+export type Gestao = Record<GestaoKey, boolean | null> & { anotacao: string | null }

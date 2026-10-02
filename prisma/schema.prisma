@@ -701,12 +701,16 @@ model Avaliacao {
   // Calculada na publicação e gravada: mudar a lista de critérios amanhã não
   // pode reescrever a média de um mês já fechado.
   media        Float?
+  // O COMBINADO para o próximo mês (02/10/2026). Uma coisa só, que o avaliado
+  // lê e que abre a conversa do mês seguinte. Aparece para ele e no PDF.
+  combinado    String?
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   notas   AvaliacaoNota[]
   versoes AvaliacaoVersao[]
   ciencia AvaliacaoCiencia?
+  gestao  AvaliacaoGestao?
 
   @@unique([competencia, avaliadoId])
   @@index([competencia])
@@ -750,6 +754,7 @@ model AvaliacaoVersao {
   // Por que foi corrigida. Obrigatório — correção sem motivo é reescrita.
   motivo      String?
   comentario  String?
+  combinado   String?
   media       Float?
   // Snapshot das notas daquela versão: [{criterio, nota, justificativa}].
   notas       Json
@@ -782,6 +787,28 @@ model AvaliacaoCiencia {
   avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
 
   @@map("avaliacao_ciencia")
+}
+
+// O que é SÓ DA GESTÃO (02/10/2026). Tabela própria, e não colunas em
+// `avaliacao`, para que nenhuma rota do avaliado consiga devolver isto por
+// descuido de um `include`: quem lê a avaliação inteira não lê a gestão.
+//
+// ⚠️⚠️ NUNCA vai para `/minha-avaliacao` nem para o PDF. Se o avaliador souber
+// que a pessoa vai ler "corre risco: sim", ele suaviza — e a resposta perde o
+// valor. Ver `lib/avaliacoes/metodo.ts` (PERGUNTAS_GESTAO).
+model AvaliacaoGestao {
+  avaliacaoId    String   @id @map("avaliacao_id")
+  querNaEquipe   Boolean? @map("quer_na_equipe")
+  prontoParaMais Boolean? @map("pronto_para_mais")
+  emRisco        Boolean? @map("em_risco")
+  // Anotação privada para preparar a conversa.
+  anotacao       String?
+  updatedById    String?  @map("updated_by_id")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  @@map("avaliacao_gestao")
 }
 
 /**
