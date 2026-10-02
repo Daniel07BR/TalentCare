@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { PessoaDoSetor, DeptMetrics } from '@/lib/ui/dept-period'
-import { ancoraDe, nivelDe } from '@/lib/avaliacoes/criterios'
+import { ancoraDe, nivelDe, resultadoDe } from '@/lib/avaliacoes/criterios'
 import { ChevronRight } from 'lucide-react'
 import Avatar from '../../Avatar'
 
@@ -76,9 +76,8 @@ export function Pessoas({ pessoas, periodo, competencia, pontuacaoDoMes, avaliav
      vermelho, sem barra — ela não é "pouca atividade", é saldo negativo. */
   const maxPont = Math.max(1, ...pessoas.map((p) => p.pontuacao ?? 0))
   const comNota = pessoas.filter((p) => p.nota != null)
-  const mediaNota = comNota.length
-    ? Math.round((comNota.reduce((a, p) => a + (p.nota ?? 0), 0) / comNota.length) * 10) / 10
-    : null
+  // O nível que mais se repete no setor, não a média (02/10/2026).
+  const mediaNota = resultadoDe(comNota.map((p) => p.nota))
 
   /* ⚠️ Sem NENHUMA nota publicada, ordenar "por nota" caía no desempate por
      atividade — a lista ficava ordenada por atividade com o botão "Nota" aceso,

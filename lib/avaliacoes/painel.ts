@@ -1,6 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
-import { CRITERIOS, aPartirDe, competencias, limitesDaCompetencia, nivelDe, mediaDe } from './criterios'
+import { CRITERIOS, aPartirDe, competencias, limitesDaCompetencia, nivelDe, resultadoDe } from './criterios'
 import { enderecoDe, sufixoDe } from './endereco'
 import { gestoresDaCasa, podeAvaliar, type Quem, type Setor } from './regua'
 
@@ -116,7 +116,7 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
       quadro: gente.filter((p) => noQuadro(p, c)).length,
       concluidas: pubs.filter((a) => a.documento?.concluidaEm).length,
       // O nível do SETOR no mês: o da média das médias — só o nome sai daqui.
-      nivel: nivelKey(mediaDe(pubs.map((a) => ({ nota: a.media })))),
+      nivel: nivelKey(resultadoDe(pubs.map((a) => a.media))),
     }
   })
 
