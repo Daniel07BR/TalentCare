@@ -43,7 +43,7 @@ const REGUA_TI: Regua = {
   },
   equipe: {
     abaixo: 'Usuário ou colega ficou sem retorno; a informação ficou só com ele.',
-    parte: 'Responde, mas não explica o que fez nem registra.',
+    parte: 'Resolve, mas a forma de responder ou de explicar dificulta o entendimento ou o relacionamento com quem pediu.',
     atende: 'Dá retorno em linguagem simples e registra no chamado o que fez.',
     acima: 'Ensinou alguém ou deixou documentação que o time passou a usar.',
   },

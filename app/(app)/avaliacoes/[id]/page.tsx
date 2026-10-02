@@ -10,6 +10,7 @@ import { FileDown } from 'lucide-react'
 import { significado, PERGUNTAS_GESTAO, GESTAO_EXPLICA, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../TermoImpresso'
 import { MetodoCientifico } from '../MetodoCientifico'
+import { DocumentoAssinado, type DocMeta } from '../DocumentoAssinado'
 import st from './avaliar.module.css'
 
 const GESTAO_VAZIA: Gestao = { querNaEquipe: null, prontoParaMais: null, emRisco: null, anotacao: null }
@@ -27,6 +28,7 @@ type Dados = {
     id: string; status: string; versao: number; media: number | null
     comentario: string | null; combinado: string | null; publishedAt: string | null; avaliadorId: string
     gestao: Gestao | null
+    documento: DocMeta
     notas: Record<string, NotaEnt>
     ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
     versoes: { versao: number; motivo: string | null; media: number | null; publishedAt: string | null }[]
@@ -66,7 +68,9 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   if (!d) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Carregando…</div>
 
   const jaPublicada = d.avaliacao?.status === 'publicada'
-  const somenteLeitura = !d.posso
+  // ⚠️ Concluída (documento assinado anexado) trava TUDO, até para quem avalia.
+  const concluida = !!d.avaliacao?.documento?.concluidaEm
+  const somenteLeitura = !d.posso || concluida
   const lista = CRITERIOS.map((c) => ({ c, v: notas[c.key] ?? { nota: null, justificativa: null } }))
   const media = mediaDe(lista.map((l) => ({ nota: l.v.nota })))
   const pendentesJust = lista.filter((l) => exigeJustificativa(l.v.nota) && !(l.v.justificativa ?? '').trim())
@@ -197,9 +201,19 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   <div className={st.situacao}>
                     Publicada{d.avaliacao!.versao > 1 ? ` · versão ${d.avaliacao!.versao}` : ''}
                     {d.avaliacao!.ciencia?.cienteEm ? ' · a pessoa já leu' : ' · aguardando ciência'}
+                    {concluida ? ' · concluída' : ''}
                   </div>
                 )}
               </div>
+
+              {jaPublicada && d.posso && !concluida && (
+                <Aviso cor="var(--info)">
+                  Publicada — você ainda pode <b>corrigir</b>: mude o que precisar e clique em &quot;Publicar correção&quot; (pede um motivo, e a versão anterior fica registrada). A avaliação só fecha de vez quando o documento assinado for anexado, lá embaixo.
+                </Aviso>
+              )}
+              {concluida && (
+                <Aviso cor="var(--chart-3)">🔒 Concluída com o documento assinado. Não pode mais ser alterada.</Aviso>
+              )}
 
               {lista.map(({ c, v }, i) => {
                 const precisa = exigeJustificativa(v.nota)
@@ -314,6 +328,12 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                     {salvando === 'publicar' ? 'Publicando…' : jaPublicada ? 'Publicar correção' : 'Publicar avaliação'}
                   </button>
                 </div>
+              )}
+
+              {/* O ÚLTIMO PASSO: o documento assinado, que conclui e trava. */}
+              {jaPublicada && (d.gestaoVisivel || concluida) && (
+                <DocumentoAssinado avaliadoId={d.pessoa.id} competencia={competencia} versao={d.avaliacao!.versao}
+                  doc={d.avaliacao!.documento} podeAnexar={d.gestaoVisivel} onMudou={carregar} />
               )}
 
               {/* Histórico de correções */}

@@ -67,6 +67,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       ciencia: true,
       versoes: { orderBy: { versao: 'desc' } },
       gestao: gestaoVisivel,
+      // Só os metadados: as imagens vêm pela rota `/documento`, uma de cada vez.
+      documento: { select: { frenteTipo: true, versoTipo: true, concluidaEm: true, concluidaPorId: true, versaoAssinada: true } },
     },
   })
 
@@ -94,6 +96,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       ? {
           id: av.id, status: av.status, versao: av.versao, media: av.media,
           comentario: av.comentario, combinado: av.combinado, publishedAt: av.publishedAt,
+          documento: av.documento
+            ? {
+                temFrente: !!av.documento.frenteTipo, temVerso: !!av.documento.versoTipo,
+                concluidaEm: av.documento.concluidaEm, versaoAssinada: av.documento.versaoAssinada,
+                concluidaPor: av.documento.concluidaPorId
+                  ? (await prisma.user.findUnique({ where: { id: av.documento.concluidaPorId }, select: { name: true } }))?.name ?? null
+                  : null,
+              }
+            : null,
           gestao: gestaoVisivel && av.gestao
             ? { querNaEquipe: av.gestao.querNaEquipe, prontoParaMais: av.gestao.prontoParaMais, emRisco: av.gestao.emRisco, anotacao: av.gestao.anotacao }
             : null,
@@ -192,8 +203,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     tx.avaliacaoGestao.upsert({ where: { avaliacaoId }, create: { avaliacaoId, ...gestao }, update: gestao })
   const existente = await prisma.avaliacao.findUnique({
     where: { competencia_avaliadoId: { competencia, avaliadoId } },
-    include: { notas: true },
+    include: { notas: true, documento: { select: { concluidaEm: true } } },
   })
+
+  // ⚠️⚠️ A TRAVA (02/10/2026): com o documento assinado anexado e a avaliação
+  // concluída, nada mais muda — nem rascunho, nem correção, nem a gestão. O que
+  // está no papel e o que está no sistema têm de ser a mesma coisa.
+  if (existente?.documento?.concluidaEm) {
+    return NextResponse.json({
+      error: 'avaliacao_concluida',
+      detalhe: 'Esta avaliação foi concluída com o documento assinado e não pode mais ser alterada.',
+    }, { status: 409 })
+  }
 
   // ── CORREÇÃO de uma publicada ──────────────────────────────────────────────
   // ⚠️⚠️ Publicada não se edita por cima. A versão anterior é guardada inteira e

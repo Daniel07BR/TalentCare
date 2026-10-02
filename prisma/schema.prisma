@@ -711,6 +711,7 @@ model Avaliacao {
   versoes AvaliacaoVersao[]
   ciencia AvaliacaoCiencia?
   gestao  AvaliacaoGestao?
+  documento AvaliacaoDocumento?
 
   @@unique([competencia, avaliadoId])
   @@index([competencia])
@@ -809,6 +810,36 @@ model AvaliacaoGestao {
   avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
 
   @@map("avaliacao_gestao")
+}
+
+// O DOCUMENTO ASSINADO — frente e verso do PDF com as assinaturas (02/10/2026).
+//
+// ⚠️⚠️ `concluidaEm` é a TRAVA: com ela preenchida a avaliação não se edita
+// mais (nem notas, nem combinado, nem a parte da gestão). Antes dela, publicada
+// ainda se corrige — com motivo, guardando a versão anterior. Um caminho só
+// escreve `concluidaEm` (PATCH em `/documento`) e todo mundo a lê daqui.
+//
+// ⚠️ As imagens moram no BANCO (bytea), e não em pasta do servidor: o deploy é
+// rsync, e o backup do TalentCare é do banco — arquivo solto em disco ficaria
+// fora dos dois. Comprimidas no navegador antes de subir (~até 900 KB cada).
+//
+// `versaoAssinada` = de qual versão é o papel. Correção depois disso não existe
+// (a trava impede), mas o número fica para quem conferir o papel com a tela.
+model AvaliacaoDocumento {
+  avaliacaoId    String    @id @map("avaliacao_id")
+  frente         Bytes?
+  frenteTipo     String?   @map("frente_tipo")
+  verso          Bytes?
+  versoTipo      String?   @map("verso_tipo")
+  enviadoPorId   String?   @map("enviado_por_id")
+  concluidaEm    DateTime? @map("concluida_em")
+  concluidaPorId String?   @map("concluida_por_id")
+  versaoAssinada Int?      @map("versao_assinada")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  avaliacao Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+
+  @@map("avaliacao_documento")
 }
 
 /**
