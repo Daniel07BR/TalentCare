@@ -1,6 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
-import { CRITERIOS, aPartirDe, competencias, limitesDaCompetencia, nivelDe, resultadoDe } from './criterios'
+import { CRITERIOS, aPartirDe, avaliacaoLiberada, competencias, limitesDaCompetencia, nivelDe, resultadoDe } from './criterios'
 import { enderecoDe, sufixoDe } from './endereco'
 import { gestoresDaCasa, podeAvaliar, type Quem, type Setor } from './regua'
 
@@ -29,7 +29,9 @@ export type Contagem = Record<NivelKey, number>
 const zero = (): Contagem => ({ abaixo: 0, parte: 0, atende: 0, acima: 0 })
 const nivelKey = (n: number | null | undefined): NivelKey | null => (n == null ? null : (nivelDe(n).key as NivelKey))
 
-/** Pode abrir o painel deste setor? Diretoria, ou quem avalia ali. */
+/** Pode abrir o painel deste setor? Diretoria, ou quem avalia ali.
+ *  ⚠️ Setor sem avaliação liberada (só a T.I, por ora) nem chega aqui: as rotas
+ *  do painel recusam antes, por `avaliacaoLiberada(nome)`. */
 export function acessaSetor(quem: Quem, departmentId: string): boolean {
   if (quem.escopo.tipo === 'tudo') return true
   return quem.escopo.avaliaDepartmentIds.includes(departmentId)
@@ -94,7 +96,7 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
     prisma.setorAvaliador.findMany({ where: { departmentId: setor.id }, select: { userId: true, nivel: true } }),
     prisma.department.findUnique({ where: { id: setor.id }, select: { avaliadoPelaDiretoria: true } }),
   ])
-  const ctxSetor: Setor = { niveis: new Map(vinc.map((v) => [v.userId, v.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria }
+  const ctxSetor: Setor = { niveis: new Map(vinc.map((v) => [v.userId, v.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria, liberado: avaliacaoLiberada(setor.nome) }
 
   /** Estava no quadro naquele mês? (admissão antes do fim, saída depois do início) */
   const noQuadro = (p: (typeof gente)[number], c: string) => {

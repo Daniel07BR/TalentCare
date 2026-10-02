@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { getTalentData, type Alcance } from '@/lib/data/source'
 import { cartoesDoMenu } from '@/lib/ui/menu'
+import { avaliacaoLiberada } from '@/lib/avaliacoes/criterios'
 import AppShell from './AppShell'
 import PrepareGate from './PrepareGate'
 
@@ -58,6 +59,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
    * ver `AppShell`. Tirar tudo os deixaria presos numa página só.
    */
   const soMeuSetor = role !== 'ADMIN'
+  /* ⚠️ O botão "Avaliações" da barra só aparece para quem avalia um setor com a
+     avaliação LIBERADA (só a T.I, por ora — 02/10/2026). Um gestor do Fiscal
+     clicaria e cairia numa fila vazia. */
+  const setoresQueAvalio = vinculosDele.length
+    ? await prisma.department.findMany({ where: { id: { in: vinculosDele.map((v) => v.departmentId) } }, select: { name: true } })
+    : []
+  const avaliaLiberado = setoresQueAvalio.some((d) => avaliacaoLiberada(d.name))
   /* Os chips dos setores são só da barra de quem não é Diretoria. (Até 11/09/2026
      eram calculados também para a Diretoria, para a prévia "vendo como gestor",
      que saiu com o menu lateral.) */
@@ -72,6 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       roleLabel={roleLabel}
       soMeuSetor={soMeuSetor}
       meusSetores={meusSetores}
+      avaliaLiberado={avaliaLiberado}
       /* ⚠️⚠️ Os cartões da janela (o que era o menu lateral) são decididos AQUI,
          no servidor: quem não é Diretoria recebe a lista vazia, e nem o botão
          aparece. Ver `lib/ui/menu.ts`. */

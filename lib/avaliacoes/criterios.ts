@@ -39,6 +39,19 @@ export const CRITERIOS: Criterio[] = [
 ]
 
 export const CRITERIO_KEYS = CRITERIOS.map((c) => c.key)
+
+/* ⚠️⚠️ OS SETORES COM AVALIAÇÃO LIBERADA (Daniel, 02/10/2026: "por hora a
+   avaliação só está liberada para o departamento de T.I"). A T.I é o PILOTO do
+   método; os outros entram quando o Daniel liberar — e liberar é acrescentar o
+   nome aqui. UMA lista, consultada por todas as portas: a fila, a tela de
+   avaliar, o documento assinado, a área do setor, o cartão do departamento, o
+   botão da barra dos gestores e o relatório completo.
+   Nomes NORMALIZADOS (sem acento, pontos e espaços): "T.I" e "TI" são "ti". */
+export const SETORES_COM_AVALIACAO = ['ti']
+const normSetor = (s: string | null | undefined) =>
+  (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+/** A avaliação está liberada para este setor (pelo NOME do setor)? */
+export const avaliacaoLiberada = (nomeSetor: string | null | undefined) => SETORES_COM_AVALIACAO.includes(normSetor(nomeSetor))
 export const criterioDe = (key: string) => CRITERIOS.find((c) => c.key === key)
 
 /**

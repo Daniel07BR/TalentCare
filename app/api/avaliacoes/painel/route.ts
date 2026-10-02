@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { quemEh } from '@/lib/avaliacoes/regua'
+import { avaliacaoLiberada } from '@/lib/avaliacoes/criterios'
 import { acessaSetor, painelDoSetor, setorDoEndereco } from '@/lib/avaliacoes/painel'
 import { enderecoDe } from '@/lib/avaliacoes/endereco'
 import { prisma } from '@/lib/db/prisma'
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
     ? { id: porId.id, nome: porId.name, endereco: enderecoDe({ id: porId.id, nome: porId.name }) }
     : await setorDoEndereco(pedido)
   if (!setor) return NextResponse.json({ error: 'Setor não encontrado' }, { status: 404 })
+  // Só os setores com a avaliação liberada (T.I, por ora — 02/10/2026).
+  if (!avaliacaoLiberada(setor.nome)) return NextResponse.json({ error: 'A avaliação ainda não foi liberada para este setor.' }, { status: 404 })
   if (!acessaSetor(quem, setor.id)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const meses = Number(req.nextUrl.searchParams.get('meses') ?? 12)

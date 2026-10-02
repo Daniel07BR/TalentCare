@@ -1,5 +1,19 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação liberada só para a T.I (piloto)
+
+Pedido do Daniel: *"por hora a avaliação só está liberada para o departamento de T.I"*.
+
+- Uma chave só: `SETORES_COM_AVALIACAO = ['ti']` + `avaliacaoLiberada(nome)` em
+  `lib/avaliacoes/criterios.ts`. **Liberar outro setor = acrescentar o nome ali.**
+- Portas fechadas para os demais setores: a **fila** (só T.I), `podeAvaliar` (o `Setor` ganhou
+  `liberado`; `contextoDoSetor` da régua passou a ser o único — as cópias locais da rota da
+  avaliação e do documento saíram), a **área do setor** e a página/janela da pessoa (404), o
+  **cartão** na página do departamento (some), o botão **"Avaliações"** da barra dos gestores
+  (só para quem avalia setor liberado) e o quadro do **relatório completo** ("ainda não
+  liberada", sem cobrar "faltam avaliar").
+- A Diretoria segue vendo tudo da T.I: fila, área do setor, janela e histórico de cada pessoa.
+
 ## 2026-10-02 — Guia da avaliação: padrão do texto dos atrasos
 
 - Atrasos no texto da avaliação: **só a contagem do mês**, ligada à advertência ("foram 4

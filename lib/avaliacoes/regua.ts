@@ -1,7 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { isHiddenDept } from '@/lib/hidden-depts'
-import { limitesDaCompetencia } from './criterios'
+import { avaliacaoLiberada, limitesDaCompetencia } from './criterios'
 
 /* ============================================================
    A RÉGUA DA AVALIAÇÃO — UMA, aqui, e em nenhum outro lugar.
@@ -88,6 +88,9 @@ export type Setor = {
   /** userId → 'gestor' | 'sub'. Só quem tem vínculo naquele setor aparece. */
   niveis: Map<string, string>
   pelaDiretoria: boolean
+  /** `false` = a avaliação ainda não foi liberada para este setor (só a T.I, por
+   *  ora — `SETORES_COM_AVALIACAO`). Ninguém avalia ali, nem a Diretoria. */
+  liberado?: boolean
 }
 
 /**
@@ -119,6 +122,8 @@ export function podeAvaliar(
 ): boolean {
   if (alvo.id === quem.id) return false
   if (!alvo.departmentId) return false
+  // Setor ainda não liberado para a avaliação (só a T.I, por ora).
+  if (setor.liberado === false) return false
 
   const nivelDoAlvo = setor.niveis.get(alvo.id)
   // Gestor não é avaliado — por ninguém (02/10/2026).
@@ -284,6 +289,8 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
     // Diretoria e Sistemas continuam fora da população avaliada, como no resto
     // do painel — a Diretoria usa o sistema, não é avaliada nele.
     .filter((p) => !isHiddenDept(p.department?.name))
+    // ⚠️ Só os setores com a avaliação LIBERADA (T.I, por ora — 02/10/2026).
+    .filter((p) => avaliacaoLiberada(p.department?.name))
     .map((p) => {
       const av = porAvaliado.get(p.id)
       const setor = porSetor.get(p.departmentId ?? '') ?? setorVazio
@@ -355,10 +362,14 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
  *  fila (`filaDaCompetencia`) e da rota da avaliação — se divergirem, um botão
  *  oferece o que a rota recusa. */
 export async function contextoDoSetor(departmentId: string | null): Promise<Setor> {
-  if (!departmentId) return { niveis: new Map(), pelaDiretoria: false }
+  if (!departmentId) return { niveis: new Map(), pelaDiretoria: false, liberado: false }
   const [rows, dept] = await Promise.all([
     prisma.setorAvaliador.findMany({ where: { departmentId }, select: { userId: true, nivel: true } }),
-    prisma.department.findUnique({ where: { id: departmentId }, select: { avaliadoPelaDiretoria: true } }),
+    prisma.department.findUnique({ where: { id: departmentId }, select: { avaliadoPelaDiretoria: true, name: true } }),
   ])
-  return { niveis: new Map(rows.map((r) => [r.userId, r.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria }
+  return {
+    niveis: new Map(rows.map((r) => [r.userId, r.nivel])),
+    pelaDiretoria: !!dept?.avaliadoPelaDiretoria,
+    liberado: avaliacaoLiberada(dept?.name),
+  }
 }
