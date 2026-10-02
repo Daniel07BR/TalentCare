@@ -147,3 +147,46 @@
 
 .heroPessoa { display: flex; align-items: center; gap: 16px; }
 .vazio { padding: 26px; text-align: center; color: var(--n-text-3); font-size: 13px; }
+
+/* ── a JANELA DA PESSOA (02/10/2026) ── */
+.fundoJanela {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px; background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px);
+  animation: aparece .15s ease-out;
+}
+.janela {
+  position: relative; width: min(920px, 100%); max-height: calc(100vh - 48px); overflow-y: auto;
+  background: var(--n-bg); color: var(--n-text); border-radius: 18px; box-shadow: 0 24px 60px rgba(15, 23, 42, .35);
+  border-top: 5px solid var(--faixa-acento); padding: 22px 24px 18px;
+  font-family: inherit;
+}
+@keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
+.fechar {
+  position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--n-card); border: 1px solid var(--n-border); color: var(--n-text-2);
+}
+.fechar:hover { color: var(--n-text); }
+.janelaTopo { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding-right: 40px; }
+.janelaNome { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.4px; }
+.janelaSub { font-size: 13px; color: var(--n-text-2); margin-top: 2px; }
+.janelaTiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 14px; }
+.janelaTile {
+  background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+.janelaBloco { background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+.janelaTitulo { margin: 0 0 10px; font-size: 14px; font-weight: 700; }
+.janelaAcoes {
+  position: sticky; bottom: -18px; margin: 4px -24px -18px; padding: 14px 24px;
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  background: var(--n-bg); border-top: 1px solid var(--n-border);
+}
+.botaoPri, .botaoSec {
+  display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; text-decoration: none;
+}
+.botaoPri { background: var(--n-blue); color: #fff; box-shadow: 0 6px 16px color-mix(in srgb, var(--n-blue) 28%, transparent); }
+.botaoSec { background: var(--n-card); color: var(--n-text); border: 1px solid var(--n-border); }
+/* ⚠️ Sem `all: unset`: ele viria DEPOIS de `.mapaPessoa` e apagaria o `display: flex`. */
+.mapaPessoaBotao { background: none; border: none; font: inherit; text-align: left; cursor: pointer; width: 100%; }

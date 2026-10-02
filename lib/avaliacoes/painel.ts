@@ -2,7 +2,7 @@ import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { CRITERIOS, competencias, limitesDaCompetencia, nivelDe, mediaDe } from './criterios'
 import { enderecoDe, sufixoDe } from './endereco'
-import type { Quem } from './regua'
+import { podeAvaliar, type Quem, type Setor } from './regua'
 
 /* ============================================================
    O HISTÓRICO DAS AVALIAÇÕES — o painel do setor e o da pessoa (02/10/2026).
@@ -79,6 +79,15 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
 
   const porPessoaMes = new Map(avs.map((a) => [`${a.avaliadoId}|${a.competencia}`, a]))
 
+  /* Quem EU posso avaliar — a janela da pessoa mostra o botão "Avaliar" só para
+     quem pode. ⚠️ O MESMO contexto da fila e da rota (`podeAvaliar`): se as três
+     contas divergissem, o botão abriria uma tela que responde 403. */
+  const [vinc, dept] = await Promise.all([
+    prisma.setorAvaliador.findMany({ where: { departmentId: setor.id }, select: { userId: true, nivel: true } }),
+    prisma.department.findUnique({ where: { id: setor.id }, select: { avaliadoPelaDiretoria: true } }),
+  ])
+  const ctxSetor: Setor = { niveis: new Map(vinc.map((v) => [v.userId, v.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria }
+
   /** Estava no quadro naquele mês? (admissão antes do fim, saída depois do início) */
   const noQuadro = (p: (typeof gente)[number], c: string) => {
     const { inicio: i, fim: f } = limitesDaCompetencia(c)
@@ -142,6 +151,7 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
       id: p.id, nome: p.name, cargo: p.jobTitle ?? 'Colaborador', hasAvatar: !!p.avatarUrl,
       endereco: enderecoDe({ id: p.id, nome: p.name }),
       souEu, ativo: p.active, meses: linha, tendencia,
+      posso: p.departmentId === setor.id && podeAvaliar(quem, { id: p.id, departmentId: p.departmentId }, ctxSetor),
       gestao: g ? { emRisco: g.emRisco, prontoParaMais: g.prontoParaMais, querNaEquipe: g.querNaEquipe } : null,
     }
   })

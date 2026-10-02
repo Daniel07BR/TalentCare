@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliações: janela da pessoa e barra dos meses
+
+- **Janela da pessoa** na área do setor: clicar no nome abre, no centro da tela, o último
+  resultado, o rumo, meses e assinadas, a gestão, a média no tempo, os três pontos dos últimos
+  6 meses e o último recado/combinado. Botões: **Avaliar <mês>** (ou "Abrir a avaliação de
+  <mês>", se já publicada) — só para quem pode avaliar a pessoa — e **Histórico completo**.
+  Esc ou clique fora fecha. Portal no `<body>` com a paleta reaplicada.
+- **Barra dos meses** no topo da tela de avaliar: os últimos 12 meses da pessoa, cada um na cor
+  do nível, com 🔒 (assinada) ou ✎ (falta assinar). Um clique abre o mês para ler, corrigir ou
+  anexar o documento assinado. A rota manda só o nome do nível; rascunho só para quem avalia.
+- `painelDoSetor` devolve `posso` por pessoa (mesma `podeAvaliar` da fila e da rota).
+
 ## 2026-10-02 — Avaliação: "Voltar" leva à área do setor
 
 - "‹ Voltar às avaliações · <setor>" na tela de avaliar abre a área do histórico do setor
