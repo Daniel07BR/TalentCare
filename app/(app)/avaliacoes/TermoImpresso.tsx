@@ -29,6 +29,7 @@ type Termo = {
   publicadaEm: string | null
   versao: number
   reguaPropria: boolean
+  setorNome?: string | null
   resultado: { nivel: string; nivelKey: string } | null
   pontos: { criterio: string; sub: string | null; nivel: string; nivelKey: string | null; significado: string; exemplo: string | null }[]
   recado: string | null
@@ -69,7 +70,7 @@ const CSS = `
 .tr-faixa h1 { margin: 0; font-size: 19px; letter-spacing: -.3px; }
 .tr-faixa .tr-comp { color: #fbbf24; font-weight: 700; }
 .tr-faixa small { color: #cbd5e1; font-size: 10.5px; text-align: right; line-height: 1.35; }
-.tr-ident { display: grid; grid-template-columns: 1.4fr 1.2fr 1fr; gap: 8px 14px; margin: 12px 2px; }
+.tr-ident { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 6px 14px; margin: 12px 2px; }
 .tr-ident b { display: block; font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
 .tr-ident span { font-weight: 600; }
 .tr-tit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #f59e0b; margin: 0 0 6px; }
@@ -193,13 +194,13 @@ function Folha({ t }: { t: Termo }) {
 
       <div className="tr-ident">
         <div><b>Funcionário</b><span>{t.pessoa.nome}</span></div>
-        <div><b>Cargo · Setor</b><span>{t.pessoa.cargo} · {t.pessoa.setor}</span></div>
-        {/* ⚠️ Sem a versão (Daniel, 02/10/2026: "não interessa ao avaliado"). */}
-        <div><b>Publicada em</b><span>{data(t.publicadaEm)}</span></div>
-        {/* O avaliador em linha própria, com o PAPEL dele no lugar do cargo — e não
-            colado ao nome (Daniel, 02/10/2026). O setor é o da avaliação. */}
+        {/* ⚠️ UMA linha (Daniel, 02/10/2026): o nome do avaliador sozinho, e o
+            "Cargo · Setor" ao lado dele é o do AVALIADOR — o papel na avaliação
+            ("Gestor") e o setor pelo nome da casa ("T.I"). Sem a versão: não
+            interessa ao avaliado. */}
         <div><b>Avaliador</b><span>{t.avaliador.nome}</span></div>
-        <div><b>Cargo · Setor</b><span>{t.avaliador.papel} · {t.pessoa.setor}</span></div>
+        <div><b>Cargo · Setor</b><span>{t.avaliador.papel} · {t.setorNome ?? t.pessoa.setor}</span></div>
+        <div><b>Publicada em</b><span>{data(t.publicadaEm)}</span></div>
       </div>
 
       {/* O MÉTODO em três quadros — "mais resumida, simples e direta". */}

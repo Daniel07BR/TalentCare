@@ -1,9 +1,10 @@
 # CHANGELOG — TalentCare
 
-## 2026-10-02 — PDF: avaliador com "Cargo · Setor" e sem versão
+## 2026-10-02 — PDF: identificação numa linha, avaliador com "Cargo · Setor" e sem versão
 
-- Identificação em duas linhas: **Funcionário · Cargo · Setor · Publicada em** e **Avaliador ·
-  Cargo · Setor** — o papel ("Gestor · TI") sai de junto do nome e vai para o campo dele.
+- Uma linha só: **Funcionário · Avaliador · Cargo · Setor · Publicada em**. O nome do avaliador
+  vai sozinho; o "Cargo · Setor" ao lado é o dele — o papel na avaliação e o setor pelo nome da
+  casa (**Gestor · T.I**). A tentativa anterior abriu uma segunda linha e duplicou o campo.
 - Sai a versão ("· v3") da data de publicação: não interessa ao avaliado.
 
 ## 2026-10-02 — Avaliação: combinados em itens
