@@ -194,3 +194,22 @@
 
 /* O resultado do mês é o NOME do nível, grande — não há mais número (02/10/2026). */
 .notaNivelGrande { font-size: 22px; font-weight: 800; letter-spacing: -.4px; line-height: 1.2; text-align: center; margin: 4px 0 2px; }
+
+/* ---------- OS COMBINADOS EM ITENS (02/10/2026) ---------- */
+.combinados { display: flex; flex-direction: column; gap: 8px; }
+.combinado { display: flex; align-items: center; gap: 8px; }
+.combinadoMarca {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); font-size: 12px; font-weight: 800;
+}
+.combinadoTirar {
+  flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-mute); font-size: 17px; line-height: 1; cursor: pointer; font-family: inherit;
+}
+.combinadoTirar:hover { color: var(--danger); border-color: var(--danger); }
+.combinadoMais {
+  align-self: flex-start; margin-left: 32px; padding: 7px 12px; border-radius: var(--radius-sm);
+  border: 1px dashed var(--border); background: transparent; color: var(--text-dim);
+  font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.combinadoMais:hover { color: var(--text); border-color: var(--text-mute); }

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FileDown } from 'lucide-react'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
-import { FONTES_CURTAS } from '@/lib/avaliacoes/metodo'
+import { FONTES_CURTAS, itensDoCombinado } from '@/lib/avaliacoes/metodo'
 
 /* ============================================================
    O TERMO EM A4 — a avaliação do mês para assinar (02/10/2026).
@@ -93,6 +93,8 @@ table.tr-tab { width: 100%; border-collapse: separate; border-spacing: 0 5px; ma
 .tr-caixa { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; border-top: 3px solid var(--c, #0f172a); }
 .tr-caixa h2 { margin: 0 0 3px; font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--c, #64748b); }
 .tr-caixa p { margin: 0; white-space: pre-wrap; font-size: 11px; }
+.tr-lista { margin: 0; padding-left: 16px; font-size: 11px; }
+.tr-lista li { margin: 1px 0; }
 .tr-obs { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px 4px; border-top: 3px solid #0ea5e9; margin-bottom: 4px; }
 .tr-obs h2 { margin: 0; font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: #0369a1; }
 .tr-obs small { color: #64748b; font-size: 10px; }
@@ -245,7 +247,7 @@ function Folha({ t }: { t: Termo }) {
       {(t.recado || t.combinado) && (
         <div className="tr-dois" style={!t.recado || !t.combinado ? { gridTemplateColumns: '1fr' } : undefined}>
           {t.recado && <div className="tr-caixa" style={{ ['--c' as string]: '#6d28d9' }}><h2>Recado do avaliador</h2><p>{t.recado}</p></div>}
-          {t.combinado && <div className="tr-caixa" style={{ ['--c' as string]: '#15803d' }}><h2>Combinado para o próximo mês</h2><p>{t.combinado}</p></div>}
+          {t.combinado && <div className="tr-caixa" style={{ ['--c' as string]: '#15803d' }}><h2>{itensDoCombinado(t.combinado).length > 1 ? 'Combinados' : 'Combinado'} para o próximo mês</h2><ol className="tr-lista">{itensDoCombinado(t.combinado).map((c, i) => <li key={i}>{c}</li>)}</ol></div>}
         </div>
       )}
 

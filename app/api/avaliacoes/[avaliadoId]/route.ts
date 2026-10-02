@@ -6,7 +6,7 @@ import {
   CRITERIOS, aPartirDe, competenciaAnterior, competencias, exigeJustificativa, mediaDe, nivelDe,
 } from '@/lib/avaliacoes/criterios'
 import type { Prisma } from '@prisma/client'
-import { reguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
+import { reguaDoSetor, itensDoCombinado, textoDoCombinado, type Gestao } from '@/lib/avaliacoes/metodo'
 
 type Ctx = { params: Promise<{ avaliadoId: string }> }
 
@@ -212,7 +212,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const media = mediaDe(notas)
   const comentario = (body.comentario ?? '').trim() || null
-  const combinado = (body.combinado ?? '').trim() || null
+  // Um item por linha, até 3 — normalizado aqui, e não só na tela.
+  const combinado = textoDoCombinado(itensDoCombinado(body.combinado))
 
   // A parte da gestão, normalizada. Só quem AVALIA grava (a régua acima já
   // barrou quem não avalia); booleano ou nulo, nada além disso.

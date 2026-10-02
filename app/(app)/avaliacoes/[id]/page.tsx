@@ -7,7 +7,7 @@ import {
   competenciaLabel, competenciaAnterior,
 } from '@/lib/avaliacoes/criterios'
 import { FileDown } from 'lucide-react'
-import { significado, PERGUNTAS_GESTAO, GESTAO_EXPLICA, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
+import { significado, PERGUNTAS_GESTAO, GESTAO_EXPLICA, MAX_COMBINADOS, itensDoCombinado, textoDoCombinado, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../TermoImpresso'
 import { MetodoCientifico } from '../MetodoCientifico'
 import { DocumentoAssinado, type DocMeta } from '../DocumentoAssinado'
@@ -45,7 +45,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   const [d, setD] = useState<Dados | null>(null)
   const [notas, setNotas] = useState<Record<string, NotaEnt>>({})
   const [comentario, setComentario] = useState('')
-  const [combinado, setCombinado] = useState('')
+  // Os combinados em ITENS (02/10/2026); sempre ao menos um campo na tela.
+  const [combinados, setCombinados] = useState<string[]>([''])
   const [gestao, setGestao] = useState<Gestao>(GESTAO_VAZIA)
   const [motivo, setMotivo] = useState('')
   const [erro, setErro] = useState<string | null>(null)
@@ -59,7 +60,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
         setD(j)
         setNotas(j?.avaliacao?.notas ?? {})
         setComentario(j?.avaliacao?.comentario ?? '')
-        setCombinado(j?.avaliacao?.combinado ?? '')
+        const itens = itensDoCombinado(j?.avaliacao?.combinado)
+        setCombinados(itens.length ? itens : [''])
         setGestao(j?.avaliacao?.gestao ?? GESTAO_VAZIA)
       })
   }, [id, competencia])
@@ -90,7 +92,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
     const r = await fetch(`/api/avaliacoes/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ competencia, acao, notas, comentario, combinado, motivo, gestao }),
+      body: JSON.stringify({ competencia, acao, notas, comentario, combinado: textoDoCombinado(combinados), motivo, gestao }),
     })
     const j = await r.json()
     setSalvando('')
@@ -296,9 +298,27 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   placeholder={`O que ${primeiro} fez bem, e o que você espera no mês que vem.`}
                   className={st.campo} />
 
-                <div className={st.campoRotulo} style={{ marginTop: 16 }}>Combinado para o próximo mês <span>· uma coisa só, {primeiro} vai ler e vai no PDF</span></div>
-                <input disabled={somenteLeitura} value={combinado} onChange={(e) => setCombinado(e.target.value)}
-                  placeholder={`O que ${primeiro} e você combinam para o mês que vem`} className={st.campo} />
+                {/* ⚠️ Um apontamento por item, até 3 (02/10/2026): dois combinados num
+                    campo só viravam um parágrafo, e nenhum dos dois se cobrava. */}
+                <div className={st.campoRotulo} style={{ marginTop: 16 }}>Combinados para o próximo mês <span>· um apontamento por item, até {MAX_COMBINADOS}; {primeiro} vai ler e vai no PDF</span></div>
+                <div className={st.combinados}>
+                  {combinados.map((c, i) => (
+                    <div key={i} className={st.combinado}>
+                      <span className={st.combinadoMarca}>{i + 1}</span>
+                      <input disabled={somenteLeitura} value={c}
+                        onChange={(e) => setCombinados((l) => l.map((x, k) => (k === i ? e.target.value : x)))}
+                        placeholder={i === 0 ? `O que ${primeiro} e você combinam para o mês que vem` : 'Outro apontamento de melhora'}
+                        className={st.campo} />
+                      {!somenteLeitura && combinados.length > 1 && (
+                        <button type="button" className={st.combinadoTirar} title="Tirar este item"
+                          onClick={() => setCombinados((l) => l.filter((_, k) => k !== i))}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  {!somenteLeitura && combinados.length < MAX_COMBINADOS && (
+                    <button type="button" className={st.combinadoMais} onClick={() => setCombinados((l) => [...l, ''])}>+ Adicionar combinado</button>
+                  )}
+                </div>
 
                 {/* Correção de publicada exige motivo — as duas versões ficam visíveis. */}
                 {jaPublicada && !somenteLeitura && (

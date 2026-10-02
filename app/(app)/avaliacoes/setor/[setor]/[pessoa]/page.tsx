@@ -9,6 +9,7 @@ import { Cartao } from '../../../../_visao/ui'
 import s from '../../../../_visao/visao.module.css'
 import p from '../../_painel/painel.module.css'
 import { Legenda, LinhaNivel, MapaPontos, Selo, cor, type NivelKey } from '../../_painel/graficos'
+import { itensDoCombinado } from '@/lib/avaliacoes/metodo'
 
 /* ============================================================
    O HISTÓRICO DE UMA PESSOA (02/10/2026): a média no tempo, os três pontos mês
@@ -182,7 +183,7 @@ function Mes({ a, pessoaId, primeiro }: { a: Av; pessoaId: string; primeiro: str
       {(a.recado || a.combinado || a.ciencia?.comentario || a.gestao) && (
         <div className={p.textos}>
           {a.recado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-acima)' }}><b>Recado do avaliador</b>{a.recado}</div>}
-          {a.combinado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-atende)' }}><b>Combinado para o mês seguinte</b>{a.combinado}</div>}
+          {a.combinado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-atende)' }}><b>Combinados para o mês seguinte</b><ol style={{ margin: 0, paddingLeft: 18, whiteSpace: 'normal' }}>{itensDoCombinado(a.combinado).map((c, i) => <li key={i}>{c}</li>)}</ol></div>}
           {a.ciencia?.comentario && <div className={p.texto} style={{ ['--t' as string]: 'var(--n-blue)' }}><b>O que {primeiro} respondeu</b>{a.ciencia.comentario}</div>}
           {a.gestao && (
             <div className={p.texto} style={{ ['--t' as string]: 'var(--n-text-3)' }}>
