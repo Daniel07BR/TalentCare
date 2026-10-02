@@ -7,7 +7,7 @@ import {
   competenciaLabel, competenciaAnterior,
 } from '@/lib/avaliacoes/criterios'
 import { FileDown } from 'lucide-react'
-import { significado, PERGUNTAS_GESTAO, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
+import { significado, PERGUNTAS_GESTAO, GESTAO_EXPLICA, type ReguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../TermoImpresso'
 import { MetodoCientifico } from '../MetodoCientifico'
 import st from './avaliar.module.css'
@@ -270,9 +270,14 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                 <section className={`tc-card ${st.cartao} ${st.gestao}`}>
                   <div className={st.campoRotulo}>🔒 Só para a gestão <span>· não aparece para {primeiro} nem no PDF</span></div>
                   <div className={st.gestaoSub}>Responda pelo que você <b>faria</b>, não pelo que acha da pessoa.</div>
+                  <div className={st.gestaoExplica}>
+                    <div><b>O que é.</b> {GESTAO_EXPLICA.oQueE}</div>
+                    <div><b>Método.</b> {GESTAO_EXPLICA.metodo}</div>
+                    <div><b>Intenção.</b> {GESTAO_EXPLICA.intencao}</div>
+                  </div>
                   {PERGUNTAS_GESTAO.map((q) => (
                     <div key={q.key} className={st.gestaoLinha}>
-                      <span>{q.texto}</span>
+                      <span className={st.gestaoPergunta}>{q.texto}<small>{q.serve}</small></span>
                       <div className={st.simNao} role="radiogroup" aria-label={q.texto}>
                         {([true, false] as const).map((v) => (
                           <button key={String(v)} type="button" role="radio" aria-checked={gestao[q.key] === v} disabled={somenteLeitura}
