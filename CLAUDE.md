@@ -10,6 +10,8 @@ antes de sugerir qualquer texto, e rode o script de insumos que ele descreve
 
 - **Nunca número** — nem nota, nem média, nem 0–10. Só o NOME do nível.
 - **Advertência é derivada do atraso** (a partir do 2º do mês): não conte como fato a mais.
+  No texto, **só a contagem**: "foram 4 atrasos na entrada e isso gerou 3 advertências" —
+  sem dias, horários ou minutos (padrão do Daniel, guia §4).
 - **O nível é decisão do Daniel.** Você junta os dados, aponta incoerência e redige; ele cola
   na tela e publica. Não grave avaliação direto no banco.
 - **Gestor não é avaliado.** Combinados: até 3 itens. Linguagem pelo DISC (`lib/disc/perfis.ts`).

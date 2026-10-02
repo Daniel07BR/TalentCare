@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Guia da avaliação: padrão do texto dos atrasos
+
+- Atrasos no texto da avaliação: **só a contagem do mês**, ligada à advertência ("foram 4
+  atrasos na entrada e isso gerou 3 advertências") — sem dias, horários ou minutos. Modelo
+  escrito pelo Daniel, no guia (§4) e no `CLAUDE.md`; exemplos do Enzo e do Yuri ajustados.
+
 ## 2026-10-02 — Guia da avaliação mensal para o agente + script de insumos
 
 - **`docs/AVALIACAO-MENSAL-PASSO-A-PASSO.md`**: o que o agente faz e não faz, as regras em
