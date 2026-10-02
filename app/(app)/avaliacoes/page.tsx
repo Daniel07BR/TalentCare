@@ -11,6 +11,7 @@ type Linha = {
   ehAvaliador: boolean; cabeADiretoria: boolean; setorSemAvaliador: boolean; quemAvalia: string[]
   avaliacaoId: string | null; status: string; media: number | null; versao: number | null
   publishedAt: string | null; ciente: boolean; comentarioDoAvaliado: string | null
+  concluida?: boolean
   posso: boolean
 }
 type Fila = {
@@ -212,6 +213,7 @@ export default function AvaliacoesPage() {
               {l.status === 'publicada' && l.ciente && <span style={{ color: 'var(--success)' }}>✓ deu ciência</span>}
               {l.status === 'publicada' && !l.ciente && 'aguarda ciência'}
               {l.status === 'publicada' && l.comentarioDoAvaliado && <div style={{ color: 'var(--info)' }}>💬 comentou</div>}
+              {l.status === 'publicada' && !l.concluida && <div>falta o documento assinado</div>}
             </div>
             <div style={{ textAlign: 'right' }}>
               {l.media != null ? (
@@ -243,6 +245,7 @@ function Selo({ l }: { l: Linha }) {
    * "esta pessoa não tem setor" — e todo mundo tem setor. Agora a coluna ao
    * lado diz QUEM avalia, e o selo só diz em que pé está.
    */
+  if (l.status === 'publicada' && l.concluida) return <Tag t="Concluída · assinada" c="var(--chart-3)" />
   if (l.status === 'publicada') return <Tag t={l.versao && l.versao > 1 ? `Avaliado · v${l.versao}` : 'Avaliado'} c="var(--success)" />
   if (l.status === 'rascunho') return <Tag t="Rascunho salvo" c="var(--warning)" />
   if (l.setorSemAvaliador) return <Tag t="Não será avaliado" c="var(--danger)" />

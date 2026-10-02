@@ -236,6 +236,7 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         id: true, avaliadoId: true, avaliadorId: true, status: true,
         media: true, versao: true, publishedAt: true,
         ciencia: { select: { cienteEm: true, comentario: true, versaoCiente: true } },
+        documento: { select: { concluidaEm: true } },
       },
     }),
     prisma.setorAvaliador.findMany({ select: { departmentId: true, userId: true, nivel: true } }),
@@ -309,6 +310,8 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         avaliadorId: av?.avaliadorId ?? null,
         publishedAt: av?.publishedAt ?? null,
         ciente: !!av?.ciencia?.cienteEm,
+        // Concluída = documento assinado anexado; daí em diante não se edita.
+        concluida: !!av?.documento?.concluidaEm,
         comentarioDoAvaliado: av?.ciencia?.comentario ?? null,
         // Pode EU avaliar esta pessoa agora?
         posso: podeAvaliar(quem, p, setor),

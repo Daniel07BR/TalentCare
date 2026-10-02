@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     include: {
       notas: true,
       ciencia: true,
+      documento: { select: { concluidaEm: true, versaoAssinada: true } },
       versoes: { orderBy: { versao: 'desc' }, select: { versao: true, motivo: true, media: true, publishedAt: true } },
     },
   })
@@ -80,6 +81,7 @@ export async function GET(req: NextRequest) {
       },
       // ⚠️ Ciência de uma versão ANTERIOR não vale para a atual: a pessoa deu
       // ciência de um texto que mudou depois.
+      concluidaEm: a.documento?.concluidaEm ?? null,
       precisaCienciaNova: !!a.ciencia && a.ciencia.versaoCiente < a.versao,
       versoes: a.versoes,
     })),

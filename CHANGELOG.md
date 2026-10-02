@@ -1,5 +1,25 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: documento assinado conclui e trava
+
+Pedido do Daniel: *"a avaliação só deve ser concluída sem opção de edição após eu subir a
+imagem de frente e verso do documento assinado pelo usuário"*.
+
+- **Cartão "Documento assinado"** depois de publicar: passo a passo (PDF → assinaturas →
+  fotos → concluir), frente e verso com miniatura e troca, e **Concluir avaliação** só com
+  os dois lados. A foto é comprimida no navegador (~900 KB) antes de subir.
+- **A trava**: `avaliacao_documento.concluida_em` preenchida → a rota recusa rascunho,
+  correção e a parte da gestão (409). Até lá, publicada se corrige com motivo, e a tela
+  agora diz isso com todas as letras.
+- Imagens no banco (bytea), não em pasta: o deploy é rsync e o backup é do banco.
+  Rota `/api/avaliacoes/[id]/documento` (GET imagem / POST lado / PATCH concluir); só quem
+  avalia (ou a Diretoria) anexa e conclui — nunca o próprio avaliado.
+- Lista: selo **"Concluída · assinada"** e "falta o documento assinado". Página do avaliado
+  mostra a conclusão com links para frente e verso.
+- Régua da T.I, Equipe "Em parte": agora fala da **forma de responder** (o tom), e não só de
+  registro.
+- Schema: `scripts/2026-10-02-avaliacao-documento.sql` (só aditivo).
+
 ## 2026-10-02 — Avaliação: o bloco "Só para a gestão" explicado
 
 - O bloco abre com **o que é** (perguntas sobre o que o avaliador faria, fora da nota),
