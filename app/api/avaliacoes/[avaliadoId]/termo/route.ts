@@ -60,13 +60,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ avaliadoId:
     publicadaEm: av.publishedAt,
     versao: av.versao,
     reguaPropria: regua.propria,
-    resultado: av.media != null ? { nivel: ancoraDe(av.media).label, media: av.media } : null,
+    resultado: av.media != null ? { nivel: ancoraDe(av.media).label, nivelKey: nivelDe(av.media).key, media: av.media } : null,
     pontos: CRITERIOS.map((c) => {
       const n = av.notas.find((x) => x.criterio === c.key)
       const nv = n?.nota != null ? nivelDe(n.nota) : null
       return {
         criterio: c.label, sub: c.sub ?? null,
         nivel: nv?.label ?? 'Não avaliado',
+        nivelKey: nv?.key ?? null,
         significado: nv ? significado(regua, c.key, nv.key) : '',
         exemplo: n?.justificativa ?? null,
       }

@@ -1,5 +1,16 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: PDF único no documento assinado e folha em uma página
+
+- **PDF único**: o cartão "Documento assinado" tem duas opções — *Fotos (frente e verso)* ou
+  *PDF único* (escaneado, com as duas faces). Conclui com as duas fotos **ou** com o PDF.
+  O servidor confere a assinatura `%PDF` do arquivo; limite 15 MB. Coluna `avaliacao_documento.pdf`.
+- **Folha para assinar redesenhada**: faixa escura com a competência, níveis com a cor de cada
+  um (vermelho, âmbar, verde, roxo), o método em três quadros curtos ("3 pontos · 4 níveis ·
+  fatos e a sua voz"), recado e combinado lado a lado, fontes no rodapé.
+- ⚠️⚠️ **Uma página, sempre**: a folha é medida antes de imprimir e reduzida até caber no A4;
+  `@page { margin: 0 }` tira o cabeçalho e o rodapé do navegador (data, endereço).
+
 ## 2026-10-02 — Avaliação: documento assinado conclui e trava
 
 Pedido do Daniel: *"a avaliação só deve ser concluída sem opção de edição após eu subir a

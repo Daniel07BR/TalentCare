@@ -13,6 +13,7 @@ type Av = {
   avaliador: string; avaliadorCargo: string | null
   regua: ReguaDoSetor
   concluidaEm: string | null
+  soPdf: boolean
   notas: Nota[]
   ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
   precisaCienciaNova: boolean
@@ -222,8 +223,9 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
       {av.concluidaEm && (
         <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--text-dim)' }}>
           🔒 Concluída em {new Date(av.concluidaEm).toLocaleDateString('pt-BR')} com o documento assinado
-          {' · '}<a href={`/api/avaliacoes/${pessoaId}/documento?competencia=${av.competencia}&lado=frente`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>ver frente</a>
-          {' · '}<a href={`/api/avaliacoes/${pessoaId}/documento?competencia=${av.competencia}&lado=verso`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>ver verso</a>
+          {(av.soPdf ? [['pdf', 'ver o PDF']] : [['frente', 'ver frente'], ['verso', 'ver verso']]).map(([lado, rotulo]) => (
+            <span key={lado}>{' · '}<a href={`/api/avaliacoes/${pessoaId}/documento?competencia=${av.competencia}&lado=${lado}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>{rotulo}</a></span>
+          ))}
         </div>
       )}
 

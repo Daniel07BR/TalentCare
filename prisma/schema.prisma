@@ -831,6 +831,9 @@ model AvaliacaoDocumento {
   frenteTipo     String?   @map("frente_tipo")
   verso          Bytes?
   versoTipo      String?   @map("verso_tipo")
+  // OU um PDF ÚNICO escaneado, com as duas faces (02/10/2026). Basta ele, ou
+  // as duas fotos, para concluir.
+  pdf            Bytes?
   enviadoPorId   String?   @map("enviado_por_id")
   concluidaEm    DateTime? @map("concluida_em")
   concluidaPorId String?   @map("concluida_por_id")
