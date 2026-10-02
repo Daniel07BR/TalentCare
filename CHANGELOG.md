@@ -1,5 +1,19 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: o avaliado não vê número; avaliador aparece como Gestor
+
+Pedido do Daniel: *"no PDF não posso apresentar notas, apenas as observações; a nota só
+deve ficar na tela do gestor para criarmos um gráfico"*.
+
+- **PDF**: o resultado geral mostra só o nome do nível; sai a "média 8,7 de 10".
+- **Meu desempenho**: sem média, sem barra proporcional; cada ponto é um selo com o nome
+  do nível, e a evolução vira um quadro por mês na cor do nível. ⚠️ O número nem viaja no
+  JSON do avaliado (`/api/minha-avaliacao` manda `nivel`; `media` só para ADMIN olhando outro).
+- A tela da avaliação aberta pelo próprio avaliado também não mostra o número, e a rota não
+  o envia a ele.
+- **Papel do avaliador** no PDF vem do vínculo (`gestor` → "Gestor", `sub` →
+  "Sub-encarregado"), não do cargo do cadastro ("Administrador").
+
 ## 2026-10-02 — Avaliação: PDF único no documento assinado e folha em uma página
 
 - **PDF único**: o cartão "Documento assinado" tem duas opções — *Fotos (frente e verso)* ou

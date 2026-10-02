@@ -25,11 +25,11 @@ import { FONTES_CURTAS } from '@/lib/avaliacoes/metodo'
 type Termo = {
   competencia: string
   pessoa: { nome: string; cargo: string; setor: string }
-  avaliador: { nome: string; cargo: string | null }
+  avaliador: { nome: string; papel: string }
   publicadaEm: string | null
   versao: number
   reguaPropria: boolean
-  resultado: { nivel: string; nivelKey: string; media: number } | null
+  resultado: { nivel: string; nivelKey: string } | null
   pontos: { criterio: string; sub: string | null; nivel: string; nivelKey: string | null; significado: string; exemplo: string | null }[]
   recado: string | null
   combinado: string | null
@@ -192,7 +192,7 @@ function Folha({ t }: { t: Termo }) {
       <div className="tr-ident">
         <div><b>Funcionário</b><span>{t.pessoa.nome}</span></div>
         <div><b>Cargo · Setor</b><span>{t.pessoa.cargo} · {t.pessoa.setor}</span></div>
-        <div><b>Avaliador</b><span>{t.avaliador.nome}</span></div>
+        <div><b>Avaliador</b><span>{t.avaliador.nome} · {t.avaliador.papel}</span></div>
         <div><b>Publicada em</b><span>{data(t.publicadaEm)}{t.versao > 1 ? ` · v${t.versao}` : ''}</span></div>
       </div>
 
@@ -238,8 +238,7 @@ function Folha({ t }: { t: Termo }) {
 
       {t.resultado && res && (
         <div className="tr-resultado" style={{ ['--c' as string]: res.forte, ['--f' as string]: res.fundo }}>
-          Resultado geral: <b>{t.resultado.nivel}</b>
-          <span className="tr-mute" style={{ marginLeft: 'auto', fontSize: 10.5 }}>média {t.resultado.media.toFixed(1).replace('.', ',')} de 10</span>
+          Resultado geral do mês: <b>{t.resultado.nivel}</b>
         </div>
       )}
 
@@ -268,7 +267,7 @@ function Folha({ t }: { t: Termo }) {
           <div className="tr-data">Data: ____/____/________</div>
         </div>
         <div>
-          <div className="tr-traco"><b>{t.avaliador.nome}</b><div className="tr-papel">Gestor do departamento</div></div>
+          <div className="tr-traco"><b>{t.avaliador.nome}</b><div className="tr-papel">{t.avaliador.papel} do departamento</div></div>
           <div className="tr-data">Data: ____/____/________</div>
         </div>
       </div>

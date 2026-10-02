@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { competencias } from '@/lib/avaliacoes/criterios'
+import { competencias, nivelDe } from '@/lib/avaliacoes/criterios'
 import { reguaDoSetor } from '@/lib/avaliacoes/metodo'
 
 // O que a PESSOA vê de si mesma: as avaliações publicadas dela, da mais nova
@@ -53,6 +53,14 @@ export async function GET(req: NextRequest) {
     select: { id: true, name: true, jobTitle: true, avatarUrl: true, department: { select: { name: true } } },
   })
 
+  /* ⚠️⚠️ O NÚMERO NÃO SAI PARA O AVALIADO (Daniel, 02/10/2026: "não posso
+     apresentar notas, apenas as observações; a nota só deve ficar na tela do
+     gestor para criarmos um gráfico"). A pessoa recebe o NOME do nível de cada
+     ponto e do mês — o 8,7 nem viaja no JSON dela. Só um ADMIN olhando outra
+     pessoa (?id=) recebe a média. */
+  const comNumero = alvoId !== meuId
+  const nivel = (n: number | null) => (n == null ? null : nivelDe(n).key)
+
   return NextResponse.json({
     pessoa: pessoa && {
       id: pessoa.id, nome: pessoa.name, cargo: pessoa.jobTitle ?? 'Colaborador',
@@ -66,7 +74,8 @@ export async function GET(req: NextRequest) {
     avaliacoes: avaliacoes.map((a) => ({
       id: a.id,
       competencia: a.competencia,
-      media: a.media,
+      media: comNumero ? a.media : null,
+      nivel: nivel(a.media),
       versao: a.versao,
       comentario: a.comentario,
       combinado: a.combinado,
@@ -74,7 +83,7 @@ export async function GET(req: NextRequest) {
       regua: reguaDoSetor(a.departmentId ? setorDe.get(a.departmentId) : pessoa?.department?.name),
       avaliador: nomeDe.get(a.avaliadorId)?.name ?? 'Avaliador',
       avaliadorCargo: nomeDe.get(a.avaliadorId)?.jobTitle ?? null,
-      notas: a.notas.map((n) => ({ criterio: n.criterio, nota: n.nota, justificativa: n.justificativa })),
+      notas: a.notas.map((n) => ({ criterio: n.criterio, nivel: nivel(n.nota), justificativa: n.justificativa })),
       ciencia: a.ciencia && {
         cienteEm: a.ciencia.cienteEm, comentario: a.ciencia.comentario,
         versaoCiente: a.ciencia.versaoCiente, lidoEm: a.ciencia.lidoEm,
@@ -85,7 +94,7 @@ export async function GET(req: NextRequest) {
       // Concluída só com o PDF único não tem foto de frente: o link vira "ver PDF".
       soPdf: !!a.documento?.concluidaEm && !a.documento?.frenteTipo,
       precisaCienciaNova: !!a.ciencia && a.ciencia.versaoCiente < a.versao,
-      versoes: a.versoes,
+      versoes: a.versoes.map((v) => ({ versao: v.versao, motivo: v.motivo, publishedAt: v.publishedAt, nivel: nivel(v.media) })),
     })),
   })
 }
