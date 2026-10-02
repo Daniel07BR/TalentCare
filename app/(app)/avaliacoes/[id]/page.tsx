@@ -277,14 +277,20 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                         )
                       })}
                     </div>
-                    {/* ⚠️ Abaixo e Acima pedem uma linha (decisão do dono, 02/09/2026): é o
-                        que sustenta a nota seis meses depois, na conversa de aumento. */}
-                    {(precisa || (v.justificativa ?? '').trim()) && (
+                    {/* ⚠️ Abaixo e Acima EXIGEM uma linha (decisão do dono, 02/09/2026): é o
+                        que sustenta o nível seis meses depois, na conversa de aumento.
+                        ⚠️ Desde 02/10/2026 o campo abre em QUALQUER nível escolhido, opcional
+                        em "Em parte" e "Atende" (Daniel: "na comunicação, se colocar atende
+                        não mede, assim como não pediu em em parte"). Antes, só aparecia nos
+                        extremos — e "Em parte" ficava sem dizer o que faltou. */}
+                    {(escolhido || (v.justificativa ?? '').trim()) && (
                       <textarea
                         disabled={somenteLeitura}
                         value={v.justificativa ?? ''}
                         onChange={(e) => setJust(c.key, e.target.value)}
-                        placeholder={precisa ? `"${escolhido!.label}" precisa de uma linha explicando: o que ${primeiro} fez para merecer isso?` : 'Observação (opcional)'}
+                        placeholder={precisa
+                          ? `"${escolhido!.label}" precisa de uma linha explicando: o que ${primeiro} fez para merecer isso?`
+                          : `Observação (opcional): o que levou a "${escolhido?.label ?? 'este nível'}"? Um fato do mês ajuda ${primeiro} a entender.`}
                         rows={2}
                         className={`${st.campo} ${precisa && !(v.justificativa ?? '').trim() ? st.campoAlerta : ''}`} />
                     )}

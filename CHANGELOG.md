@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: observação aberta em todos os níveis
+
+- O campo de observação de cada ponto abre em **qualquer** nível escolhido: **opcional** em
+  "Em parte" e "Atende", **obrigatório** só nos extremos ("Abaixo" e "Acima"), como já era no
+  servidor. Antes ele só aparecia nos extremos (ou se já houvesse texto), e "Em parte" ficava
+  sem dizer o que faltou.
+
 ## 2026-10-02 — PDF: identificação numa linha, avaliador com "Cargo · Setor" e sem versão
 
 - Uma linha só: **Funcionário · Avaliador · Cargo · Setor · Publicada em**. O nome do avaliador
