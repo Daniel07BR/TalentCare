@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: o bloco "Só para a gestão" explicado
+
+- O bloco abre com **o que é** (perguntas sobre o que o avaliador faria, fora da nota),
+  **o método** (Performance Snapshot da Deloitte — Buckingham & Goodall, HBR 2015; base
+  em Scullen, Mount & Goff, 2000) e **a intenção** (separar feedback de decisão; privado
+  para a resposta não ser suavizada). Cada pergunta diz para que serve.
+
 ## 2026-10-02 — Avaliação: base científica à vista e PDF sempre achável
 
 - **"Avaliação com base científica"**: faixa no topo das duas telas com os métodos e, num

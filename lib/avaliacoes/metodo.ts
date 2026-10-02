@@ -94,10 +94,18 @@ export const METODO_REFERENCIA =
    formato da Deloitte (Buckingham & Goodall, HBR 2015), porque julgar a própria
    intenção varia menos de avaliador para avaliador do que julgar a pessoa. */
 export const PERGUNTAS_GESTAO = [
-  { key: 'querNaEquipe', texto: 'Eu quero esta pessoa na minha equipe.' },
-  { key: 'prontoParaMais', texto: 'Está pronta para mais responsabilidade.' },
-  { key: 'emRisco', texto: 'Corre risco de baixo desempenho.' },
+  { key: 'querNaEquipe', texto: 'Eu quero esta pessoa na minha equipe.', serve: 'Mede retenção: se a resposta é "não", a nota alta não está contando a história toda.' },
+  { key: 'prontoParaMais', texto: 'Está pronta para mais responsabilidade.', serve: 'Aponta quem pode crescer: base para promoção, treinamento ou nova função.' },
+  { key: 'emRisco', texto: 'Corre risco de baixo desempenho.', serve: 'Alerta cedo: permite agir com conversa e apoio antes de virar problema.' },
 ] as const
+
+/* O texto que abre o bloco da gestão na tela (02/10/2026 — pedido do Daniel:
+   "descreva o que significa esse questionário, qual o método e a intenção"). */
+export const GESTAO_EXPLICA = {
+  oQueE: 'Três perguntas sobre o que VOCÊ faria com esta pessoa, e não sobre o que você acha dela. Elas não entram na nota e servem para as decisões da gestão: retenção, crescimento e acompanhamento.',
+  metodo: 'Instantâneo de desempenho (Performance Snapshot) da Deloitte — Buckingham & Goodall, Harvard Business Review, 2015. Ele parte do estudo de Scullen, Mount & Goff (2000): mais da metade da variação de uma nota reflete o jeito de quem avalia, e não quem é avaliado. Perguntar pela sua própria intenção reduz esse efeito, porque você responde sobre o que conhece melhor: a sua decisão.',
+  intencao: 'Separar o feedback (o que a pessoa lê e assina) das decisões de gestão (o que fazer com ela). Fica fora da página dela e do PDF de propósito: se o avaliador souber que a pessoa vai ler "corre risco: sim", ele suaviza a resposta, e ela perde o valor.',
+}
 export type GestaoKey = (typeof PERGUNTAS_GESTAO)[number]['key']
 export type Gestao = Record<GestaoKey, boolean | null> & { anotacao: string | null }
 
