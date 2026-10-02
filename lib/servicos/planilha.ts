@@ -220,8 +220,14 @@ export function lerPlanilha(buf: Buffer, periodo?: Periodo): PlanilhaLida {
    outros nomes (Tarefa - Responsável, Tarefa - Status, Tarefa - Nome, Cliente -
    Nome) e **nenhuma data**. Os dois são o mesmo dado; aceitar os dois custa a
    lista de apelidos abaixo. */
+/* ⚠️⚠️ O TERCEIRO FORMATO (02/10/2026), feito à mão pelo Legal: abas
+   "CONCLUIDAS" e "ABERTO" com Nome, Status, Cliente, Responsável — e aqui
+   **"Nome" é o SERVIÇO**, a pessoa é "Responsável". No primeiro relatório
+   "Nome" era a pessoa. Por isso, havendo uma coluna de responsável, ELA é a
+   pessoa e "Nome" passa a ser o serviço; sem ela, vale o formato antigo. */
 const COL = {
-  nome: ['Nome', 'Tarefa - Responsável', 'Responsável'],
+  responsavel: ['Tarefa - Responsável', 'Responsável', 'Responsavel'],
+  nome: ['Nome'],
   status: ['Status', 'Tarefa - Status'],
   tarefa: ['Tarefa', 'Tarefa - Nome'],
   cliente: ['Cliente', 'Cliente - Nome'],
@@ -235,22 +241,32 @@ function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[]
      importação do Contábil falhar com "aba não encontrada" sem dizer por quê.
      ⚠️ E o cabeçalho é a primeira linha (das 20 de cima) que tem Nome e Status —
      não necessariamente a linha 1. */
-  let grade: (string | null)[][] | null = null
-  let linhaCab = 0
-  busca: for (const [, g] of abas) {
+  /* ⚠️ TODAS as abas que têm as colunas, e não só a primeira: o formato de
+     02/10 separa CONCLUIDAS e ABERTO em abas, e ler só uma perderia a outra. */
+  const grades: { g: (string | null)[][]; linhaCab: number }[] = []
+  for (const [, g] of abas) {
     for (let r = 0; r < Math.min(g.length, 20); r++) {
       const h = g[r] ?? []
-      if (indiceDe(h, ...COL.nome) >= 0 && indiceDe(h, ...COL.status) >= 0) { grade = g; linhaCab = r; break busca }
+      const temPessoa = indiceDe(h, ...COL.responsavel) >= 0 || indiceDe(h, ...COL.nome) >= 0
+      if (temPessoa && indiceDe(h, ...COL.status) >= 0) { grades.push({ g, linhaCab: r }); break }
     }
   }
-  if (!grade) {
+  if (!grades.length) {
     avisos.push('Nenhuma aba com as colunas de responsável e status — os serviços não foram lidos.')
     return { linhas: [], temData: false }
   }
-  const h = grade[linhaCab]
-  const iNome = indiceDe(h, ...COL.nome), iTempo = indiceDe(h, ...COL.tempo), iStatus = indiceDe(h, ...COL.status)
-  const iTarefa = indiceDe(h, ...COL.tarefa), iCliente = indiceDe(h, ...COL.cliente), iData = indiceDe(h, ...COL.data)
-  const temData = iData >= 0
+  const colunas = grades.map(({ g, linhaCab }) => {
+    const h = g[linhaCab]
+    const iResp = indiceDe(h, ...COL.responsavel)
+    return {
+      g, linhaCab,
+      iNome: iResp >= 0 ? iResp : indiceDe(h, ...COL.nome),
+      iTarefa: iResp >= 0 ? indiceDe(h, ...COL.tarefa, ...COL.nome) : indiceDe(h, ...COL.tarefa),
+      iTempo: indiceDe(h, ...COL.tempo), iStatus: indiceDe(h, ...COL.status),
+      iCliente: indiceDe(h, ...COL.cliente), iData: indiceDe(h, ...COL.data),
+    }
+  })
+  const temData = colunas.every((c) => c.iData >= 0)
 
   /* ⚠️ Sem data por linha, sem período não há onde pôr o serviço. A rota exige o
      período; isto é o freio de quem chamar o leitor sem ele. */
@@ -261,6 +277,7 @@ function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[]
 
   const out: LinhaServico[] = []
   let semData = 0, semNome = 0, foraDoPeriodo = 0, statusEstranho = new Set<string>()
+  for (const { g: grade, linhaCab, iNome, iTarefa, iTempo, iStatus, iCliente, iData } of colunas)
   for (let r = linhaCab + 1; r < grade.length; r++) {
     const linha = grade[r]
     if (!linha || linha.every((c) => c == null || c === '')) continue
@@ -269,7 +286,7 @@ function lerAbaServicos(abas: Map<string, (string | null)[][]>, avisos: string[]
     /* ⚠️⚠️ Sem coluna de data, a linha cai no ÚLTIMO dia do período informado:
        é quando se sabe que ela estava naquele estado. Fica dentro do mês
        certo, que é o que a pontuação e o painel leem. */
-    const dia = temData ? diaDaCelula(linha[iData]) : periodo!.ate
+    const dia = iData >= 0 ? diaDaCelula(linha[iData]) : periodo!.ate
     if (!dia) { semData++; continue }
     if (periodo && (dia < periodo.de || dia > periodo.ate)) { foraDoPeriodo++; continue }
     const bruto = normalizarNome(linha[iStatus] ?? '')
