@@ -12,6 +12,7 @@ import {
   BarrasCriterio, ColunasMes, Legenda, LinhaMedia, Selo, cor, mesCurto, nivelUi,
   type Contagem, type NivelKey,
 } from '../_painel/graficos'
+import { JanelaPessoa } from '../_painel/JanelaPessoa'
 
 /* ============================================================
    AVALIAÇÕES DO SETOR — o histórico ao longo do tempo (02/10/2026).
@@ -28,7 +29,7 @@ import {
 type Celula = { nivel: NivelKey | null; media: number | null; status: string; concluida: boolean; ciente: boolean } | null
 type Pessoa = {
   id: string; nome: string; cargo: string; hasAvatar: boolean; endereco: string; souEu: boolean; ativo: boolean
-  meses: Record<string, Celula>; tendencia: 'sobe' | 'desce' | 'igual' | null
+  meses: Record<string, Celula>; tendencia: 'sobe' | 'desce' | 'igual' | null; posso: boolean
   gestao: { emRisco: boolean | null; prontoParaMais: boolean | null; querNaEquipe: boolean | null } | null
 }
 type Painel = {
@@ -49,6 +50,8 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
   const meses = Number(sp.get('meses') ?? 12)
   const [d, setD] = useState<Painel | null>(null)
   const [estado, setEstado] = useState<'carregando' | 'ok' | 'negado' | 'erro'>('carregando')
+  // A pessoa aberta na janela (o clique no nome). Fechar volta à lista.
+  const [aberta, setAberta] = useState<Pessoa | null>(null)
 
   useEffect(() => {
     let vivo = true
@@ -155,7 +158,7 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
       </div>
 
       {/* ── cada pessoa ── */}
-      <Cartao titulo="Pessoas" sub="Cada quadro é um mês. Clique no nome para ver o histórico completo." Icone={Users}>
+      <Cartao titulo="Pessoas" sub="Cada quadro é um mês. Clique no nome para abrir os resultados da pessoa e avaliar." Icone={Users}>
         {d.pessoas.length === 0 ? <div className={p.vazio}>Ninguém no setor.</div> : (
           <div className={p.mapa}>
             <div className={p.mapaGrade} style={{ gridTemplateColumns: `minmax(230px, 1.4fr) repeat(${d.meses.length}, minmax(54px, 1fr)) 56px minmax(150px, auto)` }}>
@@ -165,7 +168,7 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
               <span className={p.mapaCab} style={{ textAlign: 'left' }}>Gestão</span>
 
               {d.pessoas.map((x) => (
-                <Linha key={x.id} x={x} meses={d.meses} url={`/avaliacoes/setor/${d.setor.endereco}/${x.endereco}`} />
+                <Linha key={x.id} x={x} meses={d.meses} onAbrir={() => setAberta(x)} />
               ))}
             </div>
           </div>
@@ -178,21 +181,26 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
           <span>pontilhado = rascunho</span>
         </div>
       </Cartao>
+
+      {aberta && (
+        <JanelaPessoa setorEndereco={d.setor.endereco} pessoaEndereco={aberta.endereco} posso={aberta.posso}
+          url={`/avaliacoes/setor/${d.setor.endereco}/${aberta.endereco}`} onFechar={() => setAberta(null)} />
+      )}
     </div>
   )
 }
 
-function Linha({ x, meses, url }: { x: Pessoa; meses: string[]; url: string }) {
+function Linha({ x, meses, onAbrir }: { x: Pessoa; meses: string[]; onAbrir: () => void }) {
   const seta = x.tendencia === 'sobe' ? { t: '↑', c: 'var(--lv-atende)', d: 'melhorou' } : x.tendencia === 'desce' ? { t: '↓', c: 'var(--lv-abaixo)', d: 'caiu' } : x.tendencia === 'igual' ? { t: '→', c: 'var(--n-text-3)', d: 'manteve' } : null
   return (
     <>
-      <Link href={url} className={p.mapaPessoa}>
+      <button type="button" onClick={onAbrir} className={`${p.mapaPessoaBotao} ${p.mapaPessoa}`} title={`Abrir os resultados de ${x.nome}`}>
         <Avatar id={x.id} hasAvatar={x.hasAvatar} initials={iniciais(x.nome)} color="var(--n-blue)" size={32} radius={10} />
         <span style={{ minWidth: 0 }}>
           <span className={p.mapaNome}>{x.nome}{x.souEu && <span style={{ color: 'var(--n-text-3)', fontWeight: 500 }}> (você)</span>}</span>
           <span className={p.mapaCargo} style={{ display: 'block' }}>{x.cargo}{!x.ativo && ' · desligado'}</span>
         </span>
-      </Link>
+      </button>
       {meses.map((c) => {
         const v = x.meses[c]
         if (v?.status === 'fora') return <span key={c} className={`${p.celula} ${p.celulaFora}`} />

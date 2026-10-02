@@ -21,6 +21,7 @@ type Dados = {
   pessoa: { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; nexusUserId: string | null; departmentId: string | null }
   posso: boolean
   souEu: boolean
+  historico: { competencia: string; status: string | null; nivel: string | null; concluida: boolean }[]
   aguardandoPublicacao: boolean
   regua: ReguaDoSetor
   gestaoVisivel: boolean
@@ -111,6 +112,33 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
     <div className={`tc-anim ${st.pagina}`}>
       {/* A volta leva o SETOR de onde se veio — a lista abre dentro do setor (11/09/2026). */}
       <button onClick={voltar} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 16 }}>‹ Voltar às avaliações{d.pessoa.departmentId ? ` · ${d.pessoa.setor}` : ''}</button>
+
+      {/* ── OS MESES (02/10/2026): voltar a um mês anterior para ler, corrigir ou
+          anexar o documento assinado. Do mais velho ao mais novo; o aberto em destaque. ── */}
+      <nav className={st.meses} aria-label="Meses avaliados">
+        <span className={st.mesesRotulo}>Meses</span>
+        <div className={st.mesesLista}>
+          {[...d.historico].reverse().map((h) => {
+            const nv = h.nivel ? NIVEIS.find((n) => n.key === h.nivel) : null
+            const aberto = h.competencia === competencia
+            const falta = h.status === 'publicada' && !h.concluida && d.posso
+            return (
+              <button key={h.competencia} type="button" aria-current={aberto ? 'page' : undefined}
+                onClick={() => !aberto && router.push(`/avaliacoes/${id}?competencia=${h.competencia}`)}
+                className={`${st.mes} ${aberto ? st.mesAberto : ''}`}
+                style={{ '--cor': nv?.color ?? (h.status === 'rascunho' ? 'var(--warning)' : 'var(--border)') } as React.CSSProperties}
+                title={`${competenciaLabel(h.competencia)} · ${nv ? nv.label : h.status === 'rascunho' ? 'rascunho' : 'sem avaliação'}${h.concluida ? ' · assinada' : falta ? ' · falta o documento assinado' : ''}`}>
+                <span className={st.mesNome}>{competenciaLabel(h.competencia).replace(' de ', '/').replace(/^(\w{3})\w*/, '$1')}</span>
+                <span className={st.mesNivel}>
+                  {nv ? nv.curto : h.status === 'rascunho' ? 'rascunho' : '—'}
+                  {h.concluida ? ' 🔒' : falta ? ' ✎' : ''}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <span className={st.mesesLegenda}>🔒 assinada · ✎ falta assinar</span>
+      </nav>
 
       <div className={st.grade}>
         {/* ---------- À ESQUERDA: quem e quanto (fica parada ao rolar) ---------- */}

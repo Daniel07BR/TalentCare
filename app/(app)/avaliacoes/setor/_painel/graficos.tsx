@@ -190,3 +190,31 @@ export function BarrasCriterio({ criterios }: { criterios: { key: string; label:
     </div>
   )
 }
+
+// ── MAPA DOS PONTOS: uma linha por ponto, um quadro por mês ───────────────────
+export function MapaPontos({ meses, linhas, rotuloLarg = 120 }: {
+  meses: string[]
+  linhas: { label: string; celulas: Record<string, { nivel: NivelKey | null } | undefined> }[]
+  rotuloLarg?: number
+}) {
+  return (
+    <div className={p.mapa}>
+      <div className={p.mapaGrade} style={{ gridTemplateColumns: `${rotuloLarg}px repeat(${meses.length}, minmax(48px, 1fr))` }}>
+        <span />
+        {meses.map((c) => <span key={c} className={p.mapaCab}>{mesCurto(c)}</span>)}
+        {linhas.map((l) => (
+          <span key={l.label} style={{ display: 'contents' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--n-text)' }}>{l.label}</span>
+            {meses.map((c) => {
+              const v = l.celulas[c]
+              const n = nivelUi(v?.nivel)
+              return n
+                ? <span key={c} className={p.celula} style={{ ['--c' as string]: cor(n.key) }} title={`${competenciaLabel(c)}: ${n.label}`}>{n.curto}</span>
+                : <span key={c} className={`${p.celula} ${p.celulaVazia}`} title={`${competenciaLabel(c)}: ${v ? 'não se aplica' : 'sem avaliação'}`}>—</span>
+            })}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}

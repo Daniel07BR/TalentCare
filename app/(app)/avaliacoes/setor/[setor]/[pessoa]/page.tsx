@@ -8,7 +8,7 @@ import Avatar from '../../../../Avatar'
 import { Cartao } from '../../../../_visao/ui'
 import s from '../../../../_visao/visao.module.css'
 import p from '../../_painel/painel.module.css'
-import { Legenda, LinhaMedia, Selo, cor, mesCurto, nivelUi, type NivelKey } from '../../_painel/graficos'
+import { Legenda, LinhaMedia, MapaPontos, Selo, cor, type NivelKey } from '../../_painel/graficos'
 
 /* ============================================================
    O HISTÓRICO DE UMA PESSOA (02/10/2026): a média no tempo, os três pontos mês
@@ -139,15 +139,10 @@ export default function PainelDaPessoa({ params }: { params: Promise<{ setor: st
               <Cartao titulo="A média ao longo do tempo" Icone={LineChart}><div className={p.vazio}>Na sua própria página o número não aparece.</div></Cartao>
             )}
             <Cartao titulo="Os três pontos, mês a mês" sub="Cada linha é um ponto; cada quadro, um mês." Icone={Grid3x3} corIcone="var(--n-green)">
-              <div className={p.mapa}>
-                <div className={p.mapaGrade} style={{ gridTemplateColumns: `120px repeat(${d.meses.length}, minmax(48px, 1fr))` }}>
-                  <span />
-                  {d.meses.map((c) => <span key={c} className={p.mapaCab}>{mesCurto(c)}</span>)}
-                  {(ultima?.notas ?? []).map((cr) => (
-                    <Fileira key={cr.criterio} label={cr.label} celulas={d.meses.map((c) => ({ c, n: porMes.get(c)?.notas.find((x) => x.criterio === cr.criterio)?.nivel ?? null, tem: porMes.has(c) }))} />
-                  ))}
-                </div>
-              </div>
+              <MapaPontos meses={d.meses} linhas={(ultima?.notas ?? []).map((cr) => ({
+                label: cr.label,
+                celulas: Object.fromEntries(d.meses.filter((c) => porMes.has(c)).map((c) => [c, { nivel: porMes.get(c)!.notas.find((x) => x.criterio === cr.criterio)?.nivel ?? null }])),
+              }))} />
             </Cartao>
           </div>
 
@@ -159,17 +154,6 @@ export default function PainelDaPessoa({ params }: { params: Promise<{ setor: st
         </>
       )}
     </div>
-  )
-}
-
-function Fileira({ label, celulas }: { label: string; celulas: { c: string; n: NivelKey | null; tem: boolean }[] }) {
-  return (
-    <>
-      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--n-text)' }}>{label}</span>
-      {celulas.map(({ c, n, tem }) => n
-        ? <span key={c} className={p.celula} style={{ ['--c' as string]: cor(n) }} title={`${competenciaLabel(c)}: ${nivelUi(n)!.label}`}>{nivelUi(n)!.curto}</span>
-        : <span key={c} className={`${p.celula} ${p.celulaVazia}`} title={`${competenciaLabel(c)}: ${tem ? 'não se aplica' : 'sem avaliação'}`}>—</span>)}
-    </>
   )
 }
 

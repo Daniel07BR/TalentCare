@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh, podeVer, podeAvaliar, type Setor } from '@/lib/avaliacoes/regua'
 import {
-  CRITERIOS, competenciaAnterior, exigeJustificativa, mediaDe,
+  CRITERIOS, competenciaAnterior, competencias, exigeJustificativa, mediaDe, nivelDe,
 } from '@/lib/avaliacoes/criterios'
 import type { Prisma } from '@prisma/client'
 import { reguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
@@ -72,6 +72,24 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     },
   })
 
+  /* Os MESES desta pessoa (02/10/2026) — a barra do topo da tela, para voltar a
+     um mês anterior e ler ou anexar o documento assinado. Só o nome do nível
+     (nunca o número), e rascunho só aparece para quem pode avaliar. */
+  const doHistorico = await prisma.avaliacao.findMany({
+    where: { avaliadoId, competencia: { in: competencias(12) } },
+    select: { competencia: true, status: true, media: true, documento: { select: { concluidaEm: true } } },
+  })
+  const historico = competencias(12).map((c) => {
+    const a = doHistorico.find((x) => x.competencia === c)
+    const visivel = a && (a.status === 'publicada' || posso)
+    return {
+      competencia: c,
+      status: visivel ? a!.status : null,
+      nivel: visivel && a!.status === 'publicada' && a!.media != null ? nivelDe(a!.media).key : null,
+      concluida: !!(visivel && a!.documento?.concluidaEm),
+    }
+  })
+
   // ⚠️ RASCUNHO NÃO VAZA. Quem só pode ver (o próprio avaliado, um diretor
   // olhando de fora) recebe a avaliação apenas depois de publicada — senão a
   // pessoa leria o gestor pensando em voz alta.
@@ -87,6 +105,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       departmentId: alvo.departmentId, nexusUserId: alvo.nexusUserId,
     },
     posso,
+    historico,
     souEu: alvo.id === quem.id,
     // A régua escrita do setor: o que cada nível significa no cargo.
     regua: reguaDoSetor(alvo.department?.name),
