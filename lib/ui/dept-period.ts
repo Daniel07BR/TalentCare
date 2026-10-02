@@ -156,6 +156,8 @@ export type DeptMetrics = {
     motivo: string | null
   }
   avaliacao: {
+    /** `false` = a avaliação ainda não foi liberada para este setor. */
+    liberada?: boolean
     competencia: string; publicadas: number; avaliaveis: number; media: number | null
     porCriterio: { criterio: string; media: number; n: number }[]
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { quemEh, podeVer, podeAvaliar, type Quem, type Setor } from '@/lib/avaliacoes/regua'
+import { quemEh, podeVer, podeAvaliar, contextoDoSetor, type Quem } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 
 /* ============================================================
@@ -46,19 +46,9 @@ async function contexto(req: NextRequest, ctx: Ctx, competenciaBody?: string) {
   return { quem, alvo, av }
 }
 
-/** Mesmo contexto do setor que a rota da avaliação usa — a régua é UMA. */
-async function setorDe(departmentId: string | null): Promise<Setor> {
-  if (!departmentId) return { niveis: new Map(), pelaDiretoria: false }
-  const [rows, dept] = await Promise.all([
-    prisma.setorAvaliador.findMany({ where: { departmentId }, select: { userId: true, nivel: true } }),
-    prisma.department.findUnique({ where: { id: departmentId }, select: { avaliadoPelaDiretoria: true } }),
-  ])
-  return { niveis: new Map(rows.map((r) => [r.userId, r.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria }
-}
-
 async function podeAnexar(quem: Quem, alvo: { id: string; departmentId: string | null }) {
   if (alvo.id === quem.id) return false
-  return quem.role === 'ADMIN' || podeAvaliar(quem, alvo, await setorDe(alvo.departmentId))
+  return quem.role === 'ADMIN' || podeAvaliar(quem, alvo, await contextoDoSetor(alvo.departmentId))
 }
 
 // ── VER uma imagem ────────────────────────────────────────────────────────────

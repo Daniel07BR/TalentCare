@@ -365,6 +365,16 @@ const grade = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(1
 function Avaliacao({ m }: { m: DeptMetrics }) {
   const a = m.avaliacao
   const faltam = Math.max(0, a.avaliaveis - a.publicadas)
+  // ⚠️ Setor ainda sem avaliação liberada (só a T.I, por ora): diz isso, e não "0 de 0".
+  if (a.liberada === false) {
+    return (
+      <Card titulo="Avaliação mensal" sub="Ainda não liberada para este setor" cor="var(--accent)">
+        <div style={{ fontSize: 12.5, color: 'var(--text-mute)' }}>
+          A avaliação mensal está em piloto na T.I e ainda não foi liberada para este setor.
+        </div>
+      </Card>
+    )
+  }
   return (
     <Card
       titulo="Avaliação mensal"

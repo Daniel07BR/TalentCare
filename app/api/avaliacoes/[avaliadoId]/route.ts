@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { quemEh, podeVer, podeAvaliar, type Setor } from '@/lib/avaliacoes/regua'
+import { quemEh, podeVer, podeAvaliar, contextoDoSetor } from '@/lib/avaliacoes/regua'
 import {
   CRITERIOS, aPartirDe, competenciaAnterior, competencias, exigeJustificativa, mediaDe, nivelDe,
 } from '@/lib/avaliacoes/criterios'
@@ -17,25 +17,8 @@ type Ctx = { params: Promise<{ avaliadoId: string }> }
 const leGestao = (quem: { id: string; role: string }, alvoId: string, posso: boolean) =>
   alvoId !== quem.id && (posso || quem.role === 'ADMIN')
 
-/**
- * O contexto do setor da pessoa: quem avalia ali, em que nível, e se o setor
- * responde à Diretoria.
- *
- * ⚠️⚠️ Montado do MESMO jeito que em `filaDaCompetencia`. Se as duas contas
- * divergirem, a tela oferece o botão de avaliar e a rota responde 403 — o pior
- * tipo de bug de permissão, porque parece defeito da tela.
- */
-async function contextoDoSetor(departmentId: string | null): Promise<Setor> {
-  if (!departmentId) return { niveis: new Map(), pelaDiretoria: false }
-  const [rows, dept] = await Promise.all([
-    prisma.setorAvaliador.findMany({ where: { departmentId }, select: { userId: true, nivel: true } }),
-    prisma.department.findUnique({ where: { id: departmentId }, select: { avaliadoPelaDiretoria: true } }),
-  ])
-  return {
-    niveis: new Map(rows.map((r) => [r.userId, r.nivel])),
-    pelaDiretoria: !!dept?.avaliadoPelaDiretoria,
-  }
-}
+// O contexto do setor vem da régua (`contextoDoSetor`): a MESMA montagem da fila,
+// e com a chave dos setores liberados. Uma cópia local aqui divergiria.
 
 // ── LER ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest, ctx: Ctx) {

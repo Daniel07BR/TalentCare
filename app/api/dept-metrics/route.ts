@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
 import { quemEh, filtroDeAvaliaveis, gestoresDaCasa, podeGerirServicos } from '@/lib/avaliacoes/regua'
-import { competenciaAnterior, resultadoDe } from '@/lib/avaliacoes/criterios'
+import { avaliacaoLiberada, competenciaAnterior, resultadoDe } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
@@ -179,10 +179,13 @@ export async function GET(req: NextRequest) {
      dele (regra (b) da casa). Para os presets que cruzam meses (7d, 30d, Ano),
      fica o último mês FECHADO, que é o padrão útil. */
   const compAtual = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
-  const avaliaveisRows = await prisma.user.findMany({
+  /* ⚠️ Setor sem avaliação liberada (só a T.I, por ora — 02/10/2026): ninguém é
+     avaliável, e o relatório não cobra "faltam avaliar 31" de quem nem pode. */
+  const liberada = avaliacaoLiberada(dept.name)
+  const avaliaveisRows = liberada ? await prisma.user.findMany({
     where: { departmentId: dept.id, ...filtroDeAvaliaveis(compAtual, await gestoresDaCasa()) },
     select: { id: true },
-  })
+  }) : []
   const avaliaveisIds = avaliaveisRows.map((r) => r.id)
   const avaliaveis = avaliaveisIds.length
 
@@ -951,6 +954,7 @@ export async function GET(req: NextRequest) {
     },
     pontuacaoDoMes,
     avaliacao: {
+      liberada,
       competencia: compAtual,
       publicadas: avals.length,
       avaliaveis,

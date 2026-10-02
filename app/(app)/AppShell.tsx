@@ -94,8 +94,10 @@ const botaoQuadrado: React.CSSProperties = {
   color: 'var(--text-dim)', cursor: 'pointer',
 }
 
-function Topbar({ soMeuSetor, onAbrirMenu, meusSetores, nome, cargo, me, initials, alcance }: {
+function Topbar({ soMeuSetor, onAbrirMenu, meusSetores, avaliaLiberado, nome, cargo, me, initials, alcance }: {
   soMeuSetor: boolean
+  /** Avalia algum setor com a avaliação liberada (só a T.I, por ora)? */
+  avaliaLiberado: boolean
   /** Abre a janela de cartões. Ausente = a sessão não recebeu cartão nenhum. */
   onAbrirMenu?: () => void
   meusSetores: { id: string; name: string }[]
@@ -164,7 +166,10 @@ function Topbar({ soMeuSetor, onAbrirMenu, meusSetores, nome, cargo, me, initial
               className={'tc-nav' + (pathname === `/departamentos/${d.id}` ? ' on' : '')}
               style={navChip}>{d.name}</Link>
           ))}
-          <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
+          {/* ⚠️ Só para quem avalia um setor LIBERADO (T.I, por ora — 02/10/2026). */}
+          {avaliaLiberado && (
+            <Link href="/avaliacoes" className={'tc-nav' + (pathname.startsWith('/avaliacoes') ? ' on' : '')} style={navChip}>Avaliações</Link>
+          )}
           {/* ⚠️ "Serviços" SAIU daqui (pedido do dono, 04/09/2026). O caminho
               para a planilha é o botão no RESUMO DO SETOR, onde o gestor já
               está quando lembra dela e onde ele vê o que ela produziu. Um item
@@ -291,12 +296,13 @@ function Topbar({ soMeuSetor, onAbrirMenu, meusSetores, nome, cargo, me, initial
   )
 }
 
-export default function AppShell({ name, roleLabel, soMeuSetor = false, meusSetores = [], cartoes = [], alcance, me, data, children }: {
+export default function AppShell({ name, roleLabel, soMeuSetor = false, meusSetores = [], avaliaLiberado = false, cartoes = [], alcance, me, data, children }: {
   name: string; roleLabel: string
   /** Gestor e sub-encarregado: a barra com os setores deles, sem cartões. */
   soMeuSetor?: boolean
   /** Os setores que ele alcança — o dele e os que avalia. */
   meusSetores?: { id: string; name: string }[]
+  avaliaLiberado?: boolean
   /** Os cartões da janela, já decididos no servidor (`cartoesDoMenu`). */
   cartoes?: GrupoTelas[]
   /** O recorte do dataset — a busca não oferece o que a pessoa não abre. */
@@ -335,7 +341,7 @@ export default function AppShell({ name, roleLabel, soMeuSetor = false, meusSeto
      <PainelDaPessoaProvider>
       <div className={'app' + (settled ? ' stld' : '')} style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}>
         <Topbar soMeuSetor={soMeuSetor} onAbrirMenu={temCartoes ? () => setJanelaAberta(true) : undefined}
-          meusSetores={meusSetores} nome={name} cargo={me.cargo ? `${me.cargo} · ${roleLabel}` : roleLabel}
+          meusSetores={meusSetores} avaliaLiberado={avaliaLiberado} nome={name} cargo={me.cargo ? `${me.cargo} · ${roleLabel}` : roleLabel}
           me={me} initials={initials} alcance={alcance} />
         <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '28px 32px 56px' }}>{children}</main>
       </div>
