@@ -1,5 +1,16 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Guia da avaliação mensal para o agente + script de insumos
+
+- **`docs/AVALIACAO-MENSAL-PASSO-A-PASSO.md`**: o que o agente faz e não faz, as regras em
+  vigor, como juntar os dados, atrasos × advertências, como escrever cada campo (SBI), a
+  linguagem pelo DISC, o fluxo do mês e os exemplos reais de setembro (Yuri e Enzo).
+- **`scripts/insumos-avaliacao.mjs`** (só leitura): por setor e competência, cada pessoa
+  avaliável com atrasos dia a dia, abonados, advertências (marcadas como derivadas), DISC,
+  a avaliação do mês anterior com os combinados a cobrar, e a situação do mês.
+- **`CLAUDE.md`** na raiz: aponta o guia a qualquer agente que abrir o repositório.
+- `docs/AVALIACOES.md` ganhou aviso do que está desatualizado.
+
 ## 2026-10-02 — Resultado do mês: o nível que mais se repete
 
 Pedido do Daniel: *"dois Atende e um Acima — o sistema deve considerar o que se repetir mais"*.

@@ -1,5 +1,12 @@
 # Avaliação mensal
 
+> ⚠️⚠️ **Partes deste documento estão DESATUALIZADAS** (escrito em 09/2026, antes da revisão de
+> 02/10/2026). O que mudou: **sem nota em número** (só o nome do nível); **3 pontos e 4 níveis**,
+> não 0–10; **gestor não é avaliado** (nem pela Diretoria); resultado do mês = **o nível que mais
+> se repete**. Para preencher avaliações, vale
+> [`AVALIACAO-MENSAL-PASSO-A-PASSO.md`](AVALIACAO-MENSAL-PASSO-A-PASSO.md).
+
+
 A área onde **gente pontua gente**. O TalentCare já media a atividade de oito
 sistemas; isto é a outra metade — o julgamento humano, de 0 a 10, uma vez por mês.
 
