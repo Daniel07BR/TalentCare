@@ -94,7 +94,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     gestaoVisivel,
     avaliacao: av && podeLerConteudo
       ? {
-          id: av.id, status: av.status, versao: av.versao, media: av.media,
+          // ⚠️ O número não vai para o próprio avaliado (02/10/2026) — a tela recalcula o nível das notas.
+          id: av.id, status: av.status, versao: av.versao, media: alvo.id === quem.id ? null : av.media,
           comentario: av.comentario, combinado: av.combinado, publishedAt: av.publishedAt,
           documento: av.documento
             ? {
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           avaliadorId: av.avaliadorId,
           notas: Object.fromEntries(av.notas.map((n) => [n.criterio, { nota: n.nota, justificativa: n.justificativa }])),
           ciencia: av.ciencia,
-          versoes: av.versoes.map((v) => ({ versao: v.versao, motivo: v.motivo, media: v.media, publishedAt: v.publishedAt, notas: v.notas, comentario: v.comentario })),
+          versoes: av.versoes.map((v) => ({ versao: v.versao, motivo: v.motivo, media: alvo.id === quem.id ? null : v.media, publishedAt: v.publishedAt, notas: v.notas, comentario: v.comentario })),
         }
       : null,
     // Existe uma avaliação, mas quem pergunta ainda não pode ler o conteúdo.

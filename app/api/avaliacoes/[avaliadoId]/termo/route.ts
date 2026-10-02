@@ -46,21 +46,30 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ avaliadoId:
 
   // O setor da AVALIAÇÃO (congelado na publicação), não o de hoje: quem mudou de
   // setor depois continua avaliado pela régua que valia no mês.
-  const [avaliador, dept] = await Promise.all([
-    prisma.user.findUnique({ where: { id: av.avaliadorId }, select: { name: true, jobTitle: true } }),
+  const [avaliador, dept, vinculo] = await Promise.all([
+    prisma.user.findUnique({ where: { id: av.avaliadorId }, select: { name: true } }),
     av.departmentId ? prisma.department.findUnique({ where: { id: av.departmentId }, select: { name: true } }) : null,
+    av.departmentId
+      ? prisma.setorAvaliador.findFirst({ where: { departmentId: av.departmentId, userId: av.avaliadorId }, select: { nivel: true } })
+      : null,
   ])
+  /* ⚠️ O PAPEL de quem avaliou, e não o cargo do cadastro (Daniel, 02/10/2026: "no
+     meu caso, neste relatório, me apresente como Gestor" — o cadastro dizia
+     "Administrador"). No papel assinado o que conta é a função NA AVALIAÇÃO:
+     sub-encarregado quando o vínculo é `sub`, Gestor em todo o resto. */
+  const papel = vinculo?.nivel === 'sub' ? 'Sub-encarregado' : 'Gestor'
   const setor = dept?.name ?? alvo.department?.name ?? 'Sem setor'
   const regua = reguaDoSetor(setor)
 
   return NextResponse.json({
     competencia,
     pessoa: { nome: alvo.name, cargo: alvo.jobTitle ?? 'Colaborador', setor },
-    avaliador: { nome: avaliador?.name ?? 'Avaliador', cargo: avaliador?.jobTitle ?? null },
+    avaliador: { nome: avaliador?.name ?? 'Avaliador', papel },
     publicadaEm: av.publishedAt,
     versao: av.versao,
     reguaPropria: regua.propria,
-    resultado: av.media != null ? { nivel: ancoraDe(av.media).label, nivelKey: nivelDe(av.media).key, media: av.media } : null,
+    // ⚠️⚠️ Sem o número (02/10/2026): o papel mostra o NOME do nível; a média fica com a gestão.
+    resultado: av.media != null ? { nivel: ancoraDe(av.media).label, nivelKey: nivelDe(av.media).key } : null,
     pontos: CRITERIOS.map((c) => {
       const n = av.notas.find((x) => x.criterio === c.key)
       const nv = n?.nota != null ? nivelDe(n.nota) : null

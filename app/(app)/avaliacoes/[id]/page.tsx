@@ -119,9 +119,10 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
             <span className={st.competencia}>Competência de <b>{competenciaLabel(competencia)}</b></span>
 
             <div className={st.nota}>
-              <span className={st.notaRotulo}>Nota do mês</span>
+              <span className={st.notaRotulo}>{d.souEu ? 'Resultado do mês' : 'Nota do mês'}</span>
               <span className="cnum" style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
-                <span className={st.notaValor}>{media != null ? media.toFixed(1) : '—'}</span>
+                {/* ⚠️ O próprio avaliado não vê o número (02/10/2026) — só o nome do nível. */}
+                {!d.souEu && <span className={st.notaValor}>{media != null ? media.toFixed(1) : '—'}</span>}
               </span>
               <span className={st.notaNivel} style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
                 {nivelMedia ? ancoraDe(media!).label : 'escolha os níveis ao lado'}

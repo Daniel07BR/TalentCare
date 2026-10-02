@@ -1,14 +1,16 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Avatar from '../Avatar'
-import { CRITERIOS, criterioDe, ancoraDe, nivelDe, competenciaLabel } from '@/lib/avaliacoes/criterios'
+import { CRITERIOS, criterioDe, NIVEIS, competenciaLabel } from '@/lib/avaliacoes/criterios'
+
+const nivelPor = (k: string | null) => NIVEIS.find((n) => n.key === k) ?? null
 import { significado, METODO_RESUMO, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../avaliacoes/TermoImpresso'
 import { MetodoCientifico } from '../avaliacoes/MetodoCientifico'
 
-type Nota = { criterio: string; nota: number | null; justificativa: string | null }
+type Nota = { criterio: string; nivel: string | null; justificativa: string | null }
 type Av = {
-  id: string; competencia: string; media: number | null; versao: number
+  id: string; competencia: string; media: number | null; nivel: string | null; versao: number
   comentario: string | null; combinado: string | null; publishedAt: string | null
   avaliador: string; avaliadorCargo: string | null
   regua: ReguaDoSetor
@@ -17,7 +19,7 @@ type Av = {
   notas: Nota[]
   ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
   precisaCienciaNova: boolean
-  versoes: { versao: number; motivo: string | null; media: number | null; publishedAt: string | null }[]
+  versoes: { versao: number; motivo: string | null; nivel: string | null; publishedAt: string | null }[]
 }
 type Dados = {
   pessoa: { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean } | null
@@ -64,9 +66,9 @@ export default function MinhaAvaliacaoPage() {
   // mentir por omissão sobre a regularidade da avaliação.
   const serie = [...d.esperadas].reverse().map((c) => ({
     competencia: c,
-    media: d.avaliacoes.find((a) => a.competencia === c)?.media ?? null,
+    nivel: nivelPor(d.avaliacoes.find((a) => a.competencia === c)?.nivel ?? null),
   }))
-  const comNota = serie.filter((s) => s.media != null)
+  const comNota = serie.filter((s) => s.nivel != null)
 
   return (
     <div className="tc-anim" style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -85,18 +87,9 @@ export default function MinhaAvaliacaoPage() {
             <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{d.pessoa.cargo} · {d.pessoa.setor}</div>
           </div>
           {comNota.length > 0 && (
-            (() => {
-              /* ⚠️ O NOME do nível em destaque e o número discreto (02/10/2026): quem lê
-                 um número reage ao número e esquece o conteúdo (Kluger & DeNisi, 1996). */
-              const m = comNota.reduce((a, s) => a + (s.media ?? 0), 0) / comNota.length
-              return (
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Em {comNota.length} {comNota.length === 1 ? 'mês' : 'meses'}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: ancoraDe(m).color }}>{ancoraDe(m).label}</div>
-                  <div className="cnum" style={{ fontSize: 11, color: 'var(--text-mute)' }}>média {m.toFixed(1)}</div>
-                </div>
-              )
-            })()
+            <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--text-mute)' }}>
+              {comNota.length} {comNota.length === 1 ? 'mês avaliado' : 'meses avaliados'}
+            </div>
           )}
         </div>
       )}
@@ -122,25 +115,24 @@ export default function MinhaAvaliacaoPage() {
           <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Evolução</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 16 }}>
-              Média de cada mês. Coluna vazia = mês sem avaliação publicada.
+              O resultado de cada mês. Quadro vazio = mês sem avaliação publicada.
             </div>
-            <div style={{ display: 'flex', gap: 5, alignItems: 'flex-end', height: 110 }}>
+            {/* ⚠️ Sem altura de barra: a altura É o número (02/10/2026). Cada mês é um
+                quadro na cor do nível, com o nome curto dele. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(58px, 1fr))', gap: 6 }}>
               {serie.map((s) => (
-                <div key={s.competencia} onClick={() => s.media != null && setAberta(s.competencia)}
-                  title={`${competenciaLabel(s.competencia)}${s.media != null ? ` · ${s.media.toFixed(1)}` : ' · sem avaliação'}`}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', height: '100%', cursor: s.media != null ? 'pointer' : 'default' }}>
-                  <span className="cnum" style={{ fontSize: 10, color: 'var(--text-mute)', marginBottom: 3 }}>{s.media != null ? s.media.toFixed(1) : ''}</span>
-                  <div style={{
-                    width: '100%', height: s.media != null ? `${Math.max(4, (s.media / 10) * 80)}px` : 3,
-                    background: s.media != null ? ancoraDe(s.media).color : 'var(--border-soft)',
-                    borderRadius: '4px 4px 0 0',
-                    outline: s.competencia === atual?.competencia ? '2px solid var(--accent)' : 'none',
-                    outlineOffset: 1,
-                  }} />
-                  <span style={{ fontSize: 9.5, color: 'var(--text-mute)', marginTop: 5, whiteSpace: 'nowrap' }}>
-                    {s.competencia.slice(5)}/{s.competencia.slice(2, 4)}
-                  </span>
-                </div>
+                <button key={s.competencia} type="button" onClick={() => s.nivel && setAberta(s.competencia)}
+                  title={`${competenciaLabel(s.competencia)} · ${s.nivel ? s.nivel.label : 'sem avaliação'}`}
+                  style={{ all: 'unset', cursor: s.nivel ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                  <span style={{
+                    width: '100%', height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700,
+                    background: s.nivel ? `color-mix(in srgb, ${s.nivel.color} 16%, var(--surface))` : 'var(--surface-2)',
+                    color: s.nivel ? s.nivel.color : 'var(--text-mute)',
+                    border: s.competencia === atual?.competencia ? `2px solid ${s.nivel?.color ?? 'var(--accent)'}` : '1px solid var(--border-soft)',
+                  }}>{s.nivel ? s.nivel.curto : ''}</span>
+                  <span style={{ fontSize: 9.5, color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>{s.competencia.slice(5)}/{s.competencia.slice(2, 4)}</span>
+                </button>
               ))}
             </div>
           </div>
@@ -170,11 +162,8 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <BotaoTermo avaliadoId={pessoaId} competencia={av.competencia} />
-          {av.media != null && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: ancoraDe(av.media).color }}>{ancoraDe(av.media).label}</div>
-              <div className="cnum" style={{ fontSize: 11, color: 'var(--text-mute)' }}>média {av.media.toFixed(1)}</div>
-            </div>
+          {nivelPor(av.nivel) && (
+            <div style={{ fontSize: 17, fontWeight: 800, color: nivelPor(av.nivel)!.color }}>{nivelPor(av.nivel)!.label}</div>
           )}
         </div>
       </div>
@@ -188,21 +177,16 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{criterioDe(c.key)?.label}</div>
               </div>
-              {n.nota != null ? (
-                <>
-                  <div style={{ width: 130, height: 6, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${n.nota * 10}%`, background: ancoraDe(n.nota).color, borderRadius: 4 }} />
-                  </div>
-                  {/* O NOME do nível, que é o que o avaliador escolheu (01/10/2026) — e não o 8 que ele grava. */}
-                  <span style={{ width: 120, textAlign: 'right', fontSize: 13, fontWeight: 700, color: ancoraDe(n.nota).color }}>{nivelDe(n.nota).label}</span>
-                </>
+              {nivelPor(n.nivel) ? (
+                /* O NOME do nível, num selo da cor dele — sem barra: a largura da barra era o número. */
+                <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, color: nivelPor(n.nivel)!.color, background: `color-mix(in srgb, ${nivelPor(n.nivel)!.color} 14%, var(--surface))` }}>{nivelPor(n.nivel)!.label}</span>
               ) : (
                 <span style={{ fontSize: 11.5, color: 'var(--text-mute)' }}>não se aplica</span>
               )}
             </div>
             {/* O que o nível escolhido SIGNIFICA no setor — a régua que a pessoa conhecia. */}
-            {n.nota != null && (
-              <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>{significado(av.regua, c.key, nivelDe(n.nota).key)}</div>
+            {n.nivel && (
+              <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 4 }}>{significado(av.regua, c.key, n.nivel)}</div>
             )}
             {n.justificativa && (
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.55, paddingLeft: 2, borderLeft: '2px solid var(--border-soft)', paddingInlineStart: 9 }}>
@@ -240,7 +224,7 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
         <div style={{ marginTop: 14, fontSize: 11.5, color: 'var(--text-mute)' }}>
           <b style={{ color: 'var(--text-dim)' }}>Esta avaliação foi corrigida.</b> O que ela dizia antes continua registrado:
           {av.versoes.map((v) => (
-            <div key={v.versao} style={{ paddingTop: 4 }}>· v{v.versao} · média {v.media?.toFixed(1) ?? '—'} — {v.motivo}</div>
+            <div key={v.versao} style={{ paddingTop: 4 }}>· v{v.versao}{nivelPor(v.nivel) ? ` · ${nivelPor(v.nivel)!.label}` : ''} — {v.motivo}</div>
           ))}
         </div>
       )}
