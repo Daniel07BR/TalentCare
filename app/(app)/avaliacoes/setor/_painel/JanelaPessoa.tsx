@@ -2,12 +2,13 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { X, ClipboardPen, History } from 'lucide-react'
+import { X, ClipboardPen, History, Maximize2 } from 'lucide-react'
 import { competenciaAnterior, competenciaLabel } from '@/lib/avaliacoes/criterios'
 import Avatar from '../../../Avatar'
 import s from '../../../_visao/visao.module.css'
 import p from './painel.module.css'
 import { LinhaNivel, MapaPontos, Selo, type NivelKey } from './graficos'
+import { JanelaHistorico } from './JanelaHistorico'
 
 /* ============================================================
    A JANELA DA PESSOA (02/10/2026) — pedido do Daniel: "clicar no funcionário e
@@ -45,6 +46,8 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
 }) {
   const [d, setD] = useState<Dados | null>(null)
   const [erro, setErro] = useState(false)
+  // A janela "Histórico", por cima desta. Ela mesma trata o Esc dela.
+  const [historico, setHistorico] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -139,8 +142,13 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
               </>
             )}
 
+            {/* "Expandir gráficos" leva à página inteira da pessoa; "Histórico" abre a
+                lista de TODAS as avaliações (Daniel, 02/10/2026). */}
             <footer className={p.janelaAcoes}>
-              <Link href={url} className={p.botaoSec}><History size={15} /> Histórico completo</Link>
+              <Link href={url} className={p.botaoSec}><Maximize2 size={15} /> Expandir gráficos</Link>
+              <button type="button" onClick={() => setHistorico(true)} className={p.botaoSec} style={{ cursor: 'pointer', fontFamily: 'inherit' }}>
+                <History size={15} /> Histórico
+              </button>
               {posso && (
                 <Link href={`/avaliacoes/${d.pessoa.id}?competencia=${competencia}`} className={p.botaoPri}>
                   <ClipboardPen size={15} />
@@ -148,6 +156,7 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
                 </Link>
               )}
             </footer>
+            {historico && <JanelaHistorico pessoaId={d.pessoa.id} nome={d.pessoa.nome} onFechar={() => setHistorico(false)} />}
           </>
         )}
       </div>

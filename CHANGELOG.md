@@ -1,5 +1,15 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Janela da pessoa: "Histórico" e "Expandir gráficos"
+
+- O antigo "Histórico completo" (que leva à página inteira da pessoa) virou **"Expandir
+  gráficos"**.
+- **"Histórico"** novo abre uma segunda janela, por cima, com **todas** as avaliações já feitas
+  (sem limite de meses): mês, nível, quem avaliou e quando, versão, 🔒 assinada / ✎ falta
+  assinar, ciência e comentário. Um clique abre a avaliação daquele mês. Rascunho só para quem
+  pode avaliar. Rota `/api/avaliacoes/[id]/historico`; Esc fecha só a de cima.
+- `contextoDoSetor` agora mora em `lib/avaliacoes/regua.ts` (a régua é uma).
+
 ## 2026-10-02 — Avaliação SEM nota em número, em todo o sistema
 
 Pedido do Daniel, pela orientação dos psicólogos e psicanalistas que acompanham a empresa

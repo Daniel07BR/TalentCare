@@ -332,3 +332,15 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
 
   return { competencia, linhas, total: linhas.length, publicadas, faltam, orfaos }
 }
+
+/** O contexto de UM setor para `podeAvaliar`, lido do banco. ⚠️ Mesma montagem da
+ *  fila (`filaDaCompetencia`) e da rota da avaliação — se divergirem, um botão
+ *  oferece o que a rota recusa. */
+export async function contextoDoSetor(departmentId: string | null): Promise<Setor> {
+  if (!departmentId) return { niveis: new Map(), pelaDiretoria: false }
+  const [rows, dept] = await Promise.all([
+    prisma.setorAvaliador.findMany({ where: { departmentId }, select: { userId: true, nivel: true } }),
+    prisma.department.findUnique({ where: { id: departmentId }, select: { avaliadoPelaDiretoria: true } }),
+  ])
+  return { niveis: new Map(rows.map((r) => [r.userId, r.nivel])), pelaDiretoria: !!dept?.avaliadoPelaDiretoria }
+}
