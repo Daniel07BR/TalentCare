@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { quemEh, podeVer, podeAvaliar, type Setor } from '@/lib/avaliacoes/regua'
 import {
-  CRITERIOS, competenciaAnterior, competencias, exigeJustificativa, mediaDe, nivelDe,
+  CRITERIOS, aPartirDe, competenciaAnterior, competencias, exigeJustificativa, mediaDe, nivelDe,
 } from '@/lib/avaliacoes/criterios'
 import type { Prisma } from '@prisma/client'
 import { reguaDoSetor, type Gestao } from '@/lib/avaliacoes/metodo'
@@ -79,7 +79,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     where: { avaliadoId, competencia: { in: competencias(12) } },
     select: { competencia: true, status: true, media: true, documento: { select: { concluidaEm: true } } },
   })
-  const historico = competencias(12).map((c) => {
+  // Só a partir da primeira avaliação da pessoa (antes disso, mês vazio é só espaço).
+  const primeiraDela = doHistorico.filter((a) => a.status === 'publicada' || posso).map((a) => a.competencia).sort()[0]
+  const historico = aPartirDe(competencias(12).reverse(), primeiraDela).reverse().map((c) => {
     const a = doHistorico.find((x) => x.competencia === c)
     const visivel = a && (a.status === 'publicada' || posso)
     return {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
-import { quemEh, filtroDeAvaliaveis, podeGerirServicos } from '@/lib/avaliacoes/regua'
+import { quemEh, filtroDeAvaliaveis, gestoresDaCasa, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { montar } from '@/lib/servicos/calcular-mes'
@@ -180,7 +180,7 @@ export async function GET(req: NextRequest) {
      fica o último mês FECHADO, que é o padrão útil. */
   const compAtual = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
   const avaliaveisRows = await prisma.user.findMany({
-    where: { departmentId: dept.id, ...filtroDeAvaliaveis(compAtual) },
+    where: { departmentId: dept.id, ...filtroDeAvaliaveis(compAtual, await gestoresDaCasa()) },
     select: { id: true },
   })
   const avaliaveisIds = avaliaveisRows.map((r) => r.id)

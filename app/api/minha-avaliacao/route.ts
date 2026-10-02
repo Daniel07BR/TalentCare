@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import { competencias, nivelDe } from '@/lib/avaliacoes/criterios'
+import { aPartirDe, competencias, nivelDe } from '@/lib/avaliacoes/criterios'
 import { reguaDoSetor } from '@/lib/avaliacoes/metodo'
 
 // O que a PESSOA vê de si mesma: as avaliações publicadas dela, da mais nova
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     // Últimas competências, para a pessoa ver que meses ficaram SEM avaliação —
     // um mês ausente é informação, e escondê-lo faria o gráfico mentir por
     // omissão sobre a regularidade da avaliação.
-    esperadas: competencias(12),
+    esperadas: aPartirDe(competencias(12).reverse(), avaliacoes.map((a) => a.competencia).sort()[0]).reverse(),
     avaliacoes: avaliacoes.map((a) => ({
       id: a.id,
       competencia: a.competencia,

@@ -84,7 +84,7 @@ export default function AvaliadoresPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, background: 'var(--surface-2)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
         <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
         <span>
-          <b>A hierarquia:</b> quem é <b>gestor</b> do setor é avaliado pela <b>Diretoria</b>;
+          <b>A hierarquia:</b> quem é <b>gestor</b> do setor <b>não é avaliado</b> — nem pela Diretoria;
           quem é <b>sub-encarregado</b> é avaliado pelo gestor do setor; e todo o resto é avaliado
           pelo gestor <i>ou</i> pelo sub-encarregado — a primeira avaliação publicada dá baixa no
           mês, seja de quem for. Ninguém se avalia.

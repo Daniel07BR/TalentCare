@@ -118,6 +118,18 @@ export function competencias(n = 12, hoje = new Date()): string[] {
   return out
 }
 
+/**
+ * Corta a lista de meses no PRIMEIRO mês com avaliação (02/10/2026 — Daniel: "a
+ * avaliação começa a partir de setembro/26, não precisa apresentar os meses
+ * anteriores vazios ocupando espaço"). Sem nenhuma avaliação ainda, fica só o
+ * mês em avaliação, para a tela não nascer vazia. `meses` em ordem crescente.
+ */
+export function aPartirDe(meses: string[], primeira: string | null | undefined): string[] {
+  if (!primeira) return meses.slice(-1)
+  const cortados = meses.filter((c) => c >= primeira)
+  return cortados.length ? cortados : meses.slice(-1)
+}
+
 /** Primeiro e último dia da competência (Date local). */
 export function limitesDaCompetencia(c: string): { inicio: Date; fim: Date } {
   const [a, m] = c.split('-').map(Number)

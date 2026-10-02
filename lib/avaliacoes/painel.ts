@@ -1,8 +1,8 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
-import { CRITERIOS, competencias, limitesDaCompetencia, nivelDe, mediaDe } from './criterios'
+import { CRITERIOS, aPartirDe, competencias, limitesDaCompetencia, nivelDe, mediaDe } from './criterios'
 import { enderecoDe, sufixoDe } from './endereco'
-import { podeAvaliar, type Quem, type Setor } from './regua'
+import { gestoresDaCasa, podeAvaliar, type Quem, type Setor } from './regua'
 
 /* ============================================================
    O HISTÓRICO DAS AVALIAÇÕES — o painel do setor e o da pessoa (02/10/2026).
@@ -48,7 +48,10 @@ const mesesValidos = (n: number) => ([6, 12, 24].includes(n) ? n : 12)
 
 // ── O PAINEL DO SETOR ─────────────────────────────────────────────────────────
 export async function painelDoSetor(quem: Quem, setor: { id: string; nome: string; endereco: string }, nMeses: number) {
-  const meses = competencias(mesesValidos(nMeses)).reverse() // do mais velho ao mais novo
+  // Do mais velho ao mais novo — e só a partir da PRIMEIRA avaliação do setor.
+  const primeira = await prisma.avaliacao.findFirst({ where: { departmentId: setor.id }, orderBy: { competencia: 'asc' }, select: { competencia: true } })
+  const todos = aPartirDe(competencias(24).reverse(), primeira?.competencia)
+  const meses = todos.slice(-mesesValidos(nMeses))
   const { inicio } = limitesDaCompetencia(meses[0])
 
   const avs = await prisma.avaliacao.findMany({
@@ -66,9 +69,12 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
      avaliado AQUI no período e saiu ou mudou de setor depois — o histórico não
      some porque a pessoa foi embora. */
   const idsAvaliados = [...new Set(avs.map((a) => a.avaliadoId))]
+  const gestores = await gestoresDaCasa()
   const gente = await prisma.user.findMany({
     where: {
       foraDoDiretorio: false,
+      // Gestor não é avaliado (02/10/2026) — não entra na lista nem nas contas.
+      NOT: { id: { in: gestores } },
       OR: [
         { departmentId: setor.id, active: true },
         { departmentId: setor.id, leftAt: { gte: inicio } },
@@ -160,7 +166,9 @@ export async function painelDoSetor(quem: Quem, setor: { id: string; nome: strin
     }
   })
 
-  return { setor, meses, ultimo, resumo, criterios, pessoas }
+  // `mesesComDado`: quantos meses existem desde a primeira avaliação — a tela só
+  // oferece 12/24 quando há tanto assim para mostrar.
+  return { setor, meses, mesesComDado: todos.length, ultimo, resumo, criterios, pessoas }
 }
 
 // ── O PAINEL DA PESSOA ────────────────────────────────────────────────────────
@@ -174,7 +182,8 @@ export async function painelDaPessoa(quem: Quem, setor: { id: string; nome: stri
   const p = achados[0]
   const souEu = p.id === quem.id
 
-  const meses = competencias(mesesValidos(nMeses)).reverse()
+  const primeira = await prisma.avaliacao.findFirst({ where: { avaliadoId: p.id }, orderBy: { competencia: 'asc' }, select: { competencia: true } })
+  const meses = aPartirDe(competencias(mesesValidos(nMeses)).reverse(), primeira?.competencia)
   const avs = await prisma.avaliacao.findMany({
     where: { avaliadoId: p.id, competencia: { in: meses } },
     orderBy: { competencia: 'desc' },

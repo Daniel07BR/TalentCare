@@ -180,7 +180,7 @@ export function MapaPontos({ meses, linhas, rotuloLarg = 120 }: {
 }) {
   return (
     <div className={p.mapa}>
-      <div className={p.mapaGrade} style={{ gridTemplateColumns: `${rotuloLarg}px repeat(${meses.length}, minmax(48px, 1fr))` }}>
+      <div className={p.mapaGrade} style={{ gridTemplateColumns: `${rotuloLarg}px repeat(${meses.length}, minmax(48px, 96px))` }}>
         <span />
         {meses.map((c) => <span key={c} className={p.mapaCab}>{mesCurto(c)}</span>)}
         {linhas.map((l) => (
