@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — PDF: avaliador com "Cargo · Setor" e sem versão
+
+- Identificação em duas linhas: **Funcionário · Cargo · Setor · Publicada em** e **Avaliador ·
+  Cargo · Setor** — o papel ("Gestor · TI") sai de junto do nome e vai para o campo dele.
+- Sai a versão ("· v3") da data de publicação: não interessa ao avaliado.
+
 ## 2026-10-02 — Avaliação: combinados em itens
 
 Pedido do Daniel: *"separar os apontamentos de melhora — ele tem dois combinados e isso ficou
