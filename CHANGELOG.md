@@ -1,5 +1,28 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliações: a área do histórico (setor e pessoa)
+
+Pedido do Daniel: *"criar na página do departamento o card para acessar a área de avaliações,
+monitorar todo o histórico ao longo do tempo, dashboard do departamento e dos funcionários —
+muito bonito, fácil de compreender, com as cores do PDF"*.
+
+- **Cartão "Avaliações do setor"** na página do departamento: resultado do último mês, 6 meses
+  em colunas pequenas, avaliados e assinadas, e "Abrir a área ›". Some para quem não avalia.
+- **`/avaliacoes/setor/<setor>`**: faixa do PDF com período (6/12/24 meses) e legenda; quatro
+  azulejos (resultado, avaliados, assinadas, pedem atenção); colunas por mês com quantas pessoas
+  em cada nível; a média do setor sobre as faixas dos níveis; os três pontos do último mês; e o
+  mapa das pessoas — um quadro por mês, rumo (↑↓→) e os sinais da gestão.
+- **`/avaliacoes/setor/<setor>/<pessoa>`**: último resultado, rumo, assinadas, a gestão do último
+  mês; média no tempo; os três pontos mês a mês; e a linha do tempo com exemplos, recado,
+  combinado, a resposta da pessoa, o documento assinado e a parte só da gestão.
+- Fila de avaliações filtrada por setor ganhou "📊 Histórico do setor".
+- ⚠️ Régua: Diretoria e quem avalia o setor (`lib/avaliacoes/painel.ts`). Na linha do próprio
+  gestor vai só o nome do nível — sem número e sem a gestão.
+- ⚠️ Endereço legível (regra da casa): slug do nome + sufixo do id (`ti-x8k2p9`); link antigo
+  ou com id redireciona.
+- Cores dos níveis validadas (dataviz) nos dois temas; o nome do nível vai sempre escrito ao
+  lado da cor.
+
 ## 2026-10-02 — Avaliação: o avaliado não vê número; avaliador aparece como Gestor
 
 Pedido do Daniel: *"no PDF não posso apresentar notas, apenas as observações; a nota só

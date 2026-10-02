@@ -17,6 +17,7 @@ import { Sistemas } from './_visao/Sistemas'
 import { PainelDoIndicador, type ChavePainel } from './_visao/Paineis'
 import { PainelDaPessoaProvider } from '../../PainelDaPessoa'
 import { CartaoDiscSetor } from '../../_visao/disc/CartaoDiscSetor'
+import { CartaoAvaliacoes } from './_visao/CartaoAvaliacoes'
 
 /* ============================================================
    O RELATÓRIO DO SETOR — a visão geral, no desenho da imagem conceito.
@@ -79,6 +80,8 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
         <WhatsappEChamados m={m} abrir={detalhe.abrir} />
         <Assiduidade m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>
+      {/* As AVALIAÇÕES do setor (02/10/2026): a porta para o histórico. Some para quem não avalia. */}
+      <CartaoAvaliacoes deptId={m.setor.id} />
       {/* O perfil DISC do setor (22/09/2026). Some para quem não é da régua. */}
       <div style={{ marginBottom: 14 }}><CartaoDiscSetor deptId={m.setor.id} /></div>
       <Sistemas m={m} abrir={detalhe.abrir} />

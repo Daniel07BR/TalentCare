@@ -104,6 +104,13 @@ export default function AvaliacoesPage() {
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* O histórico do setor (02/10/2026). O id basta: a página troca para o endereço legível. */}
+          {setorUrl && (
+            <a href={`/avaliacoes/setor/${setorUrl}`} className="tc-btn"
+              style={{ padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
+              📊 Histórico do setor
+            </a>
+          )}
           {setoresDaFila.length > 1 && (
             <select value={setorUrl ?? ''} onChange={(e) => trocaSetor(e.target.value)} aria-label="Setor" className="tc-btn"
               style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>

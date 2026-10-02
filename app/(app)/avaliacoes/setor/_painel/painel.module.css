@@ -1,0 +1,149 @@
+/* ============================================================
+   O PAINEL DE AVALIAÇÕES (02/10/2026) — setor e pessoa.
+
+   Mesma paleta da página do departamento (`.raiz` de visao.module.css) + as
+   QUATRO CORES DOS NÍVEIS, as mesmas do PDF para assinar. Validadas (dataviz):
+   no claro passam todas as checagens, com o âmbar abaixo de 3:1 sobre o branco
+   — por isso o NOME do nível vai sempre escrito ao lado da cor (selo, legenda,
+   dica). No escuro, tons próprios (não a inversão automática), também validados.
+   ============================================================ */
+
+.niveis {
+  --lv-abaixo: #e5484d; --lv-parte: #df8b0b; --lv-atende: #0f9d76; --lv-acima: #7c3aed;
+  --lv-vazio: #eef1f6;
+  --faixa: #0f172a; --faixa-texto: #fff; --faixa-sub: #cbd5e1; --faixa-acento: #f59e0b;
+}
+:global([data-theme="dark"]) .niveis {
+  --lv-abaixo: #e8547a; --lv-parte: #bf8a12; --lv-atende: #1fa87a; --lv-acima: #9177ee;
+  --lv-vazio: #1d2740;
+  --faixa: #182238; --faixa-texto: #e6ebf5; --faixa-sub: #a8b4ca;
+}
+
+/* ── a faixa do topo (a do PDF) ── */
+.faixa {
+  background: var(--faixa); color: var(--faixa-texto);
+  border-radius: 16px; border-bottom: 4px solid var(--faixa-acento);
+  padding: 20px 24px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.faixaTitulo { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
+.faixaSub { color: var(--faixa-sub); font-size: 13px; margin-top: 3px; }
+.faixaAcento { color: var(--faixa-acento); }
+.faixaDireita { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+
+.periodo { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.08); }
+.periodo button {
+  border: none; background: transparent; color: var(--faixa-sub); font-family: inherit;
+  font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+}
+.periodo .on { background: var(--faixa-texto); color: var(--faixa); }
+
+.legenda { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; }
+.legendaItem { display: inline-flex; align-items: center; gap: 6px; }
+.quadrado { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+/* ── azulejos ── */
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 14px; }
+.tile {
+  background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px;
+  box-shadow: var(--n-shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.tileRotulo { font-size: 11.5px; font-weight: 700; color: var(--n-text-3); text-transform: uppercase; letter-spacing: .5px; }
+.tileValor { font-size: 26px; font-weight: 800; letter-spacing: -.8px; color: var(--n-text); line-height: 1.1; }
+.tileNota { font-size: 12px; color: var(--n-text-2); }
+.progresso { height: 6px; border-radius: 4px; background: var(--lv-vazio); overflow: hidden; }
+.progresso > span { display: block; height: 100%; border-radius: 4px; }
+
+/* ── o selo do nível ── */
+.selo {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  color: var(--n-text); background: color-mix(in srgb, var(--c) 14%, var(--n-card));
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+}
+.selo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.seloGrande { font-size: 15px; padding: 6px 14px; }
+
+/* ── grade de cartões ── */
+.dois { display: grid; gap: 14px; grid-template-columns: 1fr; margin-bottom: 14px; }
+@media (min-width: 1100px) { .dois { grid-template-columns: 1.15fr 1fr; } }
+.bloco { margin-bottom: 14px; }
+
+/* ── colunas por mês ── */
+.colunas { display: flex; align-items: flex-end; gap: 8px; height: 230px; padding-top: 22px; position: relative; }
+.coluna { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: default; }
+.colunaPilha { flex: 1; width: 100%; max-width: 46px; display: flex; flex-direction: column-reverse; gap: 2px; justify-content: flex-start; position: relative; }
+.colunaPilha > span { display: block; width: 100%; }
+.colunaPilha > span:last-child { border-radius: 4px 4px 0 0; }
+.colunaTotal { font-size: 11px; font-weight: 700; color: var(--n-text-2); }
+.colunaMes { font-size: 10.5px; color: var(--n-text-3); white-space: nowrap; }
+.coluna:hover .colunaPilha { filter: brightness(1.06); }
+.colunaAtiva .colunaMes { color: var(--n-text); font-weight: 700; }
+.vazioCol { width: 100%; max-width: 46px; height: 3px; border-radius: 2px; background: var(--lv-vazio); }
+
+.dica {
+  position: absolute; z-index: 5; pointer-events: none; min-width: 170px;
+  background: var(--n-card); border: 1px solid var(--n-border); border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .16); padding: 10px 12px; font-size: 12px; color: var(--n-text);
+}
+.dica b { display: block; margin-bottom: 5px; }
+.dicaLinha { display: flex; align-items: center; gap: 7px; padding: 1px 0; }
+.dicaLinha span:last-child { margin-left: auto; font-weight: 700; padding-left: 12px; }
+
+/* ── barras por critério ── */
+.barras { display: flex; flex-direction: column; gap: 14px; }
+.barraTopo { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.barraTopo span { color: var(--n-text-3); font-weight: 500; font-size: 12px; }
+.barra { display: flex; gap: 2px; height: 26px; }
+.barra > span { display: block; min-width: 0; }
+.barra > span:first-child { border-radius: 6px 0 0 6px; }
+.barra > span:last-child { border-radius: 0 6px 6px 0; }
+.barra > span:only-child { border-radius: 6px; }
+
+/* ── o mapa das pessoas ── */
+.mapa { overflow-x: auto; }
+.mapaGrade { display: grid; gap: 4px; align-items: center; min-width: max-content; }
+.mapaCab { font-size: 10.5px; color: var(--n-text-3); text-align: center; font-weight: 600; white-space: nowrap; }
+.mapaPessoa {
+  display: flex; align-items: center; gap: 10px; min-width: 230px; padding: 4px 8px 4px 2px;
+  text-decoration: none; color: inherit; border-radius: 10px;
+}
+.mapaPessoa:hover { background: var(--n-card-2); }
+.mapaNome { font-size: 13px; font-weight: 600; color: var(--n-text); }
+.mapaCargo { font-size: 11px; color: var(--n-text-3); }
+.celula {
+  height: 34px; min-width: 54px; border-radius: 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: var(--n-text);
+  background: color-mix(in srgb, var(--c) 16%, var(--n-card));
+  border-bottom: 3px solid var(--c); position: relative;
+}
+.celula small { font-size: 9px; font-weight: 600; color: var(--n-text-2); line-height: 1; }
+.celulaVazia { background: var(--n-card-2); border-bottom: 3px dashed var(--n-border); color: var(--n-text-3); font-weight: 500; }
+.celulaFora { background: transparent; border: none; }
+.celulaRascunho { background: var(--n-card-2); border-bottom: 3px dotted var(--lv-parte); color: var(--n-text-3); }
+.marcaAssinada { position: absolute; top: 2px; right: 4px; font-size: 9px; }
+
+.sinais { display: flex; gap: 4px; flex-wrap: wrap; }
+.sinal {
+  font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; color: var(--n-text);
+  background: color-mix(in srgb, var(--c) 14%, var(--n-card)); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+}
+.tend { font-size: 15px; font-weight: 800; text-align: center; }
+
+.rodapeLegenda { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 11.5px; color: var(--n-text-3); }
+
+/* ── linha do tempo da pessoa ── */
+.tempo { display: flex; flex-direction: column; gap: 12px; }
+.mesCartao { border: 1px solid var(--n-border); border-left: 5px solid var(--c); border-radius: 12px; padding: 14px 16px; background: var(--n-card); }
+.mesTopo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.mesNome { font-size: 15px; font-weight: 800; text-transform: capitalize; }
+.mesMeta { font-size: 11.5px; color: var(--n-text-3); margin-left: auto; }
+.pontos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.ponto { background: var(--n-card-2); border-radius: 10px; padding: 9px 11px; font-size: 12px; color: var(--n-text-2); line-height: 1.5; }
+.pontoNome { font-size: 12.5px; font-weight: 700; color: var(--n-text); display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 4px; }
+.textos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 8px; }
+.texto { border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.55; color: var(--n-text-2); border: 1px solid var(--n-border-2); border-top: 3px solid var(--t); white-space: pre-wrap; }
+.texto b { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--n-text-3); margin-bottom: 3px; white-space: normal; }
+
+.heroPessoa { display: flex; align-items: center; gap: 16px; }
+.vazio { padding: 26px; text-align: center; color: var(--n-text-3); font-size: 13px; }
