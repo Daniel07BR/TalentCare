@@ -4,7 +4,7 @@ import Avatar from '../Avatar'
 import { CRITERIOS, criterioDe, NIVEIS, competenciaLabel } from '@/lib/avaliacoes/criterios'
 
 const nivelPor = (k: string | null) => NIVEIS.find((n) => n.key === k) ?? null
-import { significado, METODO_RESUMO, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
+import { significado, METODO_RESUMO, itensDoCombinado, type ReguaDoSetor } from '@/lib/avaliacoes/metodo'
 import { BotaoTermo } from '../avaliacoes/TermoImpresso'
 import { MetodoCientifico } from '../avaliacoes/MetodoCientifico'
 
@@ -215,8 +215,10 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
 
       {av.combinado && (
         <div style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--success)' }}>
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>Combinado para o próximo mês</div>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{av.combinado}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>Combinados para o próximo mês</div>
+          <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65 }}>
+            {itensDoCombinado(av.combinado).map((c, i) => <li key={i}>{c}</li>)}
+          </ol>
         </div>
       )}
 

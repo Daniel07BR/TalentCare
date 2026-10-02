@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: combinados em itens
+
+Pedido do Daniel: *"separar os apontamentos de melhora — ele tem dois combinados e isso ficou
+junto; poderia ter marcadores para adicionarmos"*.
+
+- Tela de avaliar: **"Combinados para o próximo mês"** em itens numerados, um apontamento por
+  campo, com **+ Adicionar combinado** e **×** para tirar — até 3.
+- PDF, "Meu desempenho", página e janela da pessoa mostram os combinados em **lista numerada**.
+- Sem migração: a coluna `avaliacao.combinado` segue texto, **um item por linha**
+  (`itensDoCombinado` / `textoDoCombinado` em `lib/avaliacoes/metodo.ts`); o que já estava
+  gravado vira um item só. A rota normaliza (corta em 3, ignora marcador digitado).
+
 ## 2026-10-02 — Gestor não é avaliado; sem meses vazios antes da primeira avaliação
 
 - ⚠️⚠️ **Gestor não é avaliado, nem pela Diretoria** (Daniel: *"gestores não são avaliados, nem

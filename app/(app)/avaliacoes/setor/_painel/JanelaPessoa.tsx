@@ -9,6 +9,7 @@ import s from '../../../_visao/visao.module.css'
 import p from './painel.module.css'
 import { LinhaNivel, MapaPontos, Selo, type NivelKey } from './graficos'
 import { JanelaHistorico } from './JanelaHistorico'
+import { itensDoCombinado } from '@/lib/avaliacoes/metodo'
 
 /* ============================================================
    A JANELA DA PESSOA (02/10/2026) — pedido do Daniel: "clicar no funcionário e
@@ -136,7 +137,7 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
                 {(ultima?.recado || ultima?.combinado) && (
                   <div className={p.textos} style={{ marginBottom: 16 }}>
                     {ultima.recado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-acima)' }}><b>Último recado</b>{ultima.recado}</div>}
-                    {ultima.combinado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-atende)' }}><b>Combinado</b>{ultima.combinado}</div>}
+                    {ultima.combinado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-atende)' }}><b>Combinados</b><ol style={{ margin: 0, paddingLeft: 18, whiteSpace: 'normal' }}>{itensDoCombinado(ultima.combinado).map((c, i) => <li key={i}>{c}</li>)}</ol></div>}
                   </div>
                 )}
               </>

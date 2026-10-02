@@ -155,3 +155,22 @@ export const BASE_CIENTIFICA: {
 
 /** As fontes em uma linha, para o rodapé do PDF. */
 export const FONTES_CURTAS = 'Smith & Kendall (1963); Borman & Motowidlo (1993); Weitzel / Center for Creative Leadership (2000); Kluger & DeNisi (1996).'
+
+/* ── OS COMBINADOS, em itens (02/10/2026) ───────────────────────────────────
+   Pedido do Daniel: "separar os apontamentos de melhora — ele tem dois
+   combinados e isso ficou junto; poderia ter marcadores para adicionarmos".
+   A coluna continua TEXTO (`avaliacao.combinado`), um item por linha: o que já
+   estava gravado vira um item só, sem migração, e versões antigas seguem
+   legíveis. ⚠️ Até 3: combinado demais não se cumpre nem se cobra. */
+export const MAX_COMBINADOS = 3
+
+/** O texto gravado → os itens (uma linha cada; marcador digitado é ignorado). */
+export function itensDoCombinado(texto: string | null | undefined): string[] {
+  return (texto ?? '').split(/\r?\n/).map((l) => l.replace(/^\s*(?:[-•*·]|\d+[.)])\s*/, '').trim()).filter(Boolean)
+}
+
+/** Os itens → o texto que se grava (ou null, sem nenhum). */
+export function textoDoCombinado(itens: string[]): string | null {
+  const limpos = itens.map((i) => i.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, MAX_COMBINADOS)
+  return limpos.length ? limpos.join('\n') : null
+}
