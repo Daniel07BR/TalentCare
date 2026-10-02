@@ -18,7 +18,7 @@ const GESTAO_VAZIA: Gestao = { querNaEquipe: null, prontoParaMais: null, emRisco
 type NotaEnt = { nota: number | null; justificativa: string | null }
 type Dados = {
   competencia: string
-  pessoa: { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; nexusUserId: string | null }
+  pessoa: { id: string; nome: string; cargo: string; setor: string; hasAvatar: boolean; nexusUserId: string | null; departmentId: string | null }
   posso: boolean
   souEu: boolean
   aguardandoPublicacao: boolean
@@ -100,12 +100,17 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   }
 
   const primeiro = d.pessoa.nome.split(' ')[0]
-  const voltar = () => router.push(`/avaliacoes?competencia=${competencia}${sp.get('setor') ? `&setor=${sp.get('setor')}` : ''}`)
+  /* ⚠️ A volta leva à ÁREA DE AVALIAÇÕES DO SETOR (Daniel, 02/10/2026), e não à
+     fila. O id do setor basta: a página troca para o endereço legível. Sem setor
+     (caso raro), cai na fila como antes. */
+  const voltar = () => router.push(d.pessoa.departmentId
+    ? `/avaliacoes/setor/${d.pessoa.departmentId}`
+    : `/avaliacoes?competencia=${competencia}${sp.get('setor') ? `&setor=${sp.get('setor')}` : ''}`)
 
   return (
     <div className={`tc-anim ${st.pagina}`}>
       {/* A volta leva o SETOR de onde se veio — a lista abre dentro do setor (11/09/2026). */}
-      <button onClick={voltar} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 16 }}>‹ Voltar às avaliações</button>
+      <button onClick={voltar} className="tc-btn" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, padding: 0, marginBottom: 16 }}>‹ Voltar às avaliações{d.pessoa.departmentId ? ` · ${d.pessoa.setor}` : ''}</button>
 
       <div className={st.grade}>
         {/* ---------- À ESQUERDA: quem e quanto (fica parada ao rolar) ---------- */}
@@ -209,7 +214,8 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
 
               {jaPublicada && d.posso && !concluida && (
                 <Aviso cor="var(--info)">
-                  Publicada — você ainda pode <b>corrigir</b>: mude o que precisar e clique em &quot;Publicar correção&quot; (pede um motivo, e a versão anterior fica registrada). A avaliação só fecha de vez quando o documento assinado for anexado, lá embaixo.
+                  {/* ⚠️ Num <span> só: o Aviso é flex, e texto solto + <b> viravam três colunas. */}
+                  <span>Publicada — você ainda pode <b>corrigir</b>: mude o que precisar e clique em &quot;Publicar correção&quot; (pede um motivo, e a versão anterior fica registrada). A avaliação só fecha de vez quando o documento assinado for anexado, lá embaixo.</span>
                 </Aviso>
               )}
               {concluida && (

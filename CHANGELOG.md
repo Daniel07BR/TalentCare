@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação: "Voltar" leva à área do setor
+
+- "‹ Voltar às avaliações · <setor>" na tela de avaliar abre a área do histórico do setor
+  (`/avaliacoes/setor/…`), e não mais a fila.
+- O aviso "Publicada — você ainda pode corrigir" saía em três colunas (o `Aviso` é flex e o
+  texto com `<b>` virava itens separados); agora é um parágrafo só.
+
 ## 2026-10-02 — Avaliações: a área do histórico (setor e pessoa)
 
 Pedido do Daniel: *"criar na página do departamento o card para acessar a área de avaliações,
