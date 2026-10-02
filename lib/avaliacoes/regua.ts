@@ -93,8 +93,9 @@ export type Setor = {
 /**
  * Pode AVALIAR esta pessoa?
  *
- * A HIERARQUIA, fixada pelo dono em 02/09/2026:
- *   - **gestor do setor** → avaliado pela **Diretoria**, sempre;
+ * A HIERARQUIA, fixada pelo dono em 02/09/2026 e revista em 02/10/2026:
+ *   - **gestor do setor** → ⚠️⚠️ NÃO É AVALIADO, nem pela Diretoria (Daniel,
+ *     02/10/2026: "gestores não são avaliados, nem mesmo pela diretoria");
  *   - **sub-encarregado** → avaliado pelo **gestor** daquele setor;
  *   - **todos os outros** → pelo gestor **ou** pelo sub-encarregado.
  *
@@ -120,8 +121,10 @@ export function podeAvaliar(
   if (!alvo.departmentId) return false
 
   const nivelDoAlvo = setor.niveis.get(alvo.id)
-  // Gestor do setor, ou setor inteiro marcado: cabe à Diretoria e a mais ninguém.
-  if (nivelDoAlvo === 'gestor' || setor.pelaDiretoria) return quem.role === 'ADMIN'
+  // Gestor não é avaliado — por ninguém (02/10/2026).
+  if (nivelDoAlvo === 'gestor') return false
+  // Setor inteiro marcado (sem chefia própria): cabe à Diretoria e a mais ninguém.
+  if (setor.pelaDiretoria) return quem.role === 'ADMIN'
 
   const meuNivel = setor.niveis.get(quem.id)
   if (!meuNivel) return false
@@ -138,7 +141,8 @@ export function quemAvaliaEssa(
   nomeDe: Map<string, string>,
 ): string[] {
   const nivelDoAlvo = setor.niveis.get(alvo.id)
-  if (nivelDoAlvo === 'gestor' || setor.pelaDiretoria) return ['Diretoria']
+  if (nivelDoAlvo === 'gestor') return []
+  if (setor.pelaDiretoria) return ['Diretoria']
   const podem = [...setor.niveis.entries()]
     .filter(([id, nivel]) => id !== alvo.id && (nivelDoAlvo === 'sub' ? nivel === 'gestor' : true))
     .map(([id]) => nomeDe.get(id) ?? '—')
@@ -181,7 +185,7 @@ export const setoresQueGere = (quem: Quem): string[] | 'todos' =>
  * admitido antes do dia 16 (cobrar do gestor quem chegou dia 28 é cobrar o
  * impossível) e fora do `foraDoDiretorio` (conta de sistema não é gente).
  */
-export function filtroDeAvaliaveis(competencia: string) {
+export function filtroDeAvaliaveis(competencia: string, gestores: string[]) {
   const { fim } = limitesDaCompetencia(competencia)
   const corteAdmissao = new Date(fim.getFullYear(), fim.getMonth(), 16)
   return {
@@ -189,7 +193,20 @@ export function filtroDeAvaliaveis(competencia: string) {
     foraDoDiretorio: false,
     OR: [{ leftAt: null }, { leftAt: { gt: fim } }],
     entryDate: { lt: corteAdmissao },
+    /* ⚠️⚠️ GESTOR NÃO É AVALIADO (Daniel, 02/10/2026: "gestores não são
+       avaliados, nem mesmo pela diretoria"). `gestores` é obrigatório de
+       propósito: quem monta a população não tem como esquecer. Em `NOT`, e não
+       em `id`, para não brigar com o `{ id: quem.id }` do alcance da fila. */
+    NOT: { id: { in: gestores } },
   }
+}
+
+/** Quem é GESTOR em algum setor (vínculo `gestor`) — e por isso não é avaliado.
+ *  ⚠️ Pelo vínculo gravado, nunca pelo cargo: a Rosemeire é `Colaborador` no
+ *  cadastro e gestora de dois setores. */
+export async function gestoresDaCasa(): Promise<string[]> {
+  const rows = await prisma.setorAvaliador.findMany({ where: { nivel: 'gestor' }, select: { userId: true }, distinct: ['userId'] })
+  return rows.map((r) => r.userId)
 }
 
 /**
@@ -217,10 +234,11 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
         ? { departmentId: { in: quem.escopo.avaliaDepartmentIds } }
         : { id: quem.id }
 
+  const gestores = await gestoresDaCasa()
   const [pessoas, avaliacoes, avaliadores, deptsDiretoria, todosNomes] = await Promise.all([
     prisma.user.findMany({
       where: {
-        ...filtroDeAvaliaveis(competencia),
+        ...filtroDeAvaliaveis(competencia, gestores),
         ...alcance,
       },
       select: {
@@ -270,9 +288,9 @@ export async function filaDaCompetencia(quem: Quem, competencia: string) {
       const av = porAvaliado.get(p.id)
       const setor = porSetor.get(p.departmentId ?? '') ?? setorVazio
       const meuNivel = setor.niveis.get(p.id)
-      // ⚠️ Gestor do setor é avaliado pela Diretoria, e não pelo par de chefia.
       const ehAvaliador = !!meuNivel
-      const cabeADiretoria = meuNivel === 'gestor' || setor.pelaDiretoria
+      // Gestor nem chega aqui (sai no filtro); cabe à Diretoria só o setor marcado.
+      const cabeADiretoria = setor.pelaDiretoria
       /*
        * QUEM avalia esta pessoa, por nome.
        *

@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Gestor não é avaliado; sem meses vazios antes da primeira avaliação
+
+- ⚠️⚠️ **Gestor não é avaliado, nem pela Diretoria** (Daniel: *"gestores não são avaliados, nem
+  mesmo pela diretoria"*). Revê a hierarquia de 02/09: quem tem vínculo `gestor` em algum setor
+  sai da população (`filtroDeAvaliaveis(competencia, gestores)` — o parâmetro é obrigatório),
+  da fila, das contas do setor (`dept-metrics`), da área do setor, e `podeAvaliar` recusa.
+  O setor marcado "avaliado pela Diretoria" (sem chefia própria) continua com a Diretoria.
+  Texto da tela "Quem avalia" corrigido.
+- **Sem meses vazios**: a área do setor, a página e a janela da pessoa, a barra dos meses e
+  "Meu desempenho" começam no **primeiro mês com avaliação** (`aPartirDe`). O seletor 6/12/24
+  meses só aparece quando há mais de 6 meses desde a primeira; a grade não estica as células.
+
 ## 2026-10-02 — Janela da pessoa: "Histórico" e "Expandir gráficos"
 
 - O antigo "Histórico completo" (que leva à página inteira da pessoa) virou **"Expandir

@@ -34,7 +34,7 @@ type Pessoa = {
 }
 type Painel = {
   setor: { id: string; nome: string; endereco: string }
-  meses: string[]; ultimo: string | null
+  meses: string[]; mesesComDado: number; ultimo: string | null
   resumo: { competencia: string; niveis: Contagem; avaliados: number; quadro: number; concluidas: number; nivel: NivelKey | null }[]
   criterios: { key: string; label: string; niveis: Contagem }[]
   pessoas: Pessoa[]
@@ -97,15 +97,21 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
         <div>
           <h1 className={p.faixaTitulo}>Avaliações · {d.setor.nome}</h1>
           <div className={p.faixaSub}>
-            Histórico de <span className={p.faixaAcento}>{d.meses.length} meses</span>, de {competenciaLabel(d.meses[0])} a {competenciaLabel(d.meses[d.meses.length - 1])}
+            {d.meses.length === 1
+              ? <>Avaliações desde <span className={p.faixaAcento}>{competenciaLabel(d.meses[0])}</span></>
+              : <>Histórico de <span className={p.faixaAcento}>{d.meses.length} meses</span>, de {competenciaLabel(d.meses[0])} a {competenciaLabel(d.meses[d.meses.length - 1])}</>}
           </div>
         </div>
         <div className={p.faixaDireita}>
-          <div className={p.periodo} role="tablist" aria-label="Período">
-            {[6, 12, 24].map((n) => (
-              <button key={n} type="button" role="tab" aria-selected={d.meses.length === n} className={d.meses.length === n ? p.on : ''} onClick={() => trocarPeriodo(n)}>{n} meses</button>
-            ))}
-          </div>
+          {/* O período só aparece quando há mais de 6 meses desde a primeira
+              avaliação — antes disso, os botões não mudariam nada na tela. */}
+          {d.mesesComDado > 6 && (
+            <div className={p.periodo} role="tablist" aria-label="Período">
+              {[6, 12, 24].filter((n, i, arr) => i === 0 || d.mesesComDado > arr[i - 1]).map((n) => (
+                <button key={n} type="button" role="tab" aria-selected={meses === n} className={meses === n ? p.on : ''} onClick={() => trocarPeriodo(n)}>{n} meses</button>
+              ))}
+            </div>
+          )}
           <Legenda claro />
         </div>
       </header>
@@ -160,7 +166,7 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
       <Cartao titulo="Pessoas" sub="Cada quadro é um mês. Clique no nome para abrir os resultados da pessoa e avaliar." Icone={Users}>
         {d.pessoas.length === 0 ? <div className={p.vazio}>Ninguém no setor.</div> : (
           <div className={p.mapa}>
-            <div className={p.mapaGrade} style={{ gridTemplateColumns: `minmax(230px, 1.4fr) repeat(${d.meses.length}, minmax(54px, 1fr)) 56px minmax(150px, auto)` }}>
+            <div className={p.mapaGrade} style={{ gridTemplateColumns: `minmax(230px, 1fr) repeat(${d.meses.length}, minmax(54px, 96px)) 56px minmax(150px, auto)` }}>
               <span />
               {d.meses.map((c) => <span key={c} className={p.mapaCab}>{mesCurto(c)}</span>)}
               <span className={p.mapaCab}>Rumo</span>
