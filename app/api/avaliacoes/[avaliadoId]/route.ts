@@ -205,7 +205,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }, { status: 422 })
   }
   if (acao === 'publicar' && notas.every((n) => n.nota === null)) {
-    return NextResponse.json({ error: 'Não dá para publicar uma avaliação sem nenhuma nota.' }, { status: 422 })
+    return NextResponse.json({ error: 'Não dá para publicar uma avaliação sem nenhum nível escolhido.' }, { status: 422 })
   }
 
   const media = mediaDe(notas)

@@ -7,7 +7,7 @@ import { competenciaAnterior, competenciaLabel } from '@/lib/avaliacoes/criterio
 import Avatar from '../../../Avatar'
 import s from '../../../_visao/visao.module.css'
 import p from './painel.module.css'
-import { LinhaMedia, MapaPontos, Selo, type NivelKey } from './graficos'
+import { LinhaNivel, MapaPontos, Selo, type NivelKey } from './graficos'
 
 /* ============================================================
    A JANELA DA PESSOA (02/10/2026) — pedido do Daniel: "clicar no funcionário e
@@ -27,7 +27,7 @@ import { LinhaMedia, MapaPontos, Selo, type NivelKey } from './graficos'
    ============================================================ */
 
 type Av = {
-  competencia: string; nivel: NivelKey | null; media: number | null
+  competencia: string; nivel: NivelKey | null
   notas: { criterio: string; label: string; nivel: NivelKey | null; justificativa: string | null }[]
   recado: string | null; combinado: string | null; concluidaEm: string | null
   gestao: { emRisco: boolean | null; prontoParaMais: boolean | null; querNaEquipe: boolean | null } | null
@@ -70,7 +70,6 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
   const anterior = d?.avaliacoes[1] ?? null
   const rumo = ultima && anterior ? Math.sign(ORDEM.indexOf(ultima.nivel ?? '') - ORDEM.indexOf(anterior.nivel ?? '')) : null
   const porMes = new Map((d?.avaliacoes ?? []).map((a) => [a.competencia, a]))
-  const temNumero = !!d?.avaliacoes.some((a) => a.media != null)
 
   return createPortal(
     <div className={`${s.paleta} ${p.niveis} ${p.fundoJanela}`} onClick={onFechar} role="presentation">
@@ -120,12 +119,10 @@ export function JanelaPessoa({ setorEndereco, pessoaEndereco, posso, url, onFech
 
             {d.avaliacoes.length > 0 && (
               <>
-                {temNumero && (
-                  <section className={p.janelaBloco}>
-                    <h3 className={p.janelaTitulo}>A média ao longo do tempo</h3>
-                    <LinhaMedia pontos={d.meses.map((c) => ({ competencia: c, media: porMes.get(c)?.media ?? null }))} />
-                  </section>
-                )}
+                <section className={p.janelaBloco}>
+                  <h3 className={p.janelaTitulo}>A evolução ao longo do tempo</h3>
+                  <LinhaNivel pontos={d.meses.map((c) => ({ competencia: c, nivel: porMes.get(c)?.nivel ?? null }))} />
+                </section>
                 <section className={p.janelaBloco}>
                   <h3 className={p.janelaTitulo}>Os três pontos, mês a mês</h3>
                   <MapaPontos meses={d.meses.slice(-6)} rotuloLarg={150} linhas={(ultima?.notas ?? []).map((cr) => ({

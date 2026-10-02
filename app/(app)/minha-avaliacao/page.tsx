@@ -105,8 +105,8 @@ export default function MinhaAvaliacaoPage() {
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 30, textAlign: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Nenhuma avaliação publicada ainda</div>
           <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-            Quando o seu gestor publicar a avaliação do mês, ela aparece aqui — com a nota de cada
-            critério e o motivo. Você vai poder registrar ciência e responder.
+            Quando o seu gestor publicar a avaliação do mês, ela aparece aqui — com o nível de cada
+            ponto e o motivo. Você vai poder registrar ciência e responder.
           </div>
         </div>
       ) : (
@@ -251,7 +251,7 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>O que você tem a dizer</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginBottom: 9, lineHeight: 1.55 }}>
             Opcional. O seu avaliador vai ler, e o texto fica registrado junto da avaliação — ele
-            não altera a nota, fica ao lado dela.
+            não altera o resultado, fica ao lado dele.
           </div>
           <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4}
             placeholder="Concorda? Discorda de algum ponto? Quer contar algo que o mês não mostrou?"

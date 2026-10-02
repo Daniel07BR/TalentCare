@@ -1,5 +1,25 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-02 — Avaliação SEM nota em número, em todo o sistema
+
+Pedido do Daniel, pela orientação dos psicólogos e psicanalistas que acompanham a empresa
+(*"não são a favor de nota em número"*). Nenhuma tela, relatório ou PDF mostra número de
+avaliação — nem para a gestão. O resultado é sempre o **nome do nível**.
+
+- Tela de avaliar: "Nota do mês 8.7" virou **"Resultado do mês: Acima do esperado"**; versões
+  anteriores pelo nível.
+- Fila: a coluna "Nota" virou **"Resultado"** (Abaixo / Em parte / Atende / Acima).
+- Área do setor, página da pessoa e janela: o gráfico de média 0–10 virou **"A evolução"** —
+  o eixo são os quatro níveis, cada mês um ponto na faixa do nível. A seta ↑↓ compara níveis.
+  `painel.ts` não envia mais média nenhuma (só `nivel`).
+- Relatório completo do setor: "Nota média do setor" → **"Resultado do setor"**; "Média por
+  critério" → **"Cada ponto, no setor"**, pelo nome do nível. Lista de pessoas: coluna
+  **"Avaliação"** com o nível, e sai o selo "MAIOR NOTA" (avaliação não vira pódio).
+- Textos do método e da gestão sem "nota"; a base científica diz "Nível com nome, sem nota em
+  número".
+- ⚠️ O número continua **no banco** (`avaliacao.media`, notas 3/6/8/10): é ele que decide o
+  nível do mês e do setor. Só não aparece.
+
 ## 2026-10-02 — Avaliações: janela da pessoa e barra dos meses
 
 - **Janela da pessoa** na área do setor: clicar no nome abre, no centro da tela, o último

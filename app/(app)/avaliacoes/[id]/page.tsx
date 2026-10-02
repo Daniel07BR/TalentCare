@@ -152,12 +152,10 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
             <span className={st.competencia}>Competência de <b>{competenciaLabel(competencia)}</b></span>
 
             <div className={st.nota}>
-              <span className={st.notaRotulo}>{d.souEu ? 'Resultado do mês' : 'Nota do mês'}</span>
-              <span className="cnum" style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
-                {/* ⚠️ O próprio avaliado não vê o número (02/10/2026) — só o nome do nível. */}
-                {!d.souEu && <span className={st.notaValor}>{media != null ? media.toFixed(1) : '—'}</span>}
-              </span>
-              <span className={st.notaNivel} style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
+              {/* ⚠️⚠️ SEM NÚMERO, para ninguém (02/10/2026 — orientação dos psicólogos que
+                  acompanham a empresa). O resultado do mês é o NOME do nível, grande. */}
+              <span className={st.notaRotulo}>Resultado do mês</span>
+              <span className={st.notaNivelGrande} style={{ color: nivelMedia ? nivelMedia.color : 'var(--text-mute)' }}>
                 {nivelMedia ? ancoraDe(media!).label : 'escolha os níveis ao lado'}
               </span>
               <div className={st.progresso}>
@@ -200,7 +198,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
           */}
           <div className={st.lembrete}>
             <span style={{ color: 'var(--text-mute)', flex: 'none' }}>ⓘ</span>
-            <span>A <b>ficha</b> mostra o que os sistemas registraram. Esta nota é <b>o que você observou</b>. Quando as duas discordam, é aí que há algo a conversar.</span>
+            <span>A <b>ficha</b> mostra o que os sistemas registraram. Esta avaliação é <b>o que você observou</b>. Quando as duas discordam, é aí que há algo a conversar.</span>
           </div>
 
         </aside>
@@ -378,7 +376,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
                   {d.avaliacao.versoes.map((v) => (
                     <div key={v.versao} style={{ fontSize: 12, color: 'var(--text-mute)', padding: '5px 0', display: 'flex', gap: 10 }}>
                       <b>v{v.versao}</b>
-                      <span>média {v.media?.toFixed(1) ?? '—'}</span>
+                      <span>{v.media != null ? ancoraDe(v.media).label : '—'}</span>
                       <span style={{ flex: 1 }}>{v.motivo}</span>
                       <span>{v.publishedAt ? new Date(v.publishedAt).toLocaleDateString('pt-BR') : ''}</span>
                     </div>

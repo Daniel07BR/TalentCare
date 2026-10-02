@@ -86,41 +86,31 @@ export function ColunasMes({ resumo }: {
   )
 }
 
-// ── LINHA: a média ao longo do tempo, sobre as faixas dos níveis ──────────────
-/* As faixas de fundo são as ÂNCORAS da escala (0–4, 4–6, 6–8, 8–10): a pessoa lê
-   "está na faixa do Atende" sem precisar saber o que é 7,3. */
-const FAIXAS: { key: NivelKey; de: number; ate: number }[] = [
-  { key: 'abaixo', de: 0, ate: 4 }, { key: 'parte', de: 4, ate: 6 }, { key: 'atende', de: 6, ate: 8 }, { key: 'acima', de: 8, ate: 10 },
-]
-export function LinhaMedia({ pontos, rotulo = 'Média' }: { pontos: { competencia: string; media: number | null }[]; rotulo?: string }) {
+// ── LINHA DOS NÍVEIS: o resultado de cada mês, sem número ────────────────────
+/* ⚠️⚠️ SEM NÚMERO (Daniel, 02/10/2026 — orientação dos psicólogos que acompanham a
+   empresa: "não são a favor de nota em número"). Era a média 0–10 sobre as faixas;
+   agora o eixo SÃO os quatro níveis, de baixo para cima, e cada mês é um ponto na
+   faixa do nível dele. Lê-se a evolução sem ler número nenhum. */
+const ORDEM_NIVEIS: NivelKey[] = ['abaixo', 'parte', 'atende', 'acima']
+export function LinhaNivel({ pontos, rotulo = 'Resultado' }: { pontos: { competencia: string; nivel: NivelKey | null }[]; rotulo?: string }) {
   const [hover, setHover] = useState<number | null>(null)
-  const W = 640, H = 230, E = 30, D = 70, T = 12, B = 26
+  const W = 640, H = 220, E = 78, D = 16, T = 10, B = 26
+  const faixa = (H - T - B) / 4
   const x = (i: number) => E + (pontos.length === 1 ? (W - E - D) / 2 : (i / (pontos.length - 1)) * (W - E - D))
-  const y = (v: number) => T + (1 - v / 10) * (H - T - B)
-  // Mês sem avaliação QUEBRA a linha — ligar por cima dele inventaria a nota do meio.
-  const trechos: { i: number; v: number }[][] = []
-  pontos.forEach((pt, i) => {
-    if (pt.media == null) { trechos.push([]); return }
-    if (!trechos.length) trechos.push([])
-    trechos[trechos.length - 1].push({ i, v: pt.media })
-  })
-  const ultimo = [...pontos.keys()].reverse().find((i) => pontos[i].media != null)
+  const y = (k: NivelKey) => T + (3 - ORDEM_NIVEIS.indexOf(k)) * faixa + faixa / 2
+  // Mês sem avaliação QUEBRA a linha — ligar por cima dele inventaria o nível do meio.
+  const trechos: { i: number; k: NivelKey }[][] = [[]]
+  pontos.forEach((pt, i) => { if (pt.nivel) trechos[trechos.length - 1].push({ i, k: pt.nivel }); else trechos.push([]) })
   const hp = hover != null ? pontos[hover] : null
-  const faixaDe = (v: number) => FAIXAS.find((f) => v <= f.ate) ?? FAIXAS[3]
+  const passo = (W - E - D) / Math.max(1, pontos.length - 1)
 
   return (
     <div style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`${rotulo} mês a mês`} style={{ display: 'block', overflow: 'visible' }}>
-        {FAIXAS.map((f) => (
-          <g key={f.key}>
-            <rect x={E} y={y(f.ate)} width={W - E - D} height={y(f.de) - y(f.ate)} fill={cor(f.key)} opacity={0.09} />
-            <text x={W - D + 8} y={(y(f.de) + y(f.ate)) / 2 + 4} fontSize={11} fontWeight={700} fill="var(--n-text-2)">{nivelUi(f.key)!.curto}</text>
-          </g>
-        ))}
-        {[0, 4, 6, 8, 10].map((v) => (
-          <g key={v}>
-            <line x1={E} x2={W - D} y1={y(v)} y2={y(v)} stroke="var(--n-border)" strokeWidth={1} />
-            <text x={E - 8} y={y(v) + 4} fontSize={10.5} textAnchor="end" fill="var(--n-text-3)">{v}</text>
+        {ORDEM_NIVEIS.map((k, idx) => (
+          <g key={k}>
+            <rect x={E} y={T + (3 - idx) * faixa} width={W - E - D} height={faixa - 2} rx={6} fill={cor(k)} opacity={0.1} />
+            <text x={E - 10} y={y(k) + 4} fontSize={11.5} fontWeight={700} textAnchor="end" fill="var(--n-text-2)">{nivelUi(k)!.curto}</text>
           </g>
         ))}
         {pontos.map((pt, i) => (
@@ -129,31 +119,22 @@ export function LinhaMedia({ pontos, rotulo = 'Média' }: { pontos: { competenci
           </text>
         ))}
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="var(--n-text-3)" strokeDasharray="3 3" />}
-        {trechos.filter((t) => t.length > 1).map((t, k) => (
-          <polyline key={k} points={t.map((q) => `${x(q.i)},${y(q.v)}`).join(' ')} fill="none" stroke="var(--n-text)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {trechos.filter((t) => t.length > 1).map((t, n) => (
+          <polyline key={n} points={t.map((q) => `${x(q.i)},${y(q.k)}`).join(' ')} fill="none" stroke="var(--n-text)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         ))}
-        {pontos.map((pt, i) => pt.media != null && (
-          <circle key={i} cx={x(i)} cy={y(pt.media)} r={hover === i ? 6 : 4.5} fill={cor(faixaDe(pt.media).key)} stroke="var(--n-card)" strokeWidth={2} />
+        {pontos.map((pt, i) => pt.nivel && (
+          <circle key={i} cx={x(i)} cy={y(pt.nivel)} r={hover === i ? 7 : 5.5} fill={cor(pt.nivel)} stroke="var(--n-card)" strokeWidth={2} />
         ))}
-        {ultimo != null && (
-          <text x={x(ultimo)} y={y(pontos[ultimo].media!) - 11} fontSize={12} fontWeight={800} textAnchor="middle" fill="var(--n-text)">
-            {pontos[ultimo].media!.toFixed(1).replace('.', ',')}
-          </text>
-        )}
         {pontos.map((pt, i) => (
-          <rect key={`h${i}`} x={x(i) - (W - E - D) / Math.max(1, pontos.length - 1) / 2} y={0} width={(W - E - D) / Math.max(1, pontos.length - 1)} height={H}
-            fill="transparent" onMouseEnter={() => setHover(i)} />
+          <rect key={`h${i}`} x={x(i) - passo / 2} y={0} width={passo} height={H} fill="transparent" onMouseEnter={() => setHover(i)} />
         ))}
       </svg>
       {hp && (
         <div className={p.dica} style={{ top: 0, left: `min(calc(${(x(hover!) / W) * 100}% + 12px), calc(100% - 190px))` }}>
           <b style={{ textTransform: 'capitalize' }}>{competenciaLabel(hp.competencia)}</b>
-          {hp.media == null ? <span style={{ color: 'var(--n-text-3)' }}>Sem avaliação publicada</span> : (
-            <div className={p.dicaLinha}>
-              <span className={p.quadrado} style={{ background: cor(faixaDe(hp.media).key) }} />
-              <span>{nivelUi(faixaDe(hp.media).key)!.curto}</span><span>{hp.media.toFixed(1).replace('.', ',')}</span>
-            </div>
-          )}
+          {hp.nivel
+            ? <div className={p.dicaLinha}><span className={p.quadrado} style={{ background: cor(hp.nivel) }} /><span>{nivelUi(hp.nivel)!.label}</span></div>
+            : <span style={{ color: 'var(--n-text-3)' }}>Sem avaliação publicada</span>}
         </div>
       )}
     </div>

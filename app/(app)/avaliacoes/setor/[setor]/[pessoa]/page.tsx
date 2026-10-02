@@ -8,7 +8,7 @@ import Avatar from '../../../../Avatar'
 import { Cartao } from '../../../../_visao/ui'
 import s from '../../../../_visao/visao.module.css'
 import p from '../../_painel/painel.module.css'
-import { Legenda, LinhaMedia, MapaPontos, Selo, cor, type NivelKey } from '../../_painel/graficos'
+import { Legenda, LinhaNivel, MapaPontos, Selo, cor, type NivelKey } from '../../_painel/graficos'
 
 /* ============================================================
    O HISTÓRICO DE UMA PESSOA (02/10/2026): a média no tempo, os três pontos mês
@@ -20,7 +20,7 @@ import { Legenda, LinhaMedia, MapaPontos, Selo, cor, type NivelKey } from '../..
    ============================================================ */
 
 type Av = {
-  competencia: string; nivel: NivelKey | null; media: number | null; versao: number
+  competencia: string; nivel: NivelKey | null; versao: number
   publicadaEm: string | null; avaliador: string
   notas: { criterio: string; label: string; nivel: NivelKey | null; justificativa: string | null }[]
   recado: string | null; combinado: string | null
@@ -79,7 +79,6 @@ export default function PainelDaPessoa({ params }: { params: Promise<{ setor: st
   const rumo = ultima && anterior ? Math.sign(ordemNivel(ultima.nivel) - ordemNivel(anterior.nivel)) : null
   const assinadas = d.avaliacoes.filter((a) => a.concluidaEm).length
   const primeiro = d.pessoa.nome.split(' ')[0]
-  const temNumero = d.avaliacoes.some((a) => a.media != null)
 
   return (
     <div className={`tc-anim ${s.raiz} ${p.niveis}`}>
@@ -131,13 +130,9 @@ export default function PainelDaPessoa({ params }: { params: Promise<{ setor: st
       ) : (
         <>
           <div className={p.dois}>
-            {temNumero ? (
-              <Cartao titulo="A média ao longo do tempo" sub="Sobre as faixas dos níveis. Só a gestão vê o número." Icone={LineChart} corIcone="var(--n-blue)">
-                <LinhaMedia pontos={d.meses.map((c) => ({ competencia: c, media: porMes.get(c)?.media ?? null }))} />
-              </Cartao>
-            ) : (
-              <Cartao titulo="A média ao longo do tempo" Icone={LineChart}><div className={p.vazio}>Na sua própria página o número não aparece.</div></Cartao>
-            )}
+            <Cartao titulo="A evolução ao longo do tempo" sub="O resultado de cada mês, pelo nível." Icone={LineChart} corIcone="var(--n-blue)">
+              <LinhaNivel pontos={d.meses.map((c) => ({ competencia: c, nivel: porMes.get(c)?.nivel ?? null }))} />
+            </Cartao>
             <Cartao titulo="Os três pontos, mês a mês" sub="Cada linha é um ponto; cada quadro, um mês." Icone={Grid3x3} corIcone="var(--n-green)">
               <MapaPontos meses={d.meses} linhas={(ultima?.notas ?? []).map((cr) => ({
                 label: cr.label,
@@ -164,7 +159,6 @@ function Mes({ a, pessoaId, primeiro }: { a: Av; pessoaId: string; primeiro: str
       <div className={p.mesTopo}>
         <span className={p.mesNome}>{competenciaLabel(a.competencia)}</span>
         <Selo nivel={a.nivel} />
-        {a.media != null && <span style={{ fontSize: 12, color: 'var(--n-text-3)' }}>média {a.media.toFixed(1).replace('.', ',')}</span>}
         <span className={p.mesMeta}>
           por {a.avaliador}{a.versao > 1 ? ` · v${a.versao}` : ''}
           {' · '}{a.ciencia ? (a.ciencia.atual ? '✓ ciência' : 'ciência de versão anterior') : 'sem ciência'}

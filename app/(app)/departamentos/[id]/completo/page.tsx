@@ -375,28 +375,26 @@ function Avaliacao({ m }: { m: DeptMetrics }) {
       cor="var(--accent)"
     >
       <div style={grade}>
-        <N label="Nota média do setor" valor={a.media !== null ? a.media.toFixed(1) : null} cor={a.media !== null ? ancoraDe(a.media).color : undefined} />
+        {/* ⚠️ Sem número (02/10/2026): o resultado do setor é o NOME do nível. */}
+        <N label="Resultado do setor" valor={a.media !== null ? ancoraDe(a.media).label : null} cor={a.media !== null ? ancoraDe(a.media).color : undefined} />
         <N label="Avaliações publicadas" valor={a.publicadas} cor="var(--success)" nota={`de ${a.avaliaveis} pessoas`} />
         <N label="Faltam avaliar" valor={faltam} cor={faltam > 0 ? 'var(--warning)' : undefined} />
       </div>
       {a.porCriterio.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10, color: 'var(--text-dim)' }}>Média por critério</div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10, color: 'var(--text-dim)' }}>Cada ponto, no setor</div>
           {a.porCriterio.map((c) => (
             <div key={c.criterio} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '5px 0' }}>
               <span style={{ flex: 1, fontSize: 12.5 }}>{criterioDe(c.criterio)?.label ?? c.criterio}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--text-mute)', width: 74, textAlign: 'right' }}>{c.n} {c.n === 1 ? 'nota' : 'notas'}</span>
-              <div style={{ width: 150, height: 6, background: 'var(--surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${c.media * 10}%`, background: ancoraDe(c.media).color, borderRadius: 4 }} />
-              </div>
-              <span className="cnum" style={{ width: 30, textAlign: 'right', fontSize: 13.5, fontWeight: 700, color: ancoraDe(c.media).color }}>{c.media.toFixed(1)}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-mute)', width: 90, textAlign: 'right' }}>{c.n} {c.n === 1 ? 'avaliação' : 'avaliações'}</span>
+              <span style={{ width: 150, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: ancoraDe(c.media).color }}>{ancoraDe(c.media).label}</span>
             </div>
           ))}
           {/* ⚠️ "Não se aplica" fica FORA da média — por isso a contagem de notas
               muda de critério para critério, e a tela mostra quantas entraram. */}
           <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 8, lineHeight: 1.5 }}>
-            Critério marcado como "não se aplica" fica fora da média — é por isso que o número de
-            notas muda de linha para linha.
+            Ponto marcado como "não se aplica" fica fora — é por isso que o número de avaliações
+            muda de linha para linha.
           </div>
         </div>
       )}
