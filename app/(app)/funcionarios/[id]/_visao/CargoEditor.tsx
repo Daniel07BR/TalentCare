@@ -1,90 +1,34 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { BadgeCheck, Check, Pencil, X } from 'lucide-react'
+import { BadgeCheck, ExternalLink } from 'lucide-react'
+import { FICHA_NO_FLUXO } from '@/lib/ui/corrija-no-fluxo'
 import { forte, suave } from '../../../_visao/ui'
 
 /* ============================================================
-   CARGO OFICIAL — campo editável no hero (14/09/2026).
+   CARGO OFICIAL — SOMENTE LEITURA desde 05/10/2026.
 
-   Pedido do dono: "acrescente um campo editável com o cargo da pessoa; isso vou
-   subir posteriormente, mas preciso deixar o campo pronto".
+   Nasceu editável aqui (14/09/2026, `users.cargo_oficial`). Agora o cargo é da FICHA DE RH do
+   DP, no Fluxo (o cargo do vínculo pessoa × empresa), e chega pelo `run-ficha-sync.mjs`. Quando o
+   TalentCare e o vínculo discordavam, o DP decide na tela "Divergências" do Fluxo — editar aqui
+   seria desfeito no próximo sync. O editor antigo está no histórico do git.
 
-   ⚠️ É o cargo do DP, gravado em `users.cargo_oficial`. O "Colaborador" logo
-   abaixo do nome é o cargo do NEXUS (`job_title`), que o sync reescreve e que
-   decide o acesso — por isso os dois não se misturam.
-   ⚠️ Vazio diz "a informar", nunca some: o campo tem de estar à vista para a
-   carga que vem depois ser conferida pessoa a pessoa.
+   ⚠️ O "Colaborador" logo abaixo do nome continua sendo o cargo do NEXUS (`job_title`), que
+   decide o acesso — os dois não se misturam.
+   ⚠️ Vazio diz "a informar", nunca some.
    ============================================================ */
-export function CargoEditor({ id, cargo }: { id: string; cargo: string | null }) {
-  const router = useRouter()
-  const [valor, setValor] = useState(cargo)
-  const [editando, setEditando] = useState(false)
-  const [texto, setTexto] = useState(cargo ?? '')
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
-  useEffect(() => { setValor(cargo) }, [cargo])
-
-  const abrir = () => { setTexto(valor ?? ''); setErro(null); setEditando(true) }
-  async function salvar() {
-    setSalvando(true); setErro(null)
-    try {
-      const r = await fetch('/api/admin/cargo-set', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, cargo: texto }),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (!r.ok) { setErro(r.status === 403 ? 'Só o dono do sistema pode editar o cargo.' : (j.error ?? 'Não foi possível salvar.')); return }
-      setValor(j.cargo ?? null)
-      setEditando(false)
-      router.refresh()
-    } catch {
-      setErro('Não foi possível salvar — verifique a conexão.')
-    } finally {
-      setSalvando(false)
-    }
-  }
-
-  const icone = (
-    <span style={{ width: 28, height: 28, borderRadius: 8, background: suave('purple'), color: forte('purple'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-      <BadgeCheck size={15} strokeWidth={2.2} />
-    </span>
-  )
-
-  if (!editando) {
-    return (
-      <button type="button" onClick={abrir} title="Editar o cargo oficial"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '6px 12px 6px 6px', background: 'color-mix(in srgb, var(--n-card) 80%, transparent)', border: `1px ${valor ? 'solid' : 'dashed'} var(--n-border)`, borderRadius: 12, minWidth: 0, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
-        {icone}
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)', lineHeight: 1.2 }}>Cargo</span>
-          <span style={{ display: 'block', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', color: valor ? 'var(--n-text)' : 'var(--n-text-3)', fontStyle: valor ? 'normal' : 'italic' }}>
-            {valor ?? 'a informar'}
-          </span>
-        </span>
-        <Pencil size={13} color="var(--n-text-3)" style={{ marginLeft: 2 }} />
-      </button>
-    )
-  }
-
-  const botao: React.CSSProperties = { width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', flex: 'none' }
+export function CargoEditor({ cargo }: { id: string; cargo: string | null }) {
   return (
-    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 6px', background: 'var(--n-card)', border: '1px solid var(--n-blue)', boxShadow: '0 0 0 3px var(--n-blue-soft)', borderRadius: 12 }}>
-        {icone}
-        <label style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 10.5, color: 'var(--n-text-3)', lineHeight: 1.2 }}>Cargo</span>
-          <input autoFocus value={texto} maxLength={120} placeholder="Ex.: Analista Contábil Pleno" disabled={salvando}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') setEditando(false) }}
-            style={{ width: 220, maxWidth: '52vw', border: 'none', outline: 'none', background: 'transparent', color: 'var(--n-text)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, padding: 0 }} />
-        </label>
-        <button type="button" onClick={salvar} disabled={salvando} title="Salvar (Enter)" aria-label="Salvar cargo"
-          style={{ ...botao, border: 'none', background: 'var(--n-blue)', color: '#fff', opacity: salvando ? 0.6 : 1 }}><Check size={16} /></button>
-        <button type="button" onClick={() => setEditando(false)} disabled={salvando} title="Cancelar (Esc)" aria-label="Cancelar"
-          style={{ ...botao, border: '1px solid var(--n-border)', background: 'var(--n-card-2)', color: 'var(--n-text-2)' }}><X size={16} /></button>
+    <a href={FICHA_NO_FLUXO} target="_blank" rel="noopener noreferrer" title="O cargo vem da ficha de RH do DP, no Fluxo — corrija lá"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '6px 12px 6px 6px', background: 'color-mix(in srgb, var(--n-card) 80%, transparent)', border: `1px ${cargo ? 'solid' : 'dashed'} var(--n-border)`, borderRadius: 12, minWidth: 0, fontFamily: 'inherit', textAlign: 'left', textDecoration: 'none' }}>
+      <span style={{ width: 28, height: 28, borderRadius: 8, background: suave('purple'), color: forte('purple'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+        <BadgeCheck size={15} strokeWidth={2.2} />
       </span>
-      {erro && <span style={{ fontSize: 11, color: 'var(--n-red)' }}>{erro}</span>}
-    </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)', lineHeight: 1.2 }}>Cargo · vem do Fluxo (DP)</span>
+        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', color: cargo ? 'var(--n-text)' : 'var(--n-text-3)', fontStyle: cargo ? 'normal' : 'italic' }}>
+          {cargo ?? 'a informar'}
+        </span>
+      </span>
+      <ExternalLink size={13} color="var(--n-text-3)" style={{ marginLeft: 2 }} />
+    </a>
   )
 }

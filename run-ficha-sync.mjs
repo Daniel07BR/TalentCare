@@ -8,8 +8,10 @@
 //
 // ⚠️⚠️ Vazio NÃO apaga: só grava o campo que a ficha do Fluxo TEM. A planilha do DP (nascimento)
 // não roda de novo — um `null` aqui apagaria o que ninguém reconstrói.
-// ⚠️ O CARGO não vem daqui (ainda): `cargoOficial` segue editado no TalentCare até o Daniel decidir
-// entre ele e o cargo do vínculo do Fluxo (45 divergiam em 05/10/2026).
+// ⚠️ O CARGO vem do vínculo principal da ficha (o mais recente). Onde o TalentCare e o vínculo
+// discordavam, o DP decide na tela "Divergências" do Fluxo — e ENQUANTO o cargo de alguém está
+// pendente (`pendentes` traz "cargo"), o daqui NÃO troca: trocar antes da decisão apagaria da tela
+// a opção que o DP talvez escolha.
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -21,6 +23,11 @@ const ENSAIO = process.argv.includes('--ensaio')
 const SEXO = { M: 'Masculino', F: 'Feminino' }
 const dia = (d) => (d ? new Date(`${d}T12:00:00Z`) : undefined)
 const igualDia = (a, b) => (!a && !b) || (a && b && a.toISOString().slice(0, 10) === b.toISOString().slice(0, 10))
+/** O mesmo `igual` das divergências do Fluxo: sem acento, sem caixa, espaços colapsados. */
+const mesmoTexto = (a, b) => {
+  const n = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
+  return n(a) === n(b)
+}
 
 async function main() {
   if (!BASE || !KEY) throw new Error('FLUXO_BASE_URL/FLUXO_API_KEY ausentes no .env')
@@ -28,14 +35,17 @@ async function main() {
   if (!res.ok) throw new Error(`Fluxo ${res.status}: ${await res.text()}`)
   const { fichas = [] } = await res.json()
 
-  const conta = { fichas: fichas.length, semPessoa: 0, admissao: 0, nascimento: 0, sexo: 0, escolaridade: 0 }
+  const conta = { fichas: fichas.length, semPessoa: 0, admissao: 0, nascimento: 0, sexo: 0, escolaridade: 0, cargo: 0, cargoPendente: 0 }
   for (const f of fichas) {
-    const u = await prisma.user.findFirst({ where: { nexusUserId: f.nexusUserId }, select: { id: true, entryDate: true, birthDate: true, gender: true } })
+    const u = await prisma.user.findFirst({ where: { nexusUserId: f.nexusUserId }, select: { id: true, entryDate: true, birthDate: true, gender: true, cargoOficial: true } })
     if (!u) { conta.semPessoa++; continue }
     const dados = {}
     if (f.admissao && !igualDia(u.entryDate, dia(f.admissao))) { dados.entryDate = dia(f.admissao); conta.admissao++ }
     if (f.nascimento && !igualDia(u.birthDate, dia(f.nascimento))) { dados.birthDate = dia(f.nascimento); conta.nascimento++ }
     if (f.sexo && SEXO[f.sexo] && u.gender !== SEXO[f.sexo]) { dados.gender = SEXO[f.sexo]; conta.sexo++ }
+    const cargo = f.vinculos?.[0]?.cargo?.trim()
+    if ((f.pendentes ?? []).includes('cargo')) conta.cargoPendente++
+    else if (cargo && !mesmoTexto(u.cargoOficial, cargo)) { dados.cargoOficial = cargo; conta.cargo++ }
     if (!ENSAIO && Object.keys(dados).length) await prisma.user.update({ where: { id: u.id }, data: dados })
 
     const e = f.escolaridade
