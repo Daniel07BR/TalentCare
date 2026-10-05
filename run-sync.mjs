@@ -163,10 +163,11 @@ async function main() {
       created++
     }
 
-    // FORMAÇÃO: o Nexus é a fonte. ⚠️ Só sobrescreve quando ele TEM a lista —
-    // sem isso, pessoa ainda não preenchida lá apagaria o que existe aqui.
+    // FORMAÇÃO: ⚠️⚠️ desde 05/10/2026 a fonte é o FLUXO (ficha de RH do DP), lida pelo
+    // `run-ficha-sync.mjs` logo depois deste. O Nexus NÃO escreve mais aqui — se escrevesse, a
+    // cópia velha dele desfaria a cada hora o que o DP corrigiu no Fluxo.
     // Mantido em sincronia com lib/nexus.ts: este CLI duplica a lógica de lá.
-    if (Array.isArray(nu.educationItems) && nu.educationItems.length) {
+    if (false && Array.isArray(nu.educationItems) && nu.educationItems.length) {
       await prisma.employeeEducation.upsert({
         where: { nexusUserId: nu.id },
         create: {

@@ -1,4 +1,5 @@
 'use client'
+import { CorrijaNoFluxo } from '@/lib/ui/corrija-no-fluxo'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, ChevronDown, ChevronUp } from 'lucide-react'
@@ -42,10 +43,17 @@ export default function EducationManual({ people }: { people: ManualPerson[] }) 
   async function save(id: string) {
     setBusy(id)
     try {
-      await fetch('/api/admin/education-set', {
+      const res = await fetch('/api/admin/education-set', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nexusUserId: id, items: draft }),
       })
+      // ⚠️ desde 05/10/2026 a rota RECUSA (409): a formação vem da ficha de RH do DP, no Fluxo.
+      // Antes o erro passava calado e a janela fechava como se tivesse salvo.
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        alert(j.error ?? 'Não salvou.')
+        return
+      }
       setOpenId(null)
       router.refresh()
     } finally {
@@ -68,6 +76,10 @@ export default function EducationManual({ people }: { people: ManualPerson[] }) 
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '32px auto 0' }}>
+      <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 13, color: 'var(--text-dim)' }}>
+        ⚠️ Desde 05/10/2026 a formação vem da <b>ficha de RH do DP, no Fluxo</b> — esta lista é só leitura.{' '}
+        <CorrijaNoFluxo oque="Formação" marginTop={0} />
+      </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>

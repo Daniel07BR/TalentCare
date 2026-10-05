@@ -3,6 +3,9 @@ import type { UserRole } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
+/** A formação vinha do Nexus; desde 05/10/2026 vem do Fluxo (ficha de RH do DP). */
+const FORMACAO_DO_NEXUS = false
+
 // Integração de DIRETÓRIO Nexus → TalentCare.
 // Modelo (igual ao HelpDesk): PRESENÇA = todos (fonte /api/integrations/employees);
 // ACESSO = decidido pelo CARGO/SETOR aqui no TalentCare. Por ora só Diretoria e a
@@ -455,7 +458,10 @@ export async function syncFromNexus(): Promise<SyncResult> {
       // ⚠️ Só sobrescreve quando o Nexus TEM formação: sem isso, uma pessoa
       // ainda não preenchida lá apagaria o que existe aqui — e escolaridade é
       // dado que ninguém reconstrói da origem.
-      if (Array.isArray(nu.educationItems) && nu.educationItems.length) {
+      // ⚠️⚠️ desde 05/10/2026 a FONTE é o Fluxo (ficha de RH do DP, `run-ficha-sync.mjs`): o
+      // Nexus não escreve mais a formação aqui (a cópia velha dele desfaria o que o DP corrigiu).
+      // Mantido em sincronia com o `run-sync.mjs`.
+      if (FORMACAO_DO_NEXUS && Array.isArray(nu.educationItems) && nu.educationItems.length) {
         await prisma.employeeEducation.upsert({
           where: { nexusUserId: nu.id },
           create: {
