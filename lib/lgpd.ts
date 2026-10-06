@@ -53,6 +53,17 @@ export async function gravarMedidaLgpd(prisma: PrismaClient, m: MedidaCrua) {
      linha na ficha de alguém que nunca soma nada. */
   if (!tipo) return { ok: false as const, erro: 'medida_nao_punitiva' }
 
+  /* ⚠️⚠️ SÓ CONTA A MEDIDA FECHADA (06/10/2026). Desde que o DP gera a medida de LGPD no Fluxo, ela
+     nasce no Nexus como `aguardando_documento` e pode virar `abonada` (o DP decidiu não aplicar) ou
+     `cancelada` (registro errado). Só `closed` — com o escaneado assinado anexado — desconta ponto.
+     Qualquer outro status APAGA o evento, se ele já tinha entrado: uma suspensão abonada que ficasse
+     aqui seria falta grave na nota de quem não foi punido. Sem status (push antigo) = fechada. */
+  const status = texto(m.status)
+  if (status && status !== 'closed') {
+    const r = await prisma.disciplinaEvento.deleteMany({ where: { source: 'lgpd', sourceId: id } })
+    return { ok: true as const, gravada: false, motivo: `status_${status}`, removida: r.count > 0 }
+  }
+
   const dia = occurredAt.slice(0, 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { ok: false as const, erro: 'data_invalida' }
 
