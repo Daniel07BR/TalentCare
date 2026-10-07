@@ -1,5 +1,15 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-07 — Botão "Imprimir manual do método" na área do setor
+
+Pedido do Daniel: imprimir o manual do método de avaliação (uma folha A4, para a Diretoria
+e a psicóloga) direto da página de avaliações do setor.
+
+- PDF em `public/manuais/metodo-avaliacao-ti.pdf` (atrás do login: o `matcher` do proxy cobre
+  `public/`). `manualDoSetor(nome)` em `lib/avaliacoes/metodo.ts` diz qual setor tem manual;
+  hoje só a T.I. O botão fica na faixa do topo de `/avaliacoes/setor/<setor>` e abre o PDF numa aba.
+- ⚠️ O PDF traz a régua da T.I por extenso: mudou a régua em `metodo.ts`, refaça o PDF.
+
 ## 2026-10-02 — Avaliação liberada só para a T.I (piloto)
 
 Pedido do Daniel: *"por hora a avaliação só está liberada para o departamento de T.I"*.

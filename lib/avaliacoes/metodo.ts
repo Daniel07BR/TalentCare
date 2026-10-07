@@ -64,6 +64,19 @@ export function reguaDoSetor(nomeSetor: string | null | undefined): ReguaDoSetor
   return { propria: false, setor: null, regua: Object.fromEntries(CRITERIOS.map((c) => [c.key, generica])) }
 }
 
+/* O MANUAL DO MÉTODO em uma folha A4 (07/10/2026) — pedido do Daniel, para
+   entregar à Diretoria e à psicóloga. É um PDF pronto em `public/manuais/`
+   (atrás do login: o `matcher` do proxy cobre `public/`).
+   ⚠️ Ele traz a régua do setor por extenso: mudou a régua aqui em cima, refaça o PDF. */
+const MANUAIS: Record<string, string> = {
+  ti: '/manuais/metodo-avaliacao-ti.pdf',
+}
+
+/** O manual impresso do setor, se ele tiver um. */
+export function manualDoSetor(nomeSetor: string | null | undefined): string | null {
+  return MANUAIS[norm(nomeSetor)] ?? null
+}
+
 /** O texto de UM nível de UM critério. */
 export function significado(r: ReguaDoSetor, criterio: string, nivel: string): string {
   return r.regua[criterio]?.[nivel as NivelKey] ?? NIVEIS.find((n) => n.key === nivel)?.dica ?? ''
