@@ -2,8 +2,9 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BarChart3, LineChart, ListChecks, Users } from 'lucide-react'
+import { BarChart3, LineChart, ListChecks, Printer, Users } from 'lucide-react'
 import { competenciaLabel } from '@/lib/avaliacoes/criterios'
+import { manualDoSetor } from '@/lib/avaliacoes/metodo'
 import Avatar from '../../../Avatar'
 import { Cartao } from '../../../_visao/ui'
 import s from '../../../_visao/visao.module.css'
@@ -84,6 +85,7 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
   const ult = d.resumo.find((r) => r.competencia === d.ultimo) ?? null
   const atencao = d.pessoas.filter((x) => !x.souEu && (x.gestao?.emRisco || (d.ultimo && x.meses[d.ultimo]?.nivel === 'abaixo')))
   const comNivel = d.resumo.some((r) => r.nivel != null)
+  const manual = manualDoSetor(d.setor.nome)
 
   return (
     <div className={`tc-anim ${s.raiz} ${p.niveis}`}>
@@ -113,6 +115,13 @@ export default function PainelDoSetor({ params }: { params: Promise<{ setor: str
             </div>
           )}
           <Legenda claro />
+          {/* O manual do método em uma folha A4: abre o PDF numa aba, e o
+              navegador imprime (Ctrl+P). */}
+          {manual && (
+            <a href={manual} target="_blank" rel="noopener" className={p.manual} title="Abre o manual em PDF, pronto para imprimir em uma folha A4">
+              <Printer size={14} aria-hidden /> Imprimir manual do método
+            </a>
+          )}
         </div>
       </header>
 
