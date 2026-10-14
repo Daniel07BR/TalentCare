@@ -60,77 +60,74 @@ export function IndicadoresInternos({ m, abrir, className }: ComDetalhe & { clas
   }
 
   const familias = agruparIndicadores(d.tipos.filter((t) => t.concluidos > 0).map((t) => ({ tarefa: t.tipo, n: t.concluidos })))
-  const pessoas = d.pessoas.filter((p) => p.concluidos > 0)
-  const maior = Math.max(1, ...pessoas.map((p) => p.concluidos))
+  /* ⚠️ TABELA (pedido do Daniel, 14/10/2026: "ficou muito grande… os resultados de cada item em colunas e
+     os totais na frente dos nomes"): uma linha por pessoa, o TOTAL logo depois do nome, uma coluna por
+     assunto e a 1ª linha com o total do SETOR. O detalhe (porte da folha, tipo da conferência) vai na
+     dica do número — é o que deixava a versão em blocos alta. */
+  const pessoas = d.pessoas.filter((p) => p.concluidos > 0).map((p) => ({
+    ...p,
+    porFamilia: new Map(agruparIndicadores(p.tipos.map((t) => ({ tarefa: t.tipo, n: t.n }))).map((f) => [f.chave, f])),
+  }))
+  const dica = (f?: { nome: string; total: number; partes: { nome: string; n: number }[] }) =>
+    f ? `${f.nome}: ${f.total}${f.partes.length ? ` (${f.partes.map((x) => `${x.nome} ${x.n}`).join(' · ')})` : ''}` : undefined
+  const num: React.CSSProperties = { padding: '6px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }
+  const cab: React.CSSProperties = { ...num, fontSize: 10.5, fontWeight: 700, color: 'var(--n-text-3)', textTransform: 'uppercase', letterSpacing: '.03em', borderBottom: '1px solid var(--n-border)' }
 
   return (
-    <Cartao titulo={NOME_INDICADORES} Icone={ClipboardList} sub={sub} className={className}
+    <Cartao titulo={NOME_INDICADORES} Icone={ClipboardList} className={className}
+      sub={<><b style={{ color: 'var(--n-green)' }}>{d.total.concluidos.toLocaleString('pt-BR')}</b> trabalhos concluídos no período · registrados no Fluxo</>}
       acao={<LinkAcao onClick={() => abrir('servicos')}>Ver detalhes</LinkAcao>}>
       {d.total.concluidos === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>Nenhum trabalho concluído no período.</div>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-1px', color: 'var(--n-green)', fontVariantNumeric: 'tabular-nums' }}>
-              {d.total.concluidos.toLocaleString('pt-BR')}
-            </span>
-            <span style={{ fontSize: 12.5, color: 'var(--n-text-2)' }}>
-              trabalhos concluídos, em {familias.length} {familias.length === 1 ? 'assunto' : 'assuntos'}
-            </span>
+          <div style={{ overflowX: 'auto', margin: '0 -4px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...cab, textAlign: 'left' }}>Pessoa</th>
+                  <th style={{ ...cab, color: 'var(--n-text)' }}>Total</th>
+                  {familias.map((f) => <th key={f.chave} style={cab} title={f.nome}>{f.curto}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ background: 'var(--n-card-2)' }}>
+                  <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--n-text)' }}>Setor</td>
+                  <td style={{ ...num, fontWeight: 800, color: 'var(--n-green)' }}>{d.total.concluidos.toLocaleString('pt-BR')}</td>
+                  {familias.map((f) => (
+                    <td key={f.chave} style={{ ...num, fontWeight: 700, color: 'var(--n-text)' }} title={dica(f)}>{f.total.toLocaleString('pt-BR')}</td>
+                  ))}
+                </tr>
+                {pessoas.map((p) => (
+                  <tr key={p.id ?? p.nome} style={{ borderTop: '1px solid var(--n-border)' }}>
+                    <td style={{ padding: '4px 8px', minWidth: 150 }}>
+                      <button type="button" disabled={!p.id} onClick={() => p.id && router.push(`/funcionarios/${p.id}`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: p.id ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit', textAlign: 'left', minHeight: 32 }}>
+                        {p.id
+                          ? <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color="var(--n-text-3)" size={24} />
+                          : <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--n-border)', flex: 'none' }} />}
+                        <span style={{ fontWeight: 600, whiteSpace: 'nowrap', color: p.id ? 'var(--n-text)' : 'var(--n-text-3)' }}>{p.nome}</span>
+                      </button>
+                    </td>
+                    <td style={{ ...num, fontWeight: 800, color: 'var(--n-text)' }}>{p.concluidos}</td>
+                    {familias.map((f) => {
+                      const x = p.porFamilia.get(f.chave)
+                      return (
+                        <td key={f.chave} style={{ ...num, color: x ? 'var(--n-text-2)' : 'var(--n-text-3)' }} title={dica(x)}>
+                          {x ? x.total : <span style={{ opacity: 0.5 }}>—</span>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {/* um bloco por assunto, na ordem do trabalho do DP */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(150px,100%),1fr))', gap: 8, marginBottom: 16 }}>
-            {familias.map((f) => (
-              <div key={f.chave} style={{ background: 'var(--n-card-2, var(--surface-2))', borderRadius: 10, padding: '9px 11px', borderLeft: '3px solid var(--n-blue)' }}>
-                <div style={{ fontSize: 11, color: 'var(--n-text-2)', fontWeight: 600 }}>{f.nome}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.5px', color: 'var(--n-text)', fontVariantNumeric: 'tabular-nums' }}>
-                  {f.total.toLocaleString('pt-BR')}
-                </div>
-                {f.partes.length > 0 && (
-                  <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', lineHeight: 1.45 }}>
-                    {f.partes.map((p, i) => (
-                      <span key={p.nome}>{i > 0 && ' · '}{p.nome} <b style={{ color: 'var(--n-text-2)' }}>{p.n}</b></span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* por pessoa: o total e os assuntos dela, do maior para o menor */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--n-text)', marginBottom: 6 }}>Por pessoa</div>
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {pessoas.map((p) => {
-              const dela = agruparIndicadores(p.tipos.map((t) => ({ tarefa: t.tipo, n: t.n }))).sort((a, b) => b.total - a.total)
-              return (
-                <li key={p.id ?? p.nome}>
-                  <button type="button" disabled={!p.id} onClick={() => p.id && router.push(`/funcionarios/${p.id}`)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '5px 4px', background: 'none', border: 'none', borderRadius: 10, cursor: p.id ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit', textAlign: 'left', minHeight: 40 }}>
-                    {p.id
-                      ? <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color="var(--n-text-3)" size={28} />
-                      : <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--n-border)', flex: 'none' }} />}
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: p.id ? 'var(--n-text)' : 'var(--n-text-3)' }}>{p.nome}</span>
-                        <span style={{ flex: 1, height: 5, background: 'var(--n-border)', borderRadius: 9, overflow: 'hidden', minWidth: 30 }}>
-                          <span style={{ display: 'block', width: `${(p.concluidos / maior) * 100}%`, height: '100%', background: 'var(--n-green)', borderRadius: 9 }} />
-                        </span>
-                        <b style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', minWidth: 30, textAlign: 'right' }}>{p.concluidos}</b>
-                      </span>
-                      <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {dela.map((f) => `${f.nome} ${f.total}`).join(' · ')}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
 
           <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
             Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela <b>competência</b>; férias, admissões e
-            rescisões pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo.
+            rescisões pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo. Passe o mouse
+            num número para ver o detalhe (porte da folha, tipo da conferência).
           </div>
         </>
       )}

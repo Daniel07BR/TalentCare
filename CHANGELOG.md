@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (5) — Indicadores internos do setor em TABELA
+
+Pedido do Daniel ("ficou muito grande… os resultados de cada item em colunas e os totais na frente dos
+nomes"): uma linha por pessoa com o TOTAL logo depois do nome, uma coluna por assunto (nome curto em
+`lib/servicos/indicadores.ts`, `curto`) e a 1ª linha com o total do setor. O detalhe (porte da folha,
+tipo da conferência) vai na dica do número. Rola na horizontal em tela estreita.
+
 ## 2026-10-14 (4) — Página do DP: resumo dos Indicadores internos no lugar de Atividade + Últimas saídas
 
 Pedido do Daniel. No setor cujos serviços chegam do Fluxo (o último envio ativo é "Fluxo · …"):
