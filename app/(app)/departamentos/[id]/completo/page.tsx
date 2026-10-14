@@ -437,9 +437,9 @@ function Atividade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) => v
      sistemas que ele usa de passagem. */
   if (m.servicos?.temFonte) {
     const sv = m.servicos
-    add('Serviços do setor', true,
+    add('Indicadores internos', true,
       <CardFonte
-        titulo="Serviços do setor" sub={sv.cobertura ? `da planilha ${sv.cobertura.arquivo}` : undefined}
+        titulo="Indicadores internos" sub={sv.cobertura ? (sv.cobertura.arquivo.startsWith('Fluxo') ? 'registrados no Fluxo' : `da planilha ${sv.cobertura.arquivo}`) : undefined}
         cor="var(--chart-2)" Icone={FileSpreadsheet}
         ranking={r.servicos?.gente ?? []} unidade={r.servicos?.rotulo || 'mais concluiu serviço'}
         /* ⚠️ TODO MUNDO do setor, inclusive em zero: nesta fonte faltar da lista

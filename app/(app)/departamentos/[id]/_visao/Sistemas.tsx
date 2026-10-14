@@ -22,7 +22,7 @@ function sistemas(m: DeptMetrics): Sis[] {
        mantém à mão e reconhece. ⚠️ Desde 01/10/2026 ela ABRE A JANELA como os
        outros cartões (o Legal achou que o clique estava quebrado quando ele
        levava direto à tela da planilha); a planilha fica a um botão, lá dentro. */
-    { chave: 'servicos', nome: 'Serviços do setor', Icone: FileSpreadsheet, tom: 'blue', tem: !!sv?.temFonte, gente: r.servicos?.gente ?? [],
+    { chave: 'servicos', nome: 'Indicadores internos', Icone: FileSpreadsheet, tom: 'blue', tem: !!sv?.temFonte, gente: r.servicos?.gente ?? [],
       stats: [[num(sv?.concluidos ?? 0), 'Concluídos'], [num(sv?.abertos ?? 0), 'Em aberto']] },
     /* ⚠️ O WHATSAPP SAIU daqui (pedido do dono, 11/09/2026): virou o cartão próprio
        acima dos chamados entre setores (`WhatsappEChamados.tsx`), no lugar da

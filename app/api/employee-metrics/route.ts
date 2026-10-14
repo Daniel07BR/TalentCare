@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
        não credita ninguém, então não pode aparecer na ficha de alguém. */
     prisma.servicoDepto.findMany({
       where: { personKey, dia: { gte: fromDay, lte: toDay } },
-      select: { dia: true, status: true, tarefa: true, minutos: true },
+      select: { dia: true, status: true, tarefa: true, minutos: true, loteId: true },
     }),
     /* ⚠️⚠️ O TOTAL da pessoa na planilha, sem filtro. Sem ele a ficha mostra o
        recorte de 30 dias e quem subiu 18 meses de arquivo pergunta onde foram
@@ -513,8 +513,17 @@ export async function GET(req: NextRequest) {
        manda planilha" de "esta pessoa não fez nada": sem ele, todo mundo dos
        outros 14 setores apareceria com "0 serviços", que é a mesma falta do
        ponto com outra roupa. */
-    servicos: (() => {
+    servicos: await (async () => {
       const concl = servicos.filter((x) => x.status === 'concluida')
+      /* ⚠️ DE ONDE vêm os indicadores (14/10/2026): o DP chega sozinho do Fluxo (lote com autor
+         'fluxo'), o Legal sobe planilha. A ficha agrupa por assunto só o que é do Fluxo — os
+         nomes de lá são fixos —, e diz a origem em vez de "da planilha" para quem não tem. */
+      const lotes = [...new Set(servicos.map((x) => x.loteId))]
+      const amostra = lotes.length ? lotes : (await prisma.servicoDepto.findMany({ where: { personKey }, select: { loteId: true }, take: 1 })).map((x) => x.loteId)
+      const autores = amostra.length
+        ? (await prisma.importLote.findMany({ where: { id: { in: amostra } }, select: { enviadoPor: true } })).map((l) => l.enviadoPor)
+        : []
+      const origem: 'fluxo' | 'planilha' | null = !autores.length ? null : autores.every((a) => a === 'fluxo') ? 'fluxo' : 'planilha'
       const porMesMap = new Map<string, { concluidos: number; minutos: number }>()
       for (const x of concl) {
         const mes = x.dia.slice(0, 7)
@@ -535,7 +544,10 @@ export async function GET(req: NextRequest) {
         desconsiderados: servicos.filter((x) => x.status === 'desconsiderada').length,
         minutos: concl.reduce((a, x) => a + x.minutos, 0),
         porMes: [...porMesMap].sort((a, b) => a[0].localeCompare(b[0])).map(([mes, v]) => ({ mes, ...v })),
-        porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).slice(0, 8).map(([tarefa, v]) => ({ tarefa, ...v })),
+        /* ⚠️ A lista INTEIRA (antes cortava em 8): a totalização por assunto do Fluxo precisa de
+           todos os tipos — cortar somaria menos do que "Concluídos". A tela corta a da planilha. */
+        porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).map(([tarefa, v]) => ({ tarefa, ...v })),
+        origem,
         /** Concluídos na planilha INTEIRA — o contexto que faz o recorte se ler. */
         totalConcluidos: servTotal,
       }

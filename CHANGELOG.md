@@ -1,5 +1,20 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (2) — "Serviços do setor" vira INDICADORES INTERNOS, com totalização por assunto
+
+Pedido do Daniel, olhando a ficha da Tauana: deixar mais clara a totalização (fechamento de folha,
+férias…) e trocar o nome.
+
+- Na TELA, "Serviços do setor" → **"Indicadores internos"** (ficha, PDF, painel do setor, janela de
+  detalhe, relatório completo, página de envio). Tabela, rotas e chaves da régua seguem "serviço".
+- Ficha e PDF: quando a origem é o Fluxo (DP), o total do período em destaque e UM bloco por
+  assunto — Fechamento de folha (até 10 · 11 a 50 · mais de 50 func. · domésticas), Pró-labore, Vale,
+  FGTS, DCTF, sem movimento, e-Social do mês, Férias, Rescisões, Admissões, Conferências. Sai o
+  "Em aberto" (o Fluxo só manda concluído). A planilha (Legal) segue com "O que mais fez".
+- Regra do agrupamento num lugar só: `lib/servicos/indicadores.ts`; tipo novo cai em "Outros".
+  Conferido na Tauana, set/2026: 223 concluídos = soma dos blocos.
+- `/api/employee-metrics` devolve `servicos.origem` e a lista INTEIRA de tipos (antes cortava em 8).
+
 ## 2026-10-14 — Serviços do DP chegam sozinhos do Fluxo ("Serviços do setor")
 
 Pedido do Daniel: levar ao TalentCare a produção de cada pessoa do Departamento Pessoal,
