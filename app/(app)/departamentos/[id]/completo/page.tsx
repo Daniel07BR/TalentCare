@@ -184,10 +184,14 @@ export default function DepartamentoDetailPage({ params }: { params: Promise<{ i
           <button
             onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, padding: '0 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
-            title="Enviar a planilha de serviços e definir a régua de pontuação deste setor"
+            title={m.servicos?.cobertura?.arquivo?.startsWith('Fluxo')
+              ? 'O tempo médio de cada tipo de indicador interno e a pontuação do setor — os números chegam do Fluxo'
+              : 'Enviar a planilha de serviços e definir a régua de pontuação deste setor'}
           >
             <Upload size={15} />
-            {m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
+            {/* ⚠️ o DP não usa planilha (14/10/2026) */}
+            {m.servicos?.cobertura?.arquivo?.startsWith('Fluxo') ? 'Tipos e pontuação'
+              : m.servicos?.temFonte ? 'Atualizar planilha do setor' : 'Enviar planilha do setor'}
           </button>
         )}
         </div>

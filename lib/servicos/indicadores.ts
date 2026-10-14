@@ -79,3 +79,29 @@ export function agruparIndicadores(porTarefa: { tarefa: string; n: number }[]): 
   }
   return saida
 }
+
+/* ── FUNCIONÁRIOS ADMINISTRADOS (14/10/2026) ─────────────────────────────────────────────
+   Pedido do Daniel: no "Quem fez" do DP, trocar a contagem de trabalhos por FUNCIONÁRIOS
+   ADMINISTRADOS — *"soma quantidade de férias, rescisões, admissões etc, isso vale 1 funcionário
+   administrado, e folha você multiplica o total de funcionários das empresas fechadas naquele mês"*.
+
+   ⚠️ A REGRA MORA AQUI, e só aqui (janela do setor, janela da pessoa, janela do tipo):
+   - folha (empresas e domésticas) = os funcionários da empresa fechada — o número do cadastro no
+     mês da competência, que o Fluxo manda (o mesmo do painel do DP);
+   - férias, rescisão e admissão = 1 cada (é um funcionário);
+   - o resto (pró-labore, vale, FGTS, DCTF, e-Social, sem movimento, conferências) é obrigação da
+     EMPRESA, não de um funcionário: conta como trabalho, não como funcionário administrado.
+   ⚠️ Folha sem nº de funcionários (empresa sem cadastro) soma 0 e a tela DIZ quantas são — zero
+   por falta de cadastro não pode se passar por empresa vazia. */
+export const REGRA_ADMINISTRADOS =
+  'Folha: os funcionários de cada empresa fechada · férias, rescisão e admissão: 1 cada'
+
+export function ehFolha(tarefa: string) {
+  return tarefa.startsWith(FOLHA) || tarefa === 'Folha de doméstica'
+}
+
+export function administradosDe(tarefa: string, funcionarios: number | null | undefined): number {
+  if (ehFolha(tarefa)) return funcionarios ?? 0
+  if (tarefa === 'Férias' || tarefa === 'Rescisão' || tarefa === 'Admissão') return 1
+  return 0
+}

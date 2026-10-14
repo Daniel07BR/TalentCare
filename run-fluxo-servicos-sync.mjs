@@ -90,9 +90,11 @@ async function main() {
       tarefa: s.tarefa,
       cliente: s.cliente ?? null,
       minutos: 0,
+      // os funcionários da empresa da folha (cadastro no mês da competência) — base de "funcionários administrados"
+      funcionarios: Number.isInteger(s.funcionarios) ? s.funcionarios : null,
     }))
     const semVinculo = linhas.filter((l) => !l.personKey).length
-    const hash = 'fluxo:' + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente, s.regua]))).digest('hex')
+    const hash = 'fluxo:' + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente, s.regua, s.funcionarios]))).digest('hex')
 
     const igual = await prisma.importLote.findFirst({ where: { departmentId: dept.id, hash, ativo: true } })
     if (igual) {
