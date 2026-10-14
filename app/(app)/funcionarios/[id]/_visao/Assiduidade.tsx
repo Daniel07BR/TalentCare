@@ -60,8 +60,8 @@ export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
             <Mini valor={a.suspensoesAtraso == null ? '—' : num(a.suspensoesAtraso)} rotulo="Suspensões por atraso" tom="purple" />
             <Mini valor={a.suspensoes == null ? '—' : num(a.suspensoes)} rotulo="Suspensões · LGPD" tom="purple" />
             {(a.lgpdAdvertencias ?? 0) > 0 && <Mini valor={num(a.lgpdAdvertencias!)} rotulo="Advertências · LGPD" tom="red" />}
-            {/* ⚠️ Falta não vem no dump do Nexo: "—", nunca zero. */}
-            <Mini valor="—" rotulo="Faltas · sem fonte" />
+            {/* FALTAS: lançadas pelo DP no Fluxo (14/10/2026). Janela sem Fluxo: "—", nunca zero. */}
+            <Mini valor={a.faltas == null ? '—' : num(a.faltas)} rotulo={a.faltas == null ? 'Faltas · sem fonte' : a.faltasJustificadas ? `Faltas · ${num(a.faltasJustificadas)} justificada${a.faltasJustificadas > 1 ? 's' : ''}` : 'Faltas'} />
           </div>
 
           {/* A GRAVIDADE: seis atrasos de 7 min e dois de meia hora são conversas diferentes. */}

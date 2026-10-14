@@ -105,6 +105,8 @@ export type DeptMetrics = {
   }
   assiduidade: {
     atrasos: number; abonados: number; minutos: number; advertencias: number; faltas: number | null
+    /** das `faltas`, as justificadas (Fluxo, 14/10/2026) */
+    faltasJustificadas?: number | null
     /** ⚠️ Medidas do Controle da LGPD no período. NÃO dependem da cobertura do
      *  ponto: elas não vêm do dump do Nexo.
      *  ⚠️ `null` = resposta velha ou rota anterior a 09/09/2026 — a tela mostra

@@ -37,8 +37,8 @@ export function Assiduidade({ m, abrir, abrirPainel }: ComDetalhe & { abrirPaine
             apaga. Mesmo número (atraso + LGPD) do indicador do topo. */}
         <Mini valor={susp === null ? '—' : num(susp)} rotulo="Suspensões" tom="purple"
           onClick={n.suspensoes > 0 ? () => abrirPainel('suspensoes') : undefined} />
-        {/* ⚠️ Falta não vem no dump do Nexo: "—", nunca zero. */}
-        <Mini valor={a.faltas == null ? '—' : num(a.faltas)} rotulo={a.faltas == null ? 'Faltas · sem fonte' : 'Faltas'} />
+        {/* FALTAS: lançadas pelo DP no Fluxo (14/10/2026). Janela sem Fluxo: "—", nunca zero. */}
+        <Mini valor={a.faltas == null ? '—' : num(a.faltas)} rotulo={a.faltas == null ? 'Faltas · sem fonte' : a.faltasJustificadas ? `Faltas · ${num(a.faltasJustificadas)} justificada${a.faltasJustificadas > 1 ? 's' : ''}` : 'Faltas'} />
       </div>
       <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>Atrasos do setor · {m.label}</div>
       <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>

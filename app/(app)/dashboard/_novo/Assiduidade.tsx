@@ -46,7 +46,7 @@ function useMapaDaCasa() {
   return { r, loading, erro }
 }
 
-export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperando, recarregando, atrasos, advertencias, suspensoes, minutos, abonados, nAtrasos, nMinutos, nAdvertencias, nSuspensoes, abrirLista, abrirDetalhe, abrirPessoa }: {
+export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperando, recarregando, atrasos, advertencias, suspensoes, minutos, abonados, faltas, faltasJustificadas, nAtrasos, nMinutos, nAdvertencias, nSuspensoes, abrirLista, abrirDetalhe, abrirPessoa }: {
   periodo: string; fromDay: string; toDay: string
   /** A janela não foi medida pelo ponto: tudo vira "—", nunca zero. */
   semPonto: boolean; motivo: string
@@ -54,6 +54,9 @@ export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperan
   atrasos: number | string; advertencias: number | string; minutos: number; abonados: number
   /** Suspensões por atraso + de LGPD — o MESMO número do cartão lá de cima. */
   suspensoes: number | string
+  /** FALTAS do Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre ("—", nunca 0) */
+  faltas?: number | null
+  faltasJustificadas?: number | null
   /** Quantas pessoas cada lista tem — o número só vira botão se houver quem mostrar. */
   nAtrasos: number; nMinutos: number; nAdvertencias: number; nSuspensoes: number
   abrirLista: (qual: 'Atrasos' | 'Advertências' | 'Suspensões' | 'minutos') => void
@@ -92,8 +95,10 @@ export function Assiduidade({ periodo, fromDay, toDay, semPonto, motivo, esperan
                   NÃO a apaga — o valor já chega "—" quando não deu para ler. */}
               <Mini valor={typeof suspensoes === 'number' ? num(suspensoes) : suspensoes} rotulo="Suspensões" tom="purple"
                 onClick={!esperando && nSuspensoes > 0 ? () => abrirLista('Suspensões') : undefined} />
-              {/* ⚠️ Falta não vem no dump do Nexo: "—", nunca zero. */}
-              <Mini valor="—" rotulo="Faltas · sem fonte" />
+              {/* FALTAS: lançadas pelo DP no Fluxo desde 14/10/2026 — só aparecem, não mexem na nota.
+                  Janela que o Fluxo não cobre: "—", nunca zero. */}
+              <Mini valor={faltas == null ? '—' : num(faltas)}
+                rotulo={faltas == null ? 'Faltas · sem fonte' : faltasJustificadas ? `Faltas · ${num(faltasJustificadas)} justificada${faltasJustificadas > 1 ? 's' : ''}` : 'Faltas'} />
             </div>
           )}
           <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.45 }}>

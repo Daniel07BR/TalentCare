@@ -28,7 +28,9 @@ import type { PrismaClient } from '@prisma/client'
    ⚠️ O que se apaga ao trocar o mês: TODA a `assiduidade_daily` do mês (do
    corte em diante só o Fluxo escreve nela) e só o `source: 'fluxo'` da
    `disciplina_evento` — LGPD (`lgpd`) e a planilha do DP (`disciplina`) ficam.
-   ⚠️ FALTAS: o Fluxo ainda não registra falta; o contrato traz `faltas: []`.
+   FALTAS (14/10/2026): o DP lança no Fluxo e elas vêm no mesmo envio, para
+   `fluxo_falta`. Só APARECEM (decisão do Daniel): não entram na nota de
+   assiduidade. `faltasNoPeriodo` é a única conta delas — as três rotas leem dali.
    ============================================================ */
 
 export const FLUXO_DESDE = '2026-10-01'
@@ -40,13 +42,16 @@ type DiaDoFluxo = {
   pessoa: string; dia: string; atrasos: number; abonados: number
   minutos: number; ate5: number; ate30: number; mais30: number
 }
+type FaltaDoFluxo = { ref: string; pessoa: string; dia: string; tipo: 'injustificada' | 'justificada'; periodo: 'dia' | 'manha' | 'tarde' }
 type MedidaDoFluxo = {
   ref: string; pessoa: string; dia: string; tipo: 'advertencia' | 'suspensao'
   motivo?: string | null; dias?: number | null
 }
 export type EnvioDoFluxo = {
   versao: number; mes: string; de: string; ate: string; medidoAte: string
-  pessoas: string[]; dias: DiaDoFluxo[]; medidas: MedidaDoFluxo[]; faltas?: unknown[]
+  pessoas: string[]; dias: DiaDoFluxo[]; medidas: MedidaDoFluxo[]
+  /** desde 14/10/2026; envio sem o campo (Fluxo antigo) não apaga as faltas do mês */
+  faltas?: FaltaDoFluxo[]
 }
 
 const inteiro = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : null)
@@ -68,6 +73,12 @@ function recusa(b: EnvioDoFluxo): string | null {
     if (!m.ref || !UUID.test(m.pessoa) || !DIA.test(m.dia) || m.dia < b.de || m.dia > b.ate) return 'medida_invalida'
     if (m.tipo !== 'advertencia' && m.tipo !== 'suspensao') return 'tipo_invalido'
   }
+  if (b.faltas !== undefined && !Array.isArray(b.faltas)) return 'faltas_invalidas'
+  for (const f of b.faltas ?? []) {
+    if (!f.ref || !UUID.test(f.pessoa) || !DIA.test(f.dia) || f.dia < b.de || f.dia > b.ate) return 'falta_invalida'
+    if (f.tipo !== 'injustificada' && f.tipo !== 'justificada') return 'tipo_de_falta_invalido'
+    if (!['dia', 'manha', 'tarde'].includes(f.periodo)) return 'periodo_de_falta_invalido'
+  }
   return null
 }
 
@@ -80,15 +91,17 @@ export async function gravarDisciplinaDoFluxo(prisma: PrismaClient, b: EnvioDoFl
 
   const dias = b.dias.filter((d) => d.dia >= de && (d.atrasos > 0 || d.abonados > 0))
   const medidas = b.medidas.filter((m) => m.dia >= de)
+  const faltas = b.faltas === undefined ? null : b.faltas.filter((f) => f.dia >= de)
   const contagens = {
     atrasos: dias.reduce((s, d) => s + d.atrasos, 0),
     abonados: dias.reduce((s, d) => s + d.abonados, 0),
     advertencias: medidas.filter((m) => m.tipo === 'advertencia').length,
     suspensoes: medidas.filter((m) => m.tipo === 'suspensao').length,
+    faltas: faltas?.length ?? null,
   }
   /* O hash é do CONTEÚDO (sem `medidoAte`): o reenvio da hora cheia com nada
      mudado não regrava as linhas — só avança até onde o mês está medido. */
-  const hash = createHash('sha256').update(JSON.stringify({ de, ate: b.ate, pessoas: [...b.pessoas].sort(), dias, medidas })).digest('hex')
+  const hash = createHash('sha256').update(JSON.stringify({ de, ate: b.ate, pessoas: [...b.pessoas].sort(), dias, medidas, faltas })).digest('hex')
   const anterior = await prisma.fluxoDisciplinaEnvio.findUnique({ where: { mes: b.mes } })
   const envio = { medidoAte: b.medidoAte, pessoas: b.pessoas, hash, contagens }
   if (anterior?.hash === hash) {
@@ -111,6 +124,12 @@ export async function gravarDisciplinaDoFluxo(prisma: PrismaClient, b: EnvioDoFl
         motivo: m.motivo ?? null, dias: m.tipo === 'suspensao' ? (m.dias ?? 1) : null,
       })),
     }),
+    ...(faltas === null ? [] : [
+      prisma.faltaDoFluxo.deleteMany({ where: { dia: { gte: de, lte: b.ate } } }),
+      prisma.faltaDoFluxo.createMany({
+        data: faltas.map((f) => ({ ref: f.ref, personKey: f.pessoa, dia: f.dia, tipo: f.tipo, periodo: f.periodo })),
+      }),
+    ]),
     prisma.fluxoDisciplinaEnvio.upsert({
       where: { mes: b.mes },
       create: { mes: b.mes, ...envio },
@@ -118,4 +137,24 @@ export async function gravarDisciplinaDoFluxo(prisma: PrismaClient, b: EnvioDoFl
     }),
   ])
   return { ok: true as const, mes: b.mes, mudou: true, ...contagens }
+}
+
+/**
+ * As FALTAS do período — `null` quando a janela não toca o que o Fluxo cobre
+ * (antes de `FLUXO_DESDE`, ou nenhum envio ainda): aí a tela diz "sem fonte",
+ * nunca zero. Zero falta é elogio, e só se diz de janela medida.
+ * `personKeys` = só estas pessoas (o setor, a ficha); `null` = todas no alcance.
+ */
+export async function faltasNoPeriodo(
+  prisma: PrismaClient, fromDay: string, toDay: string, personKeys: string[] | null,
+): Promise<{ total: number; injustificadas: number; justificadas: number } | null> {
+  const ultimo = (await prisma.fluxoDisciplinaEnvio.aggregate({ _max: { medidoAte: true } }))._max.medidoAte
+  if (!ultimo || toDay < FLUXO_DESDE || fromDay > ultimo) return null
+  const porTipo = await prisma.faltaDoFluxo.groupBy({
+    by: ['tipo'],
+    where: { dia: { gte: fromDay, lte: toDay }, ...(personKeys ? { personKey: { in: personKeys } } : {}) },
+    _count: { _all: true },
+  })
+  const n = (t: string) => porTipo.find((r) => r.tipo === t)?._count._all ?? 0
+  return { total: n('injustificada') + n('justificada'), injustificadas: n('injustificada'), justificadas: n('justificada') }
 }

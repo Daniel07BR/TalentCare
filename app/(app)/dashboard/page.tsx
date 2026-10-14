@@ -237,6 +237,7 @@ function Conteudo() {
             semPonto={!assid.loading && !assid.janelaComPonto} motivo={assid.motivoSemPonto ?? (assid.erro ? 'não foi possível ler o ponto' : 'sem dado de ponto nesta janela')}
             esperando={assid.loading && !assid.map} recarregando={assid.loading && !!assid.map}
             atrasos={kA?.value ?? '—'} advertencias={kV?.value ?? '—'} suspensoes={kS?.value ?? '—'} minutos={somaA.minutos} abonados={somaA.abonados}
+            faltas={assid.faltas} faltasJustificadas={assid.faltasJustificadas}
             nAtrasos={kA?.pessoas?.length ?? 0} nMinutos={minutosPessoas.length} nAdvertencias={kV?.pessoas?.length ?? 0} nSuspensoes={kS?.pessoas?.length ?? 0}
             abrirLista={(q) => setLista(q === 'minutos' ? { tipo: 'minutos' } : { tipo: 'kpi', chave: q })}
             abrirDetalhe={() => detalhe.abrir('assiduidade')} abrirPessoa={(id) => abrirPessoa('assiduidade', id)} />

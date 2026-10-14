@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
 import { alcanceDeQuemLe, porPersonKey } from '@/lib/alcance'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
+import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Assiduidade (ponto) por pessoa NO PERÍODO, lida dos espelhos locais
@@ -109,6 +110,8 @@ export async function GET(req: NextRequest) {
      divergiriam em silêncio, e a que mente é sempre a mais tranquilizadora. */
   const cob = await coberturaDoPonto()
   const janelaComPonto = janelaTemDado(cob, fromDay, toDay)
+  // as FALTAS lançadas pelo DP no Fluxo (14/10/2026), no alcance de quem lê; `null` = janela sem Fluxo
+  const faltas = await faltasNoPeriodo(prisma, fromDay, toDay, alcance.tipo === 'tudo' ? null : alcance.personKeys)
 
   return NextResponse.json({
     period, fromDay, toDay, byPerson,
@@ -134,5 +137,7 @@ export async function GET(req: NextRequest) {
     lgpdSuspensoes,
     lgpdAdvertencias,
     suspensoesAtraso,
+    faltas: faltas?.total ?? null,
+    faltasJustificadas: faltas?.justificadas ?? null,
   })
 }

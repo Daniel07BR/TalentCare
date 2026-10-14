@@ -7,6 +7,7 @@ import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
+import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Métricas REAIS de UMA pessoa no PERÍODO (rádio, ClassRoom, WhatsApp), lidas dos
@@ -46,6 +47,8 @@ export async function GET(req: NextRequest) {
   }
   // personKey da assiduidade/disciplina = nexus_user_id ?? id (cobre STAFF).
   const personKey = user.nexusUserId ?? id
+  // as FALTAS lançadas pelo DP no Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre
+  const faltasDoFluxo = await faltasNoPeriodo(prisma, fromDay, toDay, [personKey])
 
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
   const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
@@ -463,12 +466,15 @@ export async function GET(req: NextRequest) {
              gravidade. Fica fora das três faixas em vez de virar "até 5 min". */
           semMedida: Math.max(0, atr - fx5 - fx30 - fxM),
         },
-        /* ⚠️ FALTA continua sem fonte na origem (o dump do Nexo não a traz) →
-           `null`, e a ficha mostra "—". SUSPENSÃO passou a ter fonte em
+        /* FALTA: desde 14/10/2026 vem do Fluxo (o DP lança). `null` = janela que
+           o Fluxo não cobre (antes de 01/10/2026) — a ficha mostra "—", nunca 0.
+           Só aparece: não entra no `assid` acima (decisão do Daniel).
+           SUSPENSÃO passou a ter fonte em
            09/09/2026 (o Controle da LGPD do Nexus): cravá-la em `null` fazia a
            ficha dizer "sem fonte" sobre um fato registrado — e era para essa
            ficha que o painel de Suspensões mandava o gestor clicar. */
-        faltas: null as number | null,
+        faltas: faltasDoFluxo?.total ?? null,
+        faltasJustificadas: faltasDoFluxo?.justificadas ?? null,
         suspensoes: lgpdSusp,
         lgpdAdvertencias: lgpdAdv,
         /** Suspensões por ATRASO assinadas no período (planilha do DP). */

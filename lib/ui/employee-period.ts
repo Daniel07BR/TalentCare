@@ -61,6 +61,8 @@ export type EmployeeMetrics = {
     /** Primeiro dia coberto pelo ponto — antes dele o calendário hachura. */
     pontoDesde?: string | null
     faltas: number | null; suspensoes: number | null
+    /** das `faltas`, as justificadas (Fluxo, 14/10/2026) */
+    faltasJustificadas?: number | null
     /** Suspensões por ATRASO (planilha do DP) — separada da de LGPD. */
     suspensoesAtraso?: number | null
     /** Advertências por vazamento (LGPD) no período. */

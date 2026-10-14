@@ -404,6 +404,21 @@ model DisciplinaEvento {
   @@map("disciplina_evento")
 }
 
+// FALTAS lançadas pelo DP no Fluxo (14/10/2026), uma linha por falta. Chegam no MESMO envio do mês dos atrasos
+// (`lib/fluxo-disciplina.ts`), que troca o mês inteiro. Só APARECEM (decisão do Daniel): não entram na nota.
+model FaltaDoFluxo {
+  ref       String   @id // o id da falta no Fluxo
+  personKey String   @map("person_key")
+  dia       String   @db.VarChar(10) // AAAA-MM-DD
+  tipo      String // 'injustificada' | 'justificada'
+  periodo   String // 'dia' | 'manha' | 'tarde'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([personKey])
+  @@index([dia])
+  @@map("fluxo_falta")
+}
+
 // ATRASOS E DISCIPLINA DO FLUXO (14/10/2026): o último envio de cada MÊS. O Fluxo manda o mês inteiro a cada
 // gravação (atraso, abono, advertência, suspensão) e este registro diz até quando o mês está medido e QUEM o
 // controle do DP mede — é o que separa "mês limpo" de "não medido" (ver `lib/ponto-cobertura.ts`).

@@ -1,5 +1,16 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (8) — FALTAS chegam do Fluxo (o cartão deixa de dizer "sem fonte")
+
+O DP passou a lançar falta no Fluxo (aba Faltas) e ela vem no MESMO envio do mês dos atrasos. Decisões do
+Daniel: só APARECE — não entra na nota de assiduidade (o peso fica para depois).
+- Tabela `fluxo_falta` (uma linha por falta: tipo injustificada/justificada, período dia/manhã/tarde), trocada
+  junto com o mês em `lib/fluxo-disciplina.ts`. Envio sem `faltas` (Fluxo antigo) não apaga as do mês.
+- `faltasNoPeriodo` é a conta única: `null` fora do que o Fluxo cobre (antes de 01/10/2026) — "—", nunca 0.
+  Lida por `/api/assiduidade-metrics` (painel), `/api/dept-metrics` (setor) e `/api/employee-metrics` (ficha).
+- Os quatro cartões "Faltas · sem fonte" (painel, setor, setor completo, ficha) mostram o número e quantas
+  foram justificadas.
+
 ## 2026-10-14 (7) — ATRASOS, ADVERTÊNCIAS E SUSPENSÕES chegam do FLUXO em tempo real
 
 Pedido do Daniel: *"faça o fluxo enviar para o talent os dados de atrasos, faltas, advertencias e

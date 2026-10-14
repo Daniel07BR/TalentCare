@@ -665,9 +665,10 @@ function Assiduidade({ m, abrir }: { m: DeptMetrics; abrir: (c: ChaveDetalhe) =>
         <N label="Minutos de atraso" valor={a.minutos} />
         <N label="Atrasos abonados" valor={a.abonados} nota="justificados · não punem" />
         <N label="Advertências" valor={a.advertencias} cor={a.advertencias > 0 ? 'var(--danger)' : undefined} />
-        {/* ⚠️ FALTA e SUSPENSÃO não vêm no dump do Nexo. Mostrar zero aqui se
+        {/* FALTAS: do Fluxo desde 14/10/2026. `null` (janela sem Fluxo) mostra "—" — zero se
             leria como "ninguém faltou", que é justamente o que não se sabe. */}
-        <N label="Faltas" valor={a.faltas} nota="sem fonte na origem" />
+        <N label="Faltas" valor={a.faltas}
+          nota={a.faltas == null ? 'sem fonte nesta janela' : a.faltasJustificadas ? `${a.faltasJustificadas} justificada(s) · não pesam na nota` : 'lançadas pelo DP · não pesam na nota'} />
       </div>
     </Card>
   )

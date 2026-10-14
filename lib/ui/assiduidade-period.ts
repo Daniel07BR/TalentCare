@@ -30,6 +30,9 @@ export type AssidPeriodo = {
   lgpdAdvertencias: number | null
   /** Suspensões por ATRASO no período (planilha do DP) — mesma regra do `null`. */
   suspensoesAtraso: number | null
+  /** FALTAS lançadas pelo DP no Fluxo (14/10/2026). `null` = janela que o Fluxo não cobre ou erro — "—". */
+  faltas: number | null
+  faltasJustificadas: number | null
   loading: boolean
   /**
    * A busca FALHOU.
@@ -50,7 +53,8 @@ export type AssidPeriodo = {
 // atraso para todo mundo" — a resposta mais tranquilizadora e a única errada.
 const VAZIO: Omit<AssidPeriodo, 'loading'> = {
   map: null, porDia: [], janelaComPonto: false, motivoSemPonto: null, pontoDesde: null, pontoAte: null,
-  lgpdSuspensoes: null, lgpdAdvertencias: null, suspensoesAtraso: null, erro: false,
+  lgpdSuspensoes: null, lgpdAdvertencias: null, suspensoesAtraso: null, faltas: null, faltasJustificadas: null,
+  erro: false,
 }
 
 /**
@@ -79,6 +83,7 @@ export function useAssiduidadePeriod(outraJanela?: { de: string; ate: string } |
         janelaComPonto?: boolean; motivoSemPonto?: string | null
         pontoDesde?: string | null; pontoAte?: string | null
         lgpdSuspensoes?: number; lgpdAdvertencias?: number; suspensoesAtraso?: number
+        faltas?: number | null; faltasJustificadas?: number | null
       }) => {
         if (!alive) return
         const m: PeriodAssid = new Map()
@@ -99,6 +104,8 @@ export function useAssiduidadePeriod(outraJanela?: { de: string; ate: string } |
           lgpdSuspensoes: d.lgpdSuspensoes ?? null,
           lgpdAdvertencias: d.lgpdAdvertencias ?? null,
           suspensoesAtraso: d.suspensoesAtraso ?? null,
+          faltas: d.faltas ?? null,
+          faltasJustificadas: d.faltasJustificadas ?? null,
           erro: false,
         })
       })

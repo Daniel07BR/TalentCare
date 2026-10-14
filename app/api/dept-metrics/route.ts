@@ -5,6 +5,7 @@ import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/per
 import { quemEh, filtroDeAvaliaveis, gestoresDaCasa, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { avaliacaoLiberada, competenciaAnterior, resultadoDe } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
+import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { baldes, janelaAnterior } from '@/lib/serie-periodo'
@@ -162,6 +163,8 @@ export async function GET(req: NextRequest) {
   const nx = ativos.map((p) => p.nexusUserId).filter((v): v is string => !!v)
   // personKey da assiduidade = nexus_user_id ?? id (cobre STAFF sem Nexus).
   const chaves = ativos.map((p) => p.nexusUserId ?? p.id)
+  // as FALTAS do setor, lançadas pelo DP no Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre
+  const faltasDoFluxo = await faltasNoPeriodo(prisma, fromDay, toDay, chaves)
   const nomes = ativos.map((p) => p.name)
   const ids = ativos.map((p) => p.id)
 
@@ -942,9 +945,10 @@ export async function GET(req: NextRequest) {
         }
         return [...m].map(([personKey, v]) => ({ personKey, ...v })).sort((a, b) => b.concluidos - a.concluidos)
       })(),
-      // ⚠️ FALTA não tem fonte no dump do Nexo → `null`, e a tela mostra "—".
-      // Zero se leria como "ninguém faltou", que é o que não se sabe.
-      faltas: null as number | null,
+      // FALTA: do Fluxo desde 14/10/2026. `null` = janela que o Fluxo não cobre
+      // (antes de 01/10/2026) e a tela mostra "—" — zero se leria como "ninguém faltou".
+      faltas: faltasDoFluxo?.total ?? null,
+      faltasJustificadas: faltasDoFluxo?.justificadas ?? null,
     },
     demografia: {
       idadeMedia: idades.length ? Math.round(idades.reduce((a, b) => a + b, 0) / idades.length) : null,
