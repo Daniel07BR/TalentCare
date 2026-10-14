@@ -15,6 +15,11 @@
 // apagar é restrito aos lotes do Fluxo, para um envio automático nunca levar junto uma
 // planilha que alguém subiu. Rodar de novo com o mesmo conteúdo não grava nada (hash).
 //
+// ⚠️⚠️ POR MÊS, EM DUAS RÉGUAS (14/10/2026, pedido do Daniel): o Fluxo devolve, para o mês M, as pastas
+// do mês (folha, domésticas, vale, FGTS, DCTF, pró-labore, sem movimento) e o e-Social da COMPETÊNCIA M —
+// a folha de setembro é de setembro mesmo fechada em outubro, como no painel do DP — e admissão,
+// rescisão e férias FEITAS em M. O `dia` do serviço por competência vem preso ao mês dela, e é assim
+// que o filtro "Set" daqui lê a competência de setembro.
 // ⚠️ O mês passado continua mudando (uma folha de setembro concluída em outubro; uma rescisão
 // reaberta): o incremental repassa o mês corrente E o anterior; o `--completo` (madrugada)
 // repassa desde 09/2026, o corte do Fluxo.
@@ -70,7 +75,7 @@ async function main() {
 
   for (const mes of meses) {
     const { de, ate } = janela(mes)
-    const res = await fetch(`${BASE}/api/integrations/talent-servicos?from=${de}&to=${ate}`, { headers: { 'X-API-Key': KEY } })
+    const res = await fetch(`${BASE}/api/integrations/talent-servicos?mes=${mes}`, { headers: { 'X-API-Key': KEY } })
     if (!res.ok) throw new Error(`Fluxo ${res.status}: ${await res.text()}`)
     const data = await res.json()
     const servicos = data.servicos ?? []
@@ -87,7 +92,7 @@ async function main() {
       minutos: 0,
     }))
     const semVinculo = linhas.filter((l) => !l.personKey).length
-    const hash = 'fluxo:' + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente]))).digest('hex')
+    const hash = 'fluxo:' + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente, s.regua]))).digest('hex')
 
     const igual = await prisma.importLote.findFirst({ where: { departmentId: dept.id, hash, ativo: true } })
     if (igual) {
@@ -95,7 +100,8 @@ async function main() {
       continue
     }
     if (ensaio) {
-      console.log(`[ensaio] ${mes}: ${linhas.length} serviços (${semVinculo} sem pessoa da casa), janela ${diaDe}..${diaAte}`)
+      const porRegua = servicos.reduce((a, s) => ({ ...a, [s.regua]: (a[s.regua] ?? 0) + 1 }), {})
+      console.log(`[ensaio] ${mes}: ${linhas.length} serviços ${JSON.stringify(porRegua)} (${semVinculo} sem pessoa da casa), janela ${diaDe}..${diaAte}`)
       continue
     }
 

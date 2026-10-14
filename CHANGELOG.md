@@ -1,5 +1,18 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (3) — Indicadores internos por COMPETÊNCIA (folha, vale, FGTS, DCTF) e por DATA (férias, admissões, rescisões)
+
+Pedido do Daniel: o mês dos indicadores do DP tem de ler o Fluxo como o contador do Fluxo lê —
+folha, vale, FGTS e DCTF pela competência; férias, admissões e rescisões pelo que foi feito no mês.
+
+- O Fluxo responde por mês (`talent-servicos?mes=AAAA-MM`): as pastas do mês e o e-Social da
+  COMPETÊNCIA (leitura do próprio painel do DP) e admissão/rescisão/férias FEITAS no mês. O serviço
+  por competência vem com o `dia` preso ao mês dela — "Set" aqui = competência de setembro.
+- Conferido em 09/2026 contra o painel: fechamento 232 empresas / 2.659 funcionários, Tauana 73,
+  FGTS 186, DCTF 169, vale 2. Carga: 09/2026 = 1.029 · 10/2026 (até 14/10) = 181 (a folha de
+  outubro fecha em novembro).
+- A ficha diz as duas réguas embaixo dos blocos.
+
 ## 2026-10-14 (2) — "Serviços do setor" vira INDICADORES INTERNOS, com totalização por assunto
 
 Pedido do Daniel, olhando a ficha da Tauana: deixar mais clara a totalização (fechamento de folha,
