@@ -54,7 +54,7 @@ export type CoberturaPonto = {
  * "esta pessoa é medida".
  */
 export async function coberturaDoPonto(): Promise<CoberturaPonto> {
-  const [staging, manuais, faixaAtraso, faixaDisc] = await Promise.all([
+  const [staging, manuais, faixaAtraso, faixaDisc, envios] = await Promise.all([
     prisma.pontoStaging.findMany({
       where: { matchedPersonKey: { not: null } },
       select: { matchedPersonKey: true },
@@ -71,20 +71,27 @@ export async function coberturaDoPonto(): Promise<CoberturaPonto> {
        ⚠️ Filtra por FONTE, não por tipo: um tipo novo de medida quebraria a
        lista de tipos outra vez, em silêncio. */
     prisma.disciplinaEvento.aggregate({
-      where: { source: 'nexo' },
+      where: { source: { in: ['nexo', 'fluxo'] } },
       _min: { data: true }, _max: { data: true },
     }),
+    /* ⚠️⚠️ O FLUXO (14/10/2026): cada mês que ele envia diz QUEM o controle do DP
+       mede e ATÉ QUANDO o mês está medido. Sem isso, o "medido até" seria o
+       último dia com algum atraso — e um mês em que a casa chegou no horário
+       desde o dia 10 ficaria "não medido" do dia 11 em diante. E quem entrou
+       depois do dump do Axis (sem `ponto_staging`) nunca seria medido. */
+    prisma.fluxoDisciplinaEnvio.findMany({ select: { medidoAte: true, pessoas: true } }),
   ])
 
   const roster = new Set<string>([
     ...staging.map((r) => r.matchedPersonKey).filter((v): v is string => !!v),
     ...manuais.map((r) => r.personKey),
+    ...envios.flatMap((e) => (Array.isArray(e.pessoas) ? (e.pessoas as string[]) : [])),
   ])
 
   // A cobertura é a UNIÃO das duas fontes de ocorrência: uma janela em que só
   // houve advertência (e nenhum atraso) continua sendo uma janela medida.
   const mins = [faixaAtraso._min.day, faixaDisc._min.data].filter((v): v is string => !!v)
-  const maxs = [faixaAtraso._max.day, faixaDisc._max.data].filter((v): v is string => !!v)
+  const maxs = [faixaAtraso._max.day, faixaDisc._max.data, ...envios.map((e) => e.medidoAte)].filter((v): v is string => !!v)
 
   /* ⚠️⚠️ A COBERTURA NUNCA PASSA DE HOJE. Uma ÚNICA linha com data futura
      empurra o "medido até" para a frente e faz o sistema afirmar que mediu dias

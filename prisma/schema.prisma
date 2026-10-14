@@ -404,6 +404,20 @@ model DisciplinaEvento {
   @@map("disciplina_evento")
 }
 
+// ATRASOS E DISCIPLINA DO FLUXO (14/10/2026): o último envio de cada MÊS. O Fluxo manda o mês inteiro a cada
+// gravação (atraso, abono, advertência, suspensão) e este registro diz até quando o mês está medido e QUEM o
+// controle do DP mede — é o que separa "mês limpo" de "não medido" (ver `lib/ponto-cobertura.ts`).
+model FluxoDisciplinaEnvio {
+  mes        String   @id @db.VarChar(7) // AAAA-MM
+  medidoAte  String   @map("medido_ate") @db.VarChar(10)
+  pessoas    Json // [nexusUserId] que o controle mede no mês
+  hash       String
+  contagens  Json // { atrasos, abonados, advertencias, suspensoes }
+  recebidoEm DateTime @default(now()) @map("recebido_em")
+
+  @@map("fluxo_disciplina_envio")
+}
+
 // Linhas do roster do Nexo (uma por usuário do ponto) + estado do vínculo à pessoa
 // do TalentCare. Auditoria do casamento por nome (com depto como desempatador) e
 // base de uma futura tela de revisão (como /escolaridade). Recriada a cada import.

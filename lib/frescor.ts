@@ -1,6 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { SETOR_IMOB } from '@/lib/whatsapp-fontes'
+import { FLUXO_DESDE } from '@/lib/fluxo-disciplina'
 
 /* ============================================================
    ATÉ QUANDO CADA ESPELHO FOI ALIMENTADO — a conta, num lugar só.
@@ -17,7 +18,7 @@ import { SETOR_IMOB } from '@/lib/whatsapp-fontes'
 export type Fonte = { nome: string; ate: string | null; semCron?: boolean }
 
 export async function frescorDasFontes(): Promise<Fonte[]> {
-  const [cls, radio, wpp, wppImob, cide, hd, cons, ger, chat, fluxo, ponto, disc] = await Promise.all([
+  const [cls, radio, wpp, wppImob, cide, hd, cons, ger, chat, fluxo, ponto, disc, fluxoDisc] = await Promise.all([
     prisma.classroomDaily.aggregate({ _max: { day: true } }),
     prisma.radioDaily.aggregate({ _max: { day: true } }),
     /* ⚠️⚠️ SÃO DUAS INSTÂNCIAS do WhatsApp (18/09/2026) — o número do escritório
@@ -33,12 +34,15 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
     prisma.gerenciaDaily.aggregate({ _max: { day: true } }),
     prisma.chatDaily.aggregate({ _max: { day: true } }),
     prisma.fluxoDaily.aggregate({ _max: { day: true } }),
-    prisma.assiduidadeDaily.aggregate({ _max: { day: true } }),
+    // ⚠️ o dump do Axis só até o corte: daí em diante a mesma tabela é do Fluxo (linha própria abaixo)
+    prisma.assiduidadeDaily.aggregate({ where: { day: { lt: FLUXO_DESDE } }, _max: { day: true } }),
     /* ⚠️ Só o que veio do ponto: esta tela diz até quando cada FONTE mediu, e
        uma medida de LGPD registrada hoje faria o dump do ponto — que é import à
        mão e pode estar semanas atrás — parecer fresco. "Watermark recente não
        prova frescor", e aqui seria o watermark de outra fonte. */
     prisma.disciplinaEvento.aggregate({ where: { source: 'nexo' }, _max: { data: true } }),
+    // os atrasos e a disciplina do FLUXO (14/10/2026): até onde o último envio diz que o mês está medido
+    prisma.fluxoDisciplinaEnvio.aggregate({ _max: { medidoAte: true } }),
   ])
 
   return [
@@ -56,6 +60,7 @@ export async function frescorDasFontes(): Promise<Fonte[]> {
     // atrasa. ⚠️⚠️ E são DUAS linhas, não uma: a disciplina termina em 11/06 e o
     // ponto em 25/06 — anunciar só o ponto daria o painel por 14 dias mais fresco
     // do que ele é, que é exatamente o erro do "Atualizado há 12 min".
+    { nome: 'Atrasos e disciplina (Fluxo)', ate: fluxoDisc._max.medidoAte },
     { nome: 'Ponto', ate: ponto._max.day, semCron: true },
     { nome: 'Disciplina', ate: disc._max.data, semCron: true },
   ]

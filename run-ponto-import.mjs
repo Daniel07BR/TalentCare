@@ -39,6 +39,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const prisma = new PrismaClient()
+/** Igual a `FLUXO_DESDE` em `lib/fluxo-disciplina.ts` (este script é .mjs e não importa o .ts). */
+const FLUXO_DESDE = '2026-10-01'
 const DIR = process.argv[2] || '/home/suporte/ponto-dump/extracted'
 
 /* ---------- nomes (mesma normalização da escolaridade/cadastro) ---------- */
@@ -377,10 +379,18 @@ async function main() {
   /* ---------- O CORTE: daqui para frente, e só daqui ---------- */
   const argDesde = process.argv.find((a) => a.startsWith('--desde='))?.slice(8)
   if (argDesde && !/^\d{4}-\d{2}-\d{2}$/.test(argDesde)) { console.error('--desde= espera AAAA-MM-DD'); process.exit(1) }
-  const ultimoGravado = (await prisma.assiduidadeDaily.aggregate({ _max: { day: true } }))._max.day
+  /* ⚠️⚠️ DE 01/10/2026 EM DIANTE A ASSIDUIDADE É DO FLUXO (14/10/2026): ele envia
+     cada mês em tempo real (`lib/fluxo-disciplina.ts`). Este import só escreve
+     ANTES de `FLUXO_DESDE` — nem lê o último dia gravado depois dele, nem apaga
+     nada daí em diante. Sem esta trava, um dump novo apagaria outubro do Fluxo
+     e regravaria o do Axis (que parou), e o último a gravar ganharia. */
+  const ultimoGravado = (await prisma.assiduidadeDaily.aggregate({ where: { day: { lt: FLUXO_DESDE } }, _max: { day: true } }))._max.day
   const corte = argDesde ?? ultimoGravado ?? '0000-00-00'
-  for (const k of [...daily.keys()]) if (k.split('\0')[1] < corte) daily.delete(k)
-  const eventosNovos = eventos.filter((e) => e.data >= corte)
+  for (const k of [...daily.keys()]) {
+    const dia = k.split('\0')[1]
+    if (dia < corte || dia >= FLUXO_DESDE) daily.delete(k)
+  }
+  const eventosNovos = eventos.filter((e) => e.data >= corte && e.data < FLUXO_DESDE)
   eventos.length = 0
   eventos.push(...eventosNovos)
 
@@ -406,7 +416,7 @@ async function main() {
      90% do que já existe, ou se vier `--forcar` explícito. */
   const forcar = process.argv.includes('--forcar')
   // Compara só a janela que será apagada: o que está antes do corte não é tocado.
-  const jaTem = await prisma.assiduidadeDaily.count({ where: { day: { gte: corte } } })
+  const jaTem = await prisma.assiduidadeDaily.count({ where: { day: { gte: corte, lt: FLUXO_DESDE } } })
   const vaiGravar = daily.size
   if (!forcar && jaTem > 0 && vaiGravar < jaTem * 0.9) {
     console.error(JSON.stringify({
@@ -470,8 +480,8 @@ async function main() {
      ⚠️ O `ponto_staging` continua sendo refeito inteiro: é a auditoria do
      casamento de nomes (tela /ponto), não histórico de assiduidade. */
   await prisma.$transaction([
-    prisma.assiduidadeDaily.deleteMany({ where: { day: { gte: corte } } }),
-    prisma.disciplinaEvento.deleteMany({ where: { source: 'nexo', data: { gte: corte } } }),
+    prisma.assiduidadeDaily.deleteMany({ where: { day: { gte: corte, lt: FLUXO_DESDE } } }),
+    prisma.disciplinaEvento.deleteMany({ where: { source: 'nexo', data: { gte: corte, lt: FLUXO_DESDE } } }),
     prisma.pontoStaging.deleteMany({}),
   ])
 
