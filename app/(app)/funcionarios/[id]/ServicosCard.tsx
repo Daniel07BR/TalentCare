@@ -233,6 +233,13 @@ function Totalizacao({ servicos, compacto }: { servicos: Servicos; compacto: boo
           </div>
         ))}
       </div>
+      {/* ⚠️⚠️ AS DUAS RÉGUAS (14/10/2026, pedido do Daniel) — as mesmas do painel do DP no Fluxo. Sem esta
+          linha, a folha de setembro fechada em outubro some do "Atual" e ninguém sabe por quê. */}
+      <div style={{ fontSize: compacto ? 9.5 : 11, color: 'var(--text-mute)', marginTop: compacto ? 8 : 12, lineHeight: 1.5 }}>
+        <b style={{ color: 'var(--text-dim)' }}>Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela competência</b> (a folha de
+        setembro é de setembro, mesmo fechada em outubro). <b style={{ color: 'var(--text-dim)' }}>Férias, admissões e rescisões
+        contam pela data</b> em que foram feitas.
+      </div>
     </>
   )
 }
