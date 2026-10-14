@@ -1,5 +1,6 @@
 'use client'
 import { FileSpreadsheet, Scale } from 'lucide-react'
+import { agruparIndicadores, NOME_INDICADORES } from '@/lib/servicos/indicadores'
 
 type Servicos = NonNullable<{
   temFonte: boolean
@@ -7,6 +8,8 @@ type Servicos = NonNullable<{
   porMes: { mes: string; concluidos: number; minutos: number }[]
   porTarefa: { tarefa: string; n: number; minutos: number }[]
   totalConcluidos?: number
+  /** 'fluxo' = os indicadores do DP, que chegam sozinhos; 'planilha' = o setor sobe o arquivo */
+  origem?: 'fluxo' | 'planilha' | null
 }>
 type Ponto = { competencia: string; pontos: number; origem: string; detalhe: string | null }
 
@@ -35,6 +38,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
   semPontuacao?: boolean
 }) {
   const temServico = !!servicos?.temFonte
+  const doFluxo = servicos?.origem === 'fluxo'
   const temPonto = !!pontuacao?.length
   /* ⚠️⚠️ O GRÁFICO DE PONTUAÇÃO SAI NA FICHA NOVA (pedido do dono, 14/09/2026:
      "os gráficos parecem duplicados, e no mensal continua mostrando o anual").
@@ -66,18 +70,21 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
         <FileSpreadsheet size={16} color="var(--chart-2)" />
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Serviços do setor</div>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{NOME_INDICADORES}</div>
       </div>
       {/* ⚠️ Na folha A4 o período NÃO se repete aqui: a faixa do topo já o traz, e
           era a mesma data escrita pela terceira vez. */}
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: soNumeros ? 12 : 16, lineHeight: 1.5 }}>
-        Da planilha que o setor envia{!soNumeros && <> · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b></>}
+        {doFluxo ? 'Registrados no Fluxo — cada número é um trabalho concluído pela pessoa' : 'Da planilha que o setor envia'}
+        {!soNumeros && <> · <b style={{ color: 'var(--text)' }}>{periodo.toLowerCase()}</b></>}
         {/* ⚠️ SÓ O PERÍODO (Daniel, 01/10/2026: "não tem por que apresentar dados
             cumulativos… não mostre o total de todos os envios porque confunde").
             O "em todos os envios soma 160" ao lado de "Concluídos 21" saiu. */}
       </div>
 
-      {temServico && servicos && (
+      {temServico && servicos && doFluxo && <Totalizacao servicos={servicos} compacto={soNumeros} />}
+
+      {temServico && servicos && !doFluxo && (
         <>
           {/* ⚠️ SEM TEMPO na tela (Daniel, 01/10/2026: "tire a apresentação do tempo
               somado e da média de tempo de serviço"). O tempo segue na planilha e
@@ -106,7 +113,7 @@ export default function ServicosCard({ servicos, pontuacao, periodo, semPontuaca
             <div style={{ marginBottom: mostraPonto ? 18 : 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>O que mais fez</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {servicos.porTarefa.map((t) => (
+                {servicos.porTarefa.slice(0, 8).map((t) => (
                   <div key={t.tarefa} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11.5 }}>
                     <span style={{ flex: 1, minWidth: 0, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.tarefa}</span>
                     <div style={{ width: 110, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden', flex: 'none' }}>
@@ -184,5 +191,48 @@ function Num({ label, valor, cor }: { label: string; valor: string; cor?: string
       <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-.5px', color: cor ?? 'var(--text)' }}>{valor}</div>
     </div>
+  )
+}
+
+/**
+ * A TOTALIZAÇÃO dos indicadores do Fluxo (14/10/2026, pedido do Daniel): o total do período em
+ * destaque e UM bloco por assunto (Fechamento de folha, Férias, Rescisões…), com o detalhe embaixo
+ * — "até 10 func. 38 · 11 a 50 func. 3 · domésticas 3". Sem "Em aberto": o Fluxo só manda o que
+ * foi concluído, e um zero fixo ali se leria como "nada pendente".
+ * ⚠️ A soma dos blocos é o "Concluídos" — nada fica de fora (tipo novo cai em "Outros").
+ */
+function Totalizacao({ servicos, compacto }: { servicos: Servicos; compacto: boolean }) {
+  const familias = agruparIndicadores(servicos.porTarefa)
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: compacto ? 10 : 14 }}>
+        <span style={{ fontSize: compacto ? 24 : 28, fontWeight: 700, letterSpacing: '-.8px', color: 'var(--success)' }}>
+          {servicos.concluidos.toLocaleString('pt-BR')}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
+          {servicos.concluidos === 1 ? 'trabalho concluído' : 'trabalhos concluídos'} no período, em {familias.length} {familias.length === 1 ? 'assunto' : 'assuntos'}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill,minmax(${compacto ? 128 : 160}px,1fr))`, gap: compacto ? 8 : 10 }}>
+        {familias.map((f) => (
+          <div key={f.chave} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: compacto ? '8px 10px' : '10px 12px', borderLeft: '3px solid var(--chart-2)' }}>
+            <div style={{ fontSize: compacto ? 10 : 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2 }}>{f.nome}</div>
+            <div style={{ fontSize: compacto ? 18 : 21, fontWeight: 700, letterSpacing: '-.5px', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+              {f.total.toLocaleString('pt-BR')}
+            </div>
+            {f.partes.length > 0 && (
+              <div style={{ fontSize: compacto ? 9.5 : 10.5, color: 'var(--text-mute)', marginTop: 3, lineHeight: 1.45 }}>
+                {f.partes.map((p, i) => (
+                  <span key={p.nome}>
+                    {i > 0 && ' · '}
+                    {p.nome} <b style={{ color: 'var(--text-dim)' }}>{p.n}</b>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }

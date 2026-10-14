@@ -61,7 +61,7 @@ export const DETALHES = {
   consultoria: { titulo: 'Consultoria Plus', C: dynamic(MODULOS.consultoria, { loading: carregando }) },
   cide: { titulo: 'CIDE', C: dynamic(MODULOS.cide, { loading: carregando }) },
   acessorias: { titulo: 'Acessórias · volume (fora da nota)', C: dynamic(MODULOS.acessorias, { loading: carregando }) },
-  servicos: { titulo: 'Serviços do setor', C: dynamic(MODULOS.servicos, { loading: carregando }) },
+  servicos: { titulo: 'Indicadores internos', C: dynamic(MODULOS.servicos, { loading: carregando }) },
   radio: { titulo: 'Rádio Itamarathy', C: dynamic(MODULOS.radio, { loading: carregando }) },
   assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(MODULOS.assiduidade, { loading: carregando }) },
   turnover: { titulo: 'Turnover e movimentação', C: dynamic(MODULOS.turnover, { loading: carregando }) },

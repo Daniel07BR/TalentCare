@@ -139,14 +139,14 @@ export function Hero({ m }: { m: DeptMetrics }) {
                 mais, para quem lê ESTE relatório. */}
             {m.servicos?.temFonte && (
               <Sinal
-                Icone={FileSpreadsheet} rotulo="Serviços concluídos"
+                Icone={FileSpreadsheet} rotulo="Indicadores internos"
                 valor={m.servicos.concluidos.toLocaleString('pt-BR')}
                 /* ⚠️ Só o período e só a quantidade (Daniel, 01/10/2026): o total "na
                    planilha inteira" confundia, e o tempo saiu das telas. */
                 nota="no período"
                 dica={m.servicos.cobertura
-                  ? `Da planilha do setor, que cobre de ${m.servicos.cobertura.de.split('-').reverse().join('/')} a ${m.servicos.cobertura.ate.split('-').reverse().join('/')}. Fora dessa janela o setor não mediu — não é zero.`
-                  : 'Da planilha que o setor envia.'}
+                  ? `${m.servicos.cobertura.arquivo?.startsWith('Fluxo') ? 'Registrados no Fluxo' : 'Da planilha do setor'}, que cobre de ${m.servicos.cobertura.de.split('-').reverse().join('/')} a ${m.servicos.cobertura.ate.split('-').reverse().join('/')}. Fora dessa janela o setor não mediu — não é zero.`
+                  : 'Indicadores internos do setor — do Fluxo ou da planilha que o setor envia.'}
                 cor="var(--chart-2)"
               />
             )}

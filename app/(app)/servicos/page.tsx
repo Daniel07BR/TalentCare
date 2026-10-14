@@ -52,7 +52,7 @@ export default async function ServicosPage({ searchParams }: { searchParams: Pro
   if (!setores.length) {
     return (
       <div className="tc-anim" style={{ maxWidth: 720, margin: '0 auto' }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 700, letterSpacing: '-.5px' }}>Serviços do setor</h1>
+        <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 700, letterSpacing: '-.5px' }}>Indicadores internos</h1>
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
           Esta área é de quem responde por um setor. Você não tem vínculo de avaliador em nenhum —
           por isso não há planilha para subir aqui. Se isso estiver errado, quem acerta é a Diretoria,
