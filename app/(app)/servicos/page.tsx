@@ -81,7 +81,8 @@ export default async function ServicosPage({ searchParams }: { searchParams: Pro
         diaDe: l.diaDe, diaAte: l.diaAte, linhas: l.linhas,
         linhasSemVinculo: l.linhasSemVinculo, ativo: l.ativo,
         enviadoEm: l.enviadoEm.toISOString(),
-        enviadoPor: nomePorId.get(l.enviadoPor) ?? '—',
+        // o envio AUTOMÁTICO do Fluxo (serviços do DP, 14/10/2026) não tem pessoa: `run-fluxo-servicos-sync.mjs`
+        enviadoPor: nomePorId.get(l.enviadoPor) ?? (l.enviadoPor === 'fluxo' ? 'Fluxo (automático)' : '—'),
       }))}
     />
   )

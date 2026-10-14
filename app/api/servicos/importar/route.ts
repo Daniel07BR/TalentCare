@@ -48,6 +48,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Você não administra este setor.' }, { status: 403 })
   }
   if (!(arquivo instanceof File)) return NextResponse.json({ error: 'Falta o arquivo.' }, { status: 400 })
+
+  /* ⚠️⚠️ SETOR ALIMENTADO PELO FLUXO NÃO RECEBE PLANILHA (14/10/2026). Os serviços do DP chegam
+     sozinhos do Fluxo (`run-fluxo-servicos-sync.mjs`, autor 'fluxo'). Uma planilha por cima ou
+     apagaria a janela deles (a gravação abaixo substitui o setor inteiro no período) ou contaria
+     o mesmo trabalho duas vezes — e as duas coisas aconteceriam sem erro nenhum. */
+  const doFluxo = await prisma.importLote.findFirst({ where: { departmentId, enviadoPor: 'fluxo', ativo: true }, select: { id: true } })
+  if (doFluxo) {
+    return NextResponse.json({ error: 'Os serviços deste setor chegam sozinhos do Fluxo — não há planilha para subir.' }, { status: 409 })
+  }
   if (arquivo.size > LIMITE_BYTES) {
     return NextResponse.json({ error: `Arquivo grande demais (${(arquivo.size / 1048576).toFixed(1)} MB). O limite é 20 MB.` }, { status: 413 })
   }

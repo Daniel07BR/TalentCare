@@ -1,5 +1,27 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 — Serviços do DP chegam sozinhos do Fluxo ("Serviços do setor")
+
+Pedido do Daniel: levar ao TalentCare a produção de cada pessoa do Departamento Pessoal,
+**separada dos chamados**, na mesma metade da nota em que o Legal entra pela planilha.
+
+- Origem: `GET /api/integrations/talent-servicos` do Fluxo (`plane/fluxo/talent_servicos.py`),
+  um serviço por linha, com o CRÉDITO já decidido lá (quem levou ao Concluído, quem conferiu,
+  quem finalizou as férias, o responsável do e-Social do mês). Tipos: folha por PORTE (até 10 ·
+  11 a 50 · mais de 50 funcionários, contados no cadastro do mês da competência), pró-labore,
+  domésticas, vale, FGTS, DCTF, sem movimento, rescisão, admissão, férias, e-Social do mês e
+  "Conferência — <tarefa>". Passos de checklist e "assumiu" ficam fora.
+- `run-fluxo-servicos-sync.mjs`: um envio (`import_lote`, autor `fluxo`) por mês, que substitui
+  só o envio anterior DO FLUXO; cron `:55` (mês corrente e anterior) e `03:45 --completo` (desde
+  09/2026). Carga inicial: 09/2026 = 721 serviços, 10/2026 (até 14/10) = 847 — pessoa a pessoa
+  igual à conta do Fluxo.
+- `minutos = 0` (o Fluxo não mede esforço): cada tipo vale 1 ponto até a liderança do DP definir o
+  tempo médio no catálogo de Serviços.
+- Planilha de serviços para setor alimentado pelo Fluxo → 409 (duplicaria ou apagaria os dados).
+- Envio automático aparece como "Fluxo (automático)" em Serviços.
+- ⚠️ A metade de serviços muda a escala de pontos do DP: depois do primeiro mês, salvar de novo a
+  régua geral (Configurações) para o peso do atraso acompanhar a nova mediana.
+
 ## 2026-10-07 — Botão "Imprimir manual do método" na área do setor
 
 Pedido do Daniel: imprimir o manual do método de avaliação (uma folha A4, para a Diretoria
