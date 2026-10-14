@@ -84,10 +84,15 @@
 .indicadores { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .sistemas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); }
 .pilha { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* O DP (14/10/2026): o card dos Indicadores internos ocupa o lugar de dois cartões na linha 2, e o
+   Perfil DISC divide a linha com as Últimas saídas. Abaixo de 768px tudo vira uma coluna. */
+.disca { display: grid; gap: 14px; margin-bottom: 14px; grid-template-columns: 1fr; align-items: start; }
 
 @media (min-width: 768px) {
   .indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .linha2, .linha3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .duplo { grid-column: span 2; }
+  .disca { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
 }
 
 @media (min-width: 1280px) {

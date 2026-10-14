@@ -1,5 +1,17 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (4) — Página do DP: resumo dos Indicadores internos no lugar de Atividade + Últimas saídas
+
+Pedido do Daniel. No setor cujos serviços chegam do Fluxo (o último envio ativo é "Fluxo · …"):
+
+- a linha 2 fica Escolaridade + UM card **Indicadores internos** (`_visao/IndicadoresInternos.tsx`):
+  total do período, um bloco por assunto (mesma regra da ficha, `lib/servicos/indicadores.ts`) e a
+  lista por pessoa com os assuntos dela; "Ver detalhes" abre a janela de serviços. Lê
+  `/api/servicos/resumo` no período do filtro.
+- "Atividade no período" sai dessa página do DP; **Últimas saídas** vai para o lado do Perfil DISC
+  (`.disca` em `visao.module.css`).
+- Os outros setores seguem com o layout de antes.
+
 ## 2026-10-14 (3) — Indicadores internos por COMPETÊNCIA (folha, vale, FGTS, DCTF) e por DATA (férias, admissões, rescisões)
 
 Pedido do Daniel: o mês dos indicadores do DP tem de ler o Fluxo como o contador do Fluxo lê —
