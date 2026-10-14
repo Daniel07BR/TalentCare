@@ -498,6 +498,17 @@ estado ATUAL. Por isso o espelho tem duas camadas:
   tanto faz de quem é; o recomendado é um usuário "Integração" próprio, para a
   coleta não parar se alguém regerar o token pessoal.
 
+## ⚠️⚠️ Serviços do setor que vêm de um SISTEMA, e não de planilha (14/10/2026)
+
+O DP não sobe planilha: os serviços dele vêm do Fluxo (`run-fluxo-servicos-sync.mjs`) e caem
+na MESMA tabela `servico_depto` que a planilha do Legal alimenta — por isso não houve consumidor
+novo a percorrer (ficha, setor, score, catálogo e nota já leem a tabela sem olhar a origem).
+
+- O lote do sistema tem `enviadoPor = 'fluxo'`, e o sync só apaga lote seu. A gravação da planilha
+  apaga o SETOR INTEIRO na janela — por isso ela recusa (409) setor que já tem lote do Fluxo.
+- O crédito vem pronto da origem. Não recalcular aqui.
+- `minutos = 0` não é "instantâneo": é "não medido" — a média sai da decisão da liderança.
+
 ## Como entra uma 9ª fonte
 
 1. Combine com o agente do sistema de origem o endpoint `<algo>-daily` e emita uma

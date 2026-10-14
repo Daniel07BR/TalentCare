@@ -98,6 +98,6 @@ export async function GET(req: NextRequest) {
       .map(({ tipos: t, ...p }) => ({ ...p, tipos: [...t].map(([tipo, n]) => ({ tipo, n })).sort((a, b) => b.n - a.n) }))
       .sort((a, b) => b.concluidos - a.concluidos || b.abertos - a.abertos || a.nome.localeCompare(b.nome)),
     tipos: [...tipos.values()].sort((a, b) => b.concluidos - a.concluidos || b.abertos - a.abertos),
-    envios: lotes.map((l) => ({ arquivo: l.arquivo, diaDe: l.diaDe, diaAte: l.diaAte, enviadoEm: l.enviadoEm, por: enviou.get(l.enviadoPor) ?? null })),
+    envios: lotes.map((l) => ({ arquivo: l.arquivo, diaDe: l.diaDe, diaAte: l.diaAte, enviadoEm: l.enviadoEm, por: enviou.get(l.enviadoPor) ?? (l.enviadoPor === 'fluxo' ? 'Fluxo (automático)' : null) })),
   })
 }
