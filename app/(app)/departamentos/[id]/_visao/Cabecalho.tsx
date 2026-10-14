@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Building2, ChevronRight, Truck, Upload } from 'lucide-react'
+import { Building2, ChevronRight, SlidersHorizontal, Truck, Upload } from 'lucide-react'
 import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 import type { SecaoProps } from './tipos'
 
@@ -41,10 +41,19 @@ export function Cabecalho({ m }: SecaoProps) {
         {m.setor.podeGerir && (
           /* ⚠️ A ÚNICA PORTA da planilha de serviços (11/09/2026, pedido do dono): saiu
              do menu lateral, e se sobe só daqui, com o setor na URL. Só Gestta. */
+          /* ⚠️ O DP NÃO USA PLANILHA NEM GESTTA (14/10/2026): os indicadores chegam do Fluxo, e o botão leva só
+             ao catálogo de tipos (tempo médio) e à pontuação. */
+          m.servicos?.cobertura?.arquivo?.startsWith('Fluxo') ? (
+            <button type="button" style={botao} onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
+              title="O tempo médio de cada tipo de indicador interno e a pontuação do setor — os números chegam sozinhos do Fluxo">
+              <SlidersHorizontal size={15} /> Tipos e pontuação
+            </button>
+          ) : (
           <button type="button" style={botao} onClick={() => router.push(`/servicos?setor=${m.setor.id}`)}
             title="Enviar a planilha de serviços exportada do Gestta — só esse formato é aceito">
             <Upload size={15} /> {m.servicos?.temFonte ? 'Atualizar planilha do Gestta' : 'Enviar planilha do Gestta'}
           </button>
+          )
         )}
       </div>
     </header>

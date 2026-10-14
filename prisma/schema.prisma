@@ -929,6 +929,12 @@ model ServicoDepto {
    * converter na entrada evita que cada consumidor reinvente a multiplicação.
    */
   minutos      Int     @default(0)
+  /**
+   * FUNCIONÁRIOS da empresa da folha fechada (14/10/2026) — vem do Fluxo (cadastro no mês da competência).
+   * NULL = não é folha, ou a empresa não tem cadastro. É a base de "funcionários administrados"
+   * (`lib/servicos/indicadores.ts` → `administradosDe`).
+   */
+  funcionarios Int?
 
   @@index([departmentId, dia])
   @@index([personKey, dia])

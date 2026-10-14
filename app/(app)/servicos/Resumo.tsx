@@ -7,6 +7,7 @@ import { useRecorteSetor } from '@/lib/ui/recorte-setor'
 import Avatar from '../Avatar'
 import EsqueletoResumo from '../EsqueletoResumo'
 import Donut, { type DonutSeg } from '../Donut'
+import ResumoDoFluxo from './ResumoDoFluxo'
 
 /* ============================================================
    SERVIÇOS DO SETOR — a janela de resumo (01/10/2026).
@@ -20,14 +21,16 @@ import Donut, { type DonutSeg } from '../Donut'
    cliente — ver a rota `/api/servicos/resumo`.
    ============================================================ */
 
-type Pessoa = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; tipos: { tipo: string; n: number }[] }
+type Pessoa = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; administrados: number; tipos: { tipo: string; n: number; administrados: number }[] }
 type Dados = {
   setor: string
-  total: { concluidos: number; abertos: number; desconsiderados: number; minutos: number; semDono: number }
+  total: { concluidos: number; abertos: number; desconsiderados: number; minutos: number; semDono: number; administrados: number; folhasSemNumero: number }
   ultimoDiaComDado: string | null
   pessoas: Pessoa[]
-  tipos: { tipo: string; concluidos: number; abertos: number }[]
+  tipos: { tipo: string; concluidos: number; abertos: number; administrados: number }[]
   envios: { arquivo: string; diaDe: string; diaAte: string; enviadoEm: string; por: string | null }[]
+  /** 'fluxo' = o DP: os números chegam sozinhos do Fluxo, sem planilha nem Gestta (14/10/2026) */
+  origem?: 'fluxo' | 'planilha' | null
 }
 
 const COR = 'var(--chart-4)'
@@ -64,6 +67,10 @@ export default function ServicosResumo() {
   if (!setor) return <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>A planilha de serviços é de cada setor — abra pelo relatório do setor.</div>
   if (erro) return <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>{erro}</div>
   if (!dados) return <EsqueletoResumo />
+  /* ⚠️⚠️ O DP NÃO USA PLANILHA NEM GESTTA (Daniel, 14/10/2026): "pode tirar isso totalmente do TalentCare
+     do DP". Quando a origem é o Fluxo, a janela é outra — funcionários administrados, a janela da pessoa e a
+     do tipo — e nada de envio, planilha ou botão para subir arquivo. */
+  if (dados.origem === 'fluxo') return <ResumoDoFluxo dados={dados} periodo={label} />
 
   const t = dados.total
   const abrirPlanilha = () => router.push(`/servicos?setor=${setor.id}`)

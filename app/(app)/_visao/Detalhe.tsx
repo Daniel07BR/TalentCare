@@ -177,7 +177,8 @@ export function JanelaDetalhe({ chave, setor = null, comQuemSaiu = false, fila =
                 ? (chave === 'turnover'
                     ? `todas as pessoas que passaram por ${setor.nome}, inclusive quem saiu`
                     : chave === 'servicos'
-                    ? `a planilha que o ${setor.nome} envia do Gestta — todas as linhas do período`
+                    /* ⚠️ sem "planilha do Gestta" (14/10/2026): o DP chega do Fluxo; o Legal, da planilha */
+                    ? `os indicadores internos de ${setor.nome} — tudo o que foi registrado no período`
                     : comQuemSaiu
                       ? `as pessoas de ${setor.nome} no período, inclusive quem já saiu — as mesmas da barra do painel`
                       : `só as pessoas ativas de ${setor.nome} — as mesmas do cartão`)

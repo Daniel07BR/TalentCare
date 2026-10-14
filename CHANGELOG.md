@@ -1,5 +1,24 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (6) — DP sem planilha; FUNCIONÁRIOS ADMINISTRADOS; janelas da pessoa e do tipo
+
+Pedidos do Daniel:
+- *"DP não usa planilha ou lançamentos do Gestta, pode tirar isso totalmente do TalentCare do DP"* —
+  no setor alimentado pelo Fluxo: o botão do topo vira **Tipos e pontuação** (catálogo, régua e
+  pontuação — sem envio); `/servicos` esconde o bloco de envio e os textos de planilha/Gestta; o
+  catálogo explica que o Fluxo não mede tempo (a média é da liderança); a janela "Ver detalhes" é
+  outra (`servicos/ResumoDoFluxo.tsx`) e o subtítulo dela não fala mais em Gestta.
+- **Funcionários administrados** (`administradosDe`, `lib/servicos/indicadores.ts`): folha = os
+  funcionários da empresa fechada (cadastro no mês da competência, vindo do Fluxo — coluna nova
+  `servico_depto.funcionarios`, `scripts/2026-10-14-servico-funcionarios.sql`); férias, rescisão e
+  admissão = 1; o resto é obrigação da empresa e não soma. "Quem fez" vira essa lista.
+  Set/2026: 2.875 no setor (folhas 2.659 = painel do Fluxo), Tauana 444 (421 + 22 férias + 1).
+- Clique na pessoa → janela central com o resumo completo (administrados, trabalhos, assuntos, cada
+  tipo, botão para a ficha). Clique no tipo → janela com quem fez e quanto. Abrem por cima da
+  "Ver detalhes" e fecham só a si mesmas (Esc capturado, portal).
+- `/api/servicos/resumo` devolve `administrados` (setor, pessoa, tipo), `folhasSemNumero` e `origem`
+  (do último envio ativo do setor).
+
 ## 2026-10-14 (5) — Indicadores internos do setor em TABELA
 
 Pedido do Daniel ("ficou muito grande… os resultados de cada item em colunas e os totais na frente dos

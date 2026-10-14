@@ -117,6 +117,10 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
   const pendentes = previa?.nomes.filter((n) => n.resolvidoPor === 'pendente') ?? []
   const resolvidos = previa?.nomes.filter((n) => n.resolvidoPor !== 'pendente') ?? []
   const lotesDoSetor = lotes.filter((l) => l.departmentId === setorId)
+  /* ⚠️⚠️ O DP NÃO USA PLANILHA NEM GESTTA (Daniel, 14/10/2026): "pode tirar isso totalmente do TalentCare do
+     DP". Setor cujo envio ativo é o automático do Fluxo não tem bloco de envio aqui — fica o catálogo de
+     tipos (o tempo médio que a liderança define), a régua e a pontuação. */
+  const doFluxo = lotesDoSetor.some((l) => l.ativo && l.enviadoPor === 'Fluxo (automático)')
 
   /* ⚠️ 1280 como o dashboard: a tabela de tipos de serviço tem seis colunas e,
      em 1080, a do nome espremia e a tela rolava na horizontal. */
@@ -143,8 +147,8 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>Planilha do setor</div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>Serviços e pontuação</h1>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>{doFluxo ? 'Indicadores internos · registrados no Fluxo' : 'Planilha do setor'}</div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>{doFluxo ? 'Tipos e pontuação' : 'Serviços e pontuação'}</h1>
         </div>
         {/* ⚠️ Sem seletor de setor (11/09/2026): o setor é o do relatório de onde se
             veio, na URL — e fica escrito, para ninguém enviar sem ver para onde vai. */}
@@ -153,6 +157,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
         </div>
       </div>
 
+      {!doFluxo && (<>
       {/* ── envio ─────────────────────────────────────────────────────────── */}
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Enviar a planilha do Gestta — {setor.name}</div>
@@ -397,23 +402,25 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
         </>
       )}
 
+      </>)}
+
       <RegraEditor departmentId={setorId} setorNome={setor.name} />
-      <TarefasEditor departmentId={setorId} setorNome={setor.name} versao={versaoCatalogo} />
+      <TarefasEditor departmentId={setorId} setorNome={setor.name} versao={versaoCatalogo} doFluxo={doFluxo} />
       <AtividadesEditor departmentId={setorId} setorNome={setor.name} />
       <PontuacaoMes departmentId={setorId} setorNome={setor.name} />
 
       {/* ── histórico de envios ───────────────────────────────────────────── */}
       {lotesDoSetor.length > 0 && (
         <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Envios anteriores</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>Quem subiu, quando, e que janela o arquivo cobria.</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{doFluxo ? 'Envios automáticos do Fluxo' : 'Envios anteriores'}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{doFluxo ? 'Um por mês, atualizado de hora em hora; cada rodada substitui a anterior do mesmo mês.' : 'Quem subiu, quando, e que janela o arquivo cobria.'}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {lotesDoSetor.map((l) => (
               <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12.5, padding: '8px 10px', borderRadius: 6, background: 'var(--surface-2)', opacity: l.ativo ? 1 : 0.55 }}>
                 <FileSpreadsheet size={14} color="var(--text-mute)" style={{ flex: 'none' }} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.arquivo}</span>
                 <span style={{ color: 'var(--text-mute)', whiteSpace: 'nowrap' }}>{br(l.diaDe)} a {br(l.diaAte)}</span>
-                <span style={{ color: 'var(--text-mute)', whiteSpace: 'nowrap', width: 90, textAlign: 'right' }}>{l.linhas.toLocaleString('pt-BR')} linhas</span>
+                <span style={{ color: 'var(--text-mute)', whiteSpace: 'nowrap', width: 90, textAlign: 'right' }}>{l.linhas.toLocaleString('pt-BR')} {doFluxo ? 'registros' : 'linhas'}</span>
                 <span style={{ color: 'var(--text-dim)', whiteSpace: 'nowrap', width: 170, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {l.enviadoPor} · {new Date(l.enviadoEm).toLocaleDateString('pt-BR')}
                 </span>

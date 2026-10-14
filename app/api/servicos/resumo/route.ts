@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao } from '@/lib/period-range'
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
   const [linhas, lotes] = await Promise.all([
     prisma.servicoDepto.findMany({
       where: { departmentId: dept.id, dia: { gte: fromDay, lte: toDay } },
-      select: { personKey: true, nomeOrigem: true, status: true, tarefa: true, minutos: true },
+      select: { personKey: true, nomeOrigem: true, status: true, tarefa: true, minutos: true, funcionarios: true },
     }),
     /* De onde veio o número: os envios ATIVOS que encostam na janela. Sem isto,
        "0 concluídos" não diz se o setor não trabalhou ou se ninguém subiu o mês. */
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
     }),
   ])
   const ultimoDia = await prisma.servicoDepto.aggregate({ where: { departmentId: dept.id }, _max: { dia: true } })
+  const ultimoLote = await prisma.importLote.findFirst({ where: { departmentId: dept.id, ativo: true }, orderBy: { enviadoEm: 'desc' }, select: { enviadoPor: true } })
 
   // personKey = nexusUserId ?? id (o mesmo do vínculo).
   const chaves = [...new Set(linhas.map((l) => l.personKey).filter((k): k is string => !!k))]
@@ -63,10 +65,13 @@ export async function GET(req: NextRequest) {
     ? new Map((await prisma.user.findMany({ where: { id: { in: [...new Set(lotes.map((l) => l.enviadoPor))] } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]))
     : new Map<string, string>()
 
-  type P = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; tipos: Map<string, number> }
+  type P = { id: string | null; nome: string; cargo: string; hasAvatar: boolean; ativo: boolean; concluidos: number; abertos: number; minutos: number; administrados: number; tipos: Map<string, number>; admPorTipo: Map<string, number> }
   const pessoas = new Map<string, P>()
-  const tipos = new Map<string, { tipo: string; concluidos: number; abertos: number }>()
-  const total = { concluidos: 0, abertos: 0, desconsiderados: 0, minutos: 0, semDono: 0 }
+  const tipos = new Map<string, { tipo: string; concluidos: number; abertos: number; administrados: number }>()
+  /* ⚠️ `administrados` (14/10/2026): funcionários administrados — a regra é `administradosDe`
+     (lib/servicos/indicadores.ts). `folhasSemNumero` diz quantas folhas não somaram por falta de
+     cadastro de funcionários, para o zero não se passar por empresa vazia. */
+  const total = { concluidos: 0, abertos: 0, desconsiderados: 0, minutos: 0, semDono: 0, administrados: 0, folhasSemNumero: 0 }
 
   for (const l of linhas) {
     if (l.status === 'desconsiderada') { total.desconsiderados++; continue }
@@ -74,8 +79,14 @@ export async function GET(req: NextRequest) {
     if (concl) { total.concluidos++; total.minutos += l.minutos } else total.abertos++
     if (!l.personKey) total.semDono++
 
-    const t = tipos.get(l.tarefa) ?? { tipo: l.tarefa, concluidos: 0, abertos: 0 }
+    const t = tipos.get(l.tarefa) ?? { tipo: l.tarefa, concluidos: 0, abertos: 0, administrados: 0 }
     if (concl) t.concluidos++; else t.abertos++
+    const adm = concl ? administradosDe(l.tarefa, l.funcionarios) : 0
+    t.administrados += adm
+    if (concl) {
+      total.administrados += adm
+      if (ehFolha(l.tarefa) && l.funcionarios == null) total.folhasSemNumero++
+    }
     tipos.set(l.tarefa, t)
 
     /* ⚠️ Linha sem dono continua na conta, com o nome que veio no arquivo: some-la
@@ -84,9 +95,13 @@ export async function GET(req: NextRequest) {
     const u = l.personKey ? porChave.get(l.personKey) : undefined
     const p = pessoas.get(k) ?? {
       id: u?.id ?? null, nome: u?.name ?? l.nomeOrigem, cargo: u ? (u.jobTitle ?? 'Colaborador') : 'sem vínculo no TalentCare',
-      hasAvatar: !!u?.avatarUrl, ativo: u?.active ?? true, concluidos: 0, abertos: 0, minutos: 0, tipos: new Map(),
+      hasAvatar: !!u?.avatarUrl, ativo: u?.active ?? true, concluidos: 0, abertos: 0, minutos: 0, administrados: 0, tipos: new Map(), admPorTipo: new Map(),
     }
-    if (concl) { p.concluidos++; p.minutos += l.minutos; p.tipos.set(l.tarefa, (p.tipos.get(l.tarefa) ?? 0) + 1) } else p.abertos++
+    if (concl) {
+      p.concluidos++; p.minutos += l.minutos; p.administrados += adm
+      p.tipos.set(l.tarefa, (p.tipos.get(l.tarefa) ?? 0) + 1)
+      p.admPorTipo.set(l.tarefa, (p.admPorTipo.get(l.tarefa) ?? 0) + adm)
+    } else p.abertos++
     pessoas.set(k, p)
   }
 
@@ -95,9 +110,12 @@ export async function GET(req: NextRequest) {
     total,
     ultimoDiaComDado: ultimoDia._max.dia ?? null,
     pessoas: [...pessoas.values()]
-      .map(({ tipos: t, ...p }) => ({ ...p, tipos: [...t].map(([tipo, n]) => ({ tipo, n })).sort((a, b) => b.n - a.n) }))
+      .map(({ tipos: t, admPorTipo, ...p }) => ({ ...p, tipos: [...t].map(([tipo, n]) => ({ tipo, n, administrados: admPorTipo.get(tipo) ?? 0 })).sort((a, b) => b.n - a.n) }))
       .sort((a, b) => b.concluidos - a.concluidos || b.abertos - a.abertos || a.nome.localeCompare(b.nome)),
     tipos: [...tipos.values()].sort((a, b) => b.concluidos - a.concluidos || b.abertos - a.abertos),
+    /* 'fluxo' quando o envio ativo mais recente do setor é o automático do Fluxo, em qualquer janela (o DP, que não usa planilha nem
+       Gestta — Daniel, 14/10/2026): a tela tira tudo de planilha. */
+    origem: ultimoLote ? (ultimoLote.enviadoPor === 'fluxo' ? 'fluxo' : 'planilha') : null,
     envios: lotes.map((l) => ({ arquivo: l.arquivo, diaDe: l.diaDe, diaAte: l.diaAte, enviadoEm: l.enviadoEm, por: enviou.get(l.enviadoPor) ?? (l.enviadoPor === 'fluxo' ? 'Fluxo (automático)' : null) })),
   })
 }

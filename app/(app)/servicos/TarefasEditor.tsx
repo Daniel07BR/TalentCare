@@ -86,7 +86,9 @@ const ORDENAVEIS: { chave: Coluna; label: string; dica?: string; numerica: boole
   { chave: 'pontos', label: 'Pontos', numerica: true },
 ]
 
-export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: { departmentId: string; setorNome: string; versao?: number }) {
+export default function TarefasEditor({ departmentId, setorNome, versao = 0, doFluxo = false }: { departmentId: string; setorNome: string; versao?: number
+  /** O DP (14/10/2026): os tipos chegam do Fluxo, que NÃO mede tempo — a média é a que a liderança define. */
+  doFluxo?: boolean }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [fator, setFator] = useState(0.5)
   const [fatorDecidido, setFatorDecidido] = useState(true)
@@ -217,8 +219,21 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
     <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <ListChecks size={16} color="var(--chart-2)" />
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Pontos por tipo de serviço — {setorNome}</div>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{doFluxo ? 'Pontos por tipo de indicador' : 'Pontos por tipo de serviço'} — {setorNome}</div>
       </div>
+      {doFluxo ? (
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
+        Cada tipo vale <b>{fator} ponto por minuto</b>{!fatorDecidido && <span style={{ color: 'var(--warning)' }}> (valor provisório — este setor ainda não tem régua de pontuação gravada)</span>} do
+        tempo médio. <b>O Fluxo não mede quanto tempo um trabalho leva</b> (o tempo entre assumir e concluir é calendário,
+        não esforço) — por isso a média de cada tipo é a que a <b>liderança do setor define aqui</b>. Enquanto ninguém
+        define, o tipo vale 1 ponto. {total.toLocaleString('pt-BR')} trabalhos concluídos registrados até hoje.
+        {ajustadas > 0 && <> · <b style={{ color: 'var(--accent)' }}>{ajustadas} {ajustadas === 1 ? 'ajustado' : 'ajustados'}</b></>}
+        <div style={{ marginTop: 8 }}>
+          O que você decidir aqui <b>fica guardado por tipo</b> e vale para todos os meses. Tipo novo que o Fluxo passar a
+          mandar aparece aqui para ajuste.
+        </div>
+      </div>
+      ) : (
       <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.55 }}>
         Cada tipo vale <b>{fator} ponto por minuto</b>{!fatorDecidido && <span style={{ color: 'var(--warning)' }}> (valor provisório — este setor ainda não tem régua de pontuação gravada)</span>} do tempo médio, medido em{' '}
         <b>{total.toLocaleString('pt-BR')} serviços concluídos</b> da planilha inteira — não do período selecionado,
@@ -235,6 +250,7 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
           se afastar do que você conferiu.
         </div>
       </div>
+      )}
 
       {/* ── o que precisa de olho ───────────────────────────────────────────
           ⚠️⚠️ "Ninguém nunca olhou" e "olharam e mantiveram o medido" eram a
@@ -499,15 +515,17 @@ export default function TarefasEditor({ departmentId, setorNome, versao = 0 }: {
                            diz de onde a medição saiu — quantos serviços e quantos
                            ficaram de fora por virem sem tempo. */
                         title={t.mediaAjustada != null
-                          ? `Lançado por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.\n` + (t.semAmostraNaMedia
+                          ? `Lançado por ${t.ajustadoPor} em ${dataBr(t.ajustadoEm)}.` + (doFluxo ? '' : '\n' + (t.semAmostraNaMedia
                               /* ⚠️⚠️ Sem esta ramificação a tela dizia "o medido na
                                  planilha é 0 min" para os 10 tipos cujos limites
                                  tiraram TODOS os serviços — o CANCELAMENTO entre
                                  eles, com 33 min medidos em 78 serviços. Zero não
                                  foi medido: foi filtrado. */
                               ? `Os limites de ${t.tempoMinimo ?? '—'}–${t.tempoMaximo ?? '—'} min tiraram TODOS os ${t.abaixoDoMinimo + t.acimaDoMaximo} serviços cronometrados da média. Sem eles, o medido são ${t.mediaSemLimites} min.`
-                              : `O medido na planilha é ${t.mediaMedida} min, em ${t.cronometradas} serviços cronometrados.`)
-                          : `Medido em ${t.cronometradas} ${t.cronometradas === 1 ? 'serviço cronometrado' : 'serviços cronometrados'}${t.zerados ? `, com ${t.zerados} fora da conta por virem sem tempo` : ''}.\nPode mudar — o valor que você digitar passa a valer no lugar deste.`}
+                              : `O medido na planilha é ${t.mediaMedida} min, em ${t.cronometradas} serviços cronometrados.`))
+                          : doFluxo
+                            ? 'O Fluxo não mede tempo: digite a média, em minutos, que a liderança considera para este tipo.'
+                            : `Medido em ${t.cronometradas} ${t.cronometradas === 1 ? 'serviço cronometrado' : 'serviços cronometrados'}${t.zerados ? `, com ${t.zerados} fora da conta por virem sem tempo` : ''}.\nPode mudar — o valor que você digitar passa a valer no lugar deste.`}
                         style={{
                           height: 30, width: '100%', textAlign: 'right', padding: '0 26px 0 8px',
                           background: 'var(--surface-2)',
