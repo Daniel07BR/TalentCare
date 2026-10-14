@@ -10,6 +10,7 @@ import { Indicadores } from './_visao/Indicadores'
 import { Escolaridade } from './_visao/Escolaridade'
 import { AtividadeDoPeriodo } from './_visao/AtividadeDoPeriodo'
 import { UltimasSaidas } from './_visao/UltimasSaidas'
+import { IndicadoresInternos } from './_visao/IndicadoresInternos'
 import { RankingMes } from './_visao/RankingMes'
 import { WhatsappEChamados } from './_visao/WhatsappEChamados'
 import { Assiduidade } from './_visao/Assiduidade'
@@ -59,6 +60,12 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
     )
   }
 
+  /* ⚠️ O SETOR DOS INDICADORES INTERNOS (14/10/2026, pedido do Daniel para o DP): quando os serviços chegam
+     do Fluxo, "Atividade no período" e "Últimas saídas" dão lugar a UM card com o resumo dos indicadores, e
+     as saídas vão para o lado do Perfil DISC. Os outros setores seguem como estavam. A marca é o último
+     envio ativo do setor (não depende do filtro) — `run-fluxo-servicos-sync.mjs` nomeia "Fluxo · …". */
+  const doFluxo = !!m.servicos?.cobertura?.arquivo?.startsWith('Fluxo')
+
   return (
     <div className={`tc-anim ${s.raiz}`}>
       {/* ⚠️ Um segundo provedor AQUI DENTRO da `.raiz`: o painel da pessoa, aberto
@@ -72,8 +79,14 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       </div>
       <div className={s.linha2}>
         <Escolaridade deptId={m.setor.id} abrir={detalhe.abrir} />
-        <AtividadeDoPeriodo m={m} />
-        <UltimasSaidas m={m} abrir={detalhe.abrir} />
+        {doFluxo ? (
+          <IndicadoresInternos m={m} abrir={detalhe.abrir} className={s.duplo} />
+        ) : (
+          <>
+            <AtividadeDoPeriodo m={m} />
+            <UltimasSaidas m={m} abrir={detalhe.abrir} />
+          </>
+        )}
       </div>
       <div className={s.linha3}>
         <RankingMes m={m} />
@@ -83,7 +96,14 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       {/* As AVALIAÇÕES do setor (02/10/2026): a porta para o histórico. Some para quem não avalia. */}
       <CartaoAvaliacoes deptId={m.setor.id} />
       {/* O perfil DISC do setor (22/09/2026). Some para quem não é da régua. */}
-      <div style={{ marginBottom: 14 }}><CartaoDiscSetor deptId={m.setor.id} /></div>
+      {doFluxo ? (
+        <div className={s.disca}>
+          <CartaoDiscSetor deptId={m.setor.id} />
+          <UltimasSaidas m={m} abrir={detalhe.abrir} />
+        </div>
+      ) : (
+        <div style={{ marginBottom: 14 }}><CartaoDiscSetor deptId={m.setor.id} /></div>
+      )}
       <Sistemas m={m} abrir={detalhe.abrir} />
 
       {painel && <PainelDoIndicador chave={painel} m={m} onFechar={() => setPainel(null)} />}
