@@ -1,5 +1,22 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-14 (7) — ATRASOS, ADVERTÊNCIAS E SUSPENSÕES chegam do FLUXO em tempo real
+
+Pedido do Daniel: *"faça o fluxo enviar para o talent os dados de atrasos, faltas, advertencias e
+suspensões em tempo real"* — o painel mostrava 2 atrasos em outubro (o dump do Axis parou em 01/10)
+enquanto o Fluxo tinha 80.
+- `POST /api/integrations/fluxo-disciplina` (`X-API-Key` = `FLUXO_API_KEY`) → `lib/fluxo-disciplina.ts`:
+  o Fluxo manda o MÊS INTEIRO a cada gravação (e de hora em hora, como rede de segurança); aqui se
+  troca o mês — `assiduidade_daily` inteira do mês e `disciplina_evento` só `source='fluxo'`. A régua
+  (suspensão só a APLICADA pelo DP) vem decidida do Fluxo.
+- Tabela `fluxo_disciplina_envio` (por mês: `medidoAte`, `pessoas` medidas, hash): a cobertura
+  (`lib/ponto-cobertura.ts`) passa a saber quem o controle do DP mede e até quando o mês está medido
+  — mês limpo continua sendo mês medido. `lib/frescor.ts` ganha a linha "Atrasos e disciplina (Fluxo)".
+- ⚠️⚠️ Corte `FLUXO_DESDE = 2026-10-01`: antes, o import do Axis (base das avaliações já feitas);
+  depois, só o Fluxo. `run-ponto-import.mjs` não lê nem apaga nada de 01/10 em diante.
+- Faltas: o Fluxo não registra falta; o contrato traz `faltas: []` para quando registrar.
+- Cópia das 14 linhas de outubro do dump do Axis em `~/backups/fluxo-disciplina/` no `.78`.
+
 ## 2026-10-14 (6) — DP sem planilha; FUNCIONÁRIOS ADMINISTRADOS; janelas da pessoa e do tipo
 
 Pedidos do Daniel:

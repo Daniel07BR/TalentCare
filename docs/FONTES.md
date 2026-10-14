@@ -509,6 +509,14 @@ novo a percorrer (ficha, setor, score, catálogo e nota já leem a tabela sem ol
 - O crédito vem pronto da origem. Não recalcular aqui.
 - `minutos = 0` não é "instantâneo": é "não medido" — a média sai da decisão da liderança.
 
+## ⚠️⚠️ Atrasos e disciplina vêm do FLUXO, em tempo real (14/10/2026)
+
+O Fluxo empurra (`POST /api/integrations/fluxo-disciplina`) o mês inteiro a cada gravação no
+controle de atrasos do DP, e de hora em hora o mês corrente e o anterior. De 01/10/2026 em diante
+(`FLUXO_DESDE`) a `assiduidade_daily` é só dele; antes, o import do Axis. A cobertura do ponto lê
+`fluxo_disciplina_envio` (quem é medido e até quando). Ver `lib/fluxo-disciplina.ts` e, no Fluxo,
+`docs/NEXO-NO-FLUXO.md` §14.
+
 ## Como entra uma 9ª fonte
 
 1. Combine com o agente do sistema de origem o endpoint `<algo>-daily` e emita uma
