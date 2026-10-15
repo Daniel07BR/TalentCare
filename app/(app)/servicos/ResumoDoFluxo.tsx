@@ -66,7 +66,7 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
         <ClipboardList size={18} style={{ color: 'var(--chart-2)', flex: 'none' }} />
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5 }}>
           Registrados no <b style={{ color: 'var(--text)' }}>Fluxo</b>, automaticamente. Folha, vale, FGTS, DCTF, pró-labore e
-          e-Social contam pela <b>competência</b>; férias, admissões e rescisões pela <b>data</b> em que foram feitas.
+          e-Social contam pela <b>competência</b>; férias, admissões, rescisões e homologações pela <b>data</b> em que foram feitas.
         </div>
       </div>
 

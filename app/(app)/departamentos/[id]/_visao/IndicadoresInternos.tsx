@@ -125,8 +125,8 @@ export function IndicadoresInternos({ m, abrir, className }: ComDetalhe & { clas
           </div>
 
           <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
-            Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela <b>competência</b>; férias, admissões e
-            rescisões pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo. Passe o mouse
+            Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela <b>competência</b>; férias, admissões,
+            rescisões e homologações pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo. Passe o mouse
             num número para ver o detalhe (porte da folha, tipo da conferência).
           </div>
         </>

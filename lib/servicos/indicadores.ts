@@ -50,6 +50,9 @@ const FAMILIAS: Regra[] = [
   { chave: 'esocial', curto: 'e-Social', nome: 'e-Social do mês', casa: (t) => t === 'e-Social do mês' },
   { chave: 'ferias', curto: 'Férias', nome: 'Férias', casa: (t) => t === 'Férias' },
   { chave: 'rescisao', curto: 'Rescisões', nome: 'Rescisões', casa: (t) => t === 'Rescisão' },
+  // HOMOLOGAÇÕES (15/10/2026): o Fluxo manda como tipo próprio — de quem ACOMPANHOU a homologação,
+  // que pode não ser quem concluiu a rescisão (régua do painel do DP, `homologacoes_feitas`)
+  { chave: 'homologacao', curto: 'Homologações', nome: 'Homologações', casa: (t) => t === 'Homologação' },
   { chave: 'admissao', curto: 'Admissões', nome: 'Admissões', casa: (t) => t === 'Admissão' },
   { chave: 'conferencia', curto: 'Conferências', nome: 'Conferências', casa: (t) => t.startsWith(CONF), parte: (t) => t.slice(CONF.length) },
 ]
@@ -89,8 +92,9 @@ export function agruparIndicadores(porTarefa: { tarefa: string; n: number }[]): 
    - folha (empresas e domésticas) = os funcionários da empresa fechada — o número do cadastro no
      mês da competência, que o Fluxo manda (o mesmo do painel do DP);
    - férias, rescisão e admissão = 1 cada (é um funcionário);
-   - o resto (pró-labore, vale, FGTS, DCTF, e-Social, sem movimento, conferências) é obrigação da
+   - o resto (pró-labore, vale, FGTS, DCTF, e-Social, sem movimento, conferências, homologações) é obrigação da
      EMPRESA, não de um funcionário: conta como trabalho, não como funcionário administrado.
+     (A homologação é do MESMO funcionário que a rescisão já contou: contá-lo de novo dobraria.)
    ⚠️ Folha sem nº de funcionários (empresa sem cadastro) soma 0 e a tela DIZ quantas são — zero
    por falta de cadastro não pode se passar por empresa vazia. */
 export const REGRA_ADMINISTRADOS =
