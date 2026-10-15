@@ -1,5 +1,21 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-15 (3) — atrasos de outra pessoa na Bruna Cunha; atraso a mais da Tabata (dados)
+
+Achados ao comparar o histórico com a cópia do Axis no Fluxo; correção autorizada pelo Daniel. Backup
+antes: `~/backups/correcao-bruna-tabata-20261015-1244.dump` no .78 (assiduidade_daily, disciplina_evento,
+ponto_staging, ponto_match).
+- **Bruna Cunha**: o import casava DUAS pessoas do Axis com ela — a dela (Bruna Rayane Silva Reis Cunha)
+  e "Bruna Alves de Araujo" (nexo 48, 10 atrasos, não existe no Nexus). Saíram 9 dias e 1 atraso de
+  15/01 (40 → 5 min); advertências 43 → 33 (10 apagadas, 11 com o "Nº atraso do mês" renumerado, out/25
+  a mar/26). Nexo 48 ficou `ignored` no `ponto_staging`. Nenhuma nota gravada nem avaliação usava esses meses.
+- **Tabata Vieira**: atraso de 20/08 que o Axis apagou depois da carga de 08/09 — removido.
+- (Fluxo) o atraso de 01/10 da Barbara Rocha lançado em duas empresas: o da Certidaonet foi excluído no
+  Fluxo; o TalentCare recebeu sozinho (2 atrasos em outubro).
+- Conferido depois: nenhuma advertência sem atraso que a sustente, em nenhum mês de ninguém. Contra o Fluxo
+  só sobram os 110 dias da Imobiliária (Barbara, Fernando Silva, Renata Mendes) — certos AQUI; o histórico
+  do Axis dessa empresa é que não entrou no Fluxo.
+
 ## 2026-10-15 (2) — atraso de 04/09 da Juliana Fiel faltava na assiduidade
 
 A ficha dizia "1 atraso" em setembro e, ao lado, "advertência pelo 2º atraso do mês". O 1º (volta do almoço
