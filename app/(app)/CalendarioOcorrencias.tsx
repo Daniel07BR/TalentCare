@@ -47,6 +47,15 @@ export type DiaOcorrencia = {
   mais30?: number
 }
 
+/**
+ * Um dia MARCADO por um fato que não é atraso (15/10/2026, pedido do Daniel: "no calendário não está
+ * marcando a data que a pessoa levou a suspensão"). Hoje só a ficha manda, e só suspensão — de atraso
+ * ou da LGPD. ⚠️ A marca é um ANEL por cima da cor do dia, nunca troca a cor: o dia 04/09 da Juliana
+ * teve 37 min de atraso E uma suspensão da LGPD, e as duas coisas têm de continuar legíveis.
+ */
+export type MarcaDoDia = { day: string; rotulo: string }
+const COR_MARCA = 'var(--n-purple, #7c3aed)'
+
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 /** Segunda a domingo. */
 const DIAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
@@ -80,9 +89,11 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites, legenda = true,
+  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites, legenda = true, marcas = [],
 }: {
   dias: DiaOcorrencia[]
+  /** Dias com suspensão (ver `MarcaDoDia`). */
+  marcas?: MarcaDoDia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
   de: string
   ate: string
@@ -126,6 +137,9 @@ export default function CalendarioOcorrencias({
   if (!de || !ate || ate < de) return null
 
   const porIso = new Map(dias.map((d) => [d.day, d]))
+  const marcaPorIso = new Map<string, string[]>()
+  for (const x of marcas) marcaPorIso.set(x.day, [...(marcaPorIso.get(x.day) ?? []), x.rotulo])
+  const temMarca = marcas.some((x) => x.day >= de && x.day <= ate)
   const hoje = new Date().toISOString().slice(0, 10)
 
   const meses: string[] = []
@@ -196,13 +210,17 @@ export default function CalendarioOcorrencias({
 
                   const clicavel = !!onDia && lvl > 0 && !!oc
                   const marcado = clicavel && selecionado === iso
+                  const marca = foraDoPeriodo ? undefined : marcaPorIso.get(iso)
+                  const tituloFinal = marca ? `${titulo}${titulo ? ' · ' : `${brDia}: `}${marca.join(' · ')}` : titulo
                   return (
-                    <div key={iso} title={clicavel ? `${titulo} — clique para ver quem` : titulo}
+                    <div key={iso} title={clicavel ? `${tituloFinal} — clique para ver quem` : tituloFinal}
                       role={clicavel ? 'button' : undefined} tabIndex={clicavel ? 0 : undefined}
                       aria-pressed={clicavel ? marcado : undefined}
                       onClick={clicavel ? () => onDia!(iso) : undefined}
                       onKeyDown={clicavel ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDia!(iso) } } : undefined}
                       style={{
+                        position: 'relative',
+                        boxShadow: marca ? `inset 0 0 0 ${n === 1 ? 3 : 2}px ${COR_MARCA}` : undefined,
                         height: lado, display: 'grid', placeItems: 'center', borderRadius: n === 1 ? 5 : 3,
                         background: fundo,
                         cursor: clicavel ? 'pointer' : undefined,
@@ -212,6 +230,9 @@ export default function CalendarioOcorrencias({
                         fontSize: fonte, fontWeight: lvl > 0 ? 700 : 500,
                         color: cor, fontVariantNumeric: 'tabular-nums',
                       }}>
+                      {marca && (
+                        <span aria-hidden style={{ position: 'absolute', top: n === 1 ? 4 : 2, right: n === 1 ? 4 : 2, width: n === 1 ? 7 : 5, height: n === 1 ? 7 : 5, borderRadius: '50%', background: COR_MARCA }} />
+                      )}
                       {dia}
                       {/* No mês ampliado cabe o número que a cor só insinua, e
                           que é o que decide a conversa: os minutos na ficha da
@@ -231,7 +252,7 @@ export default function CalendarioOcorrencias({
       </div>
 
       {legenda && (
-        <LegendaOcorrencias escala={escala} paleta={paleta} limites={limites} style={{ marginTop: 12 }}
+        <LegendaOcorrencias escala={escala} paleta={paleta} limites={limites} suspensao={temMarca} style={{ marginTop: 12 }}
           semMedicao={!!((pontoAte && ate > pontoAte) || (pontoDesde && de < pontoDesde))} />
       )}
     </>
@@ -241,8 +262,10 @@ export default function CalendarioOcorrencias({
 /** A legenda do calendário, sozinha — para quem quer desenhá-la em outro lugar
  *  (a folha A4 põe ao lado do título). `semMedicao` é o único degrau que depende
  *  do período: só aparece quando há dia sem medição dentro dele. */
-export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, semMedicao = false, style }: {
+export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, semMedicao = false, suspensao = false, style }: {
   escala?: 'minutos' | 'pessoas'
+  /** Há dia com suspensão no período — só então o item entra na legenda. */
+  suspensao?: boolean
   paleta?: string[]
   limites?: [number, number, number]
   semMedicao?: boolean
@@ -261,6 +284,11 @@ export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, 
       {escala === 'pessoas' ? 'Ninguém atrasou' : 'Sem atraso'}
       {paleta.map((b, i) => <span key={i} style={{ width: 11, height: 11, borderRadius: 3, background: b }} />)}
       {escala === 'pessoas' ? `${limites?.[2] ?? 4} ou mais pessoas` : 'mais minutos'}
+      {suspensao && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 10 }}>
+          <span style={{ width: 11, height: 11, borderRadius: 3, boxShadow: `inset 0 0 0 2px ${COR_MARCA}` }} /> suspensão
+        </span>
+      )}
     </div>
   )
 }

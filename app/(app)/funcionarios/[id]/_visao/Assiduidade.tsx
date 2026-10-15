@@ -34,6 +34,8 @@ export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
     { n: f5.mais30, rot: 'acima de 30', cor: 'var(--n-red)' },
   ] : []
   const temSusp = m.disciplina.some((d) => ehSuspensao(d.tipo))
+  /* O DIA da suspensão no calendário (15/10/2026, pedido do Daniel) — de atraso e da LGPD. */
+  const marcas = m.disciplina.filter((d) => ehSuspensao(d.tipo)).map((d) => ({ day: d.data, rotulo: rotuloDisciplina(d.tipo) }))
 
   /* A legenda sobe para o título na folha; o degrau "sem medição" só entra se
      houver dia sem medição DENTRO do período — a mesma conta do calendário. */
@@ -43,12 +45,12 @@ export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
   return (
     <Cartao titulo="Assiduidade e disciplina" Icone={CalendarCheck} corIcone="var(--n-amber)"
       sub={impressao ? undefined : `Ponto eletrônico · ${periodo}`}
-      acao={impressao ? <LegendaOcorrencias semMedicao={semMedicao} style={{ marginTop: 2 }} /> : undefined}>
+      acao={impressao ? <LegendaOcorrencias semMedicao={semMedicao} suspensao={marcas.length > 0} style={{ marginTop: 2 }} /> : undefined}>
       <div className={f.assid}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', marginBottom: 2 }}>Mapa de ocorrências</div>
           {!impressao && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso.</div>}
-          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={pontoAte} pontoDesde={a.pontoDesde ?? null} legenda={!impressao} />
+          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={pontoAte} pontoDesde={a.pontoDesde ?? null} legenda={!impressao} marcas={marcas} />
         </div>
 
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
