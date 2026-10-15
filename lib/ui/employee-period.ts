@@ -79,7 +79,12 @@ export type EmployeeMetrics = {
     temFonte: boolean
     concluidos: number; abertos: number; desconsiderados: number; minutos: number
     porMes: { mes: string; concluidos: number; minutos: number }[]
-    porTarefa: { tarefa: string; n: number; minutos: number }[]
+    porTarefa: { tarefa: string; n: number; minutos: number; administrados?: number }[]
+    /** Funcionários administrados no período (régua `administradosDe`). Só faz sentido no Fluxo. */
+    administrados?: number
+    /** Folhas concluídas sem nº de funcionários no cadastro — somaram 0. */
+    folhasSemNumero?: number
+    origem?: 'fluxo' | 'planilha' | null
     /** Concluídos na planilha inteira, sem filtro de período. */
     totalConcluidos?: number
   }

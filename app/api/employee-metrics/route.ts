@@ -8,6 +8,7 @@ import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
+import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import type { Period } from '@/lib/mock/dashboard'
 
 // Métricas REAIS de UMA pessoa no PERÍODO (rádio, ClassRoom, WhatsApp), lidas dos
@@ -146,7 +147,7 @@ export async function GET(req: NextRequest) {
        não credita ninguém, então não pode aparecer na ficha de alguém. */
     prisma.servicoDepto.findMany({
       where: { personKey, dia: { gte: fromDay, lte: toDay } },
-      select: { dia: true, status: true, tarefa: true, minutos: true, loteId: true },
+      select: { dia: true, status: true, tarefa: true, minutos: true, loteId: true, funcionarios: true },
     }),
     /* ⚠️⚠️ O TOTAL da pessoa na planilha, sem filtro. Sem ele a ficha mostra o
        recorte de 30 dias e quem subiu 18 meses de arquivo pergunta onde foram
@@ -537,11 +538,18 @@ export async function GET(req: NextRequest) {
         a.concluidos++; a.minutos += x.minutos
         porMesMap.set(mes, a)
       }
-      const porTarefa = new Map<string, { n: number; minutos: number }>()
+      const porTarefa = new Map<string, { n: number; minutos: number; administrados: number }>()
+      /* ⚠️ FUNCIONÁRIOS ADMINISTRADOS na ficha (15/10/2026, pedido do Daniel): a MESMA régua da
+         janela do setor (`administradosDe`) — duas telas com réguas próprias dariam dois números
+         para a mesma pessoa no mesmo mês. `folhasSemNumero` vai junto pelo mesmo motivo de lá. */
+      let administrados = 0, folhasSemNumero = 0
       for (const x of concl) {
-        const a = porTarefa.get(x.tarefa) ?? { n: 0, minutos: 0 }
-        a.n++; a.minutos += x.minutos
+        const adm = administradosDe(x.tarefa, x.funcionarios)
+        const a = porTarefa.get(x.tarefa) ?? { n: 0, minutos: 0, administrados: 0 }
+        a.n++; a.minutos += x.minutos; a.administrados += adm
         porTarefa.set(x.tarefa, a)
+        administrados += adm
+        if (ehFolha(x.tarefa) && x.funcionarios == null) folhasSemNumero++
       }
       return {
         temFonte: servicos.length > 0 || servTotal > 0,
@@ -554,6 +562,8 @@ export async function GET(req: NextRequest) {
            todos os tipos — cortar somaria menos do que "Concluídos". A tela corta a da planilha. */
         porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).map(([tarefa, v]) => ({ tarefa, ...v })),
         origem,
+        administrados,
+        folhasSemNumero,
         /** Concluídos na planilha INTEIRA — o contexto que faz o recorte se ler. */
         totalConcluidos: servTotal,
       }

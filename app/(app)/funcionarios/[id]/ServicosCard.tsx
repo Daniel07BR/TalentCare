@@ -1,13 +1,17 @@
 'use client'
 import { FileSpreadsheet, Scale } from 'lucide-react'
-import { agruparIndicadores, NOME_INDICADORES } from '@/lib/servicos/indicadores'
+import { agruparIndicadores, ehFolha, NOME_INDICADORES, REGRA_ADMINISTRADOS } from '@/lib/servicos/indicadores'
 
 type Servicos = NonNullable<{
   temFonte: boolean
   concluidos: number; abertos: number; desconsiderados: number; minutos: number
   porMes: { mes: string; concluidos: number; minutos: number }[]
-  porTarefa: { tarefa: string; n: number; minutos: number }[]
+  porTarefa: { tarefa: string; n: number; minutos: number; administrados?: number }[]
   totalConcluidos?: number
+  /** Funcionários administrados no período — a régua do setor (`administradosDe`). Ausente em
+   *  resposta de antes de 15/10/2026: a tela então não mostra o número, em vez de mostrar 0. */
+  administrados?: number
+  folhasSemNumero?: number
   /** 'fluxo' = os indicadores do DP, que chegam sozinhos; 'planilha' = o setor sobe o arquivo */
   origem?: 'fluxo' | 'planilha' | null
 }>
@@ -203,22 +207,48 @@ function Num({ label, valor, cor }: { label: string; valor: string; cor?: string
  */
 function Totalizacao({ servicos, compacto }: { servicos: Servicos; compacto: boolean }) {
   const familias = agruparIndicadores(servicos.porTarefa)
+  /* ⚠️ FUNCIONÁRIOS ADMINISTRADOS (15/10/2026, pedido do Daniel): o mesmo número da janela do setor,
+     agora na ficha e na folha impressa. Folha = funcionários da empresa fechada; férias, rescisão e
+     admissão = 1 cada. O "func." da folha vai no bloco dela, porque é ali que o número cresce. */
+  const adm = servicos.administrados
+  const admFolha = servicos.porTarefa.filter((t) => ehFolha(t.tarefa)).reduce((a, t) => a + (t.administrados ?? 0), 0)
+  const semNumero = servicos.folhasSemNumero ?? 0
+  const grande = { fontSize: compacto ? 24 : 28, fontWeight: 700, letterSpacing: '-.8px' } as const
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: compacto ? 10 : 14 }}>
-        <span style={{ fontSize: compacto ? 24 : 28, fontWeight: 700, letterSpacing: '-.8px', color: 'var(--success)' }}>
-          {servicos.concluidos.toLocaleString('pt-BR')}
-        </span>
-        <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
-          {servicos.concluidos === 1 ? 'trabalho concluído' : 'trabalhos concluídos'} no período, em {familias.length} {familias.length === 1 ? 'assunto' : 'assuntos'}
+      <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: compacto ? 22 : 28, rowGap: 4, marginBottom: adm != null ? 2 : compacto ? 10 : 14 }}>
+        {adm != null && (
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ ...grande, color: 'var(--accent)' }}>{adm.toLocaleString('pt-BR')}</span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
+              {adm === 1 ? 'funcionário administrado' : 'funcionários administrados'}
+            </span>
+          </span>
+        )}
+        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ ...grande, color: 'var(--success)' }}>{servicos.concluidos.toLocaleString('pt-BR')}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
+            {servicos.concluidos === 1 ? 'trabalho concluído' : 'trabalhos concluídos'} no período, em {familias.length} {familias.length === 1 ? 'assunto' : 'assuntos'}
+          </span>
         </span>
       </div>
+      {adm != null && (
+        <div style={{ fontSize: compacto ? 9.5 : 11, color: 'var(--text-mute)', marginBottom: compacto ? 10 : 14, lineHeight: 1.5 }}>
+          Funcionários administrados — {REGRA_ADMINISTRADOS.charAt(0).toLowerCase() + REGRA_ADMINISTRADOS.slice(1)}
+          {semNumero > 0 && <> · {semNumero} {semNumero === 1 ? 'folha sem cadastro de funcionários não somou' : 'folhas sem cadastro de funcionários não somaram'}</>}
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill,minmax(${compacto ? 128 : 160}px,1fr))`, gap: compacto ? 8 : 10 }}>
         {familias.map((f) => (
           <div key={f.chave} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: compacto ? '8px 10px' : '10px 12px', borderLeft: '3px solid var(--chart-2)' }}>
             <div style={{ fontSize: compacto ? 10 : 11, color: 'var(--text-dim)', fontWeight: 600, marginBottom: 2 }}>{f.nome}</div>
             <div style={{ fontSize: compacto ? 18 : 21, fontWeight: 700, letterSpacing: '-.5px', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
               {f.total.toLocaleString('pt-BR')}
+              {f.chave === 'folha' && adm != null && admFolha > 0 && (
+                <span style={{ fontSize: compacto ? 10 : 11.5, fontWeight: 600, letterSpacing: 0, color: 'var(--accent)', marginLeft: 6 }}>
+                  {admFolha.toLocaleString('pt-BR')} func.
+                </span>
+              )}
             </div>
             {f.partes.length > 0 && (
               <div style={{ fontSize: compacto ? 9.5 : 10.5, color: 'var(--text-mute)', marginTop: 3, lineHeight: 1.45 }}>
