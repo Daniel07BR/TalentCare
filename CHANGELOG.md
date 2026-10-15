@@ -1,5 +1,16 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-15 (4) — Homologações nos Indicadores internos do DP
+
+O Fluxo passou a mandar o tipo **"Homologação"** (`talent_servicos.py`), com a régua da coluna nova do painel
+do DP: homologação marcada, com dia e hora já passados, fora "Não veio", a do cliente e a feita na empresa;
+crédito de quem ACOMPANHOU (sem ninguém escolhido, de quem assumiu o card); conta pela DATA.
+- `lib/servicos/indicadores.ts`: família **Homologações** depois de Rescisões — vira coluna na tabela do setor,
+  bloco na ficha e no PDF, e aparece no detalhe "Tipos de serviço". Não soma em funcionários administrados
+  (a rescisão já contou a pessoa).
+- Rodapés das réguas: "férias, admissões, rescisões e homologações pela data".
+- No catálogo de pontuação o tipo entra com 1 ponto até a liderança do DP definir o tempo médio.
+
 ## 2026-10-15 (3) — atrasos de outra pessoa na Bruna Cunha; atraso a mais da Tabata (dados)
 
 Achados ao comparar o histórico com a cópia do Axis no Fluxo; correção autorizada pelo Daniel. Backup
