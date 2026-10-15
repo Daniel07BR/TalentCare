@@ -1,5 +1,13 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-15 (2) — atraso de 04/09 da Juliana Fiel faltava na assiduidade
+
+A ficha dizia "1 atraso" em setembro e, ao lado, "advertência pelo 2º atraso do mês". O 1º (volta do almoço
+de 04/09, 37 min) foi lançado no Axis em 14/09, depois do import de 08/09; o import incremental de 01/10
+contou esse atraso para a advertência (ela lê o dump inteiro), mas só refez `assiduidade_daily` do corte em
+diante. Comparado com o histórico do Axis que o Fluxo guarda: era o único caso. Linha inserida à mão em
+`assiduidade_daily` (1 atraso, 37 min, faixa acima de 30).
+
 ## 2026-10-15 — FUNCIONÁRIOS ADMINISTRADOS na ficha e na folha impressa
 
 Pedido do Daniel: *"coloque nos indicadores internos dos funcionários e no relatório gerado a quantidade
