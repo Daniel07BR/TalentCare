@@ -1,5 +1,15 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-15 — FUNCIONÁRIOS ADMINISTRADOS na ficha e na folha impressa
+
+Pedido do Daniel: *"coloque nos indicadores internos dos funcionários e no relatório gerado a quantidade
+de funcionários administrados"*.
+- `/api/employee-metrics` lê `servico_depto.funcionarios` e devolve `servicos.administrados`,
+  `folhasSemNumero` e `administrados` por tipo — a MESMA régua da janela do setor (`administradosDe`).
+- `ServicosCard` (ficha e `FichaImpressa`): número em destaque ao lado de "trabalhos concluídos", a regra
+  escrita embaixo, quantas folhas não somaram por falta de cadastro, e "N func." no bloco Fechamento de folha.
+- Conferido: Juliana Fiel, set/2026 — 194 trabalhos, 1.179 funcionários administrados (3 folhas sem nº).
+
 ## 2026-10-14 (8) — FALTAS chegam do Fluxo (o cartão deixa de dizer "sem fonte")
 
 O DP passou a lançar falta no Fluxo (aba Faltas) e ela vem no MESMO envio do mês dos atrasos. Decisões do
