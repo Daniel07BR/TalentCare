@@ -8,6 +8,7 @@ import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
+import { atendimentoDaPessoa, ehRecepcao } from '@/lib/recepcao'
 import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, nexusUserId: true, name: true, departmentId: true },
+    select: { id: true, nexusUserId: true, name: true, departmentId: true, department: { select: { name: true } } },
   })
   if (!user) return NextResponse.json({ error: 'não encontrado' }, { status: 404 })
 
@@ -50,6 +51,9 @@ export async function GET(req: NextRequest) {
   const personKey = user.nexusUserId ?? id
   // as FALTAS lançadas pelo DP no Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre
   const faltasDoFluxo = await faltasNoPeriodo(prisma, fromDay, toDay, [personKey])
+  /* ATENDIMENTO DA RECEPÇÃO (16/10/2026): só aparece, fora da nota. Nulo para quem não é da
+     Recepção nem atendeu nela no período — o card some. Ver `lib/recepcao.ts`. */
+  const recepcao = await atendimentoDaPessoa(prisma, user.nexusUserId, ehRecepcao(user.department?.name), fromDay, toDay)
 
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
   const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
@@ -393,6 +397,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     period, fromDay, toDay,
+    recepcao,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: {

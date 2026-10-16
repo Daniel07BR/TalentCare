@@ -40,10 +40,17 @@ async function main() {
        (08/09/2026). `undefined` faz o Prisma não tocar na coluna. */
     const empresas = r.empresas == null ? undefined : Number(r.empresas) || 0
     const manuais = r.manuais == null ? undefined : Number(r.manuais) || 0
+    /* Os CONTATOS (16/10/2026, Atendimento da Recepção) — mesma regra do `undefined`. As linhas
+       antigas só ganham o número com `--tudo`; até lá ficam NULAS, que não é zero. */
+    const opc = (v) => (v == null ? undefined : Number(v) || 0)
+    const contatos = {
+      contatosEditados: opc(r.contatosEditados), contatosNovos: opc(r.contatosNovos),
+      contatosRemovidos: opc(r.contatosRemovidos), contatosEmpresas: opc(r.contatosEmpresas),
+    }
     await prisma.cideDaily.upsert({
       where: { nexusUserId_day: { nexusUserId: r.userId, day: r.day } },
-      create: { nexusUserId: r.userId, day: r.day, atividades, empresas: empresas ?? null, manuais: manuais ?? null },
-      update: { atividades, empresas, manuais },
+      create: { nexusUserId: r.userId, day: r.day, atividades, empresas: empresas ?? null, manuais: manuais ?? null, ...contatos },
+      update: { atividades, empresas, manuais, ...contatos },
     })
     synced++
   }

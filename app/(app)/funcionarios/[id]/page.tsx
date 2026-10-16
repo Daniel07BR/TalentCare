@@ -17,6 +17,7 @@ import { Cabecalho } from './_visao/Cabecalho'
 import { Indicadores } from './_visao/Indicadores'
 import { Sistemas } from './_visao/Sistemas'
 import { Assiduidade } from './_visao/Assiduidade'
+import { AtendimentoRecepcao } from './_visao/AtendimentoRecepcao'
 import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
@@ -95,6 +96,7 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
       <div className={f.corpo}>
         <div className={s.pilha}>
           <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} semPontuacao />
+          {m?.recepcao && <AtendimentoRecepcao r={m.recepcao} periodo={periodo} />}
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
         </div>

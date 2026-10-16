@@ -251,6 +251,16 @@ model CideDaily {
   empresas    Int?
   /** Alterações registradas deliberadamente (`origem = 'MANUAL'`). NULO idem. */
   manuais     Int?
+  /**
+   * CONTATOS das empresas (16/10/2026, o Atendimento da Recepção). Cada um é UM contato
+   * inteiro; o editado que não mudou nada fica de fora no próprio CIDE. NULO = linha
+   * gravada antes de o CIDE entregar estes campos — não é zero.
+   */
+  contatosEditados  Int? @map("contatos_editados")
+  contatosNovos     Int? @map("contatos_novos")
+  contatosRemovidos Int? @map("contatos_removidos")
+  /** Empresas distintas do dia com algum contato editado, novo ou removido. */
+  contatosEmpresas  Int? @map("contatos_empresas")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])
@@ -1492,4 +1502,47 @@ model AcessoriasDaily {
   @@id([nexusUserId, day])
   @@index([day])
   @@map("acessorias_daily")
+}
+
+// ATENDIMENTO DA RECEPÇÃO (16/10/2026) — o que cada pessoa fez na Recepção, por dia de
+// São Paulo, vindo da rota `talent-recepcao` do Fluxo (`run-recepcao-sync.mjs`).
+//
+// ⚠️⚠️ SÓ APARECE, NÃO PONTUA (pedido do Daniel): fica fora de `lib/servicos/atividades.ts`
+// e de `servico_depto`. Entrar na nota é uma decisão dele, depois de ver os números.
+// O crédito é o do Fluxo: recebida = quem atendeu; feita/não realizada = quem ligou;
+// visita = cada atendente; delivery = quem marcou Chegou; contato em lote = quem registrou.
+model RecepcaoDaily {
+  nexusUserId       String   @map("nexus_user_id")
+  day               String   @db.VarChar(10)
+  recebidas         Int      @default(0)
+  feitas            Int      @default(0)
+  naoRealizadas     Int      @default(0) @map("nao_realizadas")
+  /** Soma de pedido → resultado das FEITAS (média = seg ÷ n). */
+  esperaLigacaoSeg  Int      @default(0) @map("espera_ligacao_seg")
+  esperaLigacaoN    Int      @default(0) @map("espera_ligacao_n")
+  visitas           Int      @default(0)
+  deliveries        Int      @default(0)
+  esperaDeliverySeg Int      @default(0) @map("espera_delivery_seg")
+  esperaDeliveryN   Int      @default(0) @map("espera_delivery_n")
+  contatosEmLote    Int      @default(0) @map("contatos_em_lote")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@index([day])
+  @@map("recepcao_daily")
+}
+
+// O total da ÁREA Recepção por dia, contado por REGISTRO — uma visita com duas atendentes é
+// UMA aqui e uma para cada uma em `recepcao_daily`, por isso o total do setor NUNCA é a soma
+// das pessoas. Grupo 'total' (rótulo = o campo) e os recortes por setor: destinoLigacao
+// (para onde foram as recebidas), pedeLigacao, pedeDelivery, visitaPara.
+model RecepcaoAreaDaily {
+  day       String   @db.VarChar(10)
+  grupo     String   @db.VarChar(40)
+  rotulo    String   @db.VarChar(120)
+  n         Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([day, grupo, rotulo])
+  @@map("recepcao_area_daily")
 }

@@ -11,6 +11,8 @@ import { Escolaridade } from './_visao/Escolaridade'
 import { AtividadeDoPeriodo } from './_visao/AtividadeDoPeriodo'
 import { UltimasSaidas } from './_visao/UltimasSaidas'
 import { IndicadoresInternos } from './_visao/IndicadoresInternos'
+import { AtendimentoRecepcao } from './_visao/AtendimentoRecepcao'
+import { ehRecepcao } from '@/lib/recepcao-setor'
 import { RankingMes } from './_visao/RankingMes'
 import { WhatsappEChamados } from './_visao/WhatsappEChamados'
 import { Assiduidade } from './_visao/Assiduidade'
@@ -77,6 +79,8 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
         <Lideranca m={m} />
         <Indicadores m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>
+      {/* O ATENDIMENTO DA RECEPÇÃO (16/10/2026): só no setor Recepção, logo abaixo dos indicadores. */}
+      {ehRecepcao(m.setor.nome) && <AtendimentoRecepcao m={m} />}
       <div className={s.linha2}>
         <Escolaridade deptId={m.setor.id} abrir={detalhe.abrir} />
         {doFluxo ? (
