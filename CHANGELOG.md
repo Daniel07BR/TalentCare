@@ -1,5 +1,27 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-16 — Atendimento da Recepção no setor e na ficha (só aparece, não pontua)
+
+Pedido do Daniel: os indicadores da Recepção no TalentCare, na tela da Recepção e na de quem atende,
+"só aparecendo, sem entrar na nota".
+- **Fonte Fluxo** (`talent-recepcao`, rota nova no .70): ligações recebidas (crédito de quem atendeu),
+  feitas e não realizadas (de quem ligou, com a espera pedido → resultado), visitas (cada atendente),
+  delivery (quem marcou Chegou, com a espera) e contato em lote, por pessoa e dia; mais o total da ÁREA
+  por registro e os recortes por setor. Tabelas `recepcao_daily` e `recepcao_area_daily`
+  (`scripts/2026-10-16-recepcao-fonte.sql`), `run-recepcao-sync.mjs` troca a janela inteira (45 dias de
+  hora em hora, `:35`; `--completo` desde 22/09 às 03:50), com freio para resposta vazia.
+- **Fonte CIDE**: `atividade-daily` ganhou `contatosEditados/Novos/Removidos/Empresas` (o editado que não
+  mudou nada fica de fora lá). Colunas novas em `cide_daily`; `run-cide-sync.mjs --tudo` rodado para o passado.
+- **Setor** (`departamentos/[id]/_visao/AtendimentoRecepcao.tsx`, só na Recepção, logo abaixo dos
+  indicadores): os cinco números, "Quem fez" em barras de quatro cores com os contatos do CIDE à direita,
+  e para onde vão as ligações, quem pede à Recepção, para quem vêm as visitas.
+- **Ficha** (`funcionarios/[id]/_visao/AtendimentoRecepcao.tsx`, também no PDF): os cinco números da pessoa
+  e a fatia no setor. Vem em `/api/employee-metrics` (`recepcao`), nulo para quem não atende na Recepção.
+- ⚠️ O total do setor não é a soma das pessoas (visita com duas atendentes). Fora de
+  `lib/servicos/atividades.ts`: entrar na nota é decisão do Daniel.
+- Conferido 01–16/10 contra o Fluxo e o CIDE: setor 200 recebidas, 61 feitas, 13 não realizadas, 78 visitas,
+  40 deliveries, 881 contatos; Lívia 112/34/57/17 e 621 contatos; Larissa 86/27/37/23 e 260.
+
 ## 2026-10-15 (4) — Homologações nos Indicadores internos do DP
 
 O Fluxo passou a mandar o tipo **"Homologação"** (`talent_servicos.py`), com a régua da coluna nova do painel

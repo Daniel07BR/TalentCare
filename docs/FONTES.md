@@ -517,6 +517,19 @@ controle de atrasos do DP, e de hora em hora o mês corrente e o anterior. De 01
 `fluxo_disciplina_envio` (quem é medido e até quando). Ver `lib/fluxo-disciplina.ts` e, no Fluxo,
 `docs/NEXO-NO-FLUXO.md` §14.
 
+## ⚠️⚠️ Atendimento da Recepção: fonte que SÓ APARECE (16/10/2026)
+
+Fluxo `talent-recepcao` → `recepcao_daily` (pessoa × dia) + `recepcao_area_daily` (total da área por
+REGISTRO e recortes por setor), `run-recepcao-sync.mjs`; contatos do CIDE nas colunas `contatos_*` de
+`cide_daily`. Conta em `lib/recepcao.ts`, telas no setor Recepção e na ficha (e no PDF).
+- **Não pontua** (pedido do Daniel): nenhuma chave em `lib/servicos/atividades.ts`, nada em `servico_depto`.
+  Para entrar na nota, é o caminho do Acessórias — decisão dele.
+- **Troca a janela inteira**, em vez de upsert: a Recepção corrige o passado (desfaz contato em lote, apaga
+  visita duplicada), e o dia que ficou vazio ficaria com o número velho.
+- **O total do setor não é a soma das pessoas**: visita com duas atendentes conta uma vez na área e uma para
+  cada atendente. O total vem de `recepcao_area_daily`.
+- Consumidores fora da checklist: não está em `activityOf`, `score-metrics`, `frescor` nem no menu de sistemas.
+
 ## Como entra uma 9ª fonte
 
 1. Combine com o agente do sistema de origem o endpoint `<algo>-daily` e emita uma
