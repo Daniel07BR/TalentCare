@@ -14,7 +14,7 @@ pesquisa aqui no talent care" e "criar o campo com o resultado do teste de aten�
   com nível, % de acerto, ritmo, os números e o estilo — a régua do Fluxo, portada em `lib/testes/atencao.ts`.
   Também chega pelo vínculo do contratado no Fluxo.
 - Um código recarrega os três botões juntos (`_visao/testes/eventos.ts`).
-- Lançado o código do Yuri Santana (9EE2-…, 22/10): DISC Dominante, Influente… D25 I25 S19 C31, ISFP, atenção busca
+- Lançado o código do Yuri Santana (9EE2-…, 22/10): DISC Conforme (D25 I25 S19 C31), ISFP, atenção busca
   34/0/6 e conferência 30/0. O DISC de 22/09 ficou no histórico.
 
 ## 2026-10-22 — Personalidade na ficha e os testes da entrevista vindos do Fluxo
