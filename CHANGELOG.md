@@ -1,5 +1,24 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-22 — Personalidade na ficha e os testes da entrevista vindos do Fluxo
+
+Pedido do Daniel: "na entrevista a pessoa faz um teste de perfil, precisamos colocar no talent care assim como feito
+no disc um espaço para esse teste… deixe os campos para os encarregados preencherem" e, no Fluxo, vincular o candidato
+contratado ao funcionário "assim o resultado já alimenta o talent care automaticamente".
+- **Botão Personalidade** na ficha, ao lado do DISC (`app/(app)/_visao/personalidade/`): o tipo em quatro cores e o
+  nome da casa ("INFP · Idealista"). A janela traz o tipo, as forças, a régua de cada eixo e "no trabalho / atenção /
+  como lidar" — os textos são cópia de `personalidade-perfis.ts` do Fluxo (`lib/personalidade/perfis.ts`; mudou lá,
+  copie). **Mesma régua do DISC** (`podeVerDisc`), fora da nota e do PDF.
+- **Lançar à mão**: uma letra em cada par e a % dela (50 a 100). Aceita o teste da casa e o 16Personalities (que dá
+  qualquer número e o sufixo -A/-T, ignorado). Uma linha por aplicação, a anterior vai para o histórico.
+- **Vindo do Fluxo**: `POST /api/integrations/fluxo-testes` (chave `FLUXO_API_KEY`, a da disciplina). Um envio = o
+  estado inteiro da entrevista (`ref` = id dela, `pessoa` = id do Nexus ou nulo, DISC e personalidade). Troca as linhas
+  daquele `ref` (`fluxo_ref` em `disc_resultado` e `personalidade_resultado`); o lançado à mão nunca é tocado. Pessoa
+  que ainda não chegou pelo sync → 404 `pessoa_nao_encontrada`, e o Fluxo reenvia de hora em hora. A atenção não vem.
+- Schema aditivo: `scripts/2026-10-22-testes-do-candidato.sql` (aplicado com psql no .78).
+- Conferido: receptor (401 sem chave, `ref_invalido`, `pessoa_nao_encontrada`, desfazer ok) pela rede a partir do Fluxo;
+  gravação de DISC + personalidade com `fluxo_ref` numa transação desfeita (nada sobrou). Falta a conferência visual.
+
 ## 2026-10-16 — Atendimento da Recepção no setor e na ficha (só aparece, não pontua)
 
 Pedido do Daniel: os indicadores da Recepção no TalentCare, na tela da Recepção e na de quem atende,
