@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Pencil, Info, History, ArrowLeftRight } from 'lucide-react'
 import { diaBr } from '@/lib/disc/calculo'
 import { EIXOS, NAO_E, POLOS, TIPOS, type EixoDaPersonalidade, type LetraDaPersonalidade } from '@/lib/personalidade/perfis'
-import { COR_DO_EIXO, corDaLetra, linhaDaPersonalidade, tituloDoTipo, validarPersonalidade } from '@/lib/personalidade/calculo'
+import { COR_DO_EIXO, corDaLetra, linhaDaPersonalidade, soLetras, tituloDoTipo, validarPersonalidade } from '@/lib/personalidade/calculo'
 import type { PersonalidadeDaPessoa } from './usePersonalidade'
 import d from '../disc/disc.module.css'
 import p from './personalidade.module.css'
@@ -60,13 +60,14 @@ function Formulario({ pessoaId, inicial, onCancelar, onSalvo }: {
   pessoaId: string; inicial: { tipo: string; pct: number[] } | null; onCancelar: (() => void) | null; onSalvo: () => void
 }) {
   const [letras, setLetras] = useState<string[]>(inicial ? inicial.tipo.split('') : ['', '', '', ''])
-  const [pct, setPct] = useState<string[]>(inicial ? inicial.pct.map(String) : ['', '', '', ''])
+  const [pct, setPct] = useState<string[]>(inicial && !soLetras(inicial) ? inicial.pct.map(String) : ['', '', '', ''])
   const [dia, setDia] = useState(hojeSP())
   const [obs, setObs] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const tipo = letras.join('')
-  const prev = tipo.length === 4 && pct.every((x) => x.trim()) ? validarPersonalidade(tipo, pct) : null
+  const semPct = pct.every((x) => !x.trim())
+  const prev = tipo.length === 4 && (semPct || pct.every((x) => x.trim())) ? validarPersonalidade(tipo, pct) : null
 
   const salvar = async () => {
     if (tipo.length !== 4) { setErro('Escolha uma letra em cada um dos quatro pares.'); return }
@@ -93,8 +94,9 @@ function Formulario({ pessoaId, inicial, onCancelar, onSalvo }: {
       <div>
         <div style={{ fontSize: 15, fontWeight: 800 }}>{inicial ? 'Registrar nova aplicação' : 'Registrar o resultado da personalidade'}</div>
         <div style={{ fontSize: 12, color: 'var(--n-text-3)', marginTop: 3, lineHeight: 1.45 }}>
-          Em cada par, clique na letra que o teste deu e digite a porcentagem dela (50 a 100). Vale o teste da casa
-          ou o 16Personalities — do 16Personalities, ignore o -A / -T do fim. {inicial && 'O resultado anterior não se apaga: fica no histórico.'}
+          Em cada par, clique na letra que o teste deu. Se tiver a porcentagem, digite (50 a 100); se tiver só as
+          letras, deixe as quatro porcentagens em branco. Vale o teste da casa ou o 16Personalities — do 16Personalities,
+          ignore o -A / -T do fim. {inicial && 'O resultado anterior não se apaga: fica no histórico.'}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
@@ -116,7 +118,7 @@ function Formulario({ pessoaId, inicial, onCancelar, onSalvo }: {
                 })}
               </div>
               <input className={d.campo} type="number" inputMode="numeric" min={50} max={100} step={1} value={pct[i]}
-                placeholder="%" aria-label={`Porcentagem de ${eixo.nome}`}
+                placeholder="% (opcional)" aria-label={`Porcentagem de ${eixo.nome} (opcional)`}
                 onChange={(e) => setPct(pct.map((x, j) => (j === i ? e.target.value : x)))}
                 style={{ fontSize: 17, fontWeight: 800, textAlign: 'center' }} />
             </div>
@@ -231,9 +233,10 @@ export function JanelaPersonalidade({ dados, onFechar, onSalvo }: { dados: Perso
                   return (
                     <div key={eixo.chave} className={d.bloco} style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: `4px solid ${cor}` }}>
                       <div style={{ fontSize: 14, fontWeight: 700 }}>
-                        {eixo.nome}: <b style={{ color: cor }}>{atual.pct[i]}% {polo.nome}</b>
+                        {eixo.nome}: <b style={{ color: cor }}>{soLetras(atual) ? '' : `${atual.pct[i]}% `}{polo.nome}</b>
                       </div>
-                      <Regua eixo={eixo} letra={letra} pct={atual.pct[i]} />
+                      {/* só as letras: sem a % não há onde pôr o marcador — fica só o lado que venceu */}
+                      {!soLetras(atual) && <Regua eixo={eixo} letra={letra} pct={atual.pct[i]} />}
                       <div style={{ fontSize: 13, color: 'var(--n-text-2)', lineHeight: 1.5 }}>{polo.descricao}</div>
                       <div className={p.tres}>
                         <div><Titulo>No trabalho</Titulo><Lista itens={polo.noTrabalho} marca={cor} /></div>

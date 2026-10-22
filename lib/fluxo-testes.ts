@@ -25,8 +25,9 @@ import { validarPersonalidade } from './personalidade/calculo'
    pouco pode ainda não ter chegado ao TalentCare pelo sync do diretório:
    responde `pessoa_nao_encontrada` e o Fluxo reenvia de hora em hora.
 
-   ⚠️ A atenção (busca de números e conferência) NÃO vem: é prova de seleção,
-   e o TalentCare não tem onde lê-la. Fica no relatório da entrevista.
+   ATENÇÃO (busca de números e conferência): vem desde a 2ª entrega de 22/10/2026,
+   quando o TalentCare ganhou onde lê-la (`atencao_resultado`). Os números crus;
+   o nível sai na leitura, com a régua do Fluxo (`lib/testes/atencao.ts`).
    ============================================================ */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -38,6 +39,10 @@ export type EnvioDosTestes = {
   pessoa?: string | null
   disc?: (TesteDoFluxo & { D?: number; I?: number; S?: number; C?: number }) | null
   personalidade?: (TesteDoFluxo & { tipo?: string; pct?: number[] }) | null
+  atencao?: (TesteDoFluxo & {
+    busca?: { acertos?: number; erros?: number; omissoes?: number; percorrido?: number }
+    conferencia?: { acertos?: number; erros?: number }
+  }) | null
   setor?: string
   vinculadoPor?: string
 }
@@ -61,6 +66,16 @@ export async function gravarTestesDoFluxo(prisma: PrismaClient, e: EnvioDosTeste
   const pers = e.personalidade ? validarPersonalidade(e.personalidade.tipo, e.personalidade.pct) : null
   if (pers && !pers.ok) return { ok: false as const, erro: `personalidade: ${pers.erro}`, status: 400 }
 
+  const inteiro = (x: unknown) => (Number.isInteger(x) && (x as number) >= 0 && (x as number) <= 200 ? (x as number) : null)
+  const at = e.atencao
+    ? {
+      buscaAcertos: inteiro(e.atencao.busca?.acertos), buscaErros: inteiro(e.atencao.busca?.erros),
+      buscaOmissoes: inteiro(e.atencao.busca?.omissoes), buscaPercorrido: inteiro(e.atencao.busca?.percorrido),
+      confAcertos: inteiro(e.atencao.conferencia?.acertos), confErros: inteiro(e.atencao.conferencia?.erros),
+    }
+    : null
+  if (at && Object.values(at).some((x) => x === null)) return { ok: false as const, erro: 'atencao: números inválidos', status: 400 }
+
   const user = pessoa
     ? await prisma.user.findUnique({ where: { nexusUserId: pessoa }, select: { id: true, name: true } })
     : null
@@ -75,7 +90,17 @@ export async function gravarTestesDoFluxo(prisma: PrismaClient, e: EnvioDosTeste
   await prisma.$transaction(async (tx) => {
     await tx.discResultado.deleteMany({ where: { fluxoRef: ref } })
     await tx.personalidadeResultado.deleteMany({ where: { fluxoRef: ref } })
+    await tx.atencaoResultado.deleteMany({ where: { fluxoRef: ref } })
     if (!user) return
+    if (at && e.atencao) {
+      await tx.atencaoResultado.create({
+        data: {
+          userId: user.id, ...(at as Record<keyof typeof at, number>),
+          aplicadoEm: diaSP(e.atencao.em) ?? hoje, observacao, registradoPorId: 'fluxo', registradoPorNome: quem(e.atencao),
+          fluxoRef: ref,
+        },
+      })
+    }
     if (disc?.ok && e.disc) {
       await tx.discResultado.create({
         data: {
@@ -98,6 +123,6 @@ export async function gravarTestesDoFluxo(prisma: PrismaClient, e: EnvioDosTeste
   return {
     ok: true as const, status: 200,
     pessoa: user ? { id: user.id, nome: user.name } : null,
-    disc: !!(user && disc?.ok), personalidade: !!(user && pers?.ok),
+    disc: !!(user && disc?.ok), personalidade: !!(user && pers?.ok), atencao: !!(user && at),
   }
 }

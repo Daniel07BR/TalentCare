@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { useAoMudaremTestes } from '../testes/eventos'
 import type { Notas } from '@/lib/disc/calculo'
 
 export type LinhaDisc = {
@@ -37,5 +38,7 @@ export function useDisc(id: string) {
     return () => { vivo = false }
   }, [id])
   useEffect(() => carregar(), [carregar])
+  // o código dos testes grava DISC, personalidade e atenção juntos: os três botões recarregam
+  useAoMudaremTestes(carregar)
   return { dados, estado, recarregar: carregar }
 }

@@ -1373,10 +1373,13 @@ model DiscResultado {
   /// ao funcionário contratado e o Fluxo manda o teste. NULO = lançado aqui, à mão. ⚠️ É a idempotência: o Fluxo
   /// reenvia, e o TalentCare troca as linhas daquela entrevista (`lib/fluxo-testes.ts`).
   fluxoRef          String?  @map("fluxo_ref") @db.VarChar(64)
+  /// O código dos testes que gravou a linha ("9EE2-Q9R7-0YJE-1Y5Q"), lançado na ficha. NULO = à mão ou do Fluxo.
+  codigo            String?  @db.VarChar(19)
   criadoEm          DateTime @default(now()) @map("criado_em")
 
   @@index([userId, criadoEm])
   @@index([fluxoRef])
+  @@index([codigo])
   @@map("disc_resultado")
 }
 
@@ -1393,10 +1396,39 @@ model PersonalidadeResultado {
   userId            String   @map("user_id")
   /// As quatro letras, uma de cada par: E/I, S/N, T/F, J/P (ex.: INFP).
   tipo              String   @db.VarChar(4)
-  /// A % de CADA LETRA do tipo, na ordem (50 a 100: a letra que venceu o par).
+  /// A % de CADA LETRA do tipo, na ordem (50 a 100: a letra que venceu o par). VAZIO = só as letras (o gestor
+  /// tinha o tipo, sem as porcentagens — pedido do Daniel, 22/10/2026).
   pct               Int[]
   /// Dia da aplicação, `AAAA-MM-DD` (texto, como o DISC).
   aplicadoEm        String   @map("aplicado_em") @db.VarChar(10)
+  observacao        String?
+  registradoPorId   String   @map("registrado_por_id")
+  registradoPorNome String   @map("registrado_por_nome")
+  fluxoRef          String?  @map("fluxo_ref") @db.VarChar(64)
+  codigo            String?  @db.VarChar(19)
+  criadoEm          DateTime @default(now()) @map("criado_em")
+
+  @@index([userId, criadoEm])
+  @@index([fluxoRef])
+  @@map("personalidade_resultado")
+}
+
+// ============================================================
+// ATENÇÃO (22/10/2026) — as duas provas práticas da página do teste (busca de números e conferência). Chega SÓ pelo
+// código (`lib/testes/codigo.ts`), lançado na ficha ou vindo da entrevista no Fluxo. Os números crus; o nível, a % e o
+// estilo saem na leitura (`lib/testes/atencao.ts`, a régua do Fluxo). Mesma régua de acesso do DISC.
+// ============================================================
+model AtencaoResultado {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  buscaAcertos      Int      @map("busca_acertos")
+  buscaErros        Int      @map("busca_erros")
+  buscaOmissoes     Int      @map("busca_omissoes")
+  buscaPercorrido   Int      @map("busca_percorrido")
+  confAcertos       Int      @map("conf_acertos")
+  confErros         Int      @map("conf_erros")
+  aplicadoEm        String   @map("aplicado_em") @db.VarChar(10)
+  codigo            String?  @db.VarChar(19)
   observacao        String?
   registradoPorId   String   @map("registrado_por_id")
   registradoPorNome String   @map("registrado_por_nome")
@@ -1405,7 +1437,7 @@ model PersonalidadeResultado {
 
   @@index([userId, criadoEm])
   @@index([fluxoRef])
-  @@map("personalidade_resultado")
+  @@map("atencao_resultado")
 }
 
 // ============================================================

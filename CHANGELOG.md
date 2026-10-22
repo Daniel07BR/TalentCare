@@ -1,5 +1,22 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-22 (2) — Código dos testes na ficha, Atenção e personalidade só com as letras
+
+Pedidos do Daniel: "deixe um espaço caso os gestores só tenham as letras", "como o gestor inserir o codigo vindo da
+pesquisa aqui no talent care" e "criar o campo com o resultado do teste de atenção".
+- **Personalidade só com as letras**: as quatro % em branco salvam só o tipo (`pct` vazio); metade preenchida é recusada
+  (falta um número). A janela mostra o lado que venceu sem a régua.
+- **Código dos testes** (botão na ficha, para quem lança o DISC): `lib/testes/codigo.ts` é o porte de
+  `codigo_dos_testes.py` do Fluxo (versões 1 e 2; ensaio `scripts/ensaio-codigo-dos-testes.ts` confere contra códigos
+  decifrados lá). Conferir mostra o resultado, Salvar grava DISC + personalidade + atenção de uma vez
+  (`/api/testes/codigo`, coluna `codigo`). O mesmo código não entra duas vezes nem em outra pessoa.
+- **Atenção** (`atencao_resultado`, `/api/atencao`, botão Atenção com o nível geral): busca de números e conferência
+  com nível, % de acerto, ritmo, os números e o estilo — a régua do Fluxo, portada em `lib/testes/atencao.ts`.
+  Também chega pelo vínculo do contratado no Fluxo.
+- Um código recarrega os três botões juntos (`_visao/testes/eventos.ts`).
+- Lançado o código do Yuri Santana (9EE2-…, 22/10): DISC Dominante, Influente… D25 I25 S19 C31, ISFP, atenção busca
+  34/0/6 e conferência 30/0. O DISC de 22/09 ficou no histórico.
+
 ## 2026-10-22 — Personalidade na ficha e os testes da entrevista vindos do Fluxo
 
 Pedido do Daniel: "na entrevista a pessoa faz um teste de perfil, precisamos colocar no talent care assim como feito

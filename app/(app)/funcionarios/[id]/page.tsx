@@ -23,6 +23,7 @@ import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
 import { BotaoDisc } from '../../_visao/disc/BotaoDisc'
 import { BotaoPersonalidade } from '../../_visao/personalidade/BotaoPersonalidade'
+import { BotaoTestes } from '../../_visao/testes/BotaoTestes'
 
 /* ============================================================
    A FICHA DA PESSOA — no padrão novo (o do relatório do setor e do painel).
@@ -81,6 +82,8 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
           <BotaoDisc pessoaId={vm.id} />
           {/* A PERSONALIDADE (22/10/2026), o irmão do DISC: mesma régua, também fora do PDF. */}
           <BotaoPersonalidade pessoaId={vm.id} />
+          {/* a ATENÇÃO e o CÓDIGO DOS TESTES (22/10/2026): o código grava os três testes de uma vez */}
+          <BotaoTestes pessoaId={vm.id} />
           {/* ⚠️ Só habilita quando os dados do período chegaram: um PDF gerado antes
              sairia sem os números — e papel não recarrega. */}
           <button type="button" onClick={gerarPdf} disabled={!m}

@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { useAoMudaremTestes } from '../testes/eventos'
 
 export type LinhaPersonalidade = {
   id: string; tipo: string; pct: number[]
@@ -32,5 +33,7 @@ export function usePersonalidade(id: string) {
     return () => { vivo = false }
   }, [id])
   useEffect(() => carregar(), [carregar])
+  // o código dos testes grava DISC, personalidade e atenção juntos: os três botões recarregam
+  useAoMudaremTestes(carregar)
   return { dados, estado, recarregar: carregar }
 }
