@@ -22,6 +22,7 @@ import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
 import { BotaoDisc } from '../../_visao/disc/BotaoDisc'
+import { BotaoPersonalidade } from '../../_visao/personalidade/BotaoPersonalidade'
 
 /* ============================================================
    A FICHA DA PESSOA — no padrão novo (o do relatório do setor e do painel).
@@ -78,6 +79,8 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
           {/* ⚠️⚠️ O DISC mora na TELA e fica fora do PDF (pedido do dono, 22/09/2026).
               O botão some sozinho para quem não é da régua: a rota responde 403. */}
           <BotaoDisc pessoaId={vm.id} />
+          {/* A PERSONALIDADE (22/10/2026), o irmão do DISC: mesma régua, também fora do PDF. */}
+          <BotaoPersonalidade pessoaId={vm.id} />
           {/* ⚠️ Só habilita quando os dados do período chegaram: um PDF gerado antes
              sairia sem os números — e papel não recarrega. */}
           <button type="button" onClick={gerarPdf} disabled={!m}

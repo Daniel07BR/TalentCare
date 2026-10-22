@@ -1369,10 +1369,43 @@ model DiscResultado {
   registradoPorId   String   @map("registrado_por_id")
   /// O nome no instante do registro — a pessoa pode sair e o rastro fica.
   registradoPorNome String   @map("registrado_por_nome")
+  /// O id da entrevista de emprego no FLUXO de onde o resultado veio (22/10/2026): a Recepção vincula o candidato
+  /// ao funcionário contratado e o Fluxo manda o teste. NULO = lançado aqui, à mão. ⚠️ É a idempotência: o Fluxo
+  /// reenvia, e o TalentCare troca as linhas daquela entrevista (`lib/fluxo-testes.ts`).
+  fluxoRef          String?  @map("fluxo_ref") @db.VarChar(64)
   criadoEm          DateTime @default(now()) @map("criado_em")
 
   @@index([userId, criadoEm])
+  @@index([fluxoRef])
   @@map("disc_resultado")
+}
+
+// ============================================================
+// PERSONALIDADE (22/10/2026) — o teste de perfil no modelo dos 16 tipos, ao lado do DISC.
+//
+// Pedido do Daniel: "na entrevista a pessoa faz um teste de perfil, precisamos colocar no talent care assim como
+// feito no disc um espaço para esse teste… deixe os campos para os encarregados preencherem os testes das pessoas
+// que eles já tem". Mesma forma e mesma régua do DISC (`lib/disc/regua.ts`): uma linha POR APLICAÇÃO, a vigente é
+// a mais recente. Entra à mão (ficha) ou pelo Fluxo (`fluxoRef`).
+// ============================================================
+model PersonalidadeResultado {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  /// As quatro letras, uma de cada par: E/I, S/N, T/F, J/P (ex.: INFP).
+  tipo              String   @db.VarChar(4)
+  /// A % de CADA LETRA do tipo, na ordem (50 a 100: a letra que venceu o par).
+  pct               Int[]
+  /// Dia da aplicação, `AAAA-MM-DD` (texto, como o DISC).
+  aplicadoEm        String   @map("aplicado_em") @db.VarChar(10)
+  observacao        String?
+  registradoPorId   String   @map("registrado_por_id")
+  registradoPorNome String   @map("registrado_por_nome")
+  fluxoRef          String?  @map("fluxo_ref") @db.VarChar(64)
+  criadoEm          DateTime @default(now()) @map("criado_em")
+
+  @@index([userId, criadoEm])
+  @@index([fluxoRef])
+  @@map("personalidade_resultado")
 }
 
 // ============================================================
