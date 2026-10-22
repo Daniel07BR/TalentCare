@@ -1,0 +1,2470 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Testes do candidato · Grupo Itamarathy</title>
+<!--
+  TESTES DO CANDIDATO NA ENTREVISTA — Grupo Itamarathy (21/10/2026): DISC + personalidade + atenção.
+
+  Uma página só, sem internet: roda no computador do candidato, fora da rede. A pessoa responde
+  a parte 1 (DISC, 10 telas) e a parte 2 (personalidade, 8 telas de 5 frases), vê o resultado, e
+  quem conduz a entrevista lança os números no Fluxo (Recepção → Entrevistas → cartão do
+  candidato → Lançar testes). Nada sai deste computador.
+
+  PARTE 2 — PERSONALIDADE (pedido do Daniel, 21/10/2026: o escritório mandava o candidato ao
+  16Personalities e imprimia o resultado). ⚠️⚠️ É um teste DA CASA no modelo dos 16 tipos (as
+  quatro preferências de Jung: E/I, S/N, T/F, J/P), com frases e textos escritos do zero — as
+  perguntas, os nomes dos tipos e os textos do 16Personalities são da NERIS Analytics e não podem
+  ser copiados. O resultado pode não coincidir com o do site. 40 frases, 10 por eixo (5 para
+  cada lado), de -2 a +2; a % do lado que venceu = 50 + |soma| × 2,5; empate vai para I, N, F, P.
+  Os dados estão em `personalidade.json` (ferramentas/testes-do-candidato no Fluxo).
+
+  PARTES 3 E 4 — ATENÇÃO (pedido do Daniel, 21/10/2026: o escritório aplicava no papel o Teste AC, da Vetor,
+  e o DP corrigia à mão). ⚠️⚠️ NÃO é o AC: aquele é teste psicológico protegido (direito autoral da Vetor e uso
+  de psicólogo, CFP). Estas são PROVAS PRÁTICAS DA CASA, com cronômetro, que passam sozinhas para a próxima:
+  - Parte 3, busca de números (3 min): grade de 180 números de 2 dígitos parecidos (40 alvos, iguais aos 3
+    modelos); a pessoa clica nos alvos. Acertos, erros (marcou o que não era), omissões (alvo que ficou para
+    trás no trecho percorrido) e quanto percorreu. "Terminei" encerra antes do tempo (aí a grade toda conta).
+  - Parte 4, conferência (2 min): 40 pares (CNPJ, valor, data, nome, NF; 20 iguais e 20 com uma diferença
+    sutil), um por vez; "Iguais" ou "Diferentes" (teclas ← e →). Acertos e erros.
+  O candidato NÃO vê a pontuação dessas partes (só "concluídas"): o nível vai à chefia, no Fluxo, pelo código.
+  Grade e pares são sorteados por candidato e guardados no estado: o cronômetro conta pelo relógio (fechar a
+  página não para o tempo; reabrir depois do fim encerra a prova com o que foi feito).
+
+  PARTE 1 — DISC:
+
+  - O método e as 10 linhas de palavras são os do teste DISC da IN-Formação (a folha da
+    consultora): em cada tela, 4 grupos de 3 palavras, um por perfil; a pessoa ordena do que
+    mais combina (4) ao que menos combina (1). 10 telas × 10 pontos = 100: a nota já é a %.
+  - A posição dos grupos é sorteada por tela, e nenhum perfil repete a posição da tela anterior.
+  - Os textos dos perfis são a versão do TalentCare (`lib/disc/perfis.ts`), a mesma que a
+    chefia lê na ficha do funcionário e que o Fluxo mostra na entrevista.
+  - ⚠️ O CANDIDATO SÓ LÊ O QUE É BOM (Daniel, 21/10/2026: "só apresente características boas, nada
+    que desabone, para ele não pensar que o teste prejudica ele em algo, todos os perfis são bons").
+    Nada de "pontos de atenção", nem a frase "rende mais quando…": o lado de cuidado fica para a
+    chefia, no Fluxo. O recorte é feito ao montar a página (`montar.py`).
+  - ⚠️⚠️ O FIM É UM CÓDIGO (Daniel, 21/10/2026: "o candidato não terá o sentimento da recepcionista
+    vendo o resultado dele"): o candidato lê o resultado e clica em "Concluir"; a tela troca para um
+    agradecimento com um código de 9 letras e números (`codigoDosTestes`), que ele passa à Recepção. No
+    Fluxo, "Lançar testes" lê o código e grava o DISC e a personalidade (`codigo_dos_testes.py` faz a
+    volta). É EMBARALHAMENTO com chave fixa, não criptografia forte: mudou a conta aqui, mude lá.
+  - ⚠️ O CANDIDATO NÃO APAGA o teste (Daniel: "a recepcionista precisa pegar o resultado para
+    digitar no Fluxo"). Apagar — e começar outro candidato — só pelo "Iniciar novamente", com a SENHA
+    da Recepção (1234, a pedido do Daniel; está também no "Como usar" do Fluxo). Enquanto houver
+    um teste guardado, a tela inicial não deixa começar outro.
+  - O CÓDIGO é a VERSÃO 2 (16 caracteres, os 4 testes; BigInt): a versão 1 (9 caracteres) era só DISC +
+    personalidade. Os tamanhos da grade e da conferência são da versão — mudou a prova, suba a versão.
+  - LGPD: o estado fica no localStorage deste computador e some quando a Recepção apaga, ou
+    sozinho 24 horas depois.
+-->
+<style>
+:root{
+  color-scheme:light dark;
+  --fundo:#f5f4f0; --papel:#fff; --papel-2:#f1efe9; --tinta:#1b2236; --suave:#535a6e; --fraco:#81879a; --linha:#e3dfd5;
+  --marca:#0a2766; --marca-tinta:#fff; --marca-suave:#e9eefb; --ouro:#f39a12;
+  --n4:#0a2766; --n3:#34539a; --n2:#7086bc; --n1:#a9b3cc; --n4-fundo:#f2f5fc; --n1-fundo:#fafaf7;
+  --D:#cc0000; --I:#ffc824; --S:#61a25c; --C:#459ad8;
+  --D-tinta:#fff; --I-tinta:#3a2c00; --S-tinta:#0c2a0f; --C-tinta:#04223a;
+  --D-texto:#b00000; --I-texto:#9a6b00; --S-texto:#3b7d37; --C-texto:#1f73b3;
+  --D-suave:#fbe5e5; --I-suave:#fff5d6; --S-suave:#e8f3e7; --C-suave:#e5f0fa;
+  --recepcao:#7c3aed; --recepcao-suave:#f3edff;
+  --sombra:0 1px 2px rgba(16,24,40,.05),0 10px 28px -14px rgba(16,24,40,.22);
+  --raio:18px;
+  --fonte:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --fundo:#0f1218; --papel:#171b24; --papel-2:#1f2430; --tinta:#eef0f5; --suave:#b3b9c8; --fraco:#7d8496; --linha:#2b3140;
+    --marca:#9db8ff; --marca-tinta:#0b1636; --marca-suave:#1d2640;
+    --n4:#9db8ff; --n3:#7c98d8; --n2:#5f76aa; --n1:#48546e; --n4-fundo:#1b2236; --n1-fundo:#191d27;
+    --D-texto:#ff7b7b; --I-texto:#ffd45a; --S-texto:#8fd489; --C-texto:#84c2f2;
+    --D-suave:#3a1717; --I-suave:#3a3214; --S-suave:#1b2e1b; --C-suave:#16283a;
+    --recepcao:#b794ff; --recepcao-suave:#261d3d;
+    --sombra:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--fundo);color:var(--tinta);font:16px/1.5 var(--fonte);min-height:100vh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.tela{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+.tela.larga{max-width:1100px}
+.topo{display:flex;align-items:center;gap:10px;color:var(--suave);font-size:13px;font-weight:600;letter-spacing:.02em}
+.topo .ponto{width:8px;height:8px;border-radius:50%;background:var(--ouro)}
+.selo{margin-left:auto;padding:3px 10px;border-radius:99px;background:var(--marca-suave);color:var(--marca);font-size:12px;font-weight:700}
+
+/* ── início ── */
+.letras{display:flex;gap:8px;margin:28px 0 10px}
+.letras span{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:20px}
+.l-D{background:var(--D);color:var(--D-tinta)} .l-I{background:var(--I);color:var(--I-tinta)}
+.l-S{background:var(--S);color:var(--S-tinta)} .l-C{background:var(--C);color:var(--C-tinta)}
+h1{font-size:clamp(30px,6vw,44px);line-height:1.1;margin:8px 0 6px;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--marca)}
+.sub{color:var(--suave);font-size:17px;margin:0 0 22px;max-width:56ch}
+.cartao{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:var(--sombra);padding:20px}
+.passos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.passos li{display:flex;gap:12px;align-items:flex-start}
+.passos b.num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--marca);color:var(--marca-tinta);display:grid;place-items:center;font-size:14px}
+.form{display:grid;gap:14px;margin-top:18px}
+label.campo{display:grid;gap:6px;font-weight:600;font-size:14px;color:var(--suave)}
+input[type=text],input[type=password]{font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--linha);background:var(--papel);color:var(--tinta);min-height:50px;width:100%}
+input[type=text]:focus,input[type=password]:focus{outline:none;border-color:var(--marca)}
+.pe{margin:28px 0 0;text-align:center}
+.link-recepcao{background:none;border:0;color:var(--fraco);font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 12px}
+.concordo{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--tinta);cursor:pointer;padding:12px;border-radius:12px;background:var(--papel-2)}
+.concordo input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--marca)}
+.nota{font-size:13px;color:var(--fraco);margin:0}
+.erro{color:var(--D-texto);font-size:14px;font-weight:600;margin:0}
+.botao{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:14px;border:0;
+  background:var(--marca);color:var(--marca-tinta);font-weight:700;font-size:17px;cursor:pointer;transition:transform .12s ease,opacity .12s ease}
+.botao:hover{transform:translateY(-1px)}
+.botao:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.botao.leve{background:var(--papel-2);color:var(--tinta);border:1px solid var(--linha)}
+.botao.perigo{background:var(--D);color:#fff}
+.botao.pulsa:not(:disabled){animation:pulsa 1.6s ease-in-out infinite}
+@keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(10,39,102,.35)}50%{box-shadow:0 0 0 8px rgba(10,39,102,0)}}
+.retomar{display:grid;gap:12px;margin-bottom:16px;border-left:5px solid var(--ouro)}
+.retomar .acoes{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ── pergunta ── */
+.barra{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.voltar{width:48px;height:48px;flex:none;border-radius:14px;border:1px solid var(--linha);background:var(--papel);font-size:24px;cursor:pointer;line-height:1}
+.trilho{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.trilho i{height:8px;border-radius:99px;background:var(--linha)}
+.trilho i.feito{background:var(--marca)}
+.trilho i.atual{background:var(--ouro);animation:brilha 1.2s ease-in-out infinite}
+@keyframes brilha{50%{opacity:.45}}
+.contador{font-weight:800;font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.pergunta h2{font-size:clamp(20px,3.6vw,26px);line-height:1.25;margin:0 0 10px;letter-spacing:-.01em}
+.pergunta h2 em{font-style:normal;color:var(--marca)}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 16px;padding:0;list-style:none;font-size:13px;color:var(--suave)}
+.legenda li{display:inline-flex;align-items:center;gap:6px}
+.legenda b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px}
+.grupos{display:grid;gap:12px}
+.grupo{display:flex;align-items:center;gap:14px;width:100%;min-height:84px;text-align:left;padding:14px 16px;border-radius:20px;
+  border:2px solid var(--linha);background:var(--papel);cursor:pointer;box-shadow:var(--sombra);
+  transition:border-color .15s ease,background .15s ease,transform .22s ease,opacity .22s ease}
+.grupo:hover{border-color:var(--n2)}
+.grupo:focus-visible{outline:3px solid var(--ouro);outline-offset:2px}
+.palavras{flex:1;display:flex;flex-wrap:wrap;gap:4px 18px}
+.palavra{display:flex;flex-direction:column;min-width:0}
+.palavra b{font-size:18px;line-height:1.25}
+.palavra small{font-size:12.5px;color:var(--fraco);line-height:1.3;max-width:30ch}
+.circulo{flex:none;width:52px;height:52px;border-radius:50%;border:2.5px dashed var(--linha);display:grid;place-items:center;font-size:24px;font-weight:800;color:#fff}
+.grupo[data-nota="4"]{border-color:var(--n4);background:var(--n4-fundo)} .grupo[data-nota="4"] .circulo{background:var(--n4);border:0}
+.grupo[data-nota="3"]{border-color:var(--n3)} .grupo[data-nota="3"] .circulo{background:var(--n3);border:0}
+.grupo[data-nota="2"]{border-color:var(--n2)} .grupo[data-nota="2"] .circulo{background:var(--n2);border:0}
+.grupo[data-nota="1"]{border-color:var(--n1);background:var(--n1-fundo)} .grupo[data-nota="1"] .circulo{background:var(--n1);border:0}
+@media (prefers-color-scheme:dark){.grupo[data-nota] .circulo{color:#0b1636}}
+.circulo.estoura{animation:estoura .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes estoura{from{transform:scale(.3)}to{transform:scale(1)}}
+.grupos.sai .grupo{opacity:0;transform:translateX(-40px)}
+.grupos.sai.volta .grupo{transform:translateX(40px)}
+.grupos.entra .grupo{animation:entra .32s ease both}
+.grupos.entra.volta .grupo{animation-name:entraVolta}
+.grupos.entra .grupo:nth-child(2){animation-delay:.06s}.grupos.entra .grupo:nth-child(3){animation-delay:.12s}.grupos.entra .grupo:nth-child(4){animation-delay:.18s}
+@keyframes entra{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes entraVolta{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+.rodape{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+.limpar{min-height:48px;padding:0 14px;border-radius:12px;border:0;background:none;color:var(--suave);font-weight:600;cursor:pointer;text-decoration:underline}
+.so-leitor{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── calculando ── */
+.calculando{min-height:70vh;display:grid;place-items:center;text-align:center}
+.bolinhas{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.bolinhas i{width:18px;height:18px;border-radius:50%;animation:pula 1s ease-in-out infinite}
+.bolinhas i:nth-child(1){background:var(--D)}.bolinhas i:nth-child(2){background:var(--I);animation-delay:.12s}
+.bolinhas i:nth-child(3){background:var(--S);animation-delay:.24s}.bolinhas i:nth-child(4){background:var(--C);animation-delay:.36s}
+@keyframes pula{50%{transform:translateY(-14px)}}
+
+/* ── resultado ── */
+.resultado{display:grid;gap:18px;margin-top:16px}
+.destaque{display:grid;gap:18px;align-items:center}
+@media (min-width:600px){.destaque{grid-template-columns:170px minmax(0,1fr)}}
+.rosca{position:relative;width:170px;height:170px;margin:0 auto}
+.rosca svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rosca circle{fill:none;stroke-width:18}
+.rosca .meio{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.rosca .meio b{font-size:34px;line-height:1}
+.rosca .meio span{font-size:15px;color:var(--suave);font-weight:700}
+.ola{font-size:15px;color:var(--suave);font-weight:700;margin:0}
+.perfil-nome{font-size:clamp(30px,5vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:4px 0}
+.perfil-foco{color:var(--suave);margin:0}
+.segundo{margin:10px 0 0;font-size:15px}
+.barras{display:grid;gap:12px;margin-top:4px}
+.linha-barra{display:grid;grid-template-columns:32px minmax(0,1fr) 52px;gap:4px 10px;align-items:center}
+.linha-barra .letra{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-weight:800;grid-row:span 2}
+.linha-barra .nome{font-weight:700;font-size:15px}
+.linha-barra .nome small{font-weight:500;color:var(--fraco)}
+.linha-barra .pct{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;grid-row:span 2;font-size:18px}
+.linha-barra .trilha{height:10px;border-radius:99px;background:var(--papel-2);overflow:hidden}
+.linha-barra .trilha i{display:block;height:100%;width:0;border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.linha-barra.primeira .trilha{height:14px}
+.letra{display:grid;place-items:center;font-weight:800;border-radius:8px}
+.titulo-secao{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fraco);margin:0 0 10px}
+.perfil{display:grid;gap:16px}
+.perfil-topo{display:flex;align-items:center;gap:12px}
+.perfil-topo .letra{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
+.perfil-topo h3{margin:0;font-size:20px}
+.perfil-topo p{margin:0;color:var(--suave);font-size:14px}
+.citacao{margin:0;padding:12px 16px;border-left:4px solid var(--cor,var(--marca));background:var(--papel-2);border-radius:0 12px 12px 0;font-size:15.5px}
+.etiquetas{display:flex;flex-wrap:wrap;gap:6px}
+.etiquetas span{padding:5px 12px;border-radius:99px;font-size:13px;font-weight:700}
+.duas{display:grid;gap:16px}
+@media (min-width:600px){.duas{grid-template-columns:1fr 1fr}}
+.lista{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.lista li{position:relative;padding-left:18px;font-size:15px}
+.lista li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--cor,var(--marca))}
+.outros{display:grid;gap:10px}
+@media (min-width:600px){.outros{grid-template-columns:repeat(3,1fr)}}
+.outro{padding:14px;border-radius:14px;border:1px solid var(--linha);background:var(--papel)}
+.outro .cab{display:flex;align-items:center;gap:8px;font-weight:700}
+.outro .cab .letra{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:13px;font-weight:800}
+.outro .cab b{margin-left:auto}
+.outro p{margin:6px 0 0;font-size:13.5px;color:var(--suave)}
+.rodape-nota{font-size:13px;color:var(--fraco);margin:0}
+
+/* ── parte 2: personalidade ── */
+.parte{display:inline-flex;align-items:center;gap:8px;margin:0 0 6px;padding:3px 12px;border-radius:99px;background:var(--marca-suave);
+  color:var(--marca);font-size:13px;font-weight:800;letter-spacing:.02em}
+.intro2{display:grid;gap:16px;margin-top:24px}
+.intro2 h1{margin:0}
+.frases{display:grid;gap:12px}
+.frase{background:var(--papel);border:1.5px solid var(--linha);border-radius:18px;padding:16px;box-shadow:var(--sombra);display:grid;gap:12px}
+.frase.ok{border-color:var(--n2)}
+.frase p{margin:0;font-size:18px;font-weight:600;line-height:1.35}
+.escala{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.escala button{min-height:52px;padding:6px 4px;border-radius:12px;border:1.5px solid var(--linha);background:var(--papel-2);
+  font-size:12.5px;font-weight:600;line-height:1.2;cursor:pointer;color:var(--suave)}
+.escala button:hover{border-color:var(--n2)}
+.escala button:focus-visible{outline:3px solid var(--ouro);outline-offset:2px}
+.escala button[aria-checked="true"]{background:var(--marca);border-color:var(--marca);color:var(--marca-tinta)}
+@media (max-width:520px){.escala button{font-size:11px}}
+.frases.entra .frase{animation:entra .32s ease both}
+.frases.entra.volta .frase{animation-name:entraVolta}
+.eixos{display:grid;gap:14px}
+@media (min-width:700px){.eixos{grid-template-columns:1fr 1fr}}
+.eixo{border:1px solid var(--linha);border-radius:14px;padding:14px;background:var(--papel);display:grid;gap:8px}
+.eixo h4{margin:0;font-size:15px}
+.eixo h4 b{color:var(--cor)}
+.regua{position:relative;height:10px;border-radius:99px;background:var(--cor);opacity:.9}
+.regua i{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--papel);border:4px solid var(--cor)}
+.polos{display:flex;justify-content:space-between;font-size:12.5px;color:var(--fraco);font-weight:600}
+.polos .vence{color:var(--tinta);font-weight:800}
+.eixo p{margin:0;font-size:14px;color:var(--suave)}
+.tipo-codigo{font-size:clamp(40px,7vw,56px);font-weight:900;letter-spacing:.06em;line-height:1;color:var(--marca);margin:4px 0}
+
+/* ── partes 3 e 4: atenção ── */
+.exemplo{display:grid;gap:10px;padding:16px;border-radius:16px;background:var(--papel-2);border:1px dashed var(--linha)}
+.exemplo p{margin:0}
+.modelos{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.modelos b{display:inline-grid;place-items:center;min-width:56px;height:44px;padding:0 10px;border-radius:12px;background:var(--marca);
+  color:var(--marca-tinta);font-size:24px;font-weight:800;letter-spacing:.04em}
+.faixa-cronometro{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;justify-content:space-between;
+  padding:10px 14px;margin:0 -4px 14px;border-radius:16px;background:var(--papel);border:1px solid var(--linha);box-shadow:var(--sombra)}
+.cronometro{font-variant-numeric:tabular-nums;font-size:26px;font-weight:800;min-width:84px;text-align:center;padding:4px 12px;border-radius:12px;
+  background:var(--papel-2)}
+.cronometro.fim-perto{background:var(--D-suave);color:var(--D-texto)}
+.grade{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+@media (max-width:640px){.grade{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.celula{min-height:44px;border-radius:10px;border:1.5px solid var(--linha);background:var(--papel);font-size:19px;font-weight:700;
+  font-variant-numeric:tabular-nums;cursor:pointer;color:var(--tinta);padding:0}
+.celula:hover{border-color:var(--n2)}
+.celula.marcada{background:var(--marca);border-color:var(--marca);color:var(--marca-tinta);border-radius:50%}
+.celula.ok{background:var(--S);border-color:var(--S);color:#fff;border-radius:50%}
+.celula.errou{background:var(--D);border-color:var(--D);color:#fff}
+.par{display:grid;gap:12px}
+@media (min-width:700px){.par{grid-template-columns:1fr 1fr}}
+.par div{border-radius:16px;border:2px solid var(--linha);background:var(--papel);padding:18px 16px;display:grid;gap:6px;box-shadow:var(--sombra)}
+.par small{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fraco)}
+.par b{font-family:"Cascadia Mono",Consolas,"Courier New",monospace;font-size:clamp(20px,3.4vw,27px);letter-spacing:.02em;word-break:break-word}
+.decisao{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.decisao .botao{min-height:64px;font-size:19px}
+.conta-pares{font-weight:800;font-variant-numeric:tabular-nums;color:var(--suave)}
+
+/* ── o fim: Concluir e o código ── */
+.faixa-concluir{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;justify-content:space-between;
+  border:2px solid var(--marca);background:var(--marca-suave)}
+.faixa-concluir p{margin:0;font-weight:600;max-width:52ch}
+.fim{min-height:80vh;display:grid;place-items:center;text-align:center}
+.fim .cartao{max-width:560px;width:100%;display:grid;gap:16px;justify-items:center;padding:32px 24px}
+.fim h1{margin:0}
+.fim .sub{margin:0 auto}
+.selo-ok{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--S);color:#fff;font-size:38px;font-weight:800}
+.codigo{font-family:"Cascadia Mono",Consolas,"Courier New",monospace;font-size:clamp(34px,8vw,52px);font-weight:800;letter-spacing:.12em;
+  padding:14px 22px;border-radius:16px;background:var(--papel-2);border:2px dashed var(--marca);color:var(--marca);user-select:all}
+.fim .link-recepcao{margin-top:8px}
+
+/* ── janela de confirmação ── */
+.fundo-janela{position:fixed;inset:0;background:rgba(10,14,24,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.janela{background:var(--papel);border-radius:20px;max-width:440px;width:100%;padding:22px;display:grid;gap:12px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.janela h3{margin:0;font-size:20px}
+.janela p{margin:0;color:var(--suave)}
+.janela .acoes{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:6px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<main id="app">
+
+  <!-- INÍCIO -->
+  <section class="tela" id="tela-inicio">
+    <div class="topo"><span class="ponto"></span>Grupo Itamarathy<span class="selo">Testes do candidato</span></div>
+    <div class="letras" aria-hidden="true"><span class="l-D">D</span><span class="l-I">I</span><span class="l-S">S</span><span class="l-C">C</span></div>
+    <h1>Quatro partes rápidas: <em>descubra como você funciona</em></h1>
+    <p class="sub">DISC, personalidade e duas provas curtas de atenção, com tempo marcado. Cerca de 25 minutos no total. No fim, você vê os seus pontos fortes.</p>
+
+    <div class="cartao retomar" id="retomar" hidden>
+      <p id="retomar-texto" style="margin:0;font-weight:600"></p>
+      <div class="acoes" id="retomar-acoes"></div>
+    </div>
+
+    <div class="cartao" id="cartao-form">
+      <ol class="passos">
+        <li><b class="num">1</b><span><b>Parte 1:</b> em cada tela aparecem quatro grupos de palavras. Clique do que <b>mais</b> combina com você ao que <b>menos</b> combina: o primeiro clique vale 4, depois 3, 2 e 1.</span></li>
+        <li><b class="num">2</b><span><b>Parte 2:</b> diga o quanto você concorda com cada frase, de “discordo totalmente” a “concordo totalmente”. Nas partes 1 e 2 não existe resposta certa: responda como você <b>é</b>.</span></li>
+        <li><b class="num">3</b><span><b>Partes 3 e 4:</b> duas provas de atenção com cronômetro — quando o tempo acaba, a página passa sozinha para a próxima.</span></li>
+      </ol>
+      <form class="form" id="form-inicio" novalidate>
+        <label class="campo">Seu nome completo
+          <input type="text" id="nome" maxlength="80" autocomplete="off" placeholder="Nome e sobrenome">
+        </label>
+        <label class="concordo">
+          <input type="checkbox" id="concordo">
+          <span>Concordo que o resultado deste teste seja repassado ao Grupo Itamarathy e usado neste processo seletivo.</span>
+        </label>
+        <p class="erro" id="erro-inicio" role="alert" hidden></p>
+        <div><button class="botao" type="submit">Começar o teste</button></div>
+        <p class="nota">As respostas ficam só neste computador e são apagadas quando a Recepção encerra o teste.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- PERGUNTA -->
+  <section class="tela pergunta" id="tela-pergunta" hidden>
+    <div class="barra">
+      <button class="voltar" type="button" id="voltar" aria-label="Voltar">‹</button>
+      <div class="trilho" id="trilho" aria-hidden="true"></div>
+      <span class="contador" id="contador"></span>
+    </div>
+    <p class="parte">Parte 1 de 4 · DISC</p>
+    <h2>Clique do que <em>mais</em> combina com você ao que <em>menos</em> combina.</h2>
+    <ul class="legenda">
+      <li><b style="background:var(--n4)">4</b>me identifico muito</li>
+      <li><b style="background:var(--n3)">3</b>razoavelmente</li>
+      <li><b style="background:var(--n2)">2</b>um pouco</li>
+      <li><b style="background:var(--n1)">1</b>não me identifico</li>
+    </ul>
+    <p class="so-leitor">Clique nos quatro grupos em ordem. Clicar de novo num grupo numerado desfaz a partir dele.</p>
+    <div class="grupos" id="grupos"></div>
+    <div class="rodape">
+      <button class="limpar" type="button" id="limpar" hidden>Limpar esta tela</button>
+      <span></span>
+      <button class="botao pulsa" type="button" id="proxima" disabled>Próxima</button>
+    </div>
+  </section>
+
+  <!-- PARTE 2: A INTRODUÇÃO -->
+  <section class="tela" id="tela-parte2" hidden>
+    <div class="barra">
+      <button class="voltar" type="button" id="voltar-parte2" aria-label="Voltar">‹</button>
+      <span></span>
+    </div>
+    <div class="intro2">
+      <p class="parte">Parte 1 concluída · agora a parte 2 de 4</p>
+      <h1>Personalidade: <em>como você prefere trabalhar</em></h1>
+      <p class="sub">São 40 frases curtas, em 8 telas. Para cada uma, diga o quanto ela combina com você — de “discordo totalmente” a “concordo totalmente”. Não existe resposta certa: vá pela primeira impressão.</p>
+      <div><button class="botao" type="button" id="comecar-parte2">Começar a parte 2</button></div>
+    </div>
+  </section>
+
+  <!-- PARTE 2: AS FRASES -->
+  <section class="tela pergunta" id="tela-frases" hidden>
+    <div class="barra">
+      <button class="voltar" type="button" id="voltar-frases" aria-label="Voltar">‹</button>
+      <div class="trilho" id="trilho-frases" aria-hidden="true"></div>
+      <span class="contador" id="contador-frases"></span>
+    </div>
+    <p class="parte">Parte 2 de 4 · Personalidade</p>
+    <h2>O quanto você <em>concorda</em> com cada frase?</h2>
+    <div class="frases" id="frases"></div>
+    <div class="rodape">
+      <span></span>
+      <button class="botao pulsa" type="button" id="proxima-frases" disabled>Próxima</button>
+    </div>
+  </section>
+
+  <!-- PARTE 3: A INTRODUÇÃO DA BUSCA -->
+  <section class="tela" id="tela-parte3" hidden>
+    <div class="barra">
+      <button class="voltar" type="button" id="voltar-parte3" aria-label="Voltar">‹</button>
+      <span></span>
+    </div>
+    <div class="intro2">
+      <p class="parte">Parte 2 concluída · agora a parte 3 de 4</p>
+      <h1>Busca de números: <em>3 minutos</em></h1>
+      <p class="sub">No alto da tela ficam três números-modelo. Na grade, clique em todos os números iguais a <b>qualquer um</b> deles. Vá linha por linha, da esquerda para a direita, sem pular. Clicou errado? Clique de novo para desmarcar. Se terminar antes, clique em <b>Terminei</b>; quando o tempo acaba, a página passa sozinha para a próxima parte.</p>
+      <div class="exemplo">
+        <p><b>Treine aqui</b> (sem tempo): os modelos são</p>
+        <div class="modelos" id="modelos-exemplo"></div>
+        <div class="grade" id="grade-exemplo" style="grid-template-columns:repeat(10,minmax(0,1fr))"></div>
+        <p class="nota" id="aviso-exemplo3">Clique nos números iguais aos modelos.</p>
+      </div>
+      <div><button class="botao" type="button" id="comecar-busca" disabled>Começar — o cronômetro dispara</button></div>
+    </div>
+  </section>
+
+  <!-- PARTE 3: A BUSCA -->
+  <section class="tela larga" id="tela-busca" hidden>
+    <div class="faixa-cronometro">
+      <div class="modelos"><span class="parte" style="margin:0">Parte 3 de 4</span> Modelos: <span id="modelos-busca" class="modelos"></span></div>
+      <div class="modelos">
+        <span class="cronometro" id="cronometro-busca" role="timer" aria-live="off">3:00</span>
+        <button class="botao leve" type="button" id="terminei-busca">Terminei</button>
+      </div>
+    </div>
+    <div class="grade" id="grade-busca"></div>
+  </section>
+
+  <!-- PARTE 4: A INTRODUÇÃO DA CONFERÊNCIA -->
+  <section class="tela" id="tela-parte4" hidden>
+    <div class="intro2">
+      <p class="parte">Parte 3 concluída · agora a última, a parte 4 de 4</p>
+      <h1>Conferência: <em>2 minutos</em></h1>
+      <p class="sub">Aparecem dois registros lado a lado, como um documento e o sistema: CNPJ, valores, datas, nomes e notas. Diga se são <b>iguais</b> ou <b>diferentes</b> — qualquer número, letra ou sinal diferente conta. Use os botões ou as setas do teclado: <b>←</b> iguais, <b>→</b> diferentes. Quando o tempo acaba, a página termina sozinha.</p>
+      <div class="exemplo">
+        <p><b>Treine aqui</b> (sem tempo):</p>
+        <div class="par" id="par-exemplo"></div>
+        <div class="decisao">
+          <button class="botao leve" type="button" id="exemplo-iguais">← Iguais</button>
+          <button class="botao leve" type="button" id="exemplo-diferentes">Diferentes →</button>
+        </div>
+        <p class="nota" id="aviso-exemplo4">Compare com calma.</p>
+      </div>
+      <div><button class="botao" type="button" id="comecar-conf" disabled>Começar — o cronômetro dispara</button></div>
+    </div>
+  </section>
+
+  <!-- PARTE 4: A CONFERÊNCIA -->
+  <section class="tela" id="tela-conf" hidden>
+    <div class="faixa-cronometro">
+      <span class="parte" style="margin:0">Parte 4 de 4 · Conferência</span>
+      <span class="conta-pares" id="conta-pares"></span>
+      <span class="cronometro" id="cronometro-conf" role="timer" aria-live="off">2:00</span>
+    </div>
+    <div class="par" id="par-conf"></div>
+    <div class="decisao">
+      <button class="botao" type="button" id="conf-iguais">← Iguais</button>
+      <button class="botao" type="button" id="conf-diferentes">Diferentes →</button>
+    </div>
+  </section>
+
+  <!-- CALCULANDO -->
+  <section class="tela calculando" id="tela-calculando" hidden>
+    <div><div class="bolinhas" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p style="font-weight:700;font-size:18px">Somando as respostas…</p></div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section class="tela larga" id="tela-resultado" hidden>
+    <div class="topo"><span class="ponto"></span>Grupo Itamarathy<span class="selo">Resultado dos testes</span></div>
+    <div class="resultado" id="resultado"></div>
+    <p class="pe"><button class="botao" type="button" id="concluir-pe">Concluir</button></p>
+  </section>
+
+  <!-- O FIM: o agradecimento e o código para a Recepção -->
+  <section class="tela fim" id="tela-codigo" hidden>
+    <div class="cartao">
+      <div class="selo-ok" aria-hidden="true">✓</div>
+      <h1 id="obrigado">Obrigado!</h1>
+      <p class="sub">Você concluiu os testes. Avise a recepcionista que terminou e informe este código:</p>
+      <p class="codigo" id="codigo" aria-live="polite"></p>
+      <p class="nota">Não precisa anotar o resultado: com o código, a recepcionista registra tudo.</p>
+      <button class="link-recepcao" type="button" id="iniciar-codigo">Iniciar novamente</button>
+    </div>
+  </section>
+</main>
+
+<script id="dados" type="application/json">{
+ "teste": [
+  {
+   "D": [
+    [
+     "Autoconfiante"
+    ],
+    [
+     "Independente"
+    ],
+    [
+     "Dominante"
+    ]
+   ],
+   "I": [
+    [
+     "Comunicativo"
+    ],
+    [
+     "Alegre"
+    ],
+    [
+     "Extrovertido"
+    ]
+   ],
+   "S": [
+    [
+     "Acolhedor"
+    ],
+    [
+     "Amigável"
+    ],
+    [
+     "Paciente"
+    ]
+   ],
+   "C": [
+    [
+     "Autodisciplinado"
+    ],
+    [
+     "Atento a detalhes"
+    ],
+    [
+     "Diligente",
+     "cuidadoso, esforçado"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Proativo",
+     "não espera alguém pedir para tomar iniciativa"
+    ],
+    [
+     "Empreendedor"
+    ],
+    [
+     "Corajoso"
+    ]
+   ],
+   "I": [
+    [
+     "Participativo"
+    ],
+    [
+     "Relacionável"
+    ],
+    [
+     "Flexível"
+    ]
+   ],
+   "S": [
+    [
+     "Agradável"
+    ],
+    [
+     "Tranquilo"
+    ],
+    [
+     "Organizado"
+    ]
+   ],
+   "C": [
+    [
+     "Criterioso",
+     "avalia opções antes de agir ou decidir"
+    ],
+    [
+     "Cuidadoso"
+    ],
+    [
+     "Especialista"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Prático"
+    ],
+    [
+     "Rápido"
+    ],
+    [
+     "Eficiente",
+     "não gera retrabalho"
+    ]
+   ],
+   "I": [
+    [
+     "Persuasivo",
+     "facilidade em convencer"
+    ],
+    [
+     "Contagiante",
+     "torna o ambiente leve e inspirador"
+    ],
+    [
+     "Estimulador"
+    ]
+   ],
+   "S": [
+    [
+     "Calmo"
+    ],
+    [
+     "Rotineiro"
+    ],
+    [
+     "Constante"
+    ]
+   ],
+   "C": [
+    [
+     "Idealizador",
+     "ideia + teoria = prática ou ação"
+    ],
+    [
+     "Perfeccionista"
+    ],
+    [
+     "Uniforme",
+     "constante, padrão"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Objetivo"
+    ],
+    [
+     "Assertivo",
+     "direto, firme, comunicação clara"
+    ],
+    [
+     "Focado em resultados"
+    ]
+   ],
+   "I": [
+    [
+     "Preza pelo prazer"
+    ],
+    [
+     "Emotivo"
+    ],
+    [
+     "Divertido"
+    ]
+   ],
+   "S": [
+    [
+     "Conciliador",
+     "promove harmonia em meio ao conflito"
+    ],
+    [
+     "Conselheiro"
+    ],
+    [
+     "Bom ouvinte",
+     "escuta atentamente, ouve mais do que fala"
+    ]
+   ],
+   "C": [
+    [
+     "Conforme",
+     "orientado por normas e regras, mais lógico"
+    ],
+    [
+     "Sistemático",
+     "organizado e metódico"
+    ],
+    [
+     "Sensato",
+     "equilíbrio emocional, autocontrole, humildade"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Determinado"
+    ],
+    [
+     "Firme"
+    ],
+    [
+     "Enérgico",
+     "energia intensa, entusiasmo"
+    ]
+   ],
+   "I": [
+    [
+     "Criativo",
+     "soluções inovadoras, vê além do óbvio, conecta ideias"
+    ],
+    [
+     "Falante"
+    ],
+    [
+     "Distraído",
+     "dificuldade de manter foco e concentração"
+    ]
+   ],
+   "S": [
+    [
+     "Comedido",
+     "autocontrole, evita excessos nas ações, palavras e comportamentos"
+    ],
+    [
+     "Amável"
+    ],
+    [
+     "Mediador",
+     "lida bem com conflitos e opiniões diferentes"
+    ]
+   ],
+   "C": [
+    [
+     "Preciso",
+     "alto nível de precisão no que faz"
+    ],
+    [
+     "Lógico"
+    ],
+    [
+     "Racional",
+     "análise crítica, evidências e provas"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Lutador",
+     "enfrenta desafios e adversidades com coragem e determinação"
+    ],
+    [
+     "Combativo",
+     "senso de justiça"
+    ],
+    [
+     "Agressivo",
+     "explosivo, reativo, pouca paciência"
+    ]
+   ],
+   "I": [
+    [
+     "Solidário",
+     "se preocupa com o bem-estar coletivo, ajuda, apoio"
+    ],
+    [
+     "Facilitador",
+     "ajuda o grupo a atingir um objetivo comum, abertura para o diálogo"
+    ],
+    [
+     "Influenciador"
+    ]
+   ],
+   "S": [
+    [
+     "Autocontrolado",
+     "gerencia pensamentos, emoções e comportamentos, resiste a tentações"
+    ],
+    [
+     "Conservador",
+     "valoriza a tradição, a estabilidade, a ordem"
+    ],
+    [
+     "Responsável",
+     "assume as consequências das suas ações e decisões"
+    ]
+   ],
+   "C": [
+    [
+     "Profundo",
+     "busca por significado, intensidade, fundamento"
+    ],
+    [
+     "Perceptivo",
+     "intuitivo, atento a detalhes, lê o contexto, observador"
+    ],
+    [
+     "Estratégico",
+     "planejamento, visão de longo prazo, otimização de recursos"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Automotivado"
+    ],
+    [
+     "Pioneiro",
+     "visionário, faz o que ninguém fez, enxerga oportunidades"
+    ],
+    [
+     "Impulsionador"
+    ]
+   ],
+   "I": [
+    [
+     "Articulador"
+    ],
+    [
+     "Empolgante"
+    ],
+    [
+     "Motivador"
+    ]
+   ],
+   "S": [
+    [
+     "Persistente"
+    ],
+    [
+     "Prevenido"
+    ],
+    [
+     "Tolerante"
+    ]
+   ],
+   "C": [
+    [
+     "Exato"
+    ],
+    [
+     "Exigente"
+    ],
+    [
+     "Estruturado"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Resolvedor",
+     "antecipa desafios, soluciona problemas, proativo"
+    ],
+    [
+     "Destemido"
+    ],
+    [
+     "Desafiador",
+     "oposição constante, irritação, recusa em assumir erros"
+    ]
+   ],
+   "I": [
+    [
+     "Vaidoso"
+    ],
+    [
+     "Simpático"
+    ],
+    [
+     "Gosta de ser reconhecido"
+    ]
+   ],
+   "S": [
+    [
+     "Aconselhador"
+    ],
+    [
+     "Harmônico"
+    ],
+    [
+     "Apoiador"
+    ]
+   ],
+   "C": [
+    [
+     "Ponderado",
+     "reflete antes de agir, avalia perspectivas, riscos e benefícios"
+    ],
+    [
+     "Ordenado",
+     "metódico, disciplinado e organizado"
+    ],
+    [
+     "Analisador",
+     "detalhista, preciso, racional, lógico"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Competitivo"
+    ],
+    [
+     "Assume riscos",
+     "audacioso, confiante, tolera bem a incerteza"
+    ],
+    [
+     "Desbravador",
+     "corajoso, pioneiro, determinado"
+    ]
+   ],
+   "I": [
+    [
+     "Entusiasmo"
+    ],
+    [
+     "Impulsivo",
+     "age pela emoção, sem planejar ou medir as consequências"
+    ],
+    [
+     "Otimista",
+     "atitude positiva e resiliente"
+    ]
+   ],
+   "S": [
+    [
+     "Moderado"
+    ],
+    [
+     "Equilibrado",
+     "estabilidade emocional, harmonia, paz interior"
+    ],
+    [
+     "Estável"
+    ]
+   ],
+   "C": [
+    [
+     "Teórico"
+    ],
+    [
+     "Conservador",
+     "valoriza a estabilidade, o tradicional"
+    ],
+    [
+     "Aprofunda conhecimentos"
+    ]
+   ]
+  },
+  {
+   "D": [
+    [
+     "Direcionador"
+    ],
+    [
+     "Solucionador"
+    ],
+    [
+     "Audacioso",
+     "coragem, ousadia e iniciativa para ações difíceis ou inovadoras"
+    ]
+   ],
+   "I": [
+    [
+     "Agregador",
+     "une as pessoas, promove o trabalho em equipe"
+    ],
+    [
+     "Sociável",
+     "facilidade em interagir, conviver e se comunicar"
+    ],
+    [
+     "Mobilidade",
+     "facilidade de se mover, ser fluido e prático"
+    ]
+   ],
+   "S": [
+    [
+     "Educado"
+    ],
+    [
+     "Observador",
+     "presta atenção a detalhes, padrões e comportamentos"
+    ],
+    [
+     "Diplomático",
+     "cuidado nas palavras, mediação, empatia, inteligência emocional"
+    ]
+   ],
+   "C": [
+    [
+     "Regulador",
+     "estabelece regras e garante ordem e conformidade"
+    ],
+    [
+     "Técnico"
+    ],
+    [
+     "Orientador",
+     "oferece suporte, orientação e acompanhamento"
+    ]
+   ]
+  }
+ ],
+ "perfis": {
+  "D": {
+   "nome": "Dominante",
+   "apelido": "Executor",
+   "foco": "Resultado, desafio e impacto",
+   "frase": "Vai direto ao resultado. Decide rápido, assume o comando e não gosta de rodeio.",
+   "palavras": [
+    "Objetivo",
+    "Prático",
+    "Autoconfiante",
+    "Competitivo",
+    "Solucionador",
+    "Independente",
+    "Pró-ativo",
+    "Firme"
+   ],
+   "comoTrabalha": [
+    "Olha primeiro para a meta e para o prazo.",
+    "Decide rápido e gosta de desafiar o \"sempre foi assim\".",
+    "Gosta de ter autonomia para decidir."
+   ],
+   "forcas": [
+    "Executa: tira as coisas do papel.",
+    "Passa confiança pela clareza e pela determinação.",
+    "Funciona sob pressão e com metas ambiciosas."
+   ],
+   "entrega": "Rapidez, assertividade e execução. É o perfil para metas curtas e decisões que não podem esperar.",
+   "motiva": [
+    "Metas claras e ousadas",
+    "Autonomia para decidir",
+    "Desafios reais, não tarefas fáceis",
+    "Resultado medido"
+   ]
+  },
+  "I": {
+   "nome": "Influente",
+   "apelido": "Comunicador",
+   "foco": "Visibilidade, pertencimento e energia",
+   "frase": "Move as pessoas pela energia. Comunica, engaja e cria clima bom com facilidade.",
+   "palavras": [
+    "Comunicativo",
+    "Persuasivo",
+    "Otimista",
+    "Entusiasmado",
+    "Sociável",
+    "Participativo",
+    "Contagiante",
+    "Criativo"
+   ],
+   "comoTrabalha": [
+    "Fala bem, convence e inspira quem está em volta.",
+    "Traz ideias novas e soluções criativas.",
+    "Rende em ambiente com energia, liberdade e reconhecimento."
+   ],
+   "forcas": [
+    "Engaja e motiva a equipe naturalmente.",
+    "Constrói relacionamentos e rede com facilidade.",
+    "É excelente no atendimento e na conversa com o cliente."
+   ],
+   "entrega": "Inspiração, engajamento e energia. Mobiliza pessoas e cria uma cultura positiva no setor.",
+   "motiva": [
+    "Ambiente positivo",
+    "Reconhecimento frequente",
+    "Interação com as pessoas",
+    "Sentir-se importante no grupo"
+   ]
+  },
+  "S": {
+   "nome": "Estável",
+   "apelido": "Planejador",
+   "foco": "Segurança, confiança e constância",
+   "frase": "É o pilar da equipe. Paciente, leal e constante, mantém o setor funcionando e o clima estável.",
+   "palavras": [
+    "Paciente",
+    "Calmo",
+    "Leal",
+    "Acolhedor",
+    "Metódico",
+    "Persistente",
+    "Tolerante",
+    "Cooperativo"
+   ],
+   "comoTrabalha": [
+    "Coopera, trabalha bem em equipe e mantém a calma sob pressão.",
+    "Prefere processo claro e ritmo constante, sem surpresa.",
+    "É confiável: todo mundo sabe que pode contar com ele."
+   ],
+   "forcas": [
+    "Mantém a estabilidade e a qualidade do trabalho.",
+    "É leal à empresa e comprometido com o grupo.",
+    "Passa confiança pela consistência."
+   ],
+   "entrega": "Confiabilidade, lealdade e consistência. Mantém a equipe unida e o clima estável.",
+   "motiva": [
+    "Ambiente previsível",
+    "Clareza de funções",
+    "Respeito",
+    "Tempo para se adaptar",
+    "Relações estáveis"
+   ]
+  },
+  "C": {
+   "nome": "Conforme",
+   "apelido": "Analista",
+   "foco": "Precisão, qualidade e excelência",
+   "frase": "É a garantia de que nada passa errado. Analítico, organizado e exigente, eleva o padrão de tudo o que toca.",
+   "palavras": [
+    "Preciso",
+    "Detalhista",
+    "Organizado",
+    "Criterioso",
+    "Técnico",
+    "Racional",
+    "Sistemático",
+    "Exigente"
+   ],
+   "comoTrabalha": [
+    "É analítico, detalhista e comprometido com a qualidade.",
+    "Prefere trabalhar com dados, regras e processos definidos.",
+    "Planeja antes de agir e evita risco desnecessário."
+   ],
+   "forcas": [
+    "Padrão altíssimo de qualidade e precisão.",
+    "Confiável, ético e disciplinado.",
+    "Planeja antes, e por isso erra pouco."
+   ],
+   "entrega": "Precisão, qualidade e confiabilidade. É o perfil do planejamento e do controle.",
+   "motiva": [
+    "Processos claros",
+    "Regras bem definidas",
+    "Padrão alto",
+    "Critério objetivo de avaliação"
+   ]
+  }
+ },
+ "oQueNaoE": "O DISC é uma foto do momento e mostra tendências, não quem a pessoa é. Não mede inteligência, competência técnica, valores nem saúde emocional, e nenhum perfil é melhor que outro.",
+ "pers": {
+  "escala": [
+   [
+    "Discordo totalmente",
+    -2
+   ],
+   [
+    "Discordo",
+    -1
+   ],
+   [
+    "Neutro",
+    0
+   ],
+   [
+    "Concordo",
+    1
+   ],
+   [
+    "Concordo totalmente",
+    2
+   ]
+  ],
+  "eixos": [
+   {
+    "chave": "energia",
+    "nome": "Energia",
+    "pergunta": "De onde vem a sua energia",
+    "polos": [
+     "E",
+     "I"
+    ]
+   },
+   {
+    "chave": "informacao",
+    "nome": "Informação",
+    "pergunta": "Como você absorve as informações",
+    "polos": [
+     "S",
+     "N"
+    ]
+   },
+   {
+    "chave": "decisao",
+    "nome": "Decisão",
+    "pergunta": "Como você toma decisões",
+    "polos": [
+     "T",
+     "F"
+    ]
+   },
+   {
+    "chave": "organizacao",
+    "nome": "Organização",
+    "pergunta": "Como você organiza o trabalho",
+    "polos": [
+     "J",
+     "P"
+    ]
+   }
+  ],
+  "frases": [
+   [
+    "E",
+    "Em um lugar novo, puxo conversa com pessoas que ainda não conheço."
+   ],
+   [
+    "S",
+    "Confio mais no que já foi testado na prática do que em ideias novas."
+   ],
+   [
+    "T",
+    "Ao decidir, peso mais os fatos e a lógica do que os sentimentos envolvidos."
+   ],
+   [
+    "J",
+    "Gosto de planejar o meu dia com antecedência."
+   ],
+   [
+    "I",
+    "Depois de um dia cheio de gente, preciso de um tempo sozinho para recarregar as energias."
+   ],
+   [
+    "N",
+    "Gosto de imaginar como as coisas poderiam ser diferentes no futuro."
+   ],
+   [
+    "F",
+    "Antes de decidir, penso em como a decisão vai afetar as pessoas."
+   ],
+   [
+    "P",
+    "Prefiro deixar as opções em aberto e decidir na hora."
+   ],
+   [
+    "E",
+    "Penso melhor quando falo em voz alta com alguém."
+   ],
+   [
+    "S",
+    "Presto atenção aos detalhes e aos fatos concretos."
+   ],
+   [
+    "T",
+    "Prefiro ser sincero e direto, mesmo quando a verdade incomoda."
+   ],
+   [
+    "J",
+    "Fico satisfeito quando termino uma tarefa antes do prazo."
+   ],
+   [
+    "I",
+    "Prefiro conversas profundas com poucas pessoas a conversas rápidas com muitas."
+   ],
+   [
+    "N",
+    "Costumo enxergar ligações entre assuntos que parecem não ter relação."
+   ],
+   [
+    "F",
+    "Me esforço para manter a harmonia no grupo."
+   ],
+   [
+    "P",
+    "Lido bem com mudanças de última hora."
+   ],
+   [
+    "E",
+    "Gosto de trabalhar em lugares movimentados, com gente por perto."
+   ],
+   [
+    "S",
+    "Prefiro receber instruções claras, passo a passo."
+   ],
+   [
+    "T",
+    "Gosto de analisar os prós e os contras de forma objetiva."
+   ],
+   [
+    "J",
+    "Uso listas, agenda ou lembretes para me organizar."
+   ],
+   [
+    "I",
+    "Em reuniões, costumo pensar bastante antes de falar."
+   ],
+   [
+    "N",
+    "Me interesso mais pelo porquê das coisas do que pelo jeito de fazer."
+   ],
+   [
+    "F",
+    "Percebo com facilidade quando alguém não está bem."
+   ],
+   [
+    "P",
+    "Trabalho bem sob pressão, quando o prazo está perto."
+   ],
+   [
+    "E",
+    "Fico animado com confraternizações e encontros em grupo."
+   ],
+   [
+    "S",
+    "Aprendo melhor fazendo do que lendo a teoria."
+   ],
+   [
+    "T",
+    "Numa discussão, o argumento mais lógico deve prevalecer."
+   ],
+   [
+    "J",
+    "Gosto de ambientes organizados, com cada coisa no seu lugar."
+   ],
+   [
+    "I",
+    "Me concentro melhor em um lugar silencioso, sem interrupções."
+   ],
+   [
+    "N",
+    "Gosto de variar o jeito de fazer as coisas, mesmo quando o de sempre funciona."
+   ],
+   [
+    "F",
+    "Elogiar e reconhecer as pessoas é algo natural para mim."
+   ],
+   [
+    "P",
+    "Gosto de ter liberdade para mudar o plano no meio do caminho."
+   ],
+   [
+    "E",
+    "Quando tenho um problema, logo procuro alguém para conversar sobre ele."
+   ],
+   [
+    "S",
+    "Gosto de resolver problemas com soluções que já deram certo antes."
+   ],
+   [
+    "T",
+    "Regras devem valer igualmente para todos, sem exceção."
+   ],
+   [
+    "J",
+    "Prefiro decidir logo e seguir em frente."
+   ],
+   [
+    "I",
+    "Gosto de ter momentos só meus ao longo do dia."
+   ],
+   [
+    "N",
+    "Tenho ideias novas com frequência, mesmo sem saber ainda como colocá-las em prática."
+   ],
+   [
+    "F",
+    "Valorizo mais um ambiente acolhedor do que um ambiente competitivo."
+   ],
+   [
+    "P",
+    "Fico à vontade para improvisar."
+   ]
+  ],
+  "naoE": "Este teste mostra preferências — de onde vem a energia, como a pessoa absorve informações, decide e se organiza. Não existe tipo melhor ou pior, e ele não mede inteligência nem competência.",
+  "polos": {
+   "E": {
+    "nome": "Extrovertido",
+    "descricao": "Ganha energia na convivência: conversa, troca ideias e se anima com gente por perto.",
+    "noTrabalho": [
+     "Faz contatos com facilidade.",
+     "Rende bem em equipe e no atendimento.",
+     "Mantém o grupo em movimento e a conversa fluindo."
+    ]
+   },
+   "I": {
+    "nome": "Introvertido",
+    "descricao": "Recarrega a energia no silêncio e pensa com calma antes de falar.",
+    "noTrabalho": [
+     "Concentra-se por longos períodos.",
+     "Escuta com atenção.",
+     "Fala com cuidado e profundidade."
+    ]
+   },
+   "S": {
+    "nome": "Prático",
+    "descricao": "Olha para os fatos, para o que é concreto e para o que já foi testado.",
+    "noTrabalho": [
+     "É atento aos detalhes.",
+     "Segue procedimentos com precisão.",
+     "Resolve o problema de hoje com o que tem à mão."
+    ]
+   },
+   "N": {
+    "nome": "Intuitivo",
+    "descricao": "Enxerga possibilidades, padrões e o quadro geral.",
+    "noTrabalho": [
+     "Traz ideias novas.",
+     "Pensa no futuro e em como melhorar.",
+     "Liga assuntos que parecem distantes."
+    ]
+   },
+   "T": {
+    "nome": "Racional",
+    "descricao": "Decide pela lógica, pelos fatos e pela coerência.",
+    "noTrabalho": [
+     "Analisa com objetividade.",
+     "É direto e franco.",
+     "Trata todos pela mesma regra."
+    ]
+   },
+   "F": {
+    "nome": "Empático",
+    "descricao": "Decide levando em conta as pessoas e os valores envolvidos.",
+    "noTrabalho": [
+     "Percebe como os colegas estão.",
+     "Cria clima de cooperação.",
+     "Reconhece e valoriza o trabalho dos outros."
+    ]
+   },
+   "J": {
+    "nome": "Organizado",
+    "descricao": "Gosta de plano, de ordem e de levar as coisas até o fim.",
+    "noTrabalho": [
+     "Cumpre prazos.",
+     "Organiza tarefas e prioridades.",
+     "Gosta de decisões claras."
+    ]
+   },
+   "P": {
+    "nome": "Flexível",
+    "descricao": "Adapta-se com facilidade e gosta de manter as opções abertas.",
+    "noTrabalho": [
+     "Lida bem com imprevistos.",
+     "Encontra saídas na hora.",
+     "Traz leveza e criatividade."
+    ]
+   }
+  },
+  "tipos": {
+   "ISTJ": {
+    "titulo": "Metódico",
+    "essencia": "Responsável e confiável, cumpre o que promete com organização e atenção aos fatos.",
+    "forcas": [
+     "Responsabilidade",
+     "Organização",
+     "Atenção aos detalhes",
+     "Constância"
+    ]
+   },
+   "ISFJ": {
+    "titulo": "Cuidador",
+    "essencia": "Atencioso e leal, cuida das pessoas e das tarefas com dedicação.",
+    "forcas": [
+     "Dedicação",
+     "Lealdade",
+     "Paciência",
+     "Atenção a quem precisa"
+    ]
+   },
+   "INFJ": {
+    "titulo": "Conselheiro",
+    "essencia": "Reservado e profundo, entende as pessoas e busca um propósito no que faz.",
+    "forcas": [
+     "Empatia",
+     "Visão de futuro",
+     "Compromisso com valores",
+     "Boa escuta"
+    ]
+   },
+   "INTJ": {
+    "titulo": "Estrategista",
+    "essencia": "Independente e analítico, enxerga o longo prazo e planeja como chegar lá.",
+    "forcas": [
+     "Pensamento estratégico",
+     "Autonomia",
+     "Visão do todo",
+     "Determinação"
+    ]
+   },
+   "ISTP": {
+    "titulo": "Solucionador",
+    "essencia": "Calmo e prático, entende como as coisas funcionam e resolve problemas na hora.",
+    "forcas": [
+     "Raciocínio prático",
+     "Calma sob pressão",
+     "Habilidade técnica",
+     "Objetividade"
+    ]
+   },
+   "ISFP": {
+    "titulo": "Criativo",
+    "essencia": "Gentil e observador, traz sensibilidade e capricho a tudo o que faz.",
+    "forcas": [
+     "Sensibilidade",
+     "Capricho",
+     "Adaptabilidade",
+     "Harmonia"
+    ]
+   },
+   "INFP": {
+    "titulo": "Idealista",
+    "essencia": "Sincero e imaginativo, age guiado pelos seus valores e pela vontade de ajudar.",
+    "forcas": [
+     "Criatividade",
+     "Autenticidade",
+     "Empatia",
+     "Dedicação"
+    ]
+   },
+   "INTP": {
+    "titulo": "Pensador",
+    "essencia": "Curioso e lógico, gosta de entender a fundo e de encontrar soluções inteligentes.",
+    "forcas": [
+     "Raciocínio lógico",
+     "Curiosidade",
+     "Originalidade",
+     "Análise profunda"
+    ]
+   },
+   "ESTP": {
+    "titulo": "Dinâmico",
+    "essencia": "Ativo e direto, gosta de ação, resolve na prática e se sai bem em situações novas.",
+    "forcas": [
+     "Iniciativa",
+     "Agilidade",
+     "Senso prático",
+     "Desenvoltura com pessoas"
+    ]
+   },
+   "ESFP": {
+    "titulo": "Espontâneo",
+    "essencia": "Alegre e acolhedor, traz energia ao grupo e vive bem o presente.",
+    "forcas": [
+     "Simpatia",
+     "Entusiasmo",
+     "Flexibilidade",
+     "Trabalho em equipe"
+    ]
+   },
+   "ENFP": {
+    "titulo": "Entusiasta",
+    "essencia": "Criativo e comunicativo, inspira as pessoas e vê possibilidades em tudo.",
+    "forcas": [
+     "Criatividade",
+     "Comunicação",
+     "Otimismo",
+     "Facilidade em motivar"
+    ]
+   },
+   "ENTP": {
+    "titulo": "Visionário",
+    "essencia": "Rápido e engenhoso, gosta de ideias novas e de desafios que fazem pensar.",
+    "forcas": [
+     "Inovação",
+     "Argumentação",
+     "Versatilidade",
+     "Visão de oportunidades"
+    ]
+   },
+   "ESTJ": {
+    "titulo": "Organizador",
+    "essencia": "Prático e decidido, organiza pessoas e processos para entregar resultados.",
+    "forcas": [
+     "Liderança prática",
+     "Organização",
+     "Firmeza",
+     "Cumprimento de prazos"
+    ]
+   },
+   "ESFJ": {
+    "titulo": "Agregador",
+    "essencia": "Prestativo e sociável, cuida do grupo e mantém todos unidos.",
+    "forcas": [
+     "Cooperação",
+     "Cordialidade",
+     "Senso de responsabilidade",
+     "Cuidado com as pessoas"
+    ]
+   },
+   "ENFJ": {
+    "titulo": "Inspirador",
+    "essencia": "Caloroso e motivador, desenvolve as pessoas e une o grupo em torno de um objetivo.",
+    "forcas": [
+     "Liderança pelo exemplo",
+     "Comunicação",
+     "Empatia",
+     "Capacidade de motivar"
+    ]
+   },
+   "ENTJ": {
+    "titulo": "Condutor",
+    "essencia": "Decidido e estratégico, transforma objetivos em planos e conduz o grupo até o resultado.",
+    "forcas": [
+     "Liderança",
+     "Decisão",
+     "Planejamento",
+     "Foco em resultado"
+    ]
+   }
+  }
+ }
+}</script>
+<script>
+(function () {
+  'use strict';
+
+  var DADOS = JSON.parse(document.getElementById('dados').textContent);
+  var ORDEM = ['D', 'I', 'S', 'C'];
+  var TELAS = 10;
+  // a parte 2 (personalidade): 40 frases, 5 por tela
+  var P = DADOS.pers;
+  var POR_TELA = 5;
+  var TELAS2 = Math.ceil(P.frases.length / POR_TELA);
+  // v3 desde a atenção (21/10/2026): o estado das versões anteriores (sem as partes 3 e 4) não serve aqui
+  var CHAVE = 'itamarathy:testes-entrevista:v3';
+  var VALIDADE = 24 * 60 * 60 * 1000; // LGPD: um teste esquecido aberto não fica no computador
+  // a SENHA do "Iniciar novamente" — o único jeito de apagar o teste (o candidato não apaga). Está no Fluxo,
+  // em Entrevistas → Como usar; trocou aqui, troque lá (`disc.tsx`, SENHA_DA_RECEPCAO). 1234 a pedido do Daniel.
+  var SENHA_DA_RECEPCAO = '1234';
+  var SENTIDO = { 4: 'me identifico muito', 3: 'me identifico razoavelmente', 2: 'me identifico um pouco', 1: 'não me identifico' };
+  var reduzido = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var estado = null;
+  var animado = false;
+
+  // -- o estado no computador --------------------------------------------------------------
+  function ler() {
+    try {
+      var s = JSON.parse(localStorage.getItem(CHAVE) || 'null');
+      if (s && (!s.criado || Date.now() - s.criado > VALIDADE)) { localStorage.removeItem(CHAVE); return null; }
+      return s;
+    } catch (e) { return null; }
+  }
+  function gravar() { try { localStorage.setItem(CHAVE, JSON.stringify(estado)); } catch (e) { /* modo privado: segue sem guardar */ } }
+  function apagar() { estado = null; try { localStorage.removeItem(CHAVE); } catch (e) { /* nada */ } }
+
+  // -- o sorteio: nenhum perfil repete a posição da tela anterior ------------------------------
+  function aleatorio(n) {
+    var a = new Uint32Array(1), limite = Math.floor(0x100000000 / n) * n;
+    do { crypto.getRandomValues(a); } while (a[0] >= limite);
+    return a[0] % n;
+  }
+  function embaralhar(l) {
+    l = l.slice();
+    for (var i = l.length - 1; i > 0; i--) { var j = aleatorio(i + 1), t = l[i]; l[i] = l[j]; l[j] = t; }
+    return l;
+  }
+  function sortearOrdem() {
+    var ordem = [];
+    for (var k = 0; k < TELAS; k++) {
+      var p;
+      do { p = embaralhar(ORDEM); } while (k > 0 && p.some(function (x, j) { return x === ordem[k - 1][j]; }));
+      ordem.push(p);
+    }
+    return ordem;
+  }
+
+  // -- a conta ---------------------------------------------------------------------------------
+  function completa(s) { return s && s.length === 4 && s.slice().sort().join('') === 'CDIS'; }
+  function pontos(seqs) {
+    var p = { D: 0, I: 0, S: 0, C: 0 };
+    seqs.forEach(function (s) { s.forEach(function (l, i) { p[l] += 4 - i; }); });
+    return p;
+  }
+  function ranking(p) { return ORDEM.slice().sort(function (a, b) { return p[b] - p[a] || ORDEM.indexOf(a) - ORDEM.indexOf(b); }); }
+  // ⚠️ empate é resultado (a régua do TalentCare): todos os que têm a maior nota
+  function predominantes(p) { var m = Math.max(p.D, p.I, p.S, p.C); return ORDEM.filter(function (l) { return p[l] === m; }); }
+  function juntar(n) { return n.length <= 1 ? (n[0] || '') : n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1]; }
+  function perfil(l) { return DADOS.perfis[l]; }
+
+  // -- utilidades de tela ------------------------------------------------------------------------
+  function $(id) { return document.getElementById(id); }
+  function h(tag, attrs, filhos) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'texto') el.textContent = attrs[k];
+      else if (k === 'classe') el.className = attrs[k];
+      else if (k === 'estilo') Object.keys(attrs[k]).forEach(function (s) {
+        if (s.slice(0, 2) === '--') el.style.setProperty(s, attrs[k][s]); else el.style[s] = attrs[k][s];
+      });
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k]);
+    });
+    (filhos || []).forEach(function (f) { if (f) el.appendChild(typeof f === 'string' ? document.createTextNode(f) : f); });
+    return el;
+  }
+  function mostrar(id) {
+    pararCronometro();
+    ['tela-inicio', 'tela-pergunta', 'tela-parte2', 'tela-frases', 'tela-parte3', 'tela-busca', 'tela-parte4', 'tela-conf',
+      'tela-calculando', 'tela-resultado', 'tela-codigo'].forEach(function (t) { $(t).hidden = t !== id; });
+    window.scrollTo(0, 0);
+  }
+  function primeiroNome(n) { return (n || '').trim().split(/\s+/)[0] || ''; }
+  function quando(ms) {
+    var d = new Date(ms);
+    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  function perguntar(titulo, texto, sim, nao, perigo) {
+    return new Promise(function (ok) {
+      var fundo = h('div', { classe: 'fundo-janela', role: 'dialog', 'aria-modal': 'true' });
+      function fechar(v) { fundo.remove(); ok(v); }
+      var bSim = h('button', { classe: 'botao' + (perigo ? ' perigo' : ''), type: 'button', texto: sim, onclick: function () { fechar(true); } });
+      fundo.appendChild(h('div', { classe: 'janela' }, [
+        h('h3', { texto: titulo }), h('p', { texto: texto }),
+        h('div', { classe: 'acoes' }, [h('button', { classe: 'botao leve', type: 'button', texto: nao, onclick: function () { fechar(false); } }), bSim]),
+      ]));
+      fundo.addEventListener('click', function (ev) { if (ev.target === fundo) fechar(false); });
+      document.body.appendChild(fundo);
+      bSim.focus();
+    });
+  }
+
+  // -- início -----------------------------------------------------------------------------------
+  // ⚠️ com um teste guardado, a tela inicial NÃO deixa começar outro nem apagar: só ver (o código ou o resultado)
+  // ou continuar. Começar outro candidato é da Recepção, pelo "Iniciar novamente" (com a senha).
+  function telaInicio() {
+    estado = ler();
+    var box = $('retomar'), acoes = $('retomar-acoes');
+    acoes.innerHTML = '';
+    $('erro-inicio').hidden = true;
+    var guardado = !!estado;
+    box.hidden = !guardado;
+    $('cartao-form').hidden = guardado;
+    var quem = (guardado && estado.nome) || 'O candidato';
+    if (guardado && estado.concluido) {
+      $('retomar-texto').textContent = quem + ' concluiu os testes.';
+      acoes.appendChild(h('button', { classe: 'botao', type: 'button', texto: 'Ver o código', onclick: telaCodigo }));
+    } else if (guardado && estado.fim) {
+      $('retomar-texto').textContent = quem + ' terminou os testes e ainda não clicou em Concluir.';
+      acoes.appendChild(h('button', { classe: 'botao', type: 'button', texto: 'Ver o resultado', onclick: function () { animado = true; telaResultado(); } }));
+    } else if (guardado) {
+      $('retomar-texto').textContent = {
+        frases: quem + ' parou na parte 2 (personalidade), tela ' + (estado.tela2 + 1) + ' de ' + TELAS2 + '.',
+        parte2: quem + ' terminou a parte 1 e vai começar a parte 2.',
+        parte3: quem + ' terminou a parte 2 e vai começar a parte 3.',
+        busca: quem + ' está na parte 3 (busca de números) — o cronômetro continua contando.',
+        parte4: quem + ' terminou a parte 3 e vai começar a parte 4.',
+        conf: quem + ' está na parte 4 (conferência) — o cronômetro continua contando.',
+      }[estado.etapa] || quem + ' parou na parte 1 (DISC), tela ' + (estado.passo + 1) + ' de ' + TELAS + '.';
+      acoes.appendChild(h('button', { classe: 'botao', type: 'button', texto: 'Continuar de onde parou', onclick: continuar }));
+    }
+    if (guardado) {
+      acoes.appendChild(h('button', { classe: 'botao leve', type: 'button', texto: 'Iniciar novamente', onclick: iniciarNovamente }));
+    } else {
+      $('nome').value = '';
+      $('concordo').checked = false;
+    }
+    mostrar('tela-inicio');
+  }
+
+  $('form-inicio').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    // nunca por cima de um teste guardado (o resultado ainda não foi lançado no Fluxo)
+    if (ler()) { telaInicio(); return; }
+    var nome = $('nome').value.replace(/\s+/g, ' ').trim().slice(0, 80);
+    var erro = $('erro-inicio');
+    if (nome.split(' ').length < 2) { erro.textContent = 'Escreva o seu nome e sobrenome.'; erro.hidden = false; $('nome').focus(); return; }
+    if (!$('concordo').checked) { erro.textContent = 'Para começar, marque que você concorda.'; erro.hidden = false; return; }
+    // etapa: 'disc' → 'parte2' (a introdução) → 'frases' → 'parte3' → 'busca' → 'parte4' → 'conf' → fim
+    estado = {
+      nome: nome, ordem: sortearOrdem(), seqs: [], passo: 0, etapa: 'disc',
+      resp: P.frases.map(function () { return null; }), tela2: 0, fim: false, criado: Date.now(), data: null,
+    };
+    for (var k = 0; k < TELAS; k++) estado.seqs.push([]);
+    gravar();
+    telaPergunta(0);
+  });
+
+  function continuar() {
+    if (estado.etapa === 'conf') telaConf();
+    else if (estado.etapa === 'parte4') telaParte4();
+    else if (estado.etapa === 'busca') telaBusca();
+    else if (estado.etapa === 'parte3') telaParte3();
+    else if (estado.etapa === 'frases') telaFrases(0);
+    else if (estado.etapa === 'parte2') telaParte2();
+    else telaPergunta(0);
+  }
+
+  // -- Iniciar novamente: o único jeito de apagar o teste (a senha é da Recepção) -------------------------
+  function iniciarNovamente() {
+    var fundo = h('div', { classe: 'fundo-janela', role: 'dialog', 'aria-modal': 'true' });
+    function fechar() { fundo.remove(); }
+    var campo = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '12', 'aria-label': 'Senha da Recepção' });
+    var erro = h('p', { classe: 'erro', role: 'alert', hidden: '' });
+    var concluido = estado && estado.concluido;
+    var form = h('form', { classe: 'janela', onsubmit: function (ev) {
+      ev.preventDefault();
+      if (campo.value.trim() !== SENHA_DA_RECEPCAO) { erro.textContent = 'Senha errada.'; erro.hidden = false; campo.select(); return; }
+      fechar();
+      perguntar('Apagar e começar de novo?',
+        (concluido ? 'Confira se o código já foi lançado no Fluxo. ' : 'Este candidato ainda não concluiu os testes. ') + 'Depois de apagar, não volta.',
+        'Apagar e começar outro candidato', 'Voltar', true)
+        .then(function (s) { if (s) { apagar(); telaInicio(); } });
+    } }, [
+      h('h3', { texto: 'Iniciar novamente' }),
+      h('p', { texto: 'Só a Recepção: digite a senha para apagar este teste e deixar o computador pronto para o próximo candidato.' }),
+      campo, erro,
+      h('div', { classe: 'acoes' }, [
+        h('button', { classe: 'botao leve', type: 'button', texto: 'Voltar', onclick: fechar }),
+        h('button', { classe: 'botao', type: 'submit', texto: 'Entrar' }),
+      ]),
+    ]);
+    fundo.appendChild(form);
+    fundo.addEventListener('click', function (ev) { if (ev.target === fundo) fechar(); });
+    document.body.appendChild(fundo);
+    campo.focus();
+  }
+  $('iniciar-codigo').addEventListener('click', iniciarNovamente);
+
+  // -- O CÓDIGO DOS TESTES: os 4 testes em 16 letras e números (versão 2) ------------------------------------
+  // A versão 1 (9 caracteres, só DISC + personalidade, `codigoDosTestesV1` abaixo) fica para referência do formato.
+  // ⚠️ A volta é `apps/api/plane/fluxo/codigo_dos_testes.py` no Fluxo: mudou aqui, mude lá (o `testar.js` confere).
+  // Versão 1: valor = 1·2³⁷ + índice do DISC (D, I, S de 10 a 40) · 41⁴ + índice das 4 somas (−20..20, base 41);
+  // embaralhado por Feistel (4 voltas, metades de 20 bits); 8 dígitos base 32 de Crockford + verificador Luhn mod 32.
+  // Embaralhamento com chave fixa, não criptografia forte: serve para o código não se ler de olho.
+  var ALFABETO = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  var MEIO = 1048576; // 2^20
+  var CHAVE_A = [0x5BD1E, 0x3C6EF, 0x9E377, 0x7F4A7];
+  var CHAVE_B = [0x1B873, 0x2C1B3, 0x0D2B7, 0x6A09E];
+  function misturar(x, k) { var m = (x * CHAVE_A[k] + CHAVE_B[k]) % MEIO; return m ^ (m >>> 9); }
+  function embaralharCodigo(v) {
+    var esq = Math.floor(v / MEIO), dir = v % MEIO;
+    for (var k = 0; k < 4; k++) { var novo = esq ^ misturar(dir, k); esq = dir; dir = novo; }
+    return esq * MEIO + dir;
+  }
+  function verificador(digitos) {
+    var fator = 2, soma = 0;
+    for (var i = digitos.length - 1; i >= 0; i--) {
+      var a = fator * ALFABETO.indexOf(digitos[i]);
+      fator = fator === 2 ? 1 : 2;
+      soma += Math.floor(a / 32) + (a % 32);
+    }
+    return ALFABETO[(32 - (soma % 32)) % 32];
+  }
+  // VERSÃO 2: base mista de 72 bits — DISC (31³) · personalidade (41⁴) · busca (acertos 41, erros 64, omissões 41,
+  // percorrido 181) · conferência (acertos 41, erros 41); Feistel de 4 voltas em metades de 36 bits (BigInt); a versão
+  // (2) nos 3 bits de cima; 15 dígitos base 32 + verificador Luhn mod 32 → "XXXX-XXXX-XXXX-XXXX".
+  var B = function (x) { return BigInt(x); };
+  var A2 = ['0x5DEECE66D', '0x2545F4914', '0x7F4A7C15', '0x94D049BB1'];
+  var B2 = ['0xB', '0x3C6EF372F', '0x1B873593', '0xCC9E2D51'];
+  function codigoDosTestes(p, ps, busca, conf) {
+    var M36 = (B(1) << B(36)) - B(1);
+    var mist = function (x, k) { var m = (x * B(A2[k]) + B(B2[k])) & M36; return m ^ (m >> B(13)); };
+    var n = B(((p.D - 10) * 31 + (p.I - 10)) * 31 + (p.S - 10));
+    ps.eixos.forEach(function (e) { n = n * B(41) + B(e.soma + 20); });
+    n = ((n * B(41) + B(busca.acertos)) * B(64) + B(Math.min(busca.erros, 63))) * B(41) + B(busca.omissoes);
+    n = n * B(181) + B(busca.percorrido);
+    n = (n * B(41) + B(conf.acertos)) * B(41) + B(conf.erros);
+    var esq = n >> B(36), dir = n & M36;
+    for (var k = 0; k < 4; k++) { var novo = esq ^ mist(dir, k); esq = dir; dir = novo; }
+    var v = (B(2) << B(72)) | (esq << B(36)) | dir;
+    var digitos = '';
+    for (var j = 14; j >= 0; j--) digitos += ALFABETO[Number((v >> B(5 * j)) & B(31))];
+    var c = digitos + verificador(digitos);
+    return c.slice(0, 4) + '-' + c.slice(4, 8) + '-' + c.slice(8, 12) + '-' + c.slice(12);
+  }
+  function codigoDosTestesV1(p, ps) {
+    var idxDisc = ((p.D - 10) * 31 + (p.I - 10)) * 31 + (p.S - 10);
+    var idxPers = ps.eixos.reduce(function (a, e) { return a * 41 + (e.soma + 20); }, 0);
+    var v = embaralharCodigo(Math.pow(2, 37) * 1 + idxDisc * Math.pow(41, 4) + idxPers);
+    var digitos = '';
+    for (var j = 7; j >= 0; j--) digitos += ALFABETO[Math.floor(v / Math.pow(32, j)) % 32];
+    var c = digitos + verificador(digitos);
+    return c.slice(0, 3) + '-' + c.slice(3, 6) + '-' + c.slice(6);
+  }
+
+  // -- Concluir: o resultado sai da tela e entra o código ------------------------------------------------------
+  function concluir() {
+    perguntar('Concluir os testes?', 'O seu resultado sai da tela e aparece o código para você passar à recepcionista.', 'Concluir', 'Voltar')
+      .then(function (s) {
+        if (!s) return;
+        estado.codigo = codigoDosTestes(pontos(estado.seqs), personalidade(estado.resp), resultadoDaBusca(estado.busca), resultadoDaConf(estado.conf));
+        estado.concluido = true;
+        gravar();
+        telaCodigo();
+      });
+  }
+  $('concluir-pe').addEventListener('click', concluir);
+
+  function telaCodigo() {
+    if (!estado || !estado.concluido) { telaInicio(); return; }
+    $('obrigado').textContent = 'Obrigado' + (primeiroNome(estado.nome) ? ', ' + primeiroNome(estado.nome) : '') + '!';
+    $('codigo').textContent = estado.codigo;
+    mostrar('tela-codigo');
+  }
+
+  // -- pergunta ---------------------------------------------------------------------------------
+  var timerSobra = null;
+
+  function telaPergunta(direcao) {
+    mostrar('tela-pergunta');
+    var k = estado.passo;
+    var trilho = $('trilho');
+    trilho.innerHTML = '';
+    for (var i = 0; i < TELAS; i++) trilho.appendChild(h('i', { classe: i < k ? 'feito' : i === k ? 'atual' : '' }));
+    $('contador').textContent = (k + 1) + '/' + TELAS;
+    $('proxima').textContent = k === TELAS - 1 ? 'Ver meu resultado' : 'Próxima';
+    var grupos = $('grupos');
+    grupos.innerHTML = '';
+    grupos.className = 'grupos';
+    estado.ordem[k].forEach(function (letra) {
+      var palavras = DADOS.teste[k][letra].map(function (p) {
+        return h('span', { classe: 'palavra' }, [h('b', { texto: p[0] }), p[1] ? h('small', { texto: p[1] }) : null]);
+      });
+      grupos.appendChild(h('button', { classe: 'grupo', type: 'button', 'data-letra': letra, onclick: function () { clicar(letra); } }, [
+        h('span', { classe: 'palavras' }, palavras),
+        h('span', { classe: 'circulo', 'aria-hidden': 'true' }),
+      ]));
+    });
+    atualizarNotas(null);
+    if (direcao && !reduzido) {
+      grupos.classList.add('entra');
+      if (direcao < 0) grupos.classList.add('volta');
+    }
+  }
+
+  function atualizarNotas(novo) {
+    var k = estado.passo, seq = estado.seqs[k];
+    Array.prototype.forEach.call($('grupos').children, function (b) {
+      var letra = b.getAttribute('data-letra'), i = seq.indexOf(letra), nota = i >= 0 ? 4 - i : 0;
+      var circ = b.querySelector('.circulo');
+      var palavras = DADOS.teste[k][letra].map(function (p) { return p[0]; }).join(', ');
+      if (nota) b.setAttribute('data-nota', nota); else b.removeAttribute('data-nota');
+      circ.textContent = nota ? String(nota) : '';
+      b.setAttribute('aria-label', palavras + ' — ' + (nota ? 'nota ' + nota + ', ' + SENTIDO[nota] : 'sem nota'));
+      if (novo === letra && !reduzido) { circ.classList.remove('estoura'); void circ.offsetWidth; circ.classList.add('estoura'); }
+    });
+    $('limpar').hidden = seq.length === 0;
+    $('proxima').disabled = !completa(seq);
+  }
+
+  function clicar(letra) {
+    var k = estado.passo, seq = estado.seqs[k], i = seq.indexOf(letra);
+    clearTimeout(timerSobra);
+    if (i >= 0) seq.splice(i); // clicar num numerado desfaz a partir dele
+    else if (seq.length < 4) seq.push(letra);
+    gravar();
+    atualizarNotas(i >= 0 ? null : letra);
+    if (seq.length === 3) {
+      // o que sobrou recebe 1 sozinho
+      var sobra = ORDEM.filter(function (l) { return seq.indexOf(l) < 0; })[0];
+      timerSobra = setTimeout(function () {
+        if (estado && estado.passo === k && estado.seqs[k].length === 3) { estado.seqs[k].push(sobra); gravar(); atualizarNotas(sobra); }
+      }, reduzido ? 0 : 260);
+    }
+  }
+
+  function trocarTela(dir, depois) {
+    var grupos = $('grupos');
+    if (reduzido) { depois(); return; }
+    grupos.classList.remove('entra');
+    grupos.classList.add('sai');
+    if (dir < 0) grupos.classList.add('volta');
+    setTimeout(depois, 220);
+  }
+
+  $('limpar').addEventListener('click', function () { clearTimeout(timerSobra); estado.seqs[estado.passo] = []; gravar(); atualizarNotas(null); });
+  $('voltar').addEventListener('click', function () {
+    clearTimeout(timerSobra);
+    if (estado.passo === 0) { telaInicio(); return; }
+    trocarTela(-1, function () { estado.passo -= 1; gravar(); telaPergunta(-1); });
+  });
+  $('proxima').addEventListener('click', function () {
+    if (!completa(estado.seqs[estado.passo])) return;
+    if (estado.passo < TELAS - 1) {
+      trocarTela(1, function () { estado.passo += 1; gravar(); telaPergunta(1); });
+      return;
+    }
+    if (!estado.seqs.every(completa)) {
+      // nunca deveria acontecer: volta para a primeira tela incompleta
+      estado.passo = estado.seqs.findIndex(function (s) { return !completa(s); });
+      gravar(); telaPergunta(-1); return;
+    }
+    // a parte 1 acabou: a introdução da parte 2
+    estado.etapa = 'parte2';
+    gravar();
+    telaParte2();
+  });
+
+  // -- parte 2: personalidade ------------------------------------------------------------------
+  function telaParte2() { mostrar('tela-parte2'); }
+  $('voltar-parte2').addEventListener('click', function () { estado.etapa = 'disc'; estado.passo = TELAS - 1; gravar(); telaPergunta(-1); });
+  $('comecar-parte2').addEventListener('click', function () { estado.etapa = 'frases'; estado.tela2 = 0; gravar(); telaFrases(1); });
+
+  function telaFrases(direcao) {
+    mostrar('tela-frases');
+    var k = estado.tela2;
+    var trilho = $('trilho-frases');
+    trilho.innerHTML = '';
+    trilho.style.gridTemplateColumns = 'repeat(' + TELAS2 + ',1fr)';
+    for (var i = 0; i < TELAS2; i++) trilho.appendChild(h('i', { classe: i < k ? 'feito' : i === k ? 'atual' : '' }));
+    $('contador-frases').textContent = (k + 1) + '/' + TELAS2;
+    $('proxima-frases').textContent = k === TELAS2 - 1 ? 'Ver meu resultado' : 'Próxima';
+    var caixa = $('frases');
+    caixa.innerHTML = '';
+    caixa.className = 'frases' + (direcao && !reduzido ? ' entra' + (direcao < 0 ? ' volta' : '') : '');
+    for (var n = k * POR_TELA; n < Math.min(P.frases.length, (k + 1) * POR_TELA); n++) {
+      (function (n) {
+        var botoes = P.escala.map(function (op) {
+          return h('button', { type: 'button', role: 'radio', 'aria-checked': String(estado.resp[n] === op[1]), texto: op[0], onclick: function () { responder(n, op[1]); } });
+        });
+        caixa.appendChild(h('div', { classe: 'frase' + (estado.resp[n] !== null ? ' ok' : ''), 'data-n': n }, [
+          h('p', { id: 'frase-' + n, texto: P.frases[n][1] }),
+          h('div', { classe: 'escala', role: 'radiogroup', 'aria-labelledby': 'frase-' + n }, botoes),
+        ]));
+      })(n);
+    }
+    atualizarFrases();
+  }
+
+  function respostasDaTela(k) { return estado.resp.slice(k * POR_TELA, (k + 1) * POR_TELA); }
+  function atualizarFrases() {
+    Array.prototype.forEach.call($('frases').children, function (div) {
+      var n = +div.getAttribute('data-n');
+      div.classList.toggle('ok', estado.resp[n] !== null);
+      Array.prototype.forEach.call(div.querySelectorAll('button'), function (b, i) { b.setAttribute('aria-checked', String(estado.resp[n] === P.escala[i][1])); });
+    });
+    $('proxima-frases').disabled = respostasDaTela(estado.tela2).some(function (v) { return v === null; });
+  }
+  function responder(n, v) { estado.resp[n] = v; gravar(); atualizarFrases(); }
+
+  $('voltar-frases').addEventListener('click', function () {
+    if (estado.tela2 === 0) { estado.etapa = 'parte2'; gravar(); telaParte2(); return; }
+    estado.tela2 -= 1; gravar(); telaFrases(-1);
+  });
+  $('proxima-frases').addEventListener('click', function () {
+    if (respostasDaTela(estado.tela2).some(function (v) { return v === null; })) return;
+    if (estado.tela2 < TELAS2 - 1) { estado.tela2 += 1; gravar(); telaFrases(1); window.scrollTo(0, 0); return; }
+    var falta = estado.resp.indexOf(null);
+    if (falta >= 0) { estado.tela2 = Math.floor(falta / POR_TELA); gravar(); telaFrases(-1); return; } // nunca deveria acontecer
+    // a parte 2 acabou: a introdução da parte 3
+    estado.etapa = 'parte3';
+    gravar();
+    telaParte3();
+    window.scrollTo(0, 0);
+  });
+
+  // == PARTES 3 E 4: ATENÇÃO =================================================================================
+  // ⚠️ Os tamanhos são da VERSÃO 2 do código (`codigo_dos_testes.py`): mudou aqui, suba a versão lá e cá.
+  var BUSCA = { celulas: 180, alvos: 40, segundos: 180, modelos: [38, 63, 96],
+    // os parecidos com os modelos: dígitos trocados, repetidos, 3/8, 6/9, 5/6
+    parecidos: [83, 88, 33, 36, 58, 39, 68, 66, 53, 65, 93, 69, 98, 99, 90, 86, 89, 35, 56, 30] };
+  var CONF = { pares: 40, segundos: 120 };
+  var cronometro = null;
+  function pararCronometro() { if (cronometro) { clearInterval(cronometro); cronometro = null; } }
+  function restante(prova, limite) { return Math.max(0, limite * 1000 - (Date.now() - prova.inicio)); }
+  function mostrarTempo(el, ms) {
+    var s = Math.ceil(ms / 1000);
+    el.textContent = Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+    el.classList.toggle('fim-perto', s <= 20);
+  }
+  function rodarCronometro(prova, limite, el, aoAcabar) {
+    pararCronometro();
+    var passo = function () {
+      var ms = restante(prova, limite);
+      mostrarTempo(el, ms);
+      if (ms <= 0) { pararCronometro(); aoAcabar(); }
+    };
+    passo();
+    if (restante(prova, limite) > 0) cronometro = setInterval(passo, 250);
+  }
+  function sortear(lista) { return lista[aleatorio(lista.length)]; }
+  function chips(caixa, numeros) {
+    caixa.innerHTML = '';
+    numeros.forEach(function (n) { caixa.appendChild(h('b', { texto: String(n) })); });
+  }
+
+  // -- parte 3: a busca de números -------------------------------------------------------------------------------
+  function gerarGrade() {
+    var g = [];
+    for (var i = 0; i < BUSCA.alvos; i++) g.push(BUSCA.modelos[i % BUSCA.modelos.length]);
+    while (g.length < BUSCA.celulas) g.push(sortear(BUSCA.parecidos));
+    return embaralhar(g);
+  }
+  var EXEMPLO_BUSCA = [83, 38, 36, 96, 69, 63, 88, 38, 99, 66];
+  function telaParte3() {
+    mostrar('tela-parte3');
+    chips($('modelos-exemplo'), BUSCA.modelos);
+    var grade = $('grade-exemplo');
+    grade.innerHTML = '';
+    var marcados = {};
+    var aviso = $('aviso-exemplo3');
+    aviso.textContent = 'Clique nos números iguais aos modelos.';
+    $('comecar-busca').disabled = true;
+    EXEMPLO_BUSCA.forEach(function (n, i) {
+      var b = h('button', { classe: 'celula', type: 'button', texto: String(n), onclick: function () {
+        marcados[i] = !marcados[i];
+        var alvo = BUSCA.modelos.indexOf(n) >= 0;
+        b.className = 'celula' + (marcados[i] ? (alvo ? ' ok' : ' errou') : '');
+        var certos = EXEMPLO_BUSCA.every(function (x, j) { return !!marcados[j] === (BUSCA.modelos.indexOf(x) >= 0); });
+        var errados = EXEMPLO_BUSCA.some(function (x, j) { return marcados[j] && BUSCA.modelos.indexOf(x) < 0; });
+        aviso.textContent = certos ? 'Isso! Você achou os 4. Quando estiver pronto, comece.'
+          : errados ? 'O vermelho não é igual a nenhum modelo: clique nele de novo para desmarcar.' : 'Continue: ainda falta algum.';
+        $('comecar-busca').disabled = !certos;
+      } });
+      grade.appendChild(b);
+    });
+  }
+  $('voltar-parte3').addEventListener('click', function () { estado.etapa = 'frases'; estado.tela2 = TELAS2 - 1; gravar(); telaFrases(-1); });
+  $('comecar-busca').addEventListener('click', function () {
+    estado.busca = { grade: gerarGrade(), marcados: [], inicio: Date.now(), terminou: false };
+    estado.etapa = 'busca';
+    gravar();
+    telaBusca();
+  });
+
+  function telaBusca() {
+    if (restante(estado.busca, BUSCA.segundos) <= 0) { finalizarBusca(false); return; } // reabriu depois do tempo
+    mostrar('tela-busca');
+    chips($('modelos-busca'), BUSCA.modelos);
+    var grade = $('grade-busca');
+    grade.innerHTML = '';
+    estado.busca.grade.forEach(function (n, i) {
+      grade.appendChild(h('button', { classe: 'celula' + (estado.busca.marcados.indexOf(i) >= 0 ? ' marcada' : ''), type: 'button',
+        texto: String(n), 'data-i': i, 'aria-pressed': String(estado.busca.marcados.indexOf(i) >= 0), onclick: function (ev) { marcarNaBusca(i, ev.currentTarget); } }));
+    });
+    rodarCronometro(estado.busca, BUSCA.segundos, $('cronometro-busca'), function () { finalizarBusca(false); });
+  }
+  function marcarNaBusca(i, botao) {
+    if (estado.etapa !== 'busca' || restante(estado.busca, BUSCA.segundos) <= 0) return;
+    var k = estado.busca.marcados.indexOf(i);
+    if (k >= 0) estado.busca.marcados.splice(k, 1); else estado.busca.marcados.push(i);
+    botao.classList.toggle('marcada', k < 0);
+    botao.setAttribute('aria-pressed', String(k < 0));
+    gravar();
+  }
+  $('terminei-busca').addEventListener('click', function () {
+    perguntar('Terminou a busca?', 'O tempo que sobrou não volta. Os números que você não marcou contam como não encontrados.', 'Terminei', 'Voltar')
+      .then(function (s) { if (s && estado.etapa === 'busca') finalizarBusca(true); });
+  });
+  function finalizarBusca(terminou) {
+    pararCronometro();
+    estado.busca.terminou = terminou;
+    estado.busca.fim = Date.now();
+    estado.etapa = 'parte4';
+    gravar();
+    telaParte4();
+    window.scrollTo(0, 0);
+  }
+  // acertos (alvo marcado), erros (marcou o que não era), omissões (alvo deixado para trás no trecho percorrido) e
+  // o trecho percorrido: até a última marca — ou a grade toda, se a pessoa disse "Terminei"
+  function resultadoDaBusca(b) {
+    var ultima = b.marcados.reduce(function (m, i) { return Math.max(m, i); }, -1);
+    var percorrido = b.terminou ? BUSCA.celulas : ultima + 1;
+    var r = { acertos: 0, erros: 0, omissoes: 0, percorrido: percorrido };
+    b.grade.forEach(function (n, i) {
+      var alvo = BUSCA.modelos.indexOf(n) >= 0, marcado = b.marcados.indexOf(i) >= 0;
+      if (marcado && alvo) r.acertos++;
+      else if (marcado) r.erros++;
+      else if (alvo && i < percorrido) r.omissoes++;
+    });
+    return r;
+  }
+
+  // -- parte 4: a conferência ------------------------------------------------------------------------------------------
+  var NOMES = ['Padaria Bom Pão Ltda', 'Auto Peças Silveira ME', 'Comercial Santa Rita Eireli', 'Transportes Rápido Sul Ltda',
+    'Farmácia Nossa Senhora', 'Oficina Mecânica Irmãos Lima', 'Supermercado Bela Vista', 'Construtora Vale Verde Ltda',
+    'Clínica Odontológica Sorriso', 'Restaurante Sabor Caseiro', 'Distribuidora Andrade & Filhos', 'Moraes Consultoria Ltda',
+    'Papelaria Ponto Certo', 'Imobiliária Casa Nova', 'Pet Shop Amigo Fiel', 'Lavanderia Bolha Azul', 'Mercearia São Jorge',
+    'Ótica Visão Clara', 'Academia Corpo em Forma', 'Floricultura Jardim Real'];
+  function digitos(n) { var s = ''; for (var i = 0; i < n; i++) s += String(aleatorio(10)); return s; }
+  var GERAR = {
+    cnpj: function () { var d = digitos(8) + '0001' + digitos(2); return d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8, 12) + '-' + d.slice(12); },
+    valor: function () {
+      var reais = String(100 + aleatorio(99900)), cent = ('0' + aleatorio(100)).slice(-2);
+      return 'R$ ' + reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + cent;
+    },
+    data: function () { return ('0' + (1 + aleatorio(28))).slice(-2) + '/' + ('0' + (1 + aleatorio(12))).slice(-2) + '/' + (2020 + aleatorio(7)); },
+    nome: function () { return sortear(NOMES); },
+    nf: function () { var d = digitos(9); return 'NF ' + d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6); },
+  };
+  // a diferença SUTIL: nos números, troca dois dígitos vizinhos ou muda um; no nome, tira, dobra, troca ou muda uma letra
+  function mudarNumero(s) {
+    var pos = [];
+    for (var i = 0; i < s.length; i++) if (/\d/.test(s[i])) pos.push(i);
+    var vizinhos = pos.filter(function (i) { return /\d/.test(s[i + 1] || '') && s[i] !== s[i + 1]; });
+    if (vizinhos.length && aleatorio(2)) {
+      var v = sortear(vizinhos);
+      return s.slice(0, v) + s[v + 1] + s[v] + s.slice(v + 2);
+    }
+    var q = sortear(pos), novo;
+    do { novo = String(aleatorio(10)); } while (novo === s[q]);
+    return s.slice(0, q) + novo + s.slice(q + 1);
+  }
+  function mudarNome(s) {
+    var pos = [];
+    for (var i = 1; i < s.length - 1; i++) if (/[a-zà-ú]/i.test(s[i]) && /[a-zà-ú]/i.test(s[i - 1]) && /[a-zà-ú]/i.test(s[i + 1])) pos.push(i);
+    var q = sortear(pos), jeito = aleatorio(4);
+    if (jeito === 0) return s.slice(0, q) + s.slice(q + 1); // tira
+    if (jeito === 1) return s.slice(0, q) + s[q] + s.slice(q); // dobra
+    if (jeito === 2 && s[q] !== s[q + 1]) return s.slice(0, q) + s[q + 1] + s[q] + s.slice(q + 2); // troca vizinhas
+    var vogais = 'aeiou', troca = vogais.indexOf(s[q]) >= 0 ? vogais.replace(s[q], '') : 'rstnl'.replace(s[q], '');
+    return s.slice(0, q) + sortear(troca.split('')) + s.slice(q + 1); // muda
+  }
+  function gerarPares() {
+    var tipos = ['cnpj', 'valor', 'data', 'nome', 'nf'], pares = [];
+    tipos.forEach(function (tipo) {
+      for (var i = 0; i < CONF.pares / tipos.length; i++) {
+        var a = GERAR[tipo](), b = a;
+        if (i % 2) { do { b = tipo === 'nome' ? mudarNome(a) : mudarNumero(a); } while (b === a); }
+        pares.push({ tipo: tipo, a: a, b: b });
+      }
+    });
+    return embaralhar(pares);
+  }
+  var EXEMPLO_CONF = [{ a: '12.345.678/0001-90', b: '12.345.678/0001-09', igual: false }, { a: 'Padaria Bom Pão Ltda', b: 'Padaria Bom Pão Ltda', igual: true }];
+  var exemploConf = 0;
+  function desenharPar(caixa, par) {
+    caixa.innerHTML = '';
+    caixa.appendChild(h('div', null, [h('small', { texto: 'Documento' }), h('b', { texto: par.a })]));
+    caixa.appendChild(h('div', null, [h('small', { texto: 'Sistema' }), h('b', { texto: par.b })]));
+  }
+  function telaParte4() {
+    mostrar('tela-parte4');
+    exemploConf = 0;
+    $('comecar-conf').disabled = true;
+    $('aviso-exemplo4').textContent = 'Compare com calma.';
+    desenharPar($('par-exemplo'), EXEMPLO_CONF[0]);
+  }
+  function responderExemplo(igual) {
+    if (exemploConf >= EXEMPLO_CONF.length) return;
+    var par = EXEMPLO_CONF[exemploConf], aviso = $('aviso-exemplo4');
+    if (igual !== par.igual) {
+      aviso.textContent = par.igual ? 'Olhe de novo: os dois estão iguais.' : 'Olhe de novo: o fim é “90” num e “09” no outro.';
+      return;
+    }
+    exemploConf++;
+    if (exemploConf < EXEMPLO_CONF.length) { aviso.textContent = 'Isso! Agora o próximo.'; desenharPar($('par-exemplo'), EXEMPLO_CONF[exemploConf]); }
+    else { aviso.textContent = 'Isso! Quando estiver pronto, comece.'; $('comecar-conf').disabled = false; }
+  }
+  $('exemplo-iguais').addEventListener('click', function () { responderExemplo(true); });
+  $('exemplo-diferentes').addEventListener('click', function () { responderExemplo(false); });
+  $('comecar-conf').addEventListener('click', function () {
+    estado.conf = { pares: gerarPares(), respostas: [], inicio: Date.now() };
+    estado.etapa = 'conf';
+    gravar();
+    telaConf();
+  });
+
+  function telaConf() {
+    if (restante(estado.conf, CONF.segundos) <= 0 || estado.conf.respostas.length >= estado.conf.pares.length) { finalizarConf(); return; }
+    mostrar('tela-conf');
+    desenharConf();
+    rodarCronometro(estado.conf, CONF.segundos, $('cronometro-conf'), finalizarConf);
+  }
+  function desenharConf() {
+    var k = estado.conf.respostas.length;
+    $('conta-pares').textContent = (k + 1) + ' de ' + estado.conf.pares.length;
+    desenharPar($('par-conf'), estado.conf.pares[k]);
+  }
+  function responderConf(igual) {
+    if (estado.etapa !== 'conf' || restante(estado.conf, CONF.segundos) <= 0) return;
+    estado.conf.respostas.push(igual);
+    gravar();
+    if (estado.conf.respostas.length >= estado.conf.pares.length) finalizarConf(); else desenharConf();
+  }
+  $('conf-iguais').addEventListener('click', function () { responderConf(true); });
+  $('conf-diferentes').addEventListener('click', function () { responderConf(false); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    if (!$('tela-conf').hidden) { ev.preventDefault(); responderConf(ev.key === 'ArrowLeft'); }
+    else if (!$('tela-parte4').hidden) { ev.preventDefault(); responderExemplo(ev.key === 'ArrowLeft'); }
+  });
+  function finalizarConf() {
+    pararCronometro();
+    if (estado.etapa !== 'conf') return;
+    estado.conf.fim = Date.now();
+    estado.etapa = 'fim';
+    estado.fim = true;
+    estado.data = Date.now();
+    gravar();
+    mostrar('tela-calculando');
+    animado = false;
+    setTimeout(telaResultado, reduzido ? 200 : 1600);
+  }
+  function resultadoDaConf(c) {
+    var r = { acertos: 0, erros: 0 };
+    c.respostas.forEach(function (igual, i) { if (igual === (c.pares[i].a === c.pares[i].b)) r.acertos++; else r.erros++; });
+    return r;
+  }
+
+  // A CONTA DA PERSONALIDADE: em cada eixo, soma a resposta (-2 a +2) a favor do 1º lado (E, S, T, J) e
+  // contra ele quando a frase é do 2º lado. A % do lado que venceu = 50 + |soma| × 50 / máximo do eixo
+  // (10 frases × 2 = 20 → passos de 2,5). Empate (soma 0) vai para o 2º lado: I, N, F, P, a regra clássica.
+  function personalidade(resp) {
+    var eixos = P.eixos.map(function (ex) {
+      var soma = 0, maximo = 0;
+      P.frases.forEach(function (f, i) {
+        if (ex.polos.indexOf(f[0]) < 0) return;
+        maximo += 2;
+        soma += (f[0] === ex.polos[0] ? 1 : -1) * resp[i];
+      });
+      var primeiro = 50 + (soma * 50) / maximo; // % do 1º lado, para a régua
+      var letra = soma > 0 ? ex.polos[0] : ex.polos[1];
+      return { chave: ex.chave, nome: ex.nome, polos: ex.polos, letra: letra, soma: soma, pct: Math.round(50 + (Math.abs(soma) * 50) / maximo), primeiro: primeiro };
+    });
+    return { tipo: eixos.map(function (e) { return e.letra; }).join(''), eixos: eixos };
+  }
+
+  // -- resultado --------------------------------------------------------------------------------
+  function letra(l, tam) {
+    return h('span', { classe: 'letra', texto: l, estilo: { background: 'var(--' + l + ')', color: 'var(--' + l + '-tinta)', width: tam ? tam + 'px' : '', height: tam ? tam + 'px' : '' } });
+  }
+
+  function rosca(p, pr) {
+    var R = 48, C = 2 * Math.PI * R, folga = 1.5, inicio = 0;
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 120 120');
+    svg.setAttribute('aria-hidden', 'true');
+    var fundo = document.createElementNS(svg.namespaceURI, 'circle');
+    fundo.setAttribute('cx', 60); fundo.setAttribute('cy', 60); fundo.setAttribute('r', R);
+    fundo.style.stroke = 'var(--papel-2)';
+    svg.appendChild(fundo);
+    var arcos = [];
+    ORDEM.forEach(function (l) {
+      var comp = Math.max(0, (p[l] / 100) * C - folga);
+      var c = document.createElementNS(svg.namespaceURI, 'circle');
+      c.setAttribute('cx', 60); c.setAttribute('cy', 60); c.setAttribute('r', R);
+      c.style.stroke = 'var(--' + l + ')';
+      c.style.strokeDashoffset = String(-inicio);
+      c.style.strokeDasharray = (animado ? comp : 0) + ' ' + C;
+      arcos.push([c, comp]);
+      inicio += (p[l] / 100) * C;
+      svg.appendChild(c);
+    });
+    var pct = h('span', { texto: (animado ? p[pr[0]] : 0) + '%' });
+    var caixa = h('div', { classe: 'rosca' }, [svg, h('div', { classe: 'meio' }, [h('b', { texto: pr.join('·'), estilo: { color: 'var(--' + pr[0] + '-texto)' } }), pct])]);
+    if (!animado) {
+      arcos.forEach(function (a, i) {
+        a[0].style.transition = 'stroke-dasharray .5s ease ' + (0.15 + i * 0.28) + 's';
+        requestAnimationFrame(function () { requestAnimationFrame(function () { a[0].style.strokeDasharray = a[1] + ' ' + C; }); });
+      });
+      var alvo = p[pr[0]], t0 = performance.now();
+      (function contar(t) {
+        var x = Math.min(1, (t - t0) / 1400), v = Math.round(alvo * (1 - Math.pow(1 - x, 3)));
+        pct.textContent = v + '%';
+        if (x < 1) requestAnimationFrame(contar);
+      })(t0);
+    }
+    return caixa;
+  }
+
+  // ⚠️ só o lado bom do perfil (os dados já vêm recortados pelo `montar.py`): o candidato não pode sair
+  // achando que o teste o prejudicou — todos os perfis são bons
+  function blocoPerfil(l) {
+    var pf = perfil(l), cor = { '--cor': 'var(--' + l + ')' };
+    var etiquetas = pf.palavras.map(function (w) { return h('span', { texto: w, estilo: { background: 'var(--' + l + '-suave)', color: 'var(--' + l + '-texto)' } }); });
+    return h('div', { classe: 'cartao perfil', estilo: cor }, [
+      h('div', { classe: 'perfil-topo' }, [letra(l, 44), h('div', null, [h('h3', { texto: pf.nome + ' · ' + pf.apelido }), h('p', { texto: pf.foco })])]),
+      h('p', { classe: 'citacao', texto: pf.frase }),
+      h('div', { classe: 'etiquetas' }, etiquetas),
+      h('div', null, [h('p', { classe: 'titulo-secao', texto: 'Como você costuma trabalhar' }), lista(pf.comoTrabalha)]),
+      h('div', { classe: 'duas' }, [
+        h('div', null, [h('p', { classe: 'titulo-secao', texto: 'Onde você brilha' }), lista(pf.forcas)]),
+        h('div', null, [h('p', { classe: 'titulo-secao', texto: 'O que te motiva' }), lista(pf.motiva)]),
+      ]),
+      h('div', null, [h('p', { classe: 'titulo-secao', texto: 'O que você entrega' }), h('p', { texto: pf.entrega, estilo: { margin: '0', fontSize: '15px' } })]),
+    ]);
+  }
+  function lista(itens) { return h('ul', { classe: 'lista' }, itens.map(function (t) { return h('li', { texto: t }); })); }
+
+  // as cores das réguas da personalidade (nenhuma é cor de DISC)
+  var COR_DO_EIXO = { energia: '#2563eb', informacao: '#9333ea', decisao: '#059669', organizacao: '#ea580c' };
+
+  function eixoDaPersonalidade(ex) {
+    var pol = P.polos[ex.letra];
+    return h('div', { classe: 'eixo', estilo: { '--cor': COR_DO_EIXO[ex.chave] } }, [
+      h('h4', null, [ex.nome + ': ', h('b', { texto: ex.pct + '% ' + pol.nome })]),
+      // a régua vai do 1º lado (esquerda) ao 2º (direita): o marcador fica perto do lado que venceu
+      h('div', { classe: 'regua' }, [h('i', { estilo: { left: (100 - ex.primeiro) + '%' } })]),
+      h('div', { classe: 'polos' }, ex.polos.map(function (l) { return h('span', { classe: l === ex.letra ? 'vence' : '', texto: P.polos[l].nome }); })),
+      h('p', { texto: pol.descricao }),
+      lista(pol.noTrabalho),
+    ]);
+  }
+
+  function telaResultado() {
+    if (estado && estado.concluido) { telaCodigo(); return; } // depois do Concluir, o resultado não volta à tela
+    if (!estado || !estado.fim || !estado.seqs.every(completa) || !estado.resp || estado.resp.indexOf(null) >= 0 || !estado.busca || !estado.conf) { telaInicio(); return; }
+    var ps = personalidade(estado.resp), tp = P.tipos[ps.tipo];
+    var p = pontos(estado.seqs), ord = ranking(p), pr = predominantes(p);
+    var nomes = pr.map(function (l) { return perfil(l).nome; });
+    var caixa = $('resultado');
+    caixa.innerHTML = '';
+
+    // 0. a faixa do Concluir (e outro botão no pé da página)
+    caixa.appendChild(h('div', { classe: 'cartao faixa-concluir' }, [
+      h('p', { texto: 'Pronto! Leia o seu resultado com calma. Quando terminar, clique em Concluir.' }),
+      h('button', { classe: 'botao', type: 'button', texto: 'Concluir', onclick: concluir }),
+    ]));
+
+    // 1. o destaque
+    var segundo = pr.length > 1
+      ? h('p', { classe: 'segundo' }, ['Empate: você é igualmente ', h('b', { texto: juntar(nomes) }), '.'])
+      : h('p', { classe: 'segundo' }, ['Seu segundo traço mais forte: ', h('b', { texto: perfil(ord[1]).nome }), ' (' + p[ord[1]] + '%).']);
+    var barras = h('div', { classe: 'barras' }, ord.map(function (l, i) {
+      var fill = h('i', { estilo: { background: 'var(--' + l + ')', width: animado ? p[l] + '%' : '0' } });
+      if (!animado) setTimeout(function () { fill.style.width = p[l] + '%'; }, reduzido ? 0 : 500 + 150 * i);
+      return h('div', { classe: 'linha-barra' + (i === 0 ? ' primeira' : '') }, [
+        letra(l), h('span', { classe: 'nome' }, [perfil(l).nome + ' ', h('small', { texto: '· ' + perfil(l).apelido })]),
+        h('span', { classe: 'pct', texto: p[l] + '%' }), h('span', { classe: 'trilha' }, [fill]),
+      ]);
+    }));
+    caixa.appendChild(h('div', { classe: 'cartao' }, [
+      h('p', { classe: 'parte', texto: 'Parte 1 · DISC' }),
+      h('div', { classe: 'destaque' }, [
+        rosca(p, pr),
+        h('div', null, [
+          h('p', { classe: 'ola', texto: 'Pronto' + (primeiroNome(estado.nome) ? ', ' + primeiroNome(estado.nome) : '') + '! ' + (pr.length > 1 ? 'Seus perfis predominantes' : 'Seu perfil predominante') }),
+          h('p', { classe: 'perfil-nome', texto: juntar(nomes), estilo: { color: 'var(--' + pr[0] + '-texto)' } }),
+          h('p', { classe: 'perfil-foco', texto: pr.map(function (l) { return perfil(l).apelido + ' · ' + perfil(l).foco.toLowerCase(); }).join('  |  ') }),
+          segundo,
+        ]),
+      ]),
+      h('div', { estilo: { marginTop: '18px' } }, [barras]),
+    ]));
+
+    // 3. o que o perfil quer dizer — só o lado bom
+    caixa.appendChild(h('div', { estilo: { display: 'grid', gap: '18px' } }, [h('p', { classe: 'titulo-secao', texto: 'Seus pontos fortes', estilo: { margin: '6px 0 -8px' } })]
+      .concat(pr.map(function (l) { return blocoPerfil(l); }))));
+
+    // 4. os outros perfis
+    var outros = ord.filter(function (l) { return pr.indexOf(l) < 0; });
+    caixa.appendChild(h('div', { estilo: { display: 'grid', gap: '12px' } }, [
+      outros.length ? h('div', null, [
+        h('p', { classe: 'titulo-secao', texto: 'Os outros perfis em você' }),
+        h('p', { classe: 'rodape-nota', texto: 'Todos os perfis são bons, cada um com os seus talentos — e todo mundo tem um pouco dos quatro.', estilo: { marginBottom: '10px' } }),
+        h('div', { classe: 'outros' }, outros.map(function (l) {
+          return h('div', { classe: 'outro' }, [
+            h('div', { classe: 'cab' }, [letra(l, 26), perfil(l).nome + ' · ' + perfil(l).apelido, h('b', { texto: p[l] + '%' })]),
+            h('p', { texto: perfil(l).foco }),
+          ]);
+        })),
+      ]) : null,
+      h('p', { classe: 'rodape-nota', texto: DADOS.oQueNaoE }),
+    ]));
+
+    // 5. a parte 2: personalidade — também só o lado bom
+    caixa.appendChild(h('div', { classe: 'cartao perfil' }, [
+      h('p', { classe: 'parte', texto: 'Parte 2 · Personalidade' }),
+      h('div', null, [
+        h('p', { classe: 'ola', texto: 'Seu tipo de personalidade' }),
+        h('p', { classe: 'tipo-codigo', texto: ps.tipo }),
+        h('p', { classe: 'perfil-nome', texto: tp.titulo, estilo: { fontSize: '28px', color: 'var(--tinta)' } }),
+      ]),
+      h('p', { classe: 'citacao', texto: tp.essencia }),
+      h('div', { classe: 'etiquetas' }, tp.forcas.map(function (w) { return h('span', { texto: w, estilo: { background: 'var(--marca-suave)', color: 'var(--marca)' } }); })),
+      h('div', { classe: 'eixos' }, ps.eixos.map(eixoDaPersonalidade)),
+      h('p', { classe: 'rodape-nota', texto: P.naoE }),
+    ]));
+
+    // 6. as partes 3 e 4: atenção — o candidato não vê a pontuação (vai à chefia pelo código)
+    caixa.appendChild(h('div', { classe: 'cartao perfil' }, [
+      h('p', { classe: 'parte', texto: 'Partes 3 e 4 · Atenção' }),
+      h('p', { classe: 'perfil-nome', texto: 'Concluídas!', estilo: { fontSize: '28px', color: 'var(--S-texto)' } }),
+      h('p', { classe: 'citacao', estilo: { '--cor': 'var(--S)' }, texto: 'Obrigado pelo empenho na busca de números e na conferência. Esses resultados seguem para a empresa junto com o código, e fazem parte da conversa da entrevista.' }),
+    ]));
+
+    mostrar('tela-resultado');
+    animado = true;
+  }
+
+  telaInicio();
+})();
+</script>
+</body>
+</html>

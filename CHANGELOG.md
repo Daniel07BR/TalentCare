@@ -1,5 +1,13 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-22 (3) — Os gestores baixam a página dos testes
+
+Pedido do Daniel: "coloque no talent care a opção para os gestores baixarem o arquivo de teste". Na janela do **Código
+dos testes** (ficha), o cartão "Ainda não tem o código? Baixe os testes" com **Baixar os testes** e **Como usar** (4 passos
+para o gestor, com a senha 1234 do "Iniciar novamente"). O arquivo é `public/testes/teste-disc.html`, ⚠️ CÓPIA da página
+montada no Fluxo (`apps/web/public/disc/teste-disc.html`, sha256 788b468a…): mudou lá, copie para cá. Só baixa quem está
+logado (sem sessão o proxy leva ao login).
+
 ## 2026-10-22 (2) — Código dos testes na ficha, Atenção e personalidade só com as letras
 
 Pedidos do Daniel: "deixe um espaço caso os gestores só tenham as letras", "como o gestor inserir o codigo vindo da

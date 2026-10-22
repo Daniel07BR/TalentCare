@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { X, KeyRound, CheckCircle2 } from 'lucide-react'
+import { X, KeyRound, CheckCircle2, Download, Info, ExternalLink } from 'lucide-react'
 import { diaBr, nomeDoPerfil, predominantes } from '@/lib/disc/calculo'
 import { tituloDoTipo, linhaDaPersonalidade } from '@/lib/personalidade/calculo'
 import { resumoDaBusca, resumoDaConferencia, NOME_DO_NIVEL, COR_DO_NIVEL, PROVAS } from '@/lib/testes/atencao'
@@ -19,6 +19,81 @@ import d from '../disc/disc.module.css'
    código traz (DISC, personalidade, atenção) e só SALVAR grava — código de outra
    pessoa se pega lendo o resultado, antes de ir para a ficha.
    ============================================================ */
+
+/* A PÁGINA DO TESTE (22/10/2026, Daniel: "coloque no talent care a opção para os gestores baixarem o arquivo de teste").
+   ⚠️⚠️ CÓPIA de `apps/web/public/disc/teste-disc.html` do FLUXO, que é MONTADA lá (`ferramentas/testes-do-candidato/
+   montar.py`). Mudou a página lá, copie de novo para `public/testes/teste-disc.html` — e, se a versão do código subiu,
+   porte também `lib/testes/codigo.ts`. A senha do "Iniciar novamente" é a da página (1234). */
+export const PAGINA_DO_TESTE = '/testes/teste-disc.html'
+const NOME_DO_ARQUIVO = 'Testes do candidato - Grupo Itamarathy.html'
+const SENHA_DA_PAGINA = '1234'
+
+const PASSOS: [string, React.ReactNode][] = [
+  ['Leve a página ao computador da pessoa',
+    <>Baixe o arquivo e copie para o computador onde a pessoa vai responder (pen drive ou e-mail). Abre com dois cliques,
+      sem instalar nada e sem internet. Uma vez copiado, serve para todos.</>],
+  ['A pessoa responde e recebe um código',
+    <>Ela digita o nome, marca que concorda e faz as quatro partes — DISC, personalidade e duas provas de atenção com
+      cronômetro —, uns 25 minutos. No fim clica em <b>Concluir</b> e aparece um <b>código</b> de 16 letras e números.</>],
+  ['Lance o código na ficha',
+    <>Na ficha da pessoa, clique em <b>Código dos testes</b>, digite o código, confira e salve: o DISC, a personalidade e
+      a atenção entram de uma vez.</>],
+  ['Deixe o computador pronto para o próximo',
+    <>Na página do teste, clique em <b>Iniciar novamente</b> e digite a senha <b>{SENHA_DA_PAGINA}</b> (a tela fala em
+      “senha da Recepção”: é a mesma). Se ninguém apagar, o teste some sozinho em 24 horas.</>],
+]
+
+function BaixarOsTestes() {
+  const [comoUsar, setComoUsar] = useState(false)
+  return (
+    <div className={d.bloco} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <span className={d.cores} aria-hidden style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 18px)', gap: 3, flex: 'none' }}>
+          {(['D', 'I', 'S', 'C'] as const).map((f) => (
+            <span key={f} style={{ width: 18, height: 18, borderRadius: 5, display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 900, background: `var(--disc-${f})`, color: `var(--disc-${f}-ink)` }}>{f}</span>
+          ))}
+        </span>
+        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 800 }}>Ainda não tem o código? Baixe os testes</div>
+          <div style={{ fontSize: 12.5, color: 'var(--n-text-2)', lineHeight: 1.45, marginTop: 2 }}>
+            A mesma página da entrevista de emprego: DISC, personalidade e atenção, num arquivo que abre com dois cliques,
+            sem internet. No fim, a pessoa te passa o código.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href={PAGINA_DO_TESTE} download={NOME_DO_ARQUIVO} className={d.acao} style={{ background: '#0a2766', color: '#fff', textDecoration: 'none' }}>
+            <Download size={15} /> Baixar os testes
+          </a>
+          <button type="button" className={d.acao} onClick={() => setComoUsar(!comoUsar)} aria-expanded={comoUsar}
+            style={{ background: 'var(--n-card-2)', color: 'var(--n-text)' }}>
+            <Info size={15} /> Como usar
+          </button>
+        </div>
+      </div>
+      {comoUsar && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--n-border)', paddingTop: 12 }}>
+          <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {PASSOS.map(([t, txt], i) => (
+              <li key={t} style={{ display: 'flex', gap: 10 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#0a2766', color: '#fff', fontSize: 12, fontWeight: 800, display: 'grid', placeItems: 'center', flex: 'none' }}>{i + 1}</span>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800 }}>{t}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--n-text-2)', lineHeight: 1.5, marginTop: 2 }}>{txt}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: 'var(--n-text-3)' }}>
+            <a href={PAGINA_DO_TESTE} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--n-blue)', fontWeight: 700 }}>
+              <ExternalLink size={13} /> Ver como fica
+            </a>
+            <span>As respostas não saem do computador da pessoa: ao TalentCare chega só o código que você lança.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const hojeSP = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 
@@ -144,6 +219,7 @@ export function JanelaCodigo({ pessoaId, nome, onFechar }: { pessoaId: string; n
             </div>
           ) : (
             <>
+              {!previa && <BaixarOsTestes />}
               <form onSubmit={conferir} className={d.bloco} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 13, color: 'var(--n-text-2)', lineHeight: 1.5 }}>
                   Digite o código que apareceu no fim do teste (16 letras e números, como <b>K7Q2-M9XA-3B8C-D4EF</b>). Pode
