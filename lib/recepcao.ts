@@ -14,6 +14,13 @@ export { ehRecepcao }
    - CIDE (`cide_daily.contatos_*`, `run-cide-sync.mjs`): os contatos das empresas que a
      Recepção atualiza.
 
+   AS OUTRAS TAREFAS (29/10/2026): o Daniel conferiu se o TalentCare refletia TUDO o que a
+   Recepção faz, e faltava o que não é atendimento — entrevistas (agendar, cadastrar, encerrar,
+   lançar o código dos testes, acompanhar o dia), o Controle de faltas do VT e VR (o dia de uma
+   pessoa conferido, não o clique), prestadores de serviço cadastrados e marcadores postos nos
+   contatos do CIDE. Mesmo espelho, mesma rota do Fluxo; a régua de quem ganha o crédito mora lá
+   (`plane/fluxo/talent_recepcao.py`).
+
    ⚠️⚠️ O TOTAL DO SETOR NÃO É A SOMA DAS PESSOAS. Uma visita com duas atendentes é uma
    visita para o setor e uma para cada atendente. O total vem de `recepcao_area_daily`
    (contado por registro no Fluxo); a parte de cada pessoa, de `recepcao_daily`.
@@ -35,13 +42,27 @@ export type Numeros = {
   contatosEmLote: number
   /** Nulo = o CIDE não mediu (linha anterior a 16/10/2026 sem backfill), não zero. */
   contatos: Contatos | null
+  /** As outras tarefas (29/10/2026). */
+  entrevistas: Entrevistas
+  /** Controle de faltas: dias de pessoas conferidos (um por pessoa, dia e dia de trabalho). */
+  faltasConferidas: number
+  prestadores: number
+  marcadores: number
 }
+/** `total` = agendadas + cadastradas + encerradas: o que a Recepção resolveu de cada candidato.
+ *  Testes e acompanhadas são do dia em que o candidato veio — à parte, um por candidato e dia. */
+export type Entrevistas = { total: number; agendadas: number; cadastradas: number; encerradas: number; testes: number; acompanhadas: number }
 
 type Soma = {
   recebidas: number; feitas: number; naoRealizadas: number; esperaLigacaoSeg: number; esperaLigacaoN: number
   visitas: number; deliveries: number; esperaDeliverySeg: number; esperaDeliveryN: number; contatosEmLote: number
+  entrevistasAgendadas: number; entrevistasCadastradas: number; entrevistasEncerradas: number; entrevistasTestes: number
+  entrevistasAcompanhadas: number; faltasConferidas: number; prestadores: number; marcadores: number
 }
-const ZERO: Soma = { recebidas: 0, feitas: 0, naoRealizadas: 0, esperaLigacaoSeg: 0, esperaLigacaoN: 0, visitas: 0, deliveries: 0, esperaDeliverySeg: 0, esperaDeliveryN: 0, contatosEmLote: 0 }
+const ZERO: Soma = {
+  recebidas: 0, feitas: 0, naoRealizadas: 0, esperaLigacaoSeg: 0, esperaLigacaoN: 0, visitas: 0, deliveries: 0, esperaDeliverySeg: 0, esperaDeliveryN: 0, contatosEmLote: 0,
+  entrevistasAgendadas: 0, entrevistasCadastradas: 0, entrevistasEncerradas: 0, entrevistasTestes: 0, entrevistasAcompanhadas: 0, faltasConferidas: 0, prestadores: 0, marcadores: 0,
+}
 const CAMPOS = Object.keys(ZERO) as (keyof Soma)[]
 
 const media = (seg: number, q: number) => (q > 0 ? Math.round(seg / q / 60) : null)
@@ -53,11 +74,22 @@ function numeros(s: Soma, contatos: Contatos | null): Numeros {
     visitas: s.visitas, deliveries: s.deliveries,
     esperaDeliveryMin: media(s.esperaDeliverySeg, s.esperaDeliveryN),
     contatosEmLote: s.contatosEmLote, contatos,
+    entrevistas: {
+      total: s.entrevistasAgendadas + s.entrevistasCadastradas + s.entrevistasEncerradas,
+      agendadas: s.entrevistasAgendadas, cadastradas: s.entrevistasCadastradas, encerradas: s.entrevistasEncerradas,
+      testes: s.entrevistasTestes, acompanhadas: s.entrevistasAcompanhadas,
+    },
+    faltasConferidas: s.faltasConferidas, prestadores: s.prestadores, marcadores: s.marcadores,
   }
 }
 
+/** As outras tarefas somadas — só para saber se a pessoa fez alguma (nunca para mostrar: são coisas diferentes). */
+export const temOutrasTarefas = (x: Numeros) =>
+  x.entrevistas.total + x.entrevistas.testes + x.entrevistas.acompanhadas + x.faltasConferidas + x.prestadores + x.marcadores > 0
+
 export const temAtendimento = (x: Numeros) =>
   x.recebidas + x.feitas + x.naoRealizadas + x.visitas + x.deliveries + x.contatosEmLote + (x.contatos?.atualizados ?? 0) > 0
+  || temOutrasTarefas(x)
 
 type LinhaContato = { nexusUserId: string; contatosEditados: number | null; contatosNovos: number | null; contatosRemovidos: number | null }
 

@@ -529,6 +529,13 @@ REGISTRO e recortes por setor), `run-recepcao-sync.mjs`; contatos do CIDE nas co
 - **O total do setor não é a soma das pessoas**: visita com duas atendentes conta uma vez na área e uma para
   cada atendente. O total vem de `recepcao_area_daily`.
 - Consumidores fora da checklist: não está em `activityOf`, `score-metrics`, `frescor` nem no menu de sistemas.
+- **Outras tarefas (29/10/2026)**, mesma rota e mesmo espelho (`scripts/2026-10-29-recepcao-outras-tarefas.sql`):
+  entrevistas (agendadas, cadastradas, encerradas; testes e acompanhadas um por candidato e dia), Controle de
+  faltas em **dias de pessoas conferidos** (não ajustes: a Lívia fez 474 cliques num dia marcando afastados),
+  prestadores cadastrados e marcadores nos contatos. A régua de quem ganha o crédito mora no Fluxo
+  (`plane/fluxo/talent_recepcao.py`): o que a chefia ou o Pessoal também fazem (agendar, cadastrar, lançar código,
+  conferir falta) só conta para quem era da Recepção na hora. Bloco "Outras tarefas da Recepção" no card do setor,
+  da ficha e do PDF; também não pontua.
 
 ## Como entra uma 9ª fonte
 

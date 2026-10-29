@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation'
 import { Headset } from 'lucide-react'
 import Avatar from '../../../Avatar'
 import { Cartao, forte, suave } from '../../../_visao/ui'
-import { ITENS_RECEPCAO, atendimentos, fmt } from '../../../_visao/recepcao'
-import type { AtendimentoDoSetor } from '@/lib/recepcao'
+import { ITENS_RECEPCAO, OUTRAS_TAREFAS, atendimentos, fmt } from '../../../_visao/recepcao'
+import { temOutrasTarefas, type AtendimentoDoSetor, type PessoaDaRecepcao } from '@/lib/recepcao'
 import type { SecaoProps } from './tipos'
 
 /* ============================================================
@@ -16,7 +16,10 @@ import type { SecaoProps } from './tipos'
    1. os cinco números do setor no período (ligações recebidas e feitas, visitas, delivery,
       contatos do CIDE);
    2. quem fez: uma barra por pessoa com as quatro cores, e os contatos do CIDE à direita;
-   3. a Recepção vista pelos outros setores: para onde vão as ligações, quem pede, para
+   3. as OUTRAS TAREFAS (29/10/2026): entrevistas, Controle de faltas, prestadores e
+      marcadores — o total do setor e uma linha por pessoa, cada número na sua coluna (são
+      coisas diferentes, não se somam);
+   4. a Recepção vista pelos outros setores: para onde vão as ligações, quem pede, para
       quem vêm as visitas.
 
    ⚠️ O total do setor NÃO é a soma das barras: a visita com duas atendentes conta uma vez
@@ -26,6 +29,20 @@ import type { SecaoProps } from './tipos'
 
 const iniciais = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 const BARRA = ITENS_RECEPCAO.filter((i) => i.chave !== 'contatos')
+
+/** Foto, nome e "do <setor>" de quem fez — leva à ficha. */
+function Pessoa({ p, abrir }: { p: PessoaDaRecepcao; abrir: () => void }) {
+  return (
+    <button type="button" onClick={abrir}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', textAlign: 'left', minHeight: 32, minWidth: 0 }}>
+      <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color="var(--n-text-3)" size={26} />
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--n-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
+        {p.deOutroSetor && <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)' }}>do {p.deOutroSetor}</span>}
+      </span>
+    </button>
+  )
+}
 
 function Recorte({ titulo, linhas, tom }: { titulo: string; linhas: { rotulo: string; n: number; extra?: number }[]; tom: 'blue' | 'green' | 'purple' }) {
   const max = Math.max(1, ...linhas.map((l) => l.n + (l.extra ?? 0)))
@@ -74,7 +91,7 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
   }, [m.setor.id, m.fromDay, m.toDay])
 
   const titulo = 'Atendimento da Recepção'
-  const sub = 'Ligações, visitas e delivery do Fluxo · contatos do CIDE · só aparece, não entra na nota'
+  const sub = 'Ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE · só aparece, não entra na nota'
   if (!d) {
     return (
       <Cartao titulo={titulo} Icone={Headset} sub={sub} style={{ marginBottom: 14 }}>
@@ -86,6 +103,7 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
   }
 
   const pessoas = d.pessoas.filter((p) => atendimentos(p) > 0 || (p.contatos?.atualizados ?? 0) > 0)
+  const tarefas = d.pessoas.filter(temOutrasTarefas)
   const maxPessoa = Math.max(1, ...pessoas.map(atendimentos))
   const g = d.grupos
   const pede = new Map<string, { rotulo: string; n: number; extra: number }>()
@@ -139,14 +157,7 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
           return (
             <div key={p.id} title={dica}
               style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 210px) minmax(0, 1fr) 48px 52px', gap: 10, alignItems: 'center', padding: '5px 0', borderTop: '1px solid var(--n-border-2)' }}>
-              <button type="button" onClick={() => router.push(`/funcionarios/${p.id}`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', textAlign: 'left', minHeight: 32, minWidth: 0 }}>
-                <Avatar id={p.id} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color="var(--n-text-3)" size={26} />
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--n-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</span>
-                  {p.deOutroSetor && <span style={{ display: 'block', fontSize: 10.5, color: 'var(--n-text-3)' }}>do {p.deOutroSetor}</span>}
-                </span>
-              </button>
+              <Pessoa p={p} abrir={() => router.push(`/funcionarios/${p.id}`)} />
               <span style={{ display: 'flex', height: 12, borderRadius: 4, overflow: 'hidden', background: 'var(--n-card-2)' }}>
                 <span style={{ display: 'flex', width: `${(total / maxPessoa) * 100}%` }}>
                   {BARRA.map((i) => {
@@ -163,6 +174,50 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
           )
         })}
       </div>
+
+      {temOutrasTarefas(d.total) && (
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--n-border)' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', marginBottom: 8 }}>Outras tarefas da Recepção</div>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))' }}>
+            {OUTRAS_TAREFAS.map((i) => (
+              <div key={i.chave} style={{ background: 'var(--n-card-2)', border: '1px solid var(--n-border-2)', borderRadius: 12, padding: '12px 14px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 9, background: suave(i.tom), color: forte(i.tom), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                    <i.Icone size={16} strokeWidth={2.2} />
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--n-text-2)', lineHeight: 1.25 }}>{i.rotulo}</span>
+                </div>
+                <div className="cnum" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.8px', marginTop: 8, color: 'var(--n-text)' }}>{fmt(i.valor(d.total))}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 2, lineHeight: 1.4 }}>{i.nota(d.total)}</div>
+              </div>
+            ))}
+          </div>
+          {tarefas.length > 0 && (
+            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+              <div style={{ minWidth: 470 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 210px) repeat(4, minmax(70px, 1fr))', gap: 10, fontSize: 11, color: 'var(--n-text-3)', paddingBottom: 4 }}>
+                  <span>Quem fez</span>
+                  {OUTRAS_TAREFAS.map((i) => <span key={i.chave} style={{ textAlign: 'right' }}>{i.curto}</span>)}
+                </div>
+                {tarefas.map((p) => (
+                  <div key={p.id} title={OUTRAS_TAREFAS.map((i) => `${i.rotulo}: ${i.valor(p)}${i.chave === 'entrevistas' ? ` (${i.nota(p)})` : ''}`).join('\n')}
+                    style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 210px) repeat(4, minmax(70px, 1fr))', gap: 10, alignItems: 'center', padding: '5px 0', borderTop: '1px solid var(--n-border-2)' }}>
+                    <Pessoa p={p} abrir={() => router.push(`/funcionarios/${p.id}`)} />
+                    {OUTRAS_TAREFAS.map((i) => {
+                      const v = i.valor(p)
+                      return (
+                        <span key={i.chave} className="cnum" style={{ textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: v ? forte(i.tom) : 'var(--n-text-3)' }}>
+                          {v ? v.toLocaleString('pt-BR') : '—'}
+                        </span>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(min(230px, 100%), 1fr))', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--n-border)' }}>
         <Recorte titulo="Para onde vão as ligações recebidas" linhas={g.destinoLigacao ?? []} tom="blue" />

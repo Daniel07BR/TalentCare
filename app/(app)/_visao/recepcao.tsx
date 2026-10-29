@@ -1,5 +1,5 @@
 'use client'
-import { BookUser, Bike, DoorOpen, PhoneIncoming, PhoneOutgoing, type LucideIcon } from 'lucide-react'
+import { BookUser, Bike, CalendarCheck, DoorOpen, HardHat, PhoneIncoming, PhoneOutgoing, Tags, UserSearch, type LucideIcon } from 'lucide-react'
 import type { Numeros } from '@/lib/recepcao'
 import type { Tom } from './tipos'
 
@@ -50,6 +50,45 @@ export const ITENS_RECEPCAO: ItemRecepcao[] = [
     chave: 'contatos', rotulo: 'Contatos do CIDE', curto: 'Contatos', Icone: BookUser, tom: 'pink',
     valor: (x) => x.contatos?.atualizados ?? null,
     nota: (x) => (x.contatos ? `${x.contatos.novos} novos · ${x.contatos.removidos} removidos` : 'sem medição no período'),
+  },
+]
+
+/* AS OUTRAS TAREFAS (29/10/2026): o que a Recepção faz no Fluxo além de atender — num bloco à
+   parte, embaixo dos cinco números, porque não é atendimento e cada uma tem a sua unidade
+   (candidato, dia de uma pessoa, cadastro, marcador). ⚠️ Nunca some uma com a outra. */
+export type ItemTarefa = {
+  chave: 'entrevistas' | 'faltas' | 'prestadores' | 'marcadores'
+  rotulo: string
+  curto: string
+  Icone: LucideIcon
+  tom: Tom
+  valor: (x: Numeros) => number
+  nota: (x: Numeros) => string | null
+}
+
+export const OUTRAS_TAREFAS: ItemTarefa[] = [
+  {
+    chave: 'entrevistas', rotulo: 'Entrevistas', curto: 'Entrevistas', Icone: UserSearch, tom: 'purple',
+    valor: (x) => x.entrevistas.total,
+    nota: (x) => juntar(
+      `${x.entrevistas.agendadas} ${x.entrevistas.agendadas === 1 ? 'agendada' : 'agendadas'}`,
+      `${x.entrevistas.cadastradas} ${x.entrevistas.cadastradas === 1 ? 'cadastrada' : 'cadastradas'}`,
+      `${x.entrevistas.encerradas} ${x.entrevistas.encerradas === 1 ? 'encerrada' : 'encerradas'}`,
+      x.entrevistas.testes > 0 && `testes de ${x.entrevistas.testes} ${x.entrevistas.testes === 1 ? 'candidato' : 'candidatos'}`,
+      x.entrevistas.acompanhadas > 0 && `${x.entrevistas.acompanhadas} ${x.entrevistas.acompanhadas === 1 ? 'acompanhada' : 'acompanhadas'} no dia`,
+    ),
+  },
+  {
+    chave: 'faltas', rotulo: 'Controle de faltas', curto: 'Faltas', Icone: CalendarCheck, tom: 'blue',
+    valor: (x) => x.faltasConferidas, nota: () => 'dias de pessoas conferidos para VT e VR',
+  },
+  {
+    chave: 'prestadores', rotulo: 'Prestadores cadastrados', curto: 'Prestadores', Icone: HardHat, tom: 'amber',
+    valor: (x) => x.prestadores, nota: () => 'prestadores de serviço nas visitas',
+  },
+  {
+    chave: 'marcadores', rotulo: 'Marcadores nos contatos', curto: 'Marcadores', Icone: Tags, tom: 'pink',
+    valor: (x) => x.marcadores, nota: () => 'quem cuida de quê em cada empresa',
   },
 ]
 

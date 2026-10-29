@@ -1,5 +1,22 @@
 # CHANGELOG — TalentCare
 
+## 2026-10-29 — As outras tarefas da Recepção
+
+O Daniel pediu para conferir se o TalentCare refletia **todas** as atividades da Recepção. O que vinha do Fluxo batia
+(ligações, visitas, delivery, contato em lote — até 1 h de atraso, o sync é no minuto 35), mas faltava o que não é
+atendimento. Agora o card **Atendimento da Recepção** (setor, ficha e PDF) tem o bloco **Outras tarefas da Recepção**:
+
+- **Entrevistas**: agendadas + cadastradas + encerradas pela Recepção; embaixo, testes lançados e candidatos acompanhados
+  no dia (um por candidato e dia). O "Veio" continua sendo visita.
+- **Controle de faltas**: dias de pessoas conferidos para VT e VR — o dia, não o clique.
+- **Prestadores cadastrados** e **Marcadores nos contatos**.
+
+No setor, os quatro totais e uma linha por pessoa (cada número na sua coluna — não se somam). Só aparece, não entra na
+nota. Fluxo `0a9d07f8d5` (rota `talent-recepcao`); aqui `scripts/2026-10-29-recepcao-outras-tarefas.sql` (aditivo),
+`run-recepcao-sync.mjs`, `lib/recepcao.ts`, `app/(app)/_visao/recepcao.tsx` e os dois `AtendimentoRecepcao.tsx`.
+Outubro (01–29): Lívia 16 entrevistas, 550 dias conferidos, 20 marcadores; Larissa 3 entrevistas, 13 prestadores;
+Andrea 1 entrevista, 10 dias conferidos.
+
 ## 2026-10-22 (3) — Os gestores baixam a página dos testes
 
 Pedido do Daniel: "coloque no talent care a opção para os gestores baixarem o arquivo de teste". Na janela do **Código

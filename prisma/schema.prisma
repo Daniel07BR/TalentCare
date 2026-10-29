@@ -1590,6 +1590,18 @@ model RecepcaoDaily {
   esperaDeliverySeg Int      @default(0) @map("espera_delivery_seg")
   esperaDeliveryN   Int      @default(0) @map("espera_delivery_n")
   contatosEmLote    Int      @default(0) @map("contatos_em_lote")
+  // As OUTRAS TAREFAS (29/10/2026, scripts/2026-10-29-recepcao-outras-tarefas.sql): entrevistas,
+  // Controle de faltas (dia de uma pessoa conferido), prestadores cadastrados e marcadores nos contatos.
+  entrevistasAgendadas    Int @default(0) @map("entrevistas_agendadas")
+  entrevistasCadastradas  Int @default(0) @map("entrevistas_cadastradas")
+  entrevistasEncerradas   Int @default(0) @map("entrevistas_encerradas")
+  /** Um por candidato e dia: o código traz os três testes de uma vez. */
+  entrevistasTestes       Int @default(0) @map("entrevistas_testes")
+  /** Documentação, testes ou disponível marcados no dia — um por candidato e dia. */
+  entrevistasAcompanhadas Int @default(0) @map("entrevistas_acompanhadas")
+  faltasConferidas        Int @default(0) @map("faltas_conferidas")
+  prestadores             Int @default(0)
+  marcadores              Int @default(0)
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@id([nexusUserId, day])

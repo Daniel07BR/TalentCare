@@ -2,7 +2,8 @@
 // Rode: node --env-file=.env run-recepcao-sync.mjs [--completo]
 //
 // Lê `GET /api/integrations/talent-recepcao?from&to` (dias de São Paulo) e TROCA a janela
-// inteira em `recepcao_daily` e `recepcao_area_daily`, numa transação.
+// inteira em `recepcao_daily` e `recepcao_area_daily`, numa transação. Desde 29/10/2026 vêm
+// também as OUTRAS TAREFAS (entrevistas, Controle de faltas, prestadores, marcadores).
 //
 // ⚠️⚠️ TROCAR, e não somar por cima: a Recepção corrige o passado (desfaz um contato em lote,
 // apaga uma visita registrada em dobro, marca o Chegou de ontem). Upsert só corrigiria quem
@@ -39,6 +40,11 @@ async function main() {
     visitas: n(r.visitas), deliveries: n(r.deliveries),
     esperaDeliverySeg: n(r.esperaDeliverySeg), esperaDeliveryN: n(r.esperaDeliveryN),
     contatosEmLote: n(r.contatosEmLote),
+    // As outras tarefas (29/10/2026): entrevistas, Controle de faltas, prestadores e marcadores.
+    entrevistasAgendadas: n(r.entrevistasAgendadas), entrevistasCadastradas: n(r.entrevistasCadastradas),
+    entrevistasEncerradas: n(r.entrevistasEncerradas), entrevistasTestes: n(r.entrevistasTestes),
+    entrevistasAcompanhadas: n(r.entrevistasAcompanhadas), faltasConferidas: n(r.faltasConferidas),
+    prestadores: n(r.prestadores), marcadores: n(r.marcadores),
   }))
   const area = []
   for (const a of data.area ?? []) {
