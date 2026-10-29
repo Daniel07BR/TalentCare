@@ -1,4 +1,11 @@
-// Os SERVIÇOS DO DP (Fluxo, .70) → "Serviços do setor" do TalentCare (14/10/2026).
+// Os SERVIÇOS DO DP e do LEGAL (Fluxo, .70) → "Indicadores internos" do TalentCare (14/10/2026; Legal 29/10/2026).
+//
+// ⚠️⚠️ O LEGAL (29/10/2026, pedido do Daniel: "os resultados do legal de cada funcionário deverão ser enviados para
+// os indicadores do departamento e dos usuários lá no TalentCare"): a mesma rota com `&area=legal`
+// (`plane/fluxo/talent_legal.py`) — tarefa concluída para quem a concluiu, bloco de apoio para quem marcou o último
+// passo, tudo pela data. A partir de NOVEMBRO/2026: outubro é da planilha do Gestta (o Legal começou no Fluxo no
+// dia 29), e a planilha de outubro ainda pode subir — a recusa de planilha agora vale só para os meses que o Fluxo
+// cobre (`/api/servicos/importar`).
 // Rode: node --env-file=.env run-fluxo-servicos-sync.mjs [--completo] [--ensaio]
 //
 // Pedido do Daniel: a produção de cada pessoa do Departamento Pessoal — folha (por porte), vale,
@@ -32,12 +39,14 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 const BASE = process.env.FLUXO_BASE_URL
 const KEY = process.env.FLUXO_API_KEY
-/** O setor "Pessoal" pelo id do NEXUS — o nome de setor muda, o id não. */
-const DP_NEXUS_ID = 'b9a6a9c5-1787-4c77-b942-4247ae50d9d8'
-const PRIMEIRO_MES = '2026-09'
+/** Os setores pelo id do NEXUS — o nome de setor muda, o id não. `area` vai na rota do Fluxo (vazio = o DP). */
+const SETORES = [
+  { sigla: 'DP', nexusId: 'b9a6a9c5-1787-4c77-b942-4247ae50d9d8', area: null, primeiroMes: '2026-09', prefixo: 'fluxo:' },
+  { sigla: 'Legal', nexusId: 'fb048f73-ca57-481c-bce5-7b8ca23b0d0f', area: 'legal', primeiroMes: '2026-11', prefixo: 'fluxo-legal:' },
+]
 /** O autor dos envios automáticos (a tela de Serviços mostra "Fluxo (automático)"). */
 const AUTOR = 'fluxo'
-const ARQUIVO = (mes) => `Fluxo · serviços do DP · ${mes.slice(5)}/${mes.slice(0, 4)}`
+const ARQUIVO = (sigla, mes) => `Fluxo · serviços do ${sigla} · ${mes.slice(5)}/${mes.slice(0, 4)}`
 
 const completo = process.argv.includes('--completo')
 const ensaio = process.argv.includes('--ensaio')
@@ -62,20 +71,25 @@ function janela(mes) {
 
 async function main() {
   if (!BASE || !KEY) throw new Error('FLUXO_BASE_URL/FLUXO_API_KEY ausentes no .env')
-  const dept = await prisma.department.findUnique({ where: { nexusDepartmentId: DP_NEXUS_ID }, select: { id: true, name: true } })
-  if (!dept) throw new Error(`setor do DP (Nexus ${DP_NEXUS_ID}) não existe no TalentCare`)
-
-  // hoje em São Paulo (o Fluxo corta o dia no mesmo fuso)
-  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
-  const todos = mesesAte(PRIMEIRO_MES, hoje.slice(0, 7))
-  const meses = completo ? todos : todos.slice(-2)
-
   const usuarios = await prisma.user.findMany({ where: { nexusUserId: { not: null } }, select: { nexusUserId: true } })
   const daCasa = new Set(usuarios.map((u) => u.nexusUserId))
+  for (const setor of SETORES) {
+    const dept = await prisma.department.findUnique({ where: { nexusDepartmentId: setor.nexusId }, select: { id: true, name: true } })
+    // ⚠️ um setor faltando não derruba o outro
+    if (!dept) { console.error(`[${new Date().toISOString()}] setor ${setor.sigla} (Nexus ${setor.nexusId}) não existe no TalentCare`); continue }
+    await sincronizarSetor(setor, dept, daCasa)
+  }
+}
+
+async function sincronizarSetor(setor, dept, daCasa) {
+  // hoje em São Paulo (o Fluxo corta o dia no mesmo fuso)
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  const todos = setor.primeiroMes <= hoje.slice(0, 7) ? mesesAte(setor.primeiroMes, hoje.slice(0, 7)) : []
+  const meses = completo ? todos : todos.slice(-2)
 
   for (const mes of meses) {
     const { de, ate } = janela(mes)
-    const res = await fetch(`${BASE}/api/integrations/talent-servicos?mes=${mes}`, { headers: { 'X-API-Key': KEY } })
+    const res = await fetch(`${BASE}/api/integrations/talent-servicos?mes=${mes}${setor.area ? `&area=${setor.area}` : ''}`, { headers: { 'X-API-Key': KEY } })
     if (!res.ok) throw new Error(`Fluxo ${res.status}: ${await res.text()}`)
     const data = await res.json()
     const servicos = data.servicos ?? []
@@ -94,16 +108,16 @@ async function main() {
       funcionarios: Number.isInteger(s.funcionarios) ? s.funcionarios : null,
     }))
     const semVinculo = linhas.filter((l) => !l.personKey).length
-    const hash = 'fluxo:' + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente, s.regua, s.funcionarios]))).digest('hex')
+    const hash = setor.prefixo + mes + ':' + createHash('sha256').update(JSON.stringify(servicos.map((s) => [s.id, s.nexusUserId, s.dia, s.tarefa, s.cliente, s.regua, s.funcionarios]))).digest('hex')
 
     const igual = await prisma.importLote.findFirst({ where: { departmentId: dept.id, hash, ativo: true } })
     if (igual) {
-      console.log(`[${new Date().toISOString()}] ${mes}: ${linhas.length} serviços, sem mudança`)
+      console.log(`[${new Date().toISOString()}] ${setor.sigla} ${mes}: ${linhas.length} serviços, sem mudança`)
       continue
     }
     if (ensaio) {
       const porRegua = servicos.reduce((a, s) => ({ ...a, [s.regua]: (a[s.regua] ?? 0) + 1 }), {})
-      console.log(`[ensaio] ${mes}: ${linhas.length} serviços ${JSON.stringify(porRegua)} (${semVinculo} sem pessoa da casa), janela ${diaDe}..${diaAte}`)
+      console.log(`[ensaio] ${setor.sigla} ${mes}: ${linhas.length} serviços ${JSON.stringify(porRegua)} (${semVinculo} sem pessoa da casa), janela ${diaDe}..${diaAte}`)
       continue
     }
 
@@ -122,13 +136,13 @@ async function main() {
       const lote = antigo
         ? await tx.importLote.update({ where: { id: antigo.id }, data: { ativo: true, diaDe, diaAte, linhas: linhas.length, linhasSemVinculo: semVinculo, enviadoEm: new Date() } })
         : await tx.importLote.create({
-            data: { departmentId: dept.id, arquivo: ARQUIVO(mes), hash, diaDe, diaAte, linhas: linhas.length, linhasSemVinculo: semVinculo, enviadoPor: AUTOR },
+            data: { departmentId: dept.id, arquivo: ARQUIVO(setor.sigla, mes), hash, diaDe, diaAte, linhas: linhas.length, linhasSemVinculo: semVinculo, enviadoPor: AUTOR },
           })
       if (linhas.length) {
         await tx.servicoDepto.createMany({ data: linhas.map((l) => ({ ...l, loteId: lote.id, departmentId: dept.id })) })
       }
     })
-    console.log(`[${new Date().toISOString()}] ${mes}: ${linhas.length} serviços gravados (${semVinculo} sem pessoa da casa)`)
+    console.log(`[${new Date().toISOString()}] ${setor.sigla} ${mes}: ${linhas.length} serviços gravados (${semVinculo} sem pessoa da casa)`)
   }
 }
 

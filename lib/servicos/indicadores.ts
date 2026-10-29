@@ -8,10 +8,11 @@
    ⚠️⚠️ O NOME muda só na TELA. A tabela (`servico_depto`), as rotas (`/servicos`) e as chaves
    da régua continuam "serviço": renomear dado gravado é o que apaga decisão em silêncio.
 
-   ⚠️ O AGRUPAMENTO só vale para o que vem do FLUXO (o DP): lá os nomes dos tipos são fixos
-   (`TAREFAS` em `plane/fluxo/talent_servicos.py`). A planilha do Legal tem dezenas de tipos
-   livres, e um palpite por prefixo juntaria serviços que não são o mesmo — ela segue com a
-   lista "O que mais fez".
+   ⚠️ O AGRUPAMENTO só vale para o que vem do FLUXO: lá os nomes dos tipos são fixos (`TAREFAS` em
+   `plane/fluxo/talent_servicos.py` para o DP; `nome_da_tarefa` em `plane/fluxo/talent_legal.py` para o
+   LEGAL, que vem do Fluxo desde novembro/2026). A planilha antiga do Legal (Gestta) tem dezenas de tipos
+   livres, e um palpite por prefixo juntaria serviços que não são o mesmo — ela segue com a lista "O que
+   mais fez".
    ⚠️ Tipo do Fluxo que NÃO casar com família nenhuma vai para "Outros" e aparece — nunca some.
    ============================================================ */
 
@@ -30,6 +31,8 @@ type Regra = {
 
 const FOLHA = 'Folha de pagamento — '
 const CONF = 'Conferência — '
+const CERT = 'Renovação de certificado — '
+const BLOCO = 'Bloco — '
 
 /** A ordem é a do trabalho do DP no mês — fixa, para a ficha de todo mundo ler igual. */
 const FAMILIAS: Regra[] = [
@@ -55,6 +58,26 @@ const FAMILIAS: Regra[] = [
   { chave: 'homologacao', curto: 'Homologações', nome: 'Homologações', casa: (t) => t === 'Homologação' },
   { chave: 'admissao', curto: 'Admissões', nome: 'Admissões', casa: (t) => t === 'Admissão' },
   { chave: 'conferencia', curto: 'Conferências', nome: 'Conferências', casa: (t) => t.startsWith(CONF), parte: (t) => t.slice(CONF.length) },
+  // o LEGAL (29/10/2026) — os nomes de `talent_legal.nome_da_tarefa`: "<Serviço> — <tipo>" e "Bloco — <nome>"
+  ...([
+    ['abertura', 'Aberturas', 'Abertura'],
+    ['alteracao', 'Alterações', 'Alteração'],
+    ['cancelamento', 'Cancelamentos', 'Cancelamento'],
+    ['saida', 'Saídas', 'Saída'],
+    ['transferencia', 'Transferências', 'Transferência'],
+    ['aposentadoria', 'Aposentadorias', 'Aposentadoria'],
+  ] as const).map(([chave, nome, base]): Regra => ({
+    chave, nome, curto: nome,
+    casa: (t) => t === base || t.startsWith(`${base} — `),
+    parte: (t) => (t === base ? base.toLowerCase() : t.slice(base.length + 3)),
+  })),
+  {
+    chave: 'certificado', curto: 'Certificados', nome: 'Renovação de certificado',
+    casa: (t) => t.startsWith(CERT), parte: (t) => t.slice(CERT.length),
+  },
+  { chave: 'sindicato', curto: 'Sindicato', nome: 'Contribuição sindical', casa: (t) => t === 'Contribuição sindical' },
+  { chave: 'taxas', curto: 'Taxas', nome: 'Taxas da prefeitura', casa: (t) => t === 'Taxas da prefeitura' },
+  { chave: 'bloco', curto: 'Blocos', nome: 'Blocos de apoio', casa: (t) => t.startsWith(BLOCO), parte: (t) => t.slice(BLOCO.length) },
 ]
 
 export type Familia = { chave: string; nome: string; curto: string; total: number; partes: { nome: string; n: number }[] }
@@ -99,6 +122,12 @@ export function agruparIndicadores(porTarefa: { tarefa: string; n: number }[]): 
    por falta de cadastro não pode se passar por empresa vazia. */
 export const REGRA_ADMINISTRADOS =
   'Folha: os funcionários de cada empresa fechada · férias, rescisão e admissão: 1 cada'
+
+/** O setor CONTA FUNCIONÁRIO ADMINISTRADO? Só quando há folha, férias, rescisão ou admissão (o DP) — no
+ *  Legal o número seria sempre zero, e um "0 funcionários administrados" se leria como "não fez nada". */
+export function contaAdministrados(tarefas: string[]) {
+  return tarefas.some((t) => ehFolha(t) || administradosDe(t, 0) > 0)
+}
 
 export function ehFolha(tarefa: string) {
   return tarefa.startsWith(FOLHA) || tarefa === 'Folha de doméstica'

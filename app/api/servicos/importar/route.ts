@@ -49,14 +49,6 @@ export async function POST(req: NextRequest) {
   }
   if (!(arquivo instanceof File)) return NextResponse.json({ error: 'Falta o arquivo.' }, { status: 400 })
 
-  /* ⚠️⚠️ SETOR ALIMENTADO PELO FLUXO NÃO RECEBE PLANILHA (14/10/2026). Os serviços do DP chegam
-     sozinhos do Fluxo (`run-fluxo-servicos-sync.mjs`, autor 'fluxo'). Uma planilha por cima ou
-     apagaria a janela deles (a gravação abaixo substitui o setor inteiro no período) ou contaria
-     o mesmo trabalho duas vezes — e as duas coisas aconteceriam sem erro nenhum. */
-  const doFluxo = await prisma.importLote.findFirst({ where: { departmentId, enviadoPor: 'fluxo', ativo: true }, select: { id: true } })
-  if (doFluxo) {
-    return NextResponse.json({ error: 'Os serviços deste setor chegam sozinhos do Fluxo — não há planilha para subir.' }, { status: 409 })
-  }
   if (arquivo.size > LIMITE_BYTES) {
     return NextResponse.json({ error: `Arquivo grande demais (${(arquivo.size / 1048576).toFixed(1)} MB). O limite é 20 MB.` }, { status: 413 })
   }
@@ -69,6 +61,20 @@ export async function POST(req: NextRequest) {
   if (periodoDe < '2020-01-01') return NextResponse.json({ error: 'O período começa antes de 2020 — confira as datas.' }, { status: 400 })
   if (periodoAte > new Date().toISOString().slice(0, 10)) {
     return NextResponse.json({ error: 'O período termina no futuro. Informe até o último dia que o arquivo cobre.' }, { status: 400 })
+  }
+
+  /* ⚠️⚠️ NOS MESES QUE O FLUXO COBRE, NÃO HÁ PLANILHA (14/10/2026; por período desde 29/10/2026). Os serviços
+     do DP e do Legal chegam sozinhos do Fluxo (`run-fluxo-servicos-sync.mjs`, autor 'fluxo'). Uma planilha por
+     cima ou apagaria a janela deles (a gravação abaixo substitui o setor inteiro no período) ou contaria o
+     mesmo trabalho duas vezes — e as duas coisas aconteceriam sem erro nenhum.
+     ⚠️ A recusa olha o PERÍODO: o Legal passou ao Fluxo em novembro/2026 e ainda sobe a planilha de outubro
+     do Gestta. Antes, qualquer lote do Fluxo no setor recusava tudo — e outubro ficaria sem fechar. */
+  const doFluxo = await prisma.importLote.findFirst({
+    where: { departmentId, enviadoPor: 'fluxo', ativo: true, diaDe: { lte: periodoAte }, diaAte: { gte: periodoDe } },
+    select: { diaDe: true },
+  })
+  if (doFluxo) {
+    return NextResponse.json({ error: 'Neste período os serviços deste setor chegam sozinhos do Fluxo — não há planilha para subir.' }, { status: 409 })
   }
 
   const setor = await prisma.department.findUnique({ where: { id: departmentId }, select: { name: true } })

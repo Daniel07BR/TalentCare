@@ -1,6 +1,6 @@
 'use client'
 import { FileSpreadsheet, Scale } from 'lucide-react'
-import { agruparIndicadores, ehFolha, NOME_INDICADORES, REGRA_ADMINISTRADOS } from '@/lib/servicos/indicadores'
+import { NOME_INDICADORES, REGRA_ADMINISTRADOS, agruparIndicadores, contaAdministrados, ehFolha } from '@/lib/servicos/indicadores'
 
 type Servicos = NonNullable<{
   temFonte: boolean
@@ -210,7 +210,9 @@ function Totalizacao({ servicos, compacto }: { servicos: Servicos; compacto: boo
   /* ⚠️ FUNCIONÁRIOS ADMINISTRADOS (15/10/2026, pedido do Daniel): o mesmo número da janela do setor,
      agora na ficha e na folha impressa. Folha = funcionários da empresa fechada; férias, rescisão e
      admissão = 1 cada. O "func." da folha vai no bloco dela, porque é ali que o número cresce. */
-  const adm = servicos.administrados
+  /* ⚠️ O LEGAL (29/10/2026) também vem do Fluxo, sem folha/férias/rescisão: lá "funcionários administrados"
+     seria sempre zero — e um zero na ficha se lê como "não fez nada". Só aparece onde o setor conta funcionário. */
+  const adm = contaAdministrados(servicos.porTarefa.map((t) => t.tarefa)) ? servicos.administrados : undefined
   const admFolha = servicos.porTarefa.filter((t) => ehFolha(t.tarefa)).reduce((a, t) => a + (t.administrados ?? 0), 0)
   const semNumero = servicos.folhasSemNumero ?? 0
   const grande = { fontSize: compacto ? 24 : 28, fontWeight: 700, letterSpacing: '-.8px' } as const

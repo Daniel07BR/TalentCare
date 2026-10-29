@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardList } from 'lucide-react'
 import Avatar from '../../../Avatar'
 import { Cartao, LinkAcao } from '../../../_visao/ui'
-import { agruparIndicadores, NOME_INDICADORES } from '@/lib/servicos/indicadores'
+import { NOME_INDICADORES, agruparIndicadores, contaAdministrados } from '@/lib/servicos/indicadores'
 import type { ComDetalhe } from './tipos'
 
 /* ============================================================
@@ -125,9 +125,19 @@ export function IndicadoresInternos({ m, abrir, className }: ComDetalhe & { clas
           </div>
 
           <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
-            Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela <b>competência</b>; férias, admissões,
-            rescisões e homologações pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo. Passe o mouse
-            num número para ver o detalhe (porte da folha, tipo da conferência).
+            {contaAdministrados(d.tipos.map((t) => t.tipo)) ? (
+              <>
+                Folha, vale, FGTS, DCTF, pró-labore e e-Social contam pela <b>competência</b>; férias, admissões,
+                rescisões e homologações pela <b>data</b> em que foram feitas — as réguas do painel do DP no Fluxo. Passe o mouse
+                num número para ver o detalhe (porte da folha, tipo da conferência).
+              </>
+            ) : (
+              <>
+                Contam pela <b>data</b> em que foram concluídos: cada tarefa para quem a levou a Concluído, cada bloco de apoio
+                para quem marcou o último passo — a régua do painel do Legal no Fluxo. Passe o mouse num número para ver o
+                detalhe (tipo do serviço, bloco).
+              </>
+            )}
           </div>
         </>
       )}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, ClipboardList, X } from 'lucide-react'
 import Avatar from '../Avatar'
 import Donut, { type DonutSeg } from '../Donut'
-import { agruparIndicadores, administradosDe, ehFolha, REGRA_ADMINISTRADOS } from '@/lib/servicos/indicadores'
+import { agruparIndicadores, administradosDe, contaAdministrados, ehFolha, REGRA_ADMINISTRADOS } from '@/lib/servicos/indicadores'
 
 /* ============================================================
    INDICADORES INTERNOS DO DP — a janela "Ver detalhes" quando a origem é o FLUXO (14/10/2026).
@@ -51,10 +51,14 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
   const [pessoa, setPessoa] = useState<PessoaDoResumo | null>(null)
   const [tipo, setTipo] = useState<string | null>(null)
   const t = dados.total
+  /* ⚠️ O LEGAL (29/10/2026) também vem do Fluxo: lá não há folha, férias nem rescisão, e "funcionários
+     administrados" seria sempre zero. Sem eles, a régua da pessoa é a de TRABALHOS concluídos. */
+  const contaFunc = contaAdministrados(dados.tipos.map((x) => x.tipo))
+  const medida = (p: PessoaDoResumo) => (contaFunc ? p.administrados : p.concluidos)
   const pessoas = [...dados.pessoas]
     .filter((p) => p.concluidos > 0)
-    .sort((a, b) => b.administrados - a.administrados || b.concluidos - a.concluidos || a.nome.localeCompare(b.nome))
-  const maxAdm = Math.max(1, ...pessoas.map((p) => p.administrados))
+    .sort((a, b) => medida(b) - medida(a) || b.concluidos - a.concluidos || a.nome.localeCompare(b.nome))
+  const maxAdm = Math.max(1, ...pessoas.map(medida))
   const concluidosPorTipo = dados.tipos.filter((x) => x.concluidos > 0)
   const seg: DonutSeg[] = concluidosPorTipo.slice(0, 6).map((x, k) => ({ id: x.tipo, nome: x.tipo, value: x.concluidos, color: CORES[k] }))
   const resto = concluidosPorTipo.slice(6).reduce((a, x) => a + x.concluidos, 0)
@@ -65,8 +69,17 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', ...cartao }}>
         <ClipboardList size={18} style={{ color: 'var(--chart-2)', flex: 'none' }} />
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-          Registrados no <b style={{ color: 'var(--text)' }}>Fluxo</b>, automaticamente. Folha, vale, FGTS, DCTF, pró-labore e
-          e-Social contam pela <b>competência</b>; férias, admissões, rescisões e homologações pela <b>data</b> em que foram feitas.
+          {contaFunc ? (
+            <>
+              Registrados no <b style={{ color: 'var(--text)' }}>Fluxo</b>, automaticamente. Folha, vale, FGTS, DCTF, pró-labore e
+              e-Social contam pela <b>competência</b>; férias, admissões, rescisões e homologações pela <b>data</b> em que foram feitas.
+            </>
+          ) : (
+            <>
+              Registrados no <b style={{ color: 'var(--text)' }}>Fluxo</b>, automaticamente, pela <b>data</b> em que foram concluídos:
+              cada tarefa conta para quem a levou a Concluído, e cada bloco de apoio para quem marcou o último passo dele.
+            </>
+          )}
         </div>
       </div>
 
@@ -77,8 +90,10 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
-            <Numero valor={fmt(t.administrados)} rotulo="Funcionários administrados" cor="var(--accent)"
-              nota={t.folhasSemNumero ? `${t.folhasSemNumero} ${t.folhasSemNumero === 1 ? 'folha sem cadastro de funcionários não somou' : 'folhas sem cadastro de funcionários não somaram'}` : REGRA_ADMINISTRADOS} />
+            {contaFunc && (
+              <Numero valor={fmt(t.administrados)} rotulo="Funcionários administrados" cor="var(--accent)"
+                nota={t.folhasSemNumero ? `${t.folhasSemNumero} ${t.folhasSemNumero === 1 ? 'folha sem cadastro de funcionários não somou' : 'folhas sem cadastro de funcionários não somaram'}` : REGRA_ADMINISTRADOS} />
+            )}
             <Numero valor={fmt(t.concluidos)} rotulo="Trabalhos concluídos" cor="var(--success)" />
             <Numero valor={String(pessoas.filter((p) => p.id).length)} rotulo="Pessoas que concluíram" cor="var(--chart-4)" />
           </div>
@@ -86,9 +101,9 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))', gap: 16, alignItems: 'start' }}>
             {/* QUEM — funcionários administrados por pessoa; clique abre o resumo dela */}
             <div className="tc-card" style={cartao}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Funcionários administrados</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{contaFunc ? 'Funcionários administrados' : 'Trabalhos concluídos por pessoa'}</div>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', margin: '3px 0 14px', lineHeight: 1.5 }}>
-                {REGRA_ADMINISTRADOS} · clique na pessoa para o resumo completo
+                {contaFunc ? `${REGRA_ADMINISTRADOS} · ` : ''}clique na pessoa para o resumo completo
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {pessoas.map((p) => (
@@ -101,12 +116,21 @@ export default function ResumoDoFluxo({ dados, periodo }: { dados: DadosDoFluxo;
                           {p.nome}{!p.ativo && <span style={{ fontWeight: 500, color: 'var(--text-mute)' }}> · saiu</span>}
                         </span>
                         <span className="cnum" style={{ flex: 'none' }}>
-                          <b style={{ color: 'var(--accent)' }}>{fmt(p.administrados)}</b>
-                          <span style={{ color: 'var(--text-mute)', fontSize: 11.5 }}> func. · {fmt(p.concluidos)} trabalhos</span>
+                          {contaFunc ? (
+                            <>
+                              <b style={{ color: 'var(--accent)' }}>{fmt(p.administrados)}</b>
+                              <span style={{ color: 'var(--text-mute)', fontSize: 11.5 }}> func. · {fmt(p.concluidos)} trabalhos</span>
+                            </>
+                          ) : (
+                            <>
+                              <b style={{ color: 'var(--accent)' }}>{fmt(p.concluidos)}</b>
+                              <span style={{ color: 'var(--text-mute)', fontSize: 11.5 }}> trabalhos</span>
+                            </>
+                          )}
                         </span>
                       </div>
                       <div style={{ height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--surface-2)', marginTop: 5 }}>
-                        <div style={{ width: `${(p.administrados / maxAdm) * 100}%`, height: '100%', background: 'var(--accent)' }} />
+                        <div style={{ width: `${(medida(p) / maxAdm) * 100}%`, height: '100%', background: 'var(--accent)' }} />
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {agruparIndicadores(p.tipos.map((x) => ({ tarefa: x.tipo, n: x.n }))).sort((a, b) => b.total - a.total)
@@ -189,12 +213,13 @@ function JanelaCentral({ titulo, sub, cabeca, onFechar, children }: {
 function JanelaDaPessoa({ pessoa: p, periodo, onFechar }: { pessoa: PessoaDoResumo; periodo: string; onFechar: () => void }) {
   const router = useRouter()
   const familias = agruparIndicadores(p.tipos.map((x) => ({ tarefa: x.tipo, n: x.n })))
+  const contaFunc = contaAdministrados(p.tipos.map((x) => x.tipo))
   return (
     <JanelaCentral titulo={p.nome} onFechar={onFechar}
       sub={<>{p.cargo} · Indicadores internos · <b>{periodo}</b></>}
       cabeca={<Avatar id={p.id ?? ''} hasAvatar={p.hasAvatar} initials={iniciais(p.nome)} color="var(--chart-4)" size={44} />}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
-        <Numero valor={fmt(p.administrados)} rotulo="Funcionários administrados" cor="var(--accent)" nota={REGRA_ADMINISTRADOS} />
+        {contaFunc && <Numero valor={fmt(p.administrados)} rotulo="Funcionários administrados" cor="var(--accent)" nota={REGRA_ADMINISTRADOS} />}
         <Numero valor={fmt(p.concluidos)} rotulo="Trabalhos concluídos" cor="var(--success)" />
         <Numero valor={String(familias.length)} rotulo={familias.length === 1 ? 'Assunto' : 'Assuntos'} cor="var(--chart-4)" />
       </div>
