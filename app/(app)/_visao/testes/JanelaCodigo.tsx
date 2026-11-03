@@ -25,7 +25,7 @@ import d from '../disc/disc.module.css'
    montar.py`). Mudou a página lá, copie de novo para `public/testes/teste-disc.html` — e, se a versão do código subiu,
    porte também `lib/testes/codigo.ts`. A senha do "Iniciar novamente" é a da página (1234). */
 export const PAGINA_DO_TESTE = '/testes/teste-disc.html'
-const NOME_DO_ARQUIVO = 'Testes do candidato - Grupo Itamarathy.html'
+export const NOME_DO_ARQUIVO = 'Testes do candidato - Grupo Itamarathy.html'
 const SENHA_DA_PAGINA = '1234'
 
 const PASSOS: [string, React.ReactNode][] = [
@@ -110,7 +110,7 @@ export function SeloNivel({ nivel }: { nivel: 'alta' | 'media' | 'baixa' }) {
   )
 }
 
-function Previa({ r }: { r: ResultadoDoCodigo }) {
+export function Previa({ r }: { r: ResultadoDoCodigo }) {
   const n = r.disc
   const busca = r.busca ? resumoDaBusca(r.busca) : null
   const conf = r.conferencia ? resumoDaConferencia(r.conferencia) : null

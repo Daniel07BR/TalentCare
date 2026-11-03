@@ -1,5 +1,18 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-03 — Baixar os testes e puxar da entrevista, no topo da ficha
+
+Pedidos do Daniel, olhando a ficha da Beatriz Gabriela (fez os testes na entrevista, resultado parado no Fluxo):
+
+- **Baixar os testes** no topo da ficha, para gestor e sub repassarem aos funcionários antigos. Antes o arquivo só aparecia
+  dentro da janela do Código dos testes.
+- **Puxar da entrevista**: `app/api/testes/entrevistas/route.ts` + `_visao/testes/JanelaEntrevista.tsx`. Mostra só as entrevistas
+  que o gestor fez (quem decide é o Fluxo, `GET/POST /api/integrations/talent-entrevistas`), com o resultado para conferir antes de
+  puxar; **Não é esta pessoa** desfaz, com motivo. O resultado chega por `/api/integrations/fluxo-testes`, o mesmo do vínculo da Recepção.
+  Diretoria e T.I veem todas; o T.I liga sem ver o número do candidato. Régua da pessoa = a do DISC.
+
+Fluxo: merge `797a1b44fd` (lá também nasceu a amarração pelo DP, ao abrir a admissão numa empresa do escritório).
+
 ## 2026-10-29 — As outras tarefas da Recepção
 
 O Daniel pediu para conferir se o TalentCare refletia **todas** as atividades da Recepção. O que vinha do Fluxo batia
