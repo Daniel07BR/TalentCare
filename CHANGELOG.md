@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Contato em lote soma em Ligações feitas
+
+O Daniel pediu para conferir se o contato em lote contava como ligação e saía no relatório impresso. Não contava (era só uma
+nota "+N no contato em lote") e o PDF não o mostrava em lugar nenhum. Decisão dele: somar. `feitas` agora traz o lote em
+`numeros()` (`lib/recepcao.ts`), para setor, ficha, PDF e barra "Quem fez"; o azulejo diz "inclui N do contato em lote", também
+no papel. Soma tudo o que a Recepção registrou no lote, inclusive WhatsApp. "N% do setor" muda junto. Continua fora da nota.
+
 ## 2026-11-03 — Baixar os testes e puxar da entrevista, no topo da ficha
 
 Pedidos do Daniel, olhando a ficha da Beatriz Gabriela (fez os testes na entrevista, resultado parado no Fluxo):

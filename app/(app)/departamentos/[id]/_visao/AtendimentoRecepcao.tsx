@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Headset } from 'lucide-react'
 import Avatar from '../../../Avatar'
 import { Cartao, forte, suave } from '../../../_visao/ui'
-import { ITENS_RECEPCAO, OUTRAS_TAREFAS, atendimentos, fmt } from '../../../_visao/recepcao'
+import { ITENS_RECEPCAO, OUTRAS_TAREFAS, atendimentos, fmt, notaDoLote } from '../../../_visao/recepcao'
 import { temOutrasTarefas, type AtendimentoDoSetor, type PessoaDaRecepcao } from '@/lib/recepcao'
 import type { SecaoProps } from './tipos'
 
@@ -151,7 +151,7 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
           const dica = [
             ...BARRA.map((i) => `${i.curto}: ${i.valor(p) ?? 0}`),
             p.naoRealizadas ? `Não realizadas: ${p.naoRealizadas}` : null,
-            p.contatosEmLote ? `Contato em lote: ${p.contatosEmLote}` : null,
+            notaDoLote(p) && `Feitas ${notaDoLote(p)}`,
             p.contatos ? `Contatos do CIDE: ${p.contatos.atualizados} (${p.contatos.editados} editados, ${p.contatos.novos} novos, ${p.contatos.removidos} removidos)` : null,
           ].filter(Boolean).join('\n')
           return (

@@ -25,12 +25,17 @@ export { ehRecepcao }
    visita para o setor e uma para cada atendente. O total vem de `recepcao_area_daily`
    (contado por registro no Fluxo); a parte de cada pessoa, de `recepcao_daily`.
    ⚠️ Fora da régua de pontuação de propósito: nada daqui entra em `lib/servicos/atividades.ts`.
+
+   O CONTATO EM LOTE É LIGAÇÃO FEITA (04/11/2026, decisão do Daniel): `feitas` já vem somada aqui,
+   em `numeros()`, para o setor, a ficha, o PDF e a barra saírem iguais. Inclui o que foi por WhatsApp.
+   `contatosEmLote` fica só para a tela dizer quanto daquele número veio do lote; nunca some de novo.
    ============================================================ */
 
 
 export type Contatos = { atualizados: number; editados: number; novos: number; removidos: number }
 export type Numeros = {
   recebidas: number
+  /** Ligações feitas + contato em lote. */
   feitas: number
   naoRealizadas: number
   /** Média de pedido → ligação feita, em minutos. Nulo sem ligação feita. */
@@ -39,6 +44,7 @@ export type Numeros = {
   deliveries: number
   /** Média de pedido → Chegou, em minutos. */
   esperaDeliveryMin: number | null
+  /** Quanto de `feitas` veio do contato em lote. */
   contatosEmLote: number
   /** Nulo = o CIDE não mediu (linha anterior a 16/10/2026 sem backfill), não zero. */
   contatos: Contatos | null
@@ -69,7 +75,7 @@ const media = (seg: number, q: number) => (q > 0 ? Math.round(seg / q / 60) : nu
 
 function numeros(s: Soma, contatos: Contatos | null): Numeros {
   return {
-    recebidas: s.recebidas, feitas: s.feitas, naoRealizadas: s.naoRealizadas,
+    recebidas: s.recebidas, feitas: s.feitas + s.contatosEmLote, naoRealizadas: s.naoRealizadas,
     esperaLigacaoMin: media(s.esperaLigacaoSeg, s.esperaLigacaoN),
     visitas: s.visitas, deliveries: s.deliveries,
     esperaDeliveryMin: media(s.esperaDeliverySeg, s.esperaDeliveryN),
@@ -88,7 +94,7 @@ export const temOutrasTarefas = (x: Numeros) =>
   x.entrevistas.total + x.entrevistas.testes + x.entrevistas.acompanhadas + x.faltasConferidas + x.prestadores + x.marcadores > 0
 
 export const temAtendimento = (x: Numeros) =>
-  x.recebidas + x.feitas + x.naoRealizadas + x.visitas + x.deliveries + x.contatosEmLote + (x.contatos?.atualizados ?? 0) > 0
+  x.recebidas + x.feitas + x.naoRealizadas + x.visitas + x.deliveries + (x.contatos?.atualizados ?? 0) > 0
   || temOutrasTarefas(x)
 
 type LinhaContato = { nexusUserId: string; contatosEditados: number | null; contatosNovos: number | null; contatosRemovidos: number | null }
@@ -194,7 +200,7 @@ export async function atendimentoDoSetor(prisma: PrismaClient, deptId: string, f
       deOutroSetor: u.department?.id === deptId ? null : (u.department?.name ?? 'outro setor'),
     })
   }
-  const peso = (p: Numeros) => p.recebidas + p.feitas + p.naoRealizadas + p.visitas + p.deliveries + p.contatosEmLote
+  const peso = (p: Numeros) => p.recebidas + p.feitas + p.naoRealizadas + p.visitas + p.deliveries
   pessoas.sort((a, b) => peso(b) - peso(a) || (b.contatos?.atualizados ?? 0) - (a.contatos?.atualizados ?? 0) || a.nome.localeCompare(b.nome))
   return {
     fromDay, toDay,

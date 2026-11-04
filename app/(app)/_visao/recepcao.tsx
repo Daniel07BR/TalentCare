@@ -23,6 +23,9 @@ export type ItemRecepcao = {
 const min = (v: number | null) => (v == null ? null : v < 60 ? `${v} min` : `${Math.floor(v / 60)}h${String(v % 60).padStart(2, '0')}`)
 const juntar = (...p: (string | null | false)[]) => p.filter(Boolean).join(' · ') || null
 
+/** `feitas` já traz o contato em lote (`lib/recepcao.ts`): aqui só se diz quanto veio de lá. */
+export const notaDoLote = (x: Numeros) => (x.contatosEmLote > 0 ? `inclui ${x.contatosEmLote} do contato em lote` : null)
+
 export const ITENS_RECEPCAO: ItemRecepcao[] = [
   {
     chave: 'recebidas', rotulo: 'Ligações recebidas', curto: 'Recebidas', Icone: PhoneIncoming, tom: 'blue',
@@ -32,9 +35,9 @@ export const ITENS_RECEPCAO: ItemRecepcao[] = [
     chave: 'feitas', rotulo: 'Ligações feitas', curto: 'Feitas', Icone: PhoneOutgoing, tom: 'green',
     valor: (x) => x.feitas,
     nota: (x) => juntar(
+      notaDoLote(x),
       `${x.naoRealizadas} não ${x.naoRealizadas === 1 ? 'realizada' : 'realizadas'}`,
       x.esperaLigacaoMin != null && `espera média ${min(x.esperaLigacaoMin)}`,
-      x.contatosEmLote > 0 && `+${x.contatosEmLote} no contato em lote`,
     ),
   },
   {

@@ -526,6 +526,8 @@ REGISTRO e recortes por setor), `run-recepcao-sync.mjs`; contatos do CIDE nas co
   Para entrar na nota, é o caminho do Acessórias — decisão dele.
 - **Troca a janela inteira**, em vez de upsert: a Recepção corrige o passado (desfaz contato em lote, apaga
   visita duplicada), e o dia que ficou vazio ficaria com o número velho.
+- **O contato em lote soma em Ligações feitas** (04/11/2026, decisão do Daniel), inclusive o que foi por WhatsApp; a soma mora em
+  `numeros()`, e o espelho continua guardando os dois números separados.
 - **O total do setor não é a soma das pessoas**: visita com duas atendentes conta uma vez na área e uma para
   cada atendente. O total vem de `recepcao_area_daily`.
 - Consumidores fora da checklist: não está em `activityOf`, `score-metrics`, `frescor` nem no menu de sistemas.

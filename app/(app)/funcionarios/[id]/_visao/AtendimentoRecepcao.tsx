@@ -3,7 +3,7 @@ import { Headset, type LucideIcon } from 'lucide-react'
 import { temOutrasTarefas, type AtendimentoDaPessoa } from '@/lib/recepcao'
 import { Cartao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
-import { ITENS_RECEPCAO, OUTRAS_TAREFAS, fmt, parte } from '../../../_visao/recepcao'
+import { ITENS_RECEPCAO, OUTRAS_TAREFAS, fmt, notaDoLote, parte } from '../../../_visao/recepcao'
 
 /* ============================================================
    ATENDIMENTO DA RECEPÇÃO — o card da ficha (16/10/2026).
@@ -57,7 +57,9 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
           const meu = i.valor(r.meu)
           const pct = parte(meu, i.valor(r.setor))
           const legenda = pct == null ? i.nota(r.meu) : i.chave === 'visitas' ? `estava em ${pct}% das visitas` : `${pct}% do setor`
-          return <Azulejo key={i.chave} Icone={i.Icone} tom={i.tom} rotulo={i.rotulo} valor={meu} pct={pct} legenda={legenda} dica={i.nota(r.meu)} />
+          /* No papel a linha de baixo some: o lote vai escrito no próprio azulejo. */
+          const nota = impressao && i.chave === 'feitas' ? notaDoLote(r.meu) : null
+          return <Azulejo key={i.chave} Icone={i.Icone} tom={i.tom} rotulo={i.rotulo} valor={meu} pct={pct} legenda={legenda} nota={nota} dica={i.nota(r.meu)} />
         })}
       </div>
       {temOutrasTarefas(r.meu) && (
@@ -75,7 +77,7 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
           </div>
         </>
       )}
-      {!impressao && (r.meu.naoRealizadas > 0 || r.meu.esperaLigacaoMin != null || r.meu.contatos) && (
+      {!impressao && (r.meu.naoRealizadas > 0 || r.meu.esperaLigacaoMin != null || r.meu.contatosEmLote > 0 || r.meu.contatos) && (
         <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
           {[ITENS_RECEPCAO[1].nota(r.meu), r.meu.contatos && `contatos do CIDE: ${r.meu.contatos.editados} editados, ${r.meu.contatos.novos} novos, ${r.meu.contatos.removidos} removidos`]
             .filter(Boolean).join(' · ')}
