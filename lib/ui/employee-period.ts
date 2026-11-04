@@ -1,6 +1,7 @@
 'use client'
 import type { AtendimentoDaPessoa } from '@/lib/recepcao'
 import type { Melhorias } from '@/lib/melhorias'
+import type { Atividades } from '@/lib/imotec'
 import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
@@ -9,6 +10,8 @@ export type EmployeeMetrics = {
   recepcao?: AtendimentoDaPessoa | null
   /** Os chamados atendidos (04/11/2026) — nulo fora da T.I e da Programação, ou sem nenhum no período. */
   melhorias?: Melhorias | null
+  /** As atividades no Imotec (04/11/2026) — nulo fora da Imóveis, ou sem nenhuma no período. */
+  imotec?: Atividades | null
   /** O intervalo que estes números cobrem — a ficha compara com a vida da pessoa. */
   fromDay: string
   toDay: string

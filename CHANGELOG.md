@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Atividades no Imotec, na ficha e no setor Imóveis
+
+Pedido do Daniel: os indicadores do pessoal da Imóveis, com o que fazem dentro do Imotec. Card "Atividades no Imotec" na ficha, no PDF e na
+página do setor (com "Quem fez"), pelo período do filtro: pagamentos, aluguéis gerados, lançamentos, contratos, imóveis, pessoas e o resto.
+Só com o que não está zerado, fora da nota. Espelho `imotec_daily`, `run-imotec-sync.mjs`. O Imotec só registra quem fez desde 16/10/2026.
+
 ## 2026-11-04 — Chamados atendidos na ficha da T.I e da Programação
 
 Pedido do Daniel: o resumo de erros corrigidos, melhorias e criações do Quadro das Melhorias do Nexus no relatório desse pessoal. Card

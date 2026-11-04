@@ -10,6 +10,7 @@ import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cob
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import { atendimentoDaPessoa, ehRecepcao } from '@/lib/recepcao'
 import { melhoriasDaPessoa } from '@/lib/melhorias'
+import { imotecDaPessoa } from '@/lib/imotec'
 import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
      Recepção — o card some. Ver `lib/recepcao.ts`. */
   const recepcao = await atendimentoDaPessoa(prisma, user.nexusUserId, ehRecepcao(user.department?.name), fromDay, toDay)
   const melhorias = await melhoriasDaPessoa(prisma, user.nexusUserId, user.department?.name, fromDay, toDay)
+  const imotec = await imotecDaPessoa(prisma, user.nexusUserId, user.department?.name, fromDay, toDay)
 
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
   const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
@@ -401,6 +403,7 @@ export async function GET(req: NextRequest) {
     period, fromDay, toDay,
     recepcao,
     melhorias,
+    imotec,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: {

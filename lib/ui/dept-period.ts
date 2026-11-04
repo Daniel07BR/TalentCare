@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
+import type { ImotecDoSetor } from '@/lib/imotec'
 
 export type PessoaDoSetor = {
   id: string; nome: string; cargo: string
@@ -34,6 +35,8 @@ export type PessoaRank = {
 }
 
 export type DeptMetrics = {
+  /** As atividades no Imotec (04/11/2026) — só no setor Imóveis, e nulo sem nenhuma no período. */
+  imotec?: ImotecDoSetor | null
   pessoas: PessoaDoSetor[]
   /** Quem fez o quê em cada fonte, do maior para o menor. Só quem tem valor > 0. */
   /** Por fonte: por QUAL grandeza está ranqueado, e quem. `gente` vazia é o

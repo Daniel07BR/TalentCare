@@ -558,3 +558,9 @@ REGISTRO e recortes por setor), `run-recepcao-sync.mjs`; contatos do CIDE nas co
 `run-melhorias-sync.mjs` lê `GET /api/integrations/chamados/atendidos` do Nexus (o "Quem atendeu" do Quadro das Melhorias) e troca o
 histórico inteiro em `melhorias_daily`, de hora em hora. Só contagem. Card na ficha e no PDF de quem é da T.I e da Programação, só com o
 que não está zerado (`lib/melhorias.ts`). **Não pontua.** O dia é o do fechamento do chamado, em São Paulo.
+
+## Atividades no Imotec (04/11/2026)
+
+`run-imotec-sync.mjs` lê `GET /api/integrations/talent-atividades` do Imotec (`.73`, porta 80, só o `.78`, com `IMOTEC_API_KEY`) e troca o
+histórico inteiro em `imotec_daily`, por pessoa, dia e ação. A fonte é a auditoria de lá, e a régua é `lib/atividades-da-equipe.ts` do
+Imotec. Só existe desde 16/10/2026: antes é "não medido". Card na ficha, no PDF e no setor Imóveis, só com o que não está zerado. **Não pontua.**

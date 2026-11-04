@@ -15,6 +15,7 @@ import { Sistemas } from './Sistemas'
 import { Assiduidade } from './Assiduidade'
 import { AtendimentoRecepcao } from './AtendimentoRecepcao'
 import { ChamadosAtendidos } from './ChamadosAtendidos'
+import { AtividadesNoImotec } from '../../../_visao/imotec'
 import { formCor } from './derivar'
 
 /* ============================================================
@@ -290,6 +291,7 @@ function Folha({ vm, m, periodo }: Props) {
         <ServicosCard servicos={m.servicos} pontuacao={m.pontuacao} periodo={periodo} semPontuacao soNumeros />
         {m.recepcao && <AtendimentoRecepcao r={m.recepcao} periodo={periodo} impressao />}
         {m.melhorias && <ChamadosAtendidos c={m.melhorias} periodo={periodo} impressao />}
+        {m.imotec && <AtividadesNoImotec total={m.imotec} periodo={periodo} fromDay={m.fromDay} impressao />}
         <Sistemas m={m} periodo={periodo} pessoaId={vm.id} impressao />
         <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} impressao />
       </div>

@@ -12,6 +12,7 @@ import { AtividadeDoPeriodo } from './_visao/AtividadeDoPeriodo'
 import { UltimasSaidas } from './_visao/UltimasSaidas'
 import { IndicadoresInternos } from './_visao/IndicadoresInternos'
 import { AtendimentoRecepcao } from './_visao/AtendimentoRecepcao'
+import { AtividadesNoImotec } from '../../_visao/imotec'
 import { ehRecepcao } from '@/lib/recepcao-setor'
 import { RankingMes } from './_visao/RankingMes'
 import { WhatsappEChamados } from './_visao/WhatsappEChamados'
@@ -81,6 +82,7 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
       </div>
       {/* O ATENDIMENTO DA RECEPÇÃO (16/10/2026): só no setor Recepção, logo abaixo dos indicadores. */}
       {ehRecepcao(m.setor.nome) && <AtendimentoRecepcao m={m} />}
+      {m.imotec && <AtividadesNoImotec total={m.imotec.total} pessoas={m.imotec.pessoas} fromDay={m.fromDay} style={{ marginBottom: 14 }} />}
       <div className={s.linha2}>
         <Escolaridade deptId={m.setor.id} abrir={detalhe.abrir} />
         {doFluxo ? (

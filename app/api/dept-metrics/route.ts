@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { rangeDaRequisicao, diasNoIntervalo, rotuloDoIntervalo } from '@/lib/period-range'
+import { ehImoveis, imotecDoSetor } from '@/lib/imotec'
 import { quemEh, filtroDeAvaliaveis, gestoresDaCasa, podeGerirServicos } from '@/lib/avaliacoes/regua'
 import { avaliacaoLiberada, competenciaAnterior, resultadoDe } from '@/lib/avaliacoes/criterios'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
@@ -816,6 +817,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
+    imotec: ehImoveis(dept.name) ? await imotecDoSetor(prisma, dept.id, fromDay, toDay) : null,
     pessoas: equipePessoas,
     rankings,
     setor: {

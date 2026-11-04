@@ -22,6 +22,7 @@ import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
 import { ChamadosAtendidos } from './_visao/ChamadosAtendidos'
+import { AtividadesNoImotec } from '../../_visao/imotec'
 import { BotaoDisc } from '../../_visao/disc/BotaoDisc'
 import { BotaoPersonalidade } from '../../_visao/personalidade/BotaoPersonalidade'
 import { BotaoTestes } from '../../_visao/testes/BotaoTestes'
@@ -105,6 +106,7 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
           <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} semPontuacao />
           {m?.recepcao && <AtendimentoRecepcao r={m.recepcao} periodo={periodo} />}
           {m?.melhorias && <ChamadosAtendidos c={m.melhorias} periodo={periodo} />}
+          {m?.imotec && <AtividadesNoImotec total={m.imotec} periodo={periodo} fromDay={m.fromDay} />}
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
         </div>

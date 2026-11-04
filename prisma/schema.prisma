@@ -1637,3 +1637,16 @@ model MelhoriasDaily {
   @@id([nexusUserId, day])
   @@map("melhorias_daily")
 }
+
+// ATIVIDADES NO IMOTEC (04/11/2026): o que cada pessoa fez, pela auditoria de lá. SÓ APARECE, não pontua.
+// `run-imotec-sync.mjs` troca o histórico inteiro. O Imotec só registra quem fez desde 16/10/2026.
+model ImotecDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10)
+  acao        String   @db.VarChar(40)
+  n           Int      @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day, acao])
+  @@map("imotec_daily")
+}
