@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — PDF com as fichas de todo o setor
+
+Pedido do Daniel: botão **Gerar PDF de todos** no relatório do setor (`_visao/FichasDoSetor.tsx`). Usa o período selecionado, monta a mesma folha do "Gerar PDF" da
+pessoa, uma por página (`FichasImpressas`), e abre a impressão quando a rede sossega. Quem o leitor não pode ver fica de fora, dito na janela; ficha que falhar para a
+impressão e pergunta. Só ativos do setor.
+
 ## 2026-11-04 — Nota desligada até segunda ordem
 
 Pedido do Daniel: *"vamos desativar até segunda ordem a nota de todo sistema TalentCare e computar apenas tarefas"*. A chave é `lib/nota-ligada.ts`

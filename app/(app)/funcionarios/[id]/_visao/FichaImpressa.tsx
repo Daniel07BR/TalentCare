@@ -82,6 +82,7 @@ html body .fi-root.fi-root {
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
 .fi-folha { width: 1000px; zoom: .72; font-family: Inter, 'Segoe UI', system-ui, sans-serif; }
+.fi-folha + .fi-folha { break-before: page; }
 .fi-folha .${s.cartao}, .fi-folha .tc-card { break-inside: avoid; box-shadow: none !important; padding: 14px 16px !important; margin-bottom: 0 !important; }
 .fi-folha .${s.pilha} { gap: 10px; }
 .fi-folha [data-nota] { display: none !important; }
@@ -121,7 +122,12 @@ const ALTURA_UTIL = ((297 - 8 - 9) / 25.4) * 96 * 0.99
  *  caso em que ALGO dentro dela ficou mais largo que os 1000 px. */
 const LARGURA_UTIL = ((210 - 9 - 9) / 25.4) * 96 * 0.99
 
-export function FichaImpressa(props: Props) {
+export function FichaImpressa({ vm, m, periodo }: Props) {
+  return <FichasImpressas fichas={[{ vm, m }]} periodo={periodo} />
+}
+
+/** Uma folha por pessoa, cada uma na sua página. Com várias, é o "Gerar PDF de todos" do setor (04/11/2026). */
+export function FichasImpressas({ fichas, periodo }: { fichas: Omit<Props, 'periodo'>[]; periodo: string }) {
   /* O portal só existe no navegador — no servidor não há <body> para mirar. */
   const [pronto, setPronto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
@@ -139,27 +145,30 @@ export function FichaImpressa(props: Props) {
     if (!pronto) return
     const ajustar = () => {
       const root = raiz.current
-      const folha = root?.querySelector<HTMLElement>('.fi-folha')
-      if (!root || !folha) return
+      if (!root) return
       const antes = root.getAttribute('style')
       root.setAttribute('style', 'display:block;position:fixed;left:-20000px;top:0;visibility:hidden')
-      folha.style.setProperty('zoom', '1')
-      const alto = folha.getBoundingClientRect().height
-      /* ⚠️⚠️ A LARGURA também: `scrollWidth` acusa o que passou dos 1000 px da
-         folha (um cartão que não coube, um número que não quebrou). Sem esta
-         conta, o excesso não encolhe — ele é CORTADO pela borda da página, e a
-         ficha sai com meia coluna faltando sem nada avisar. */
-      const largo = Math.max(folha.scrollWidth, 1000)
+      root.querySelectorAll<HTMLElement>('.fi-folha').forEach((folha) => {
+        folha.style.setProperty('zoom', '1')
+        const alto = folha.getBoundingClientRect().height
+        /* ⚠️⚠️ A LARGURA também: `scrollWidth` acusa o que passou dos 1000 px da
+           folha (um cartão que não coube, um número que não quebrou). Sem esta
+           conta, o excesso não encolhe — ele é CORTADO pela borda da página, e a
+           ficha sai com meia coluna faltando sem nada avisar. */
+        const largo = Math.max(folha.scrollWidth, 1000)
+        /* Piso de 0,5: abaixo disso o número fica ilegível no papel, e uma folha
+           que ninguém lê é pior que duas páginas. */
+        /* ⚠️ `LARGURA_UTIL / largo` dá os mesmos ~0,72 quando nada passou dos
+           1000 px — é a própria conta de onde o teto saiu. Ela só morde quando
+           algo ficou mais largo que a folha. */
+        const z = alto > 0
+          ? Math.max(0.5, Math.min(ZOOM, ALTURA_UTIL / alto, LARGURA_UTIL / largo))
+          : ZOOM
+        folha.dataset.zoom = String(z)
+      })
+      /* ⚠️ O zoom final só entra depois de medir todas: a medida de uma não pode depender da outra. */
+      root.querySelectorAll<HTMLElement>('.fi-folha').forEach((folha) => folha.style.setProperty('zoom', folha.dataset.zoom ?? String(ZOOM)))
       if (antes == null) root.removeAttribute('style'); else root.setAttribute('style', antes)
-      /* Piso de 0,5: abaixo disso o número fica ilegível no papel, e uma folha
-         que ninguém lê é pior que duas páginas. */
-      /* ⚠️ `LARGURA_UTIL / largo` dá os mesmos ~0,72 quando nada passou dos
-         1000 px — é a própria conta de onde o teto saiu. Ela só morde quando
-         algo ficou mais largo que a folha. */
-      const z = alto > 0
-        ? Math.max(0.5, Math.min(ZOOM, ALTURA_UTIL / alto, LARGURA_UTIL / largo))
-        : ZOOM
-      folha.style.setProperty('zoom', String(z))
     }
     window.addEventListener('beforeprint', ajustar)
     return () => window.removeEventListener('beforeprint', ajustar)
@@ -169,7 +178,7 @@ export function FichaImpressa(props: Props) {
   return createPortal(
     <div className="fi-root" aria-hidden="true" ref={raiz}>
       <style>{CSS}</style>
-      <Folha {...props} />
+      {fichas.map((f) => <Folha key={f.vm.id} vm={f.vm} m={f.m} periodo={periodo} />)}
     </div>,
     document.body,
   )

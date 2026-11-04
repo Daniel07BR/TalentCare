@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Building2, ChevronRight, SlidersHorizontal, Truck, Upload } from 'lucide-react'
 import { ENTREGAS_DEPT_ID } from '@/lib/entregas'
 import type { SecaoProps } from './tipos'
+import { BotaoFichasDoSetor } from './FichasDoSetor'
 
 const botao: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 36, padding: '0 14px',
@@ -36,6 +37,7 @@ export function Cabecalho({ m }: SecaoProps) {
         {/* ⚠️ Sem atalho para o relatório de antes (`./completo`): o dono, em
             11/09/2026 — "a página para a qual ele leva é a que substituímos".
             A rota segue existindo por endereço, sem porta na tela. */}
+        <BotaoFichasDoSetor m={m} estilo={botao} />
         {m.setor.id === ENTREGAS_DEPT_ID && (
           <button type="button" style={botao} onClick={() => router.push('/entregas')}><Truck size={15} /> Área da mensageria</button>
         )}
