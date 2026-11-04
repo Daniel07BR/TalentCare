@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Suspensão de LGPD conta desde a geração
+
+Pedido do Daniel: a suspensão que o DP gera no Fluxo conta na hora, sem esperar o escaneado. `lib/lgpd.ts` passou a gravar `aguardando_documento`; abonada ou cancelada, inclusive medida apagada no Nexus, retiram o evento. A hora da dispensa, quando vem, entra no motivo ("dispensada às 14:32").
+
 ## 2026-11-04 — O calendário da ficha mostra as anotações do Fluxo
 
 Pedido do Daniel: o calendário reflete falta, atestado, avisos de saída mais cedo e de chegada tarde, e o clique no dia abre as anotações. Selo no canto do dia, janela `AnotacoesDoDia`, lidos do Fluxo na hora, sem guardar motivo. Motivo com a régua da ficha; o PDF só leva as marcas. "Faltas" passa a contar também o que a Recepção confirmou (18 em outubro; antes, zero).

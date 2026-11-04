@@ -53,13 +53,13 @@ export async function gravarMedidaLgpd(prisma: PrismaClient, m: MedidaCrua) {
      linha na ficha de alguém que nunca soma nada. */
   if (!tipo) return { ok: false as const, erro: 'medida_nao_punitiva' }
 
-  /* ⚠️⚠️ SÓ CONTA A MEDIDA FECHADA (06/10/2026). Desde que o DP gera a medida de LGPD no Fluxo, ela
-     nasce no Nexus como `aguardando_documento` e pode virar `abonada` (o DP decidiu não aplicar) ou
-     `cancelada` (registro errado). Só `closed` — com o escaneado assinado anexado — desconta ponto.
-     Qualquer outro status APAGA o evento, se ele já tinha entrado: uma suspensão abonada que ficasse
-     aqui seria falta grave na nota de quem não foi punido. Sem status (push antigo) = fechada. */
+  /* ⚠️⚠️ CONTA DESDE A GERAÇÃO (Daniel, 04/11/2026; de 06/10 até aqui só contava `closed`). O DP gera a
+     medida no Fluxo e ela nasce no Nexus como `aguardando_documento`: já desconta ponto, e o escaneado só
+     fecha o registro. `abonada` (o DP decidiu não aplicar) e `cancelada` (registro errado ou medida apagada
+     no Nexus) APAGAM o evento: uma suspensão abonada que ficasse aqui seria falta grave na nota de quem não
+     foi punido. Sem status (push antigo) = fechada. */
   const status = texto(m.status)
-  if (status && status !== 'closed') {
+  if (status && status !== 'closed' && status !== 'aguardando_documento') {
     const r = await prisma.disciplinaEvento.deleteMany({ where: { source: 'lgpd', sourceId: id } })
     return { ok: true as const, gravada: false, motivo: `status_${status}`, removida: r.count > 0 }
   }
@@ -97,7 +97,13 @@ export async function gravarMedidaLgpd(prisma: PrismaClient, m: MedidaCrua) {
   const t = texto(m.title)
   const dasBase = palavras(base)
   const redundante = !t || [...palavras(t)].every((w) => dasBase.has(w))
-  const motivo = redundante ? base : `${base} — ${t}`
+  /* A hora em que o DP gerou a suspensão no próprio dia: é quando a pessoa foi dispensada. Lançada em outro
+     dia, o Nexus manda vazio, porque a hora do lançamento não diz nada sobre a saída. */
+  const dispensa = texto(m.dispensadaEm)
+  const hora = dispensa && !Number.isNaN(new Date(dispensa).getTime())
+    ? new Date(dispensa).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+    : null
+  const motivo = `${redundante ? base : `${base} — ${t}`}${hora ? ` · dispensada às ${hora}` : ''}`
 
   await prisma.disciplinaEvento.upsert({
     where: { source_sourceId: { source: 'lgpd', sourceId: id } },
