@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Avaliação: trocar de mês mostrava o parecer do outro mês
+
+Relato do Daniel. A tela montava o mês novo com os dados do anterior e o campo do parecer ficava com o texto velho, com "Salvar parecer" ativo. Agora espera os dados do mês pedido. Só a exibição errou: no banco cada mês estava certo e o histórico vazio mostra que nada foi sobrescrito.
+
 ## 2026-11-04 — Avaliação: uma folha só e o parecer digitado
 
 Pedido do Daniel: para concluir basta a foto da folha onde a pessoa assina e escreve o parecer (ou o PDF); o verso saiu, e as colunas ficam. Novo campo **Parecer do funcionário** (`avaliacao_documento.parecer`, SQL `scripts/2026-11-04-avaliacao-parecer.sql`), digitado por quem avalia. ⚠️ Segue editável depois de concluir, porque transcreve o papel, e cada texto substituído fica em `parecer_historico`. Aparece na avaliação, no histórico da pessoa e em `/minha-avaliacao`. `scripts/insumos-avaliacao.mjs` agora traz todas as avaliações anteriores, com os textos e o parecer.

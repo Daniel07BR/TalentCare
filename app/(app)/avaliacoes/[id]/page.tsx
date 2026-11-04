@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { use, useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Avatar from '../../Avatar'
 import {
@@ -53,11 +53,21 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
   const [salvando, setSalvando] = useState<'' | 'rascunho' | 'publicar'>('')
   const [ok, setOk] = useState<string | null>(null)
 
+  /* ⚠️⚠️ Ao trocar de mês, o endereço muda antes de os dados chegarem. Sem esta conta, a tela
+     montava o mês novo com os dados do anterior: o parecer de um mês aparecia no outro, e salvar
+     ali gravaria no mês errado (04/11/2026). */
+  const [carregada, setCarregada] = useState<string | null>(null)
+  const ultimoPedido = useRef(competencia)
+
   const carregar = useCallback(() => {
+    ultimoPedido.current = competencia
     fetch(`/api/avaliacoes/${id}?competencia=${competencia}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((j: Dados | null) => {
+        // Resposta de um mês que já foi trocado por outro chega depois e não vale mais.
+        if (ultimoPedido.current !== competencia) return
         setD(j)
+        setCarregada(competencia)
         setNotas(j?.avaliacao?.notas ?? {})
         setComentario(j?.avaliacao?.comentario ?? '')
         const itens = itensDoCombinado(j?.avaliacao?.combinado)
@@ -68,7 +78,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => { carregar() }, [carregar])
 
-  if (!d) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Carregando…</div>
+  if (!d || carregada !== competencia) return <div style={{ padding: 40, color: 'var(--text-dim)' }}>Carregando…</div>
 
   const jaPublicada = d.avaliacao?.status === 'publicada'
   // ⚠️ Concluída (documento assinado anexado) trava TUDO, até para quem avalia.
