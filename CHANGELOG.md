@@ -7,6 +7,10 @@ nota "+N no contato em lote") e o PDF não o mostrava em lugar nenhum. Decisão 
 `numeros()` (`lib/recepcao.ts`), para setor, ficha, PDF e barra "Quem fez"; o azulejo diz "inclui N do contato em lote", também
 no papel. Soma tudo o que a Recepção registrou no lote, inclusive WhatsApp. "N% do setor" muda junto. Continua fora da nota.
 
+**Só o que não está zerado, na ficha e no PDF** (mesmo dia, Daniel viu a ficha do Yuri com o card todo em zero): azulejo zerado e
+texto com zero não saem no card Atendimento da Recepção. Fora da Recepção, só quatro pessoas ganham o card em outubro, todas com
+registro real. O card do setor segue completo.
+
 ## 2026-11-03 — Baixar os testes e puxar da entrevista, no topo da ficha
 
 Pedidos do Daniel, olhando a ficha da Beatriz Gabriela (fez os testes na entrevista, resultado parado no Fluxo):

@@ -36,7 +36,7 @@ export const ITENS_RECEPCAO: ItemRecepcao[] = [
     valor: (x) => x.feitas,
     nota: (x) => juntar(
       notaDoLote(x),
-      `${x.naoRealizadas} não ${x.naoRealizadas === 1 ? 'realizada' : 'realizadas'}`,
+      x.naoRealizadas > 0 && `${x.naoRealizadas} não ${x.naoRealizadas === 1 ? 'realizada' : 'realizadas'}`,
       x.esperaLigacaoMin != null && `espera média ${min(x.esperaLigacaoMin)}`,
     ),
   },
@@ -74,9 +74,9 @@ export const OUTRAS_TAREFAS: ItemTarefa[] = [
     chave: 'entrevistas', rotulo: 'Entrevistas', curto: 'Entrevistas', Icone: UserSearch, tom: 'purple',
     valor: (x) => x.entrevistas.total,
     nota: (x) => juntar(
-      `${x.entrevistas.agendadas} ${x.entrevistas.agendadas === 1 ? 'agendada' : 'agendadas'}`,
-      `${x.entrevistas.cadastradas} ${x.entrevistas.cadastradas === 1 ? 'cadastrada' : 'cadastradas'}`,
-      `${x.entrevistas.encerradas} ${x.entrevistas.encerradas === 1 ? 'encerrada' : 'encerradas'}`,
+      x.entrevistas.agendadas > 0 && `${x.entrevistas.agendadas} ${x.entrevistas.agendadas === 1 ? 'agendada' : 'agendadas'}`,
+      x.entrevistas.cadastradas > 0 && `${x.entrevistas.cadastradas} ${x.entrevistas.cadastradas === 1 ? 'cadastrada' : 'cadastradas'}`,
+      x.entrevistas.encerradas > 0 && `${x.entrevistas.encerradas} ${x.entrevistas.encerradas === 1 ? 'encerrada' : 'encerradas'}`,
       x.entrevistas.testes > 0 && `testes de ${x.entrevistas.testes} ${x.entrevistas.testes === 1 ? 'candidato' : 'candidatos'}`,
       x.entrevistas.acompanhadas > 0 && `${x.entrevistas.acompanhadas} ${x.entrevistas.acompanhadas === 1 ? 'acompanhada' : 'acompanhadas'} no dia`,
     ),

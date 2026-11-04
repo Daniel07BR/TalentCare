@@ -1,6 +1,6 @@
 'use client'
 import { Headset, type LucideIcon } from 'lucide-react'
-import { temOutrasTarefas, type AtendimentoDaPessoa } from '@/lib/recepcao'
+import type { AtendimentoDaPessoa } from '@/lib/recepcao'
 import { Cartao, forte, suave } from '../../../_visao/ui'
 import type { Tom } from '../../../_visao/tipos'
 import { ITENS_RECEPCAO, OUTRAS_TAREFAS, fmt, notaDoLote, parte } from '../../../_visao/recepcao'
@@ -18,6 +18,10 @@ import { ITENS_RECEPCAO, OUTRAS_TAREFAS, fmt, notaDoLote, parte } from '../../..
 
    29/10/2026: embaixo, as OUTRAS TAREFAS da Recepção (entrevistas, Controle de faltas,
    prestadores, marcadores) — só quando a pessoa fez alguma no período.
+
+   04/11/2026 (pedido do Daniel): SÓ O QUE NÃO ESTÁ ZERADO. Quem é de outro setor e fez uma visita
+   não vê "Ligações recebidas 0"; o card, o azulejo e o texto de baixo só saem com número. Vale na
+   tela e no PDF. O card do setor continua com tudo: lá o zero é o total da Recepção.
    ============================================================ */
 
 /** Um número do card. `nota` vai escrita embaixo da legenda; `dica` só no passar do mouse. */
@@ -47,13 +51,24 @@ function Azulejo({ Icone, tom, rotulo, valor, pct, legenda, nota, dica }: {
 }
 
 export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: AtendimentoDaPessoa; periodo: string; impressao?: boolean }) {
-  const grade = { display: 'grid', gap: 10, gridTemplateColumns: `repeat(auto-fit, minmax(min(${impressao ? 120 : 150}px, 100%), 1fr))` } as const
+  /* `auto-fit` esticaria um azulejo sozinho na largura toda; com poucos, a coluna fica fixa. */
+  const grade = (n: number) => ({
+    display: 'grid', gap: 10,
+    gridTemplateColumns: n < 3 ? 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' : `repeat(auto-fit, minmax(min(${impressao ? 120 : 150}px, 100%), 1fr))`,
+  }) as const
+  const itens = ITENS_RECEPCAO.filter((i) => (i.valor(r.meu) ?? 0) > 0)
+  const { entrevistas: e } = r.meu
+  const tarefas = OUTRAS_TAREFAS.filter((i) => (i.chave === 'entrevistas' ? e.total + e.testes + e.acompanhadas : i.valor(r.meu)) > 0)
+  const detalhe = [
+    ITENS_RECEPCAO[1].nota(r.meu),
+    r.meu.contatos && r.meu.contatos.atualizados > 0 && `contatos do CIDE: ${r.meu.contatos.editados} editados, ${r.meu.contatos.novos} novos, ${r.meu.contatos.removidos} removidos`,
+  ].filter(Boolean).join(' · ')
   return (
     <Cartao titulo="Atendimento da Recepção" Icone={Headset}
       sub={`${periodo} · ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE · não entra na nota`}
       style={impressao ? { breakInside: 'avoid' } : undefined}>
-      <div style={grade}>
-        {ITENS_RECEPCAO.map((i) => {
+      <div style={grade(itens.length)}>
+        {itens.map((i) => {
           const meu = i.valor(r.meu)
           const pct = parte(meu, i.valor(r.setor))
           const legenda = pct == null ? i.nota(r.meu) : i.chave === 'visitas' ? `estava em ${pct}% das visitas` : `${pct}% do setor`
@@ -62,11 +77,11 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
           return <Azulejo key={i.chave} Icone={i.Icone} tom={i.tom} rotulo={i.rotulo} valor={meu} pct={pct} legenda={legenda} nota={nota} dica={i.nota(r.meu)} />
         })}
       </div>
-      {temOutrasTarefas(r.meu) && (
+      {tarefas.length > 0 && (
         <>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--n-text)', margin: '14px 0 8px' }}>Outras tarefas da Recepção</div>
-          <div style={grade}>
-            {OUTRAS_TAREFAS.map((i) => {
+          <div style={grade(tarefas.length)}>
+            {tarefas.map((i) => {
               const meu = i.valor(r.meu)
               const pct = parte(meu, i.valor(r.setor))
               return (
@@ -77,10 +92,9 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
           </div>
         </>
       )}
-      {!impressao && (r.meu.naoRealizadas > 0 || r.meu.esperaLigacaoMin != null || r.meu.contatosEmLote > 0 || r.meu.contatos) && (
+      {!impressao && detalhe && (
         <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginTop: 10, lineHeight: 1.5 }}>
-          {[ITENS_RECEPCAO[1].nota(r.meu), r.meu.contatos && `contatos do CIDE: ${r.meu.contatos.editados} editados, ${r.meu.contatos.novos} novos, ${r.meu.contatos.removidos} removidos`]
-            .filter(Boolean).join(' · ')}
+          {detalhe}
         </div>
       )}
     </Cartao>
