@@ -9,6 +9,7 @@ import { montar } from '@/lib/servicos/calcular-mes'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
+import { selosDoFluxo } from '@/lib/anotacoes-do-fluxo'
 import { atendimentoDaPessoa, ehRecepcao } from '@/lib/recepcao'
 import { melhoriasDaPessoa } from '@/lib/melhorias'
 import { atividadesDaNota, imotecDaPessoa, somaDaNota } from '@/lib/imotec'
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
   const personKey = user.nexusUserId ?? id
   // as FALTAS lançadas pelo DP no Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre
   const faltasDoFluxo = await faltasNoPeriodo(prisma, fromDay, toDay, [personKey])
+  const selos = await selosDoFluxo(user.nexusUserId, fromDay, toDay)
   /* ATENDIMENTO DA RECEPÇÃO (16/10/2026): só aparece, fora da nota. Nulo para quem não é da
      Recepção — o card some. Ver `lib/recepcao.ts`. */
   const recepcao = await atendimentoDaPessoa(prisma, user.nexusUserId, ehRecepcao(user.department?.name), fromDay, toDay)
@@ -403,6 +405,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     period, fromDay, toDay,
     setorNome: user.department?.name ?? null,
+    selos,
     recepcao,
     melhorias,
     imotec,

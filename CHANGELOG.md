@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — O calendário da ficha mostra as anotações do Fluxo
+
+Pedido do Daniel: o calendário reflete falta, atestado, avisos de saída mais cedo e de chegada tarde, e o clique no dia abre as anotações. Selo no canto do dia, janela `AnotacoesDoDia`, lidos do Fluxo na hora, sem guardar motivo. Motivo com a régua da ficha; o PDF só leva as marcas. "Faltas" passa a contar também o que a Recepção confirmou (18 em outubro; antes, zero).
+
 ## 2026-11-04 — Avaliação: trocar de mês mostrava o parecer do outro mês
 
 Relato do Daniel. A tela montava o mês novo com os dados do anterior e o campo do parecer ficava com o texto velho, com "Salvar parecer" ativo. Agora espera os dados do mês pedido. Só a exibição errou: no banco cada mês estava certo e o histórico vazio mostra que nada foi sobrescrito.

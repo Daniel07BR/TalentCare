@@ -2,11 +2,14 @@
 import type { AtendimentoDaPessoa } from '@/lib/recepcao'
 import type { Melhorias } from '@/lib/melhorias'
 import type { Atividades } from '@/lib/imotec'
+import type { SeloDoDia } from '@/app/(app)/CalendarioOcorrencias'
 import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
 export type EmployeeMetrics = {
   setorNome?: string | null
+  /** O que o Fluxo anotou em cada dia, sem motivo (04/11/2026). `null` = o Fluxo não respondeu; a tela diz. */
+  selos?: SeloDoDia[] | null
   /** O Atendimento da Recepção (16/10/2026) — nulo para quem não é da Recepção. */
   recepcao?: AtendimentoDaPessoa | null
   /** Os chamados atendidos (04/11/2026) — nulo fora da T.I e da Programação, ou sem nenhum no período. */

@@ -56,6 +56,34 @@ export type DiaOcorrencia = {
 export type MarcaDoDia = { day: string; rotulo: string }
 const COR_MARCA = 'var(--n-purple, #7c3aed)'
 
+/**
+ * O que o Fluxo tem anotado no dia (04/11/2026, pedido do Daniel): falta, atestado, avisos de saída mais cedo e chegada
+ * tarde. Um selo no canto, sem trocar a cor do atraso. `comAnotacao` deixa o dia clicável. Só a ficha manda. Em ordem de peso:
+ * o primeiro é o que aparece quando não cabem todos.
+ */
+export type SeloDoDia = { day: string; marcas: string[]; comAnotacao: boolean }
+const CINZA = '#8a97ad'
+export const SELOS: Record<string, { letra: string; rotulo: string; cor: string }> = {
+  falta: { letra: 'F', rotulo: 'Falta', cor: '#e5484d' },
+  atestado: { letra: 'At', rotulo: 'Atestado', cor: '#2563eb' },
+  aviso_falta: { letra: 'Av', rotulo: 'Avisou que ia faltar', cor: '#db2777' },
+  sair_cedo: { letra: 'Sc', rotulo: 'Avisou que sai mais cedo', cor: '#ea580c' },
+  chegar_tarde: { letra: 'Ct', rotulo: 'Avisou que chega mais tarde', cor: '#b45309' },
+  meio: { letra: '½', rotulo: 'Meio período', cor: '#7c3aed' },
+  fora: { letra: 'FE', rotulo: 'Fora do expediente', cor: '#0d9488' },
+  ferias: { letra: 'Fé', rotulo: 'Férias', cor: '#16a34a' },
+  almoco: { letra: 'Al', rotulo: 'Avisou o horário do almoço', cor: CINZA },
+  folga: { letra: 'Fg', rotulo: 'Folga ou compensação', cor: CINZA },
+  externo: { letra: 'Ex', rotulo: 'Serviço externo', cor: CINZA },
+  home: { letra: 'Ho', rotulo: 'Home office', cor: CINZA },
+  afastado: { letra: 'Af', rotulo: 'Afastamento', cor: CINZA },
+}
+const ORDEM_DOS_SELOS = Object.keys(SELOS)
+const emOrdem = (marcas: string[]) => ORDEM_DOS_SELOS.filter((k) => marcas.includes(k))
+/** Os tipos que aparecem no período, para a legenda dizer só o que está na tela. */
+export const selosDoPeriodo = (selos: SeloDoDia[], de: string, ate: string) =>
+  emOrdem(selos.filter((s) => s.day >= de && s.day <= ate).flatMap((s) => s.marcas))
+
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 /** Segunda a domingo. */
 const DIAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
@@ -89,11 +117,13 @@ const somaMes = (m: string) => {
 }
 
 export default function CalendarioOcorrencias({
-  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites, legenda = true, marcas = [],
+  dias, de, ate, pontoAte, pontoDesde, escala = 'minutos', paleta = BGS, onDia, selecionado = null, limites, legenda = true, marcas = [], selos = [],
 }: {
   dias: DiaOcorrencia[]
   /** Dias com suspensão (ver `MarcaDoDia`). */
   marcas?: MarcaDoDia[]
+  /** O que o Fluxo anotou em cada dia (ver `SeloDoDia`). */
+  selos?: SeloDoDia[]
   /** Primeiro e último dia do PERÍODO do filtro (AAAA-MM-DD). */
   de: string
   ate: string
@@ -140,6 +170,7 @@ export default function CalendarioOcorrencias({
   const marcaPorIso = new Map<string, string[]>()
   for (const x of marcas) marcaPorIso.set(x.day, [...(marcaPorIso.get(x.day) ?? []), x.rotulo])
   const temMarca = marcas.some((x) => x.day >= de && x.day <= ate)
+  const seloPorIso = new Map(selos.map((x) => [x.day, x]))
   const hoje = new Date().toISOString().slice(0, 10)
 
   const meses: string[] = []
@@ -208,12 +239,15 @@ export default function CalendarioOcorrencias({
                   const cor = foraDoPeriodo || futuro || semMedicao ? 'var(--text-mute)'
                     : lvl >= 3 ? '#3a2a05' : 'var(--text-dim)'
 
-                  const clicavel = !!onDia && lvl > 0 && !!oc
+                  const selo = foraDoPeriodo ? undefined : seloPorIso.get(iso)
+                  const selosDoDia = selo ? emOrdem(selo.marcas) : []
+                  const clicavel = !!onDia && ((lvl > 0 && !!oc) || !!selo)
                   const marcado = clicavel && selecionado === iso
                   const marca = foraDoPeriodo ? undefined : marcaPorIso.get(iso)
-                  const tituloFinal = marca ? `${titulo}${titulo ? ' · ' : `${brDia}: `}${marca.join(' · ')}` : titulo
+                  const extras = [...(marca ?? []), ...selosDoDia.map((k) => SELOS[k].rotulo), ...(selo?.comAnotacao && !selosDoDia.length ? ['tem anotação'] : [])]
+                  const tituloFinal = extras.length ? `${titulo}${titulo ? ' · ' : `${brDia}: `}${extras.join(' · ')}` : titulo
                   return (
-                    <div key={iso} title={clicavel ? `${tituloFinal} — clique para ver quem` : tituloFinal}
+                    <div key={iso} title={clicavel ? `${tituloFinal} — clique para ver ${selos.length ? 'as anotações' : 'quem'}` : tituloFinal}
                       role={clicavel ? 'button' : undefined} tabIndex={clicavel ? 0 : undefined}
                       aria-pressed={clicavel ? marcado : undefined}
                       onClick={clicavel ? () => onDia!(iso) : undefined}
@@ -226,12 +260,22 @@ export default function CalendarioOcorrencias({
                         cursor: clicavel ? 'pointer' : undefined,
                         outline: marcado ? '2px solid var(--accent)' : undefined, outlineOffset: marcado ? 1 : undefined,
                         border: foraDoPeriodo || futuro ? '1px dashed var(--border)' : 'none',
-                        opacity: futuro ? 0.3 : foraDoPeriodo ? 0.5 : 1,
+                        opacity: futuro && !selo ? 0.3 : foraDoPeriodo ? 0.5 : 1,
                         fontSize: fonte, fontWeight: lvl > 0 ? 700 : 500,
                         color: cor, fontVariantNumeric: 'tabular-nums',
                       }}>
                       {marca && (
                         <span aria-hidden style={{ position: 'absolute', top: n === 1 ? 4 : 2, right: n === 1 ? 4 : 2, width: n === 1 ? 7 : 5, height: n === 1 ? 7 : 5, borderRadius: '50%', background: COR_MARCA }} />
+                      )}
+                      {selo && (
+                        <span aria-hidden style={{ position: 'absolute', left: n === 1 ? 3 : 1, bottom: n === 1 ? 3 : 1, display: 'flex', gap: 1, lineHeight: 1 }}>
+                          {selosDoDia.length === 0 && <span style={{ width: 5, height: 5, borderRadius: '50%', background: CINZA, margin: 1 }} />}
+                          {selosDoDia.slice(0, n <= 3 ? 2 : 1).map((k) => (
+                            n <= 3
+                              ? <span key={k} style={{ padding: n === 1 ? '1px 3px' : '1px 2px', borderRadius: 3, background: SELOS[k].cor, color: '#fff', fontSize: n === 1 ? 9 : 7.5, fontWeight: 800 }}>{SELOS[k].letra}</span>
+                              : <span key={k} style={{ width: 6, height: 6, borderRadius: '50%', background: SELOS[k].cor }} />
+                          ))}
+                        </span>
                       )}
                       {dia}
                       {/* No mês ampliado cabe o número que a cor só insinua, e
@@ -252,7 +296,7 @@ export default function CalendarioOcorrencias({
       </div>
 
       {legenda && (
-        <LegendaOcorrencias escala={escala} paleta={paleta} limites={limites} suspensao={temMarca} style={{ marginTop: 12 }}
+        <LegendaOcorrencias escala={escala} paleta={paleta} limites={limites} suspensao={temMarca} selos={selosDoPeriodo(selos, de, ate)} style={{ marginTop: 12 }}
           semMedicao={!!((pontoAte && ate > pontoAte) || (pontoDesde && de < pontoDesde))} />
       )}
     </>
@@ -262,7 +306,9 @@ export default function CalendarioOcorrencias({
 /** A legenda do calendário, sozinha — para quem quer desenhá-la em outro lugar
  *  (a folha A4 põe ao lado do título). `semMedicao` é o único degrau que depende
  *  do período: só aparece quando há dia sem medição dentro dele. */
-export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, semMedicao = false, suspensao = false, style }: {
+export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, semMedicao = false, suspensao = false, selos = [], style }: {
+  /** Os selos que aparecem no período (`selosDoPeriodo`). */
+  selos?: string[]
   escala?: 'minutos' | 'pessoas'
   /** Há dia com suspensão no período — só então o item entra na legenda. */
   suspensao?: boolean
@@ -289,6 +335,11 @@ export function LegendaOcorrencias({ escala = 'minutos', paleta = BGS, limites, 
           <span style={{ width: 11, height: 11, borderRadius: 3, boxShadow: `inset 0 0 0 2px ${COR_MARCA}` }} /> suspensão
         </span>
       )}
+      {selos.map((k) => (
+        <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+          <span style={{ padding: '1px 3px', borderRadius: 3, background: SELOS[k].cor, color: '#fff', fontSize: 9, fontWeight: 800, lineHeight: 1.1 }}>{SELOS[k].letra}</span> {SELOS[k].rotulo.toLowerCase()}
+        </span>
+      ))}
     </div>
   )
 }

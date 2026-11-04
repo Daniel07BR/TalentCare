@@ -567,3 +567,7 @@ Imotec. Só existe desde 16/10/2026: antes é "não medido". Card na ficha, no P
 
 **Pontua desde 04/11/2026 (decisão do Daniel), só da Imóveis:** tipos `imo_*` em `lib/servicos/atividades.ts`, e também em `activityOf`, `score-metrics` e
 "Atividades concluídas". A geração e as vistorias valem uma por dia; anotação, correção de pagamento e tabelas não pontuam. Sem tempo médio lançado pela liderança, cada tipo vale o piso de 1 ponto.
+
+## As anotações do calendário da ficha (Fluxo, 04/11/2026)
+
+Lidas ao vivo de `GET /api/integrations/talent-anotacoes`: as marcas em `employee-metrics` (`selos`), o texto em `/api/anotacoes-do-dia`, com a régua da ficha (`podeVer`). **O motivo não fica guardado aqui** (LGPD art. 11). O PDF leva as marcas, nunca o texto. As faltas chegam pelo envio mensal `fluxo-disciplina`: as do DP mais as que a Recepção confirmou, sem repetir o dia, para `fluxo_falta`.

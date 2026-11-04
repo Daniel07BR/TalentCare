@@ -108,7 +108,7 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
           {m?.melhorias && <ChamadosAtendidos c={m.melhorias} periodo={periodo} />}
           {m?.imotec && <AtividadesNoImotec total={m.imotec} periodo={periodo} fromDay={m.fromDay} />}
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
-          <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
+          <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} pessoaId={vm.id} />
         </div>
         <aside className={f.lateral}>
           <AntesDeAvaliar vm={vm} m={m} periodo={periodo} estado={estado} />

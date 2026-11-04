@@ -1,21 +1,28 @@
 'use client'
+import { useState } from 'react'
 import { CalendarCheck, CheckCircle2 } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
-import CalendarioOcorrencias, { LegendaOcorrencias } from '../../../CalendarioOcorrencias'
+import CalendarioOcorrencias, { LegendaOcorrencias, selosDoPeriodo } from '../../../CalendarioOcorrencias'
+import { AnotacoesDoDia } from './AnotacoesDoDia'
 import { Cartao, Chip, Mini, forte } from '../../../_visao/ui'
 import { comPonto, ehSuspensao, num, rotuloDisciplina, tomDisciplina } from './derivar'
 import f from './ficha.module.css'
 
+const INICIO_DOS_AVISOS = '2026-10-30'
+
 /* ASSIDUIDADE E DISCIPLINA — o que NÃO está nos azulejos do topo: abonados, a
    natureza de cada suspensão, a gravidade, o calendário e a lista. */
-export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
+export function Assiduidade({ m, periodo, pontoAteVm, pessoaId, impressao = false }: {
   m: EmployeeMetrics | null; periodo: string; pontoAteVm: string | null
+  /** Sem ele (ou no papel) o dia não abre: a folha leva as marcas, nunca os motivos. */
+  pessoaId?: string
   /** Folha A4 (pedido do dono, 14/09/2026): SEM a lista de advertências — só o
    *  contador — e sem as linhas de explicação.
    *  17/09/2026: sem "Ponto eletrônico · período" (o período já está no alto da
    *  folha) e com a LEGENDA do calendário ao lado do título, não no pé. */
   impressao?: boolean
 }) {
+  const [diaAberto, setDiaAberto] = useState<string | null>(null)
   const a = m?.assiduidade
   if (!m || !a) {
     return (
@@ -41,16 +48,23 @@ export function Assiduidade({ m, periodo, pontoAteVm, impressao = false }: {
      houver dia sem medição DENTRO do período — a mesma conta do calendário. */
   const pontoAte = a.pontoAte ?? pontoAteVm
   const semMedicao = !!((pontoAte && m.toDay > pontoAte) || (a.pontoDesde && m.fromDay < a.pontoDesde))
+  const selos = m.selos ?? []
+  const podeAbrir = !impressao && !!pessoaId
 
   return (
     <Cartao titulo="Assiduidade e disciplina" Icone={CalendarCheck} corIcone="var(--n-amber)"
       sub={impressao ? undefined : `Ponto eletrônico · ${periodo}`}
-      acao={impressao ? <LegendaOcorrencias semMedicao={semMedicao} suspensao={marcas.length > 0} style={{ marginTop: 2 }} /> : undefined}>
+      acao={impressao ? <LegendaOcorrencias semMedicao={semMedicao} suspensao={marcas.length > 0} selos={selosDoPeriodo(selos, m.fromDay, m.toDay)} style={{ marginTop: 2 }} /> : undefined}>
       <div className={f.assid}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--n-text)', marginBottom: 2 }}>Mapa de ocorrências</div>
-          {!impressao && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso.</div>}
-          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={pontoAte} pontoDesde={a.pontoDesde ?? null} legenda={!impressao} marcas={marcas} />
+          {!impressao && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Cada quadro é um dia; mais escuro = mais minutos de atraso. Clique no dia marcado para ver as anotações.</div>}
+          {/* ⚠️ Sem marca não quer dizer que não houve nada: a fonte pode estar fora, ou ainda não existia. */}
+          {!impressao && m.selos === null && <div style={{ fontSize: 11, color: 'var(--n-red)', marginBottom: 10 }}>O Fluxo não respondeu agora: faltas, avisos e anotações não estão marcados no calendário.</div>}
+          {!impressao && m.fromDay < INICIO_DOS_AVISOS && <div style={{ fontSize: 11, color: 'var(--n-text-3)', marginBottom: 10 }}>Os avisos existem desde 30/10/2026, e os pedidos fora do expediente desde 15/10/2026. Antes disso, dia sem marca não prova que não houve aviso.</div>}
+          <CalendarioOcorrencias dias={a.dias ?? []} de={m.fromDay} ate={m.toDay} pontoAte={pontoAte} pontoDesde={a.pontoDesde ?? null} legenda={!impressao} marcas={marcas} selos={selos}
+            onDia={podeAbrir ? setDiaAberto : undefined} selecionado={diaAberto} />
+          {podeAbrir && diaAberto && <AnotacoesDoDia pessoaId={pessoaId!} dia={diaAberto} fechar={() => setDiaAberto(null)} />}
         </div>
 
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
