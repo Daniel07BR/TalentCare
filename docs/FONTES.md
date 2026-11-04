@@ -563,4 +563,7 @@ que não está zerado (`lib/melhorias.ts`). **Não pontua.** O dia é o do fecha
 
 `run-imotec-sync.mjs` lê `GET /api/integrations/talent-atividades` do Imotec (`.73`, porta 80, só o `.78`, com `IMOTEC_API_KEY`) e troca o
 histórico inteiro em `imotec_daily`, por pessoa, dia e ação. A fonte é a auditoria de lá, e a régua é `lib/atividades-da-equipe.ts` do
-Imotec. Só existe desde 16/10/2026: antes é "não medido". Card na ficha, no PDF e no setor Imóveis, só com o que não está zerado. **Não pontua.**
+Imotec. Só existe desde 16/10/2026: antes é "não medido". Card na ficha, no PDF e no setor Imóveis, só com o que não está zerado.
+
+**Pontua desde 04/11/2026 (decisão do Daniel), só da Imóveis:** tipos `imo_*` em `lib/servicos/atividades.ts`, e também em `activityOf`, `score-metrics` e
+"Atividades concluídas". A geração e as vistorias valem uma por dia; anotação, correção de pagamento e tabelas não pontuam. Sem tempo médio lançado pela liderança, cada tipo vale o piso de 1 ponto.

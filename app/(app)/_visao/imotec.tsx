@@ -17,8 +17,8 @@ type Item = { chave: string; rotulo: string; curto: string; Icone: LucideIcon; t
 
 const ITENS: Item[] = [
   { chave: 'pagamentos', rotulo: 'Pagamentos registrados', curto: 'pagamentos', Icone: BadgeDollarSign, tom: 'green' },
-  { chave: 'pagamentosCorrigidos', rotulo: 'Pagamentos corrigidos', curto: 'pagamentos corrigidos', Icone: Pencil, tom: 'amber' },
-  { chave: 'alugueisGerados', rotulo: 'Aluguéis gerados', curto: 'aluguéis gerados', Icone: CalendarCheck, tom: 'blue', nota: 'muitos de uma vez, na geração do mês' },
+  { chave: 'pagamentosCorrigidos', rotulo: 'Pagamentos corrigidos', curto: 'pagamentos corrigidos', Icone: Pencil, tom: 'amber', nota: 'não pontua' },
+  { chave: 'alugueisGerados', rotulo: 'Aluguéis gerados', curto: 'aluguéis gerados', Icone: CalendarCheck, tom: 'blue', nota: 'na nota, vale uma geração por dia' },
   { chave: 'lancamentos', rotulo: 'Lançamentos no aluguel', curto: 'lançamentos', Icone: ListPlus, tom: 'purple', nota: 'incluídos, alterados e retirados' },
   { chave: 'cobrancas', rotulo: 'Cobranças no WhatsApp', curto: 'cobranças', Icone: MessageCircle, tom: 'whats' },
   { chave: 'alugueisAlterados', rotulo: 'Aluguéis alterados', curto: 'aluguéis alterados', Icone: FileText, tom: 'orange' },
@@ -30,10 +30,10 @@ const ITENS: Item[] = [
   { chave: 'pessoasNovas', rotulo: 'Pessoas novas', curto: 'pessoas novas', Icone: UserPlus, tom: 'green', nota: 'locatários, proprietários e fiadores' },
   { chave: 'pessoasAlteradas', rotulo: 'Pessoas alteradas', curto: 'pessoas alteradas', Icone: Users, tom: 'orange', nota: 'locatários, proprietários e fiadores' },
   { chave: 'iptu', rotulo: 'Registros de IPTU', curto: 'IPTU', Icone: Landmark, tom: 'blue' },
-  { chave: 'vistorias', rotulo: 'Registros em vistorias', curto: 'vistorias', Icone: ClipboardCheck, tom: 'pink' },
+  { chave: 'vistorias', rotulo: 'Registros em vistorias', curto: 'vistorias', Icone: ClipboardCheck, tom: 'pink', nota: 'na nota, vale um dia de vistoria' },
   { chave: 'leads', rotulo: 'Leads da Lais', curto: 'leads', Icone: Sparkles, tom: 'purple' },
-  { chave: 'tabelas', rotulo: 'Índices e tabelas', curto: 'tabelas', Icone: Table2, tom: 'blue' },
-  { chave: 'anotacoes', rotulo: 'Anotações', curto: 'anotações', Icone: MessageSquareText, tom: 'amber' },
+  { chave: 'tabelas', rotulo: 'Índices e tabelas', curto: 'tabelas', Icone: Table2, tom: 'blue', nota: 'não pontua' },
+  { chave: 'anotacoes', rotulo: 'Anotações', curto: 'anotações', Icone: MessageSquareText, tom: 'amber', nota: 'não pontua' },
 ]
 const OUTRAS: Item = { chave: 'outras', rotulo: 'Outras alterações', curto: 'outras', Icone: CircleEllipsis, tom: 'blue' }
 const CONHECIDAS = new Set(ITENS.map((i) => i.chave))
@@ -47,7 +47,7 @@ function valores(a: Atividades): [Item, number][] {
 export function AtividadesNoImotec({ total, pessoas, periodo, fromDay, impressao = false, style }: {
   total: Atividades; pessoas?: PessoaDoImotec[]; periodo?: string; fromDay: string; impressao?: boolean; style?: React.CSSProperties
 }) {
-  const sub = [periodo, 'registros do Imotec', fromDay < INICIO_DO_REGISTRO && 'o sistema registra quem fez desde 16/10/2026', 'não entra na nota']
+  const sub = [periodo, 'registros do Imotec', fromDay < INICIO_DO_REGISTRO && 'o sistema registra quem fez desde 16/10/2026', 'entra na nota']
     .filter(Boolean).join(' · ')
   return (
     <Cartao titulo="Atividades no Imotec" Icone={Building2} sub={sub} style={impressao ? { breakInside: 'avoid', ...style } : style}>

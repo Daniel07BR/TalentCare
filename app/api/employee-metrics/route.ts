@@ -10,7 +10,7 @@ import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cob
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import { atendimentoDaPessoa, ehRecepcao } from '@/lib/recepcao'
 import { melhoriasDaPessoa } from '@/lib/melhorias'
-import { imotecDaPessoa } from '@/lib/imotec'
+import { atividadesDaNota, imotecDaPessoa, somaDaNota } from '@/lib/imotec'
 import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -404,6 +404,7 @@ export async function GET(req: NextRequest) {
     recepcao,
     melhorias,
     imotec,
+    imotecNaNota: user.nexusUserId ? somaDaNota((await atividadesDaNota(prisma, [user.nexusUserId], fromDay, toDay)).get(user.nexusUserId)) : 0,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: {

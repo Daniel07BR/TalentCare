@@ -1,3 +1,4 @@
+import { atividadesDaNota, somaDaNota } from '@/lib/imotec'
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { assembleData, type Identity, type TalentData, type TrainingItem } from '@/lib/mock/data'
@@ -171,6 +172,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
   // Assiduidade/disciplina por personKey (= nexusUserId ?? id, cobre STAFF).
   const assidTotByKey = new Map(assidTot.map((a) => [a.personKey, a._sum]))
   const servTotByKey = new Map(servTot.map((r) => [r.personKey, r._count._all]))
+  const imotecTot = await atividadesDaNota(prisma)
   const assidDaysByKey = new Map<string, { day: string; atrasos: number; minutos: number }[]>()
   for (const r of assidRecent) {
     const arr = assidDaysByKey.get(r.personKey) ?? []
@@ -307,6 +309,7 @@ export async function getTalentData(alcance: Alcance = { tipo: 'tudo' }): Promis
          protege a privacidade não pode virar nota máxima: fora do alcance, a
          pessoa NÃO É MEDIDA para quem está lendo. */
       servicosConcluidos: servTotByKey.get(personKey) ?? 0,
+      imotecNaNota: u.nexusUserId ? somaDaNota(imotecTot.get(u.nexusUserId)) : 0,
       temPonto: alcanca(u.departmentId, u.id) && cobPonto.roster.has(personKey),
       /* ⚠️⚠️ ATÉ QUANDO O PONTO MEDIU. O calendário de ocorrências pinta de
          "dia limpo" tudo que não tem atraso — e o ponto é import à MÃO, sem

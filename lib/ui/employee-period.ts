@@ -12,6 +12,8 @@ export type EmployeeMetrics = {
   melhorias?: Melhorias | null
   /** As atividades no Imotec (04/11/2026) — nulo fora da Imóveis, ou sem nenhuma no período. */
   imotec?: Atividades | null
+  /** O que pontua no Imotec, na unidade da nota (a geração e a vistoria valem uma por dia). */
+  imotecNaNota?: number
   /** O intervalo que estes números cobrem — a ficha compara com a vida da pessoa. */
   fromDay: string
   toDay: string

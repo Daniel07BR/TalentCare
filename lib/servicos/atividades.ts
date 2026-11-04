@@ -40,6 +40,7 @@ export type FonteAtividade =
   | { modelo: 'gerenciaDaily'; campos: (keyof Prisma.GerenciaDailySumAggregateOutputType)[] }
   | { modelo: 'fluxoDaily'; campos: (keyof Prisma.FluxoDailySumAggregateOutputType)[] }
   | { modelo: 'whatsappAttendantDaily'; campos: string[] } // casa por NOME, não por nexusUserId
+  | { modelo: 'imotecDaily'; campos: string[] } // a ação gravada em `imotec_daily`; só da Imóveis (`lib/imotec.ts`)
 
 export type TipoAtividade = {
   /** Chave estável — vai para o banco na régua. */
@@ -112,6 +113,22 @@ export const TIPOS_ATIVIDADE: TipoAtividade[] = [
      mostra. */
   { chave: 'chat_cham_aberto', label: 'Pedido a outro setor', sistema: 'Fluxo', descricao: 'Cada pedido que a pessoa fez a outro setor pelo Fluxo (até 16/09/2026, pelo Chat Interno).', fonte: { modelo: 'fluxoDaily', campos: ['chamadosAbertos'] } },
   { chave: 'chat_cham_concluido', label: 'Pedido de outro setor atendido', sistema: 'Fluxo', descricao: 'Cada pedido de outro setor que a pessoa assumiu e atendeu até o fim (conta quando quem pediu confirma).', fonte: { modelo: 'fluxoDaily', campos: ['chamadosConcluidos'] } },
+  // ── Imotec ── só da Imóveis, e só desde 16/10/2026 (decisão do Daniel, 04/11/2026; ver `lib/imotec.ts`)
+  { chave: 'imo_pagamento', label: 'Pagamento registrado', sistema: 'Imotec', descricao: 'Cada pagamento de aluguel que a pessoa registrou. A correção de um pagamento não pontua.', fonte: { modelo: 'imotecDaily', campos: ['pagamentos'] } },
+  { chave: 'imo_geracao', label: 'Geração de aluguéis', sistema: 'Imotec', descricao: 'Cada dia em que a pessoa rodou a geração dos aluguéis. Vale uma por dia, não por aluguel: centenas saem de um clique.', fonte: { modelo: 'imotecDaily', campos: ['alugueisGerados'] } },
+  { chave: 'imo_lancamento', label: 'Lançamento no aluguel', sistema: 'Imotec', descricao: 'Cada lançamento que a pessoa incluiu, alterou ou retirou de um aluguel.', fonte: { modelo: 'imotecDaily', campos: ['lancamentos'] } },
+  { chave: 'imo_cobranca', label: 'Cobrança no WhatsApp', sistema: 'Imotec', descricao: 'Cada cobrança que a pessoa abriu pelo WhatsApp a partir do aluguel.', fonte: { modelo: 'imotecDaily', campos: ['cobrancas'] } },
+  { chave: 'imo_aluguel_alterado', label: 'Aluguel alterado', sistema: 'Imotec', descricao: 'Cada vez que a pessoa incluiu ou alterou um aluguel à mão.', fonte: { modelo: 'imotecDaily', campos: ['alugueisAlterados'] } },
+  { chave: 'imo_contrato_novo', label: 'Contrato novo', sistema: 'Imotec', descricao: 'Cada contrato que a pessoa cadastrou.', fonte: { modelo: 'imotecDaily', campos: ['contratosNovos'] } },
+  { chave: 'imo_contrato_alterado', label: 'Contrato alterado', sistema: 'Imotec', descricao: 'Cada vez que a pessoa salvou uma alteração num contrato.', fonte: { modelo: 'imotecDaily', campos: ['contratosAlterados'] } },
+  { chave: 'imo_reajuste', label: 'Reajuste aplicado', sistema: 'Imotec', descricao: 'Cada reajuste de aluguel que a pessoa aplicou.', fonte: { modelo: 'imotecDaily', campos: ['reajustes'] } },
+  { chave: 'imo_imovel_novo', label: 'Imóvel novo', sistema: 'Imotec', descricao: 'Cada imóvel que a pessoa cadastrou.', fonte: { modelo: 'imotecDaily', campos: ['imoveisNovos'] } },
+  { chave: 'imo_imovel_alterado', label: 'Imóvel alterado', sistema: 'Imotec', descricao: 'Cada vez que a pessoa salvou uma alteração num imóvel.', fonte: { modelo: 'imotecDaily', campos: ['imoveisAlterados'] } },
+  { chave: 'imo_pessoa_nova', label: 'Pessoa nova', sistema: 'Imotec', descricao: 'Cada locatário, proprietário ou fiador que a pessoa cadastrou.', fonte: { modelo: 'imotecDaily', campos: ['pessoasNovas'] } },
+  { chave: 'imo_pessoa_alterada', label: 'Pessoa alterada', sistema: 'Imotec', descricao: 'Cada vez que a pessoa salvou uma alteração num locatário, proprietário ou fiador.', fonte: { modelo: 'imotecDaily', campos: ['pessoasAlteradas'] } },
+  { chave: 'imo_iptu', label: 'Registro de IPTU', sistema: 'Imotec', descricao: 'Cada IPTU que a pessoa lançou, alterou ou dividiu.', fonte: { modelo: 'imotecDaily', campos: ['iptu'] } },
+  { chave: 'imo_vistoria', label: 'Dia de vistoria', sistema: 'Imotec', descricao: 'Cada dia em que a pessoa trabalhou numa vistoria. Vale um por dia: a vistoria grava uma linha por item.', fonte: { modelo: 'imotecDaily', campos: ['vistorias'] } },
+  { chave: 'imo_lead', label: 'Lead da Lais', sistema: 'Imotec', descricao: 'Cada lead da Lais que a pessoa atendeu ou encerrou.', fonte: { modelo: 'imotecDaily', campos: ['leads'] } },
 ]
 
 export const TIPO_ATIVIDADE_POR_CHAVE = new Map(TIPOS_ATIVIDADE.map((t) => [t.chave, t]))

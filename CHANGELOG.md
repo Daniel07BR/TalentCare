@@ -4,7 +4,10 @@
 
 Pedido do Daniel: os indicadores do pessoal da Imóveis, com o que fazem dentro do Imotec. Card "Atividades no Imotec" na ficha, no PDF e na
 página do setor (com "Quem fez"), pelo período do filtro: pagamentos, aluguéis gerados, lançamentos, contratos, imóveis, pessoas e o resto.
-Só com o que não está zerado, fora da nota. Espelho `imotec_daily`, `run-imotec-sync.mjs`. O Imotec só registra quem fez desde 16/10/2026.
+Só com o que não está zerado. Espelho `imotec_daily`, `run-imotec-sync.mjs`. O Imotec só registra quem fez desde 16/10/2026.
+
+**Entra na nota da Imóveis** (mesmo dia, decisão do Daniel): tipos `imo_*` no catálogo de atividades. A geração do mês e as vistorias valem uma por dia; anotação,
+correção de pagamento e tabelas só aparecem. Mês já gravado não muda sozinho.
 
 ## 2026-11-04 — Chamados atendidos na ficha da T.I e da Programação
 

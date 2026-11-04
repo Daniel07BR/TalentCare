@@ -27,6 +27,7 @@ export function concluidas(m: EmployeeMetrics | null): { total: number | null; p
        desde 16/09/2026; no Chat ficou a conversa. */
     { label: 'chamados concluídos', sys: 'Fluxo', n: m.fluxo.chamadosConcluidos },
     { label: 'tarefas concluídas', sys: 'Fluxo', n: m.fluxo.tarefasConcluidas },
+    { label: 'atividades', sys: 'Imotec', n: m.imotecNaNota ?? 0 },
   ].filter((p) => p.n > 0)
   return { total: partes.reduce((a, p) => a + p.n, 0), partes }
 }

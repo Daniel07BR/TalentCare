@@ -1,6 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/db/prisma'
 import { TIPOS_ATIVIDADE } from './atividades'
+import { atividadesDaNota } from '@/lib/imotec'
 
 /* ============================================================
    A CONTA DAS ATIVIDADES, num lugar só.
@@ -50,7 +51,7 @@ export async function agregarAtividades(
   const somaCampos = (r: Record<string, unknown>, campos: string[]) =>
     campos.reduce((a, c) => a + Number((r as Record<string, number | null>)[c] ?? 0), 0)
 
-  const [cls, hd, cide, cons, ger, fluxo, wpp] = await Promise.all([
+  const [cls, hd, cide, cons, ger, fluxo, wpp, imotec] = await Promise.all([
     prisma.classroomDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { courses: true, videos: true, created: true } }),
     prisma.helpdeskDaily.groupBy({ by: ['nexusUserId'], where: { nexusUserId: { in: nxIds }, ...range }, _sum: { opened: true, resolved: true } }),
     /* ⚠️⚠️ `empresas`, não `atividades` — ver o comentário do tipo
@@ -71,6 +72,7 @@ export async function agregarAtividades(
        WhatsApp no cálculo (08/09/2026). Puxa todos os atendentes da janela
        (agrupados por nome, dezenas de linhas) e casa por `normNome` aqui. */
     prisma.whatsappAttendantDaily.groupBy({ by: ['name'], where: { ...range }, _sum: { finalizados: true } }),
+    atividadesDaNota(prisma, nxIds, de, ate),
   ])
 
   // fonte-modelo → linhas agregadas, indexadas pela identidade certa
@@ -82,6 +84,7 @@ export async function agregarAtividades(
     gerenciaDaily: new Map(ger.map((r) => [r.nexusUserId, r._sum])),
     fluxoDaily: new Map(fluxo.map((r) => [r.nexusUserId, r._sum])),
     whatsappAttendantDaily: new Map(wpp.map((r) => [normNome(r.name), r._sum])),
+    imotecDaily: imotec,
   }
 
   const out = new Map<string, Map<string, number>>()

@@ -7,6 +7,7 @@ import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cob
 import type { Period } from '@/lib/mock/dashboard'
 import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
 import { montar } from '@/lib/servicos/calcular-mes'
+import { atividadesDaNota, somaDaNota } from '@/lib/imotec'
 import { competenciaAtual } from '@/lib/servicos/pontuacao'
 
 // Sinais do SCORE por pessoa NO PERÍODO (atividade nos sistemas + assiduidade),
@@ -82,11 +83,12 @@ export async function GET(req: NextRequest) {
   const advM = new Map(adv.map((r) => [r.personKey, r._count._all]))
   const servM = new Map(serv.map((r) => [r.personKey, r._count._all]))
 
+  const imotec = await atividadesDaNota(prisma, undefined, fromDay, toDay)
   const byPerson = users.map((u) => {
     const nk = u.nexusUserId
     const pk = u.nexusUserId ?? u.id
     const activity =
-      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) + (chatM.get(nk) ?? 0) : 0) +
+      (nk ? (clsM.get(nk) ?? 0) + (hdM.get(nk) ?? 0) + (cideM.get(nk) ?? 0) + (consM.get(nk) ?? 0) + (gerM.get(nk) ?? 0) + (chatM.get(nk) ?? 0) + somaDaNota(imotec.get(nk)) : 0) +
       (wppM.get(normName(u.name)) ?? 0) +
       (servM.get(pk) ?? 0)
     return { id: u.id, activity, atrasos: atrM.get(pk) ?? 0, advertencias: advM.get(pk) ?? 0 }

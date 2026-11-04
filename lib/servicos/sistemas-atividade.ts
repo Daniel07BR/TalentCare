@@ -20,4 +20,5 @@ export const SISTEMAS_ATIVIDADE: SistemaAtividade[] = [
   { sistema: 'Consultoria', titulo: 'Consultoria Plus', oque: 'Dúvidas levadas à Consultoria, a conversa nos tickets e os estudos publicados.', cor: '#2f6fd6' },
   { sistema: 'CIDE', titulo: 'CIDE', oque: 'Cadastro das empresas clientes (documentos, sócios, acessos, eSocial).', cor: '#e0556b' },
   { sistema: 'Gerência', titulo: 'Gerência · mensageria', oque: 'Protocolos para a mensageria e os serviços de rua dos mensageiros.', cor: '#e0941a' },
+  { sistema: 'Imotec', titulo: 'Imotec', oque: 'Gestão dos imóveis: aluguéis, pagamentos, contratos e cadastros. Só da Imóveis, e só desde 16/10/2026.', cor: '#5b6ec9' },
 ]
