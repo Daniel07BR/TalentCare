@@ -16,6 +16,7 @@ type Av = {
   regua: ReguaDoSetor
   concluidaEm: string | null
   soPdf: boolean
+  parecer: string | null
   notas: Nota[]
   ciencia: { cienteEm: string; comentario: string | null; versaoCiente: number; lidoEm: string | null } | null
   precisaCienciaNova: boolean
@@ -207,9 +208,14 @@ function Detalhe({ av, pessoaId, souEu, texto, setTexto, enviando, onCiencia }: 
       {av.concluidaEm && (
         <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--text-dim)' }}>
           🔒 Concluída em {new Date(av.concluidaEm).toLocaleDateString('pt-BR')} com o documento assinado
-          {(av.soPdf ? [['pdf', 'ver o PDF']] : [['frente', 'ver frente'], ['verso', 'ver verso']]).map(([lado, rotulo]) => (
-            <span key={lado}>{' · '}<a href={`/api/avaliacoes/${pessoaId}/documento?competencia=${av.competencia}&lado=${lado}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>{rotulo}</a></span>
-          ))}
+          {' · '}<a href={`/api/avaliacoes/${pessoaId}/documento?competencia=${av.competencia}&lado=${av.soPdf ? 'pdf' : 'frente'}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>{av.soPdf ? 'ver o PDF' : 'ver a folha'}</a>
+        </div>
+      )}
+
+      {av.parecer && (
+        <div style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--accent)' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>O que você escreveu na folha</div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{av.parecer}</div>
         </div>
       )}
 

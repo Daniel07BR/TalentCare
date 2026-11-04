@@ -51,7 +51,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       versoes: { orderBy: { versao: 'desc' } },
       gestao: gestaoVisivel,
       // Só os metadados: as imagens vêm pela rota `/documento`, uma de cada vez.
-      documento: { select: { frenteTipo: true, versoTipo: true, concluidaEm: true, concluidaPorId: true, versaoAssinada: true } },
+      documento: { select: { frenteTipo: true, concluidaEm: true, concluidaPorId: true, versaoAssinada: true, parecer: true, parecerEm: true, parecerPorId: true } },
     },
   })
 
@@ -103,10 +103,14 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           comentario: av.comentario, combinado: av.combinado, publishedAt: av.publishedAt,
           documento: av.documento
             ? {
-                temFrente: !!av.documento.frenteTipo, temVerso: !!av.documento.versoTipo,
+                temFrente: !!av.documento.frenteTipo,
                 // O PDF é pesado: pergunta só se existe, sem trazer os bytes.
                 temPdf: (await prisma.avaliacaoDocumento.count({ where: { avaliacaoId: av.id, pdf: { not: null } } })) > 0,
                 concluidaEm: av.documento.concluidaEm, versaoAssinada: av.documento.versaoAssinada,
+                parecer: av.documento.parecer, parecerEm: av.documento.parecerEm,
+                parecerPor: av.documento.parecerPorId
+                  ? (await prisma.user.findUnique({ where: { id: av.documento.parecerPorId }, select: { name: true } }))?.name ?? null
+                  : null,
                 concluidaPor: av.documento.concluidaPorId
                   ? (await prisma.user.findUnique({ where: { id: av.documento.concluidaPorId }, select: { name: true } }))?.name ?? null
                   : null,

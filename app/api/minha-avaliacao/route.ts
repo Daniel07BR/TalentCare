@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     include: {
       notas: true,
       ciencia: true,
-      documento: { select: { concluidaEm: true, versaoAssinada: true, frenteTipo: true } },
+      documento: { select: { concluidaEm: true, versaoAssinada: true, frenteTipo: true, parecer: true } },
       versoes: { orderBy: { versao: 'desc' }, select: { versao: true, motivo: true, media: true, publishedAt: true } },
     },
   })
@@ -91,8 +91,9 @@ export async function GET(req: NextRequest) {
       // ⚠️ Ciência de uma versão ANTERIOR não vale para a atual: a pessoa deu
       // ciência de um texto que mudou depois.
       concluidaEm: a.documento?.concluidaEm ?? null,
-      // Concluída só com o PDF único não tem foto de frente: o link vira "ver PDF".
+      // Concluída só com o PDF não tem foto da folha: o link vira "ver o PDF".
       soPdf: !!a.documento?.concluidaEm && !a.documento?.frenteTipo,
+      parecer: a.documento?.parecer ?? null,
       precisaCienciaNova: !!a.ciencia && a.ciencia.versaoCiente < a.versao,
       versoes: a.versoes.map((v) => ({ versao: v.versao, motivo: v.motivo, publishedAt: v.publishedAt, nivel: nivel(v.media) })),
     })),

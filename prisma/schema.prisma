@@ -866,13 +866,22 @@ model AvaliacaoGestao {
 // (a trava impede), mas o número fica para quem conferir o papel com a tela.
 model AvaliacaoDocumento {
   avaliacaoId    String    @id @map("avaliacao_id")
+  // A foto da FOLHA assinada (04/11/2026: o termo cabe em uma página, com o parecer
+  // e as assinaturas; o resto já está no sistema).
   frente         Bytes?
   frenteTipo     String?   @map("frente_tipo")
+  // Sem uso desde 04/11/2026. As colunas ficam: nada se apaga.
   verso          Bytes?
   versoTipo      String?   @map("verso_tipo")
-  // OU um PDF ÚNICO escaneado, com as duas faces (02/10/2026). Basta ele, ou
-  // as duas fotos, para concluir.
+  // OU um PDF escaneado (02/10/2026). Basta ele, ou a foto, para concluir.
   pdf            Bytes?
+  // O que o funcionário escreveu na folha, digitado por quem avalia (04/11/2026).
+  // ⚠️ Pode ser digitado depois de concluir: transcreve o papel, não muda a avaliação.
+  // `parecerHistorico` = [{ texto, porId, em }], cada texto que foi substituído.
+  parecer          String?
+  parecerPorId     String?   @map("parecer_por_id")
+  parecerEm        DateTime? @map("parecer_em")
+  parecerHistorico Json      @default("[]") @map("parecer_historico")
   enviadoPorId   String?   @map("enviado_por_id")
   concluidaEm    DateTime? @map("concluida_em")
   concluidaPorId String?   @map("concluida_por_id")

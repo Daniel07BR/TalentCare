@@ -16,8 +16,9 @@
        só, e não dois. Ver docs/AVALIACAO-MENSAL-PASSO-A-PASSO.md §4;
      - medidas da LGPD / suspensões, se houver;
      - o DISC (perfil predominante e as quatro pontuações);
-     - a avaliação do MÊS ANTERIOR (níveis, exemplos, combinados) — os
-       combinados de lá são o que se cobra agora;
+     - TODAS as avaliações anteriores (níveis, textos, recado, combinados) e o
+       que a pessoa respondeu: o parecer escrito na folha e o comentário da
+       ciência. Os combinados do último mês são o que se cobra agora;
      - a situação da avaliação deste mês, se já existir.
 
    ⚠️ A população segue a régua do sistema (`lib/avaliacoes/regua.ts`): ativo
@@ -85,11 +86,16 @@ try {
 
   for (const u of pessoas) {
     const k = u.nexusUserId ?? u.id
-    const [dias, disc, discRes, avAnt, avAtual] = await Promise.all([
+    const [dias, disc, discRes, anteriores, avAtual] = await Promise.all([
       p.assiduidadeDaily.findMany({ where: { personKey: k, day: { gte: inicio, lte: fim } }, orderBy: { day: 'asc' } }),
       p.disciplinaEvento.findMany({ where: { personKey: k, data: { gte: inicio, lte: fim } }, orderBy: { data: 'asc' } }),
       p.discResultado.findFirst({ where: { userId: u.id }, orderBy: { aplicadoEm: 'desc' } }),
-      p.avaliacao.findUnique({ where: { competencia_avaliadoId: { competencia: anterior, avaliadoId: u.id } }, include: { notas: true } }),
+      // ⚠️ `select` no documento: sem ele, as fotos e os PDFs viriam junto.
+      p.avaliacao.findMany({
+        where: { avaliadoId: u.id, status: 'publicada', competencia: { lt: competencia } },
+        orderBy: { competencia: 'desc' },
+        include: { notas: true, ciencia: { select: { comentario: true } }, documento: { select: { parecer: true, concluidaEm: true } } },
+      }),
       p.avaliacao.findUnique({ where: { competencia_avaliadoId: { competencia, avaliadoId: u.id } }, include: { documento: { select: { concluidaEm: true } } } }),
     ])
 
@@ -116,13 +122,22 @@ try {
       console.log('   DISC: não aplicado (escreva no tom neutro e calmo)')
     }
 
-    if (avAnt && avAnt.status === 'publicada') {
-      const linha = ['entrega', 'atitude', 'equipe'].map((c) => `${CRITERIO[c]}: ${NIVEL(avAnt.notas.find((n) => n.criterio === c)?.nota)}`).join(' · ')
-      console.log(`   Mês anterior (${anterior}): ${linha} · resultado ${NIVEL(avAnt.media)}`)
-      const comb = (avAnt.combinado ?? '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
-      if (comb.length) { console.log('   Combinados do mês anterior (cobre se foram cumpridos):'); comb.forEach((c, i) => console.log(`     ${i + 1}. ${c}`)) }
-    } else {
-      console.log(`   Mês anterior (${anterior}): sem avaliação publicada`)
+    if (!anteriores.some((a) => a.competencia === anterior)) console.log(`   Mês anterior (${anterior}): sem avaliação publicada`)
+    for (const av of anteriores) {
+      const linha = ['entrega', 'atitude', 'equipe'].map((c) => `${CRITERIO[c]}: ${NIVEL(av.notas.find((n) => n.criterio === c)?.nota)}`).join(' · ')
+      console.log(`   ${av.competencia === anterior ? 'Mês anterior' : 'Avaliação'} (${av.competencia}): ${linha} · resultado ${NIVEL(av.media)}`)
+      for (const c of ['entrega', 'atitude', 'equipe']) {
+        const texto = av.notas.find((n) => n.criterio === c)?.justificativa
+        if (texto) console.log(`     ${CRITERIO[c]}: ${texto}`)
+      }
+      if (av.comentario) console.log(`     Recado: ${av.comentario}`)
+      const comb = (av.combinado ?? '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+      if (comb.length) {
+        console.log(av.competencia === anterior ? '     Combinados (cobre se foram cumpridos):' : '     Combinados daquele mês:')
+        comb.forEach((c, i) => console.log(`       ${i + 1}. ${c}`))
+      }
+      console.log(`     Parecer do funcionário na folha: ${av.documento?.parecer ?? (av.documento?.concluidaEm ? 'não digitado (leia a folha ou pergunte ao avaliador)' : 'folha ainda não concluída')}`)
+      if (av.ciencia?.comentario) console.log(`     Comentário na ciência: ${av.ciencia.comentario}`)
     }
 
     if (avAtual) {

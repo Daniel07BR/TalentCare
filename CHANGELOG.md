@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Avaliação: uma folha só e o parecer digitado
+
+Pedido do Daniel: para concluir basta a foto da folha onde a pessoa assina e escreve o parecer (ou o PDF); o verso saiu, e as colunas ficam. Novo campo **Parecer do funcionário** (`avaliacao_documento.parecer`, SQL `scripts/2026-11-04-avaliacao-parecer.sql`), digitado por quem avalia. ⚠️ Segue editável depois de concluir, porque transcreve o papel, e cada texto substituído fica em `parecer_historico`. Aparece na avaliação, no histórico da pessoa e em `/minha-avaliacao`. `scripts/insumos-avaliacao.mjs` agora traz todas as avaliações anteriores, com os textos e o parecer.
+
 ## 2026-11-04 — Visita de imóveis, no lugar da Gerência na rua
 
 Pedido do Daniel: na Imóveis, o serviço feito na saída de carro é visita a imóvel. A ficha, o PDF e o setor mostram o card **Visita de imóveis**, com as visitas em destaque. Os outros setores não mudam.

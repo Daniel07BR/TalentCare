@@ -194,7 +194,7 @@ export async function painelDaPessoa(quem: Quem, setor: { id: string; nome: stri
       publishedAt: true, avaliadorId: true, departmentId: true,
       notas: { select: { criterio: true, nota: true, justificativa: true } },
       ciencia: { select: { cienteEm: true, comentario: true, versaoCiente: true } },
-      documento: { select: { concluidaEm: true, frenteTipo: true } },
+      documento: { select: { concluidaEm: true, frenteTipo: true, parecer: true } },
       gestao: { select: { emRisco: true, prontoParaMais: true, querNaEquipe: true, anotacao: true } },
     },
   })
@@ -232,6 +232,7 @@ export async function painelDaPessoa(quem: Quem, setor: { id: string; nome: stri
       ciencia: a.ciencia ? { em: a.ciencia.cienteEm, comentario: a.ciencia.comentario, atual: a.ciencia.versaoCiente === a.versao } : null,
       concluidaEm: a.documento?.concluidaEm ?? null,
       soPdf: !!a.documento?.concluidaEm && !a.documento?.frenteTipo,
+      parecer: a.documento?.parecer ?? null,
       gestao: souEu || !a.gestao ? null : a.gestao,
     })),
   }

@@ -26,7 +26,7 @@ type Av = {
   notas: { criterio: string; label: string; nivel: NivelKey | null; justificativa: string | null }[]
   recado: string | null; combinado: string | null
   ciencia: { em: string; comentario: string | null; atual: boolean } | null
-  concluidaEm: string | null; soPdf: boolean
+  concluidaEm: string | null; soPdf: boolean; parecer: string | null
   gestao: { emRisco: boolean | null; prontoParaMais: boolean | null; querNaEquipe: boolean | null; anotacao: string | null } | null
 }
 type Dados = {
@@ -164,9 +164,7 @@ function Mes({ a, pessoaId, primeiro }: { a: Av; pessoaId: string; primeiro: str
           por {a.avaliador}{a.versao > 1 ? ` · v${a.versao}` : ''}
           {' · '}{a.ciencia ? (a.ciencia.atual ? '✓ ciência' : 'ciência de versão anterior') : 'sem ciência'}
           {' · '}{a.concluidaEm
-            ? <>🔒 assinada {a.soPdf
-                ? <a href={doc('pdf')} target="_blank" rel="noreferrer" style={{ color: 'var(--n-blue)' }}>(PDF)</a>
-                : <><a href={doc('frente')} target="_blank" rel="noreferrer" style={{ color: 'var(--n-blue)' }}>(frente</a>{' · '}<a href={doc('verso')} target="_blank" rel="noreferrer" style={{ color: 'var(--n-blue)' }}>verso)</a></>}</>
+            ? <>🔒 assinada <a href={doc(a.soPdf ? 'pdf' : 'frente')} target="_blank" rel="noreferrer" style={{ color: 'var(--n-blue)' }}>{a.soPdf ? '(PDF)' : '(folha)'}</a></>
             : 'falta o documento assinado'}
         </span>
       </div>
@@ -180,10 +178,11 @@ function Mes({ a, pessoaId, primeiro }: { a: Av; pessoaId: string; primeiro: str
         ))}
       </div>
 
-      {(a.recado || a.combinado || a.ciencia?.comentario || a.gestao) && (
+      {(a.recado || a.combinado || a.parecer || a.ciencia?.comentario || a.gestao) && (
         <div className={p.textos}>
           {a.recado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-acima)' }}><b>Recado do avaliador</b>{a.recado}</div>}
           {a.combinado && <div className={p.texto} style={{ ['--t' as string]: 'var(--lv-atende)' }}><b>Combinados para o mês seguinte</b><ol style={{ margin: 0, paddingLeft: 18, whiteSpace: 'normal' }}>{itensDoCombinado(a.combinado).map((c, i) => <li key={i}>{c}</li>)}</ol></div>}
+          {a.parecer && <div className={p.texto} style={{ ['--t' as string]: 'var(--n-blue)' }}><b>O que {primeiro} escreveu na folha</b>{a.parecer}</div>}
           {a.ciencia?.comentario && <div className={p.texto} style={{ ['--t' as string]: 'var(--n-blue)' }}><b>O que {primeiro} respondeu</b>{a.ciencia.comentario}</div>}
           {a.gestao && (
             <div className={p.texto} style={{ ['--t' as string]: 'var(--n-text-3)' }}>

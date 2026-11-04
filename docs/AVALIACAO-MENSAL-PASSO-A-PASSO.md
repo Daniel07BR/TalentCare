@@ -50,7 +50,8 @@ dele: separar itens de texto sem mudar conteúdo — e mesmo assim gravando a ve
    fila nem na área de avaliações. Liberar um setor = acrescentar o nome em
    `SETORES_COM_AVALIACAO` (`lib/avaliacoes/criterios.ts`) — só com a palavra do Daniel.
 9. **Depois de publicar, ainda se corrige** (com motivo, a versão anterior fica). **Depois
-   de anexar o documento assinado e concluir, nada muda mais.**
+   de anexar o documento assinado e concluir, nada da avaliação muda mais** (o parecer digitado
+   segue editável: ele só transcreve o papel).
 
 O método por trás (para explicar a quem perguntar): escala ancorada em comportamento
 (BARS), feedback Situação → Comportamento → Impacto (SBI), níveis com nome sem número.
@@ -72,8 +73,14 @@ ssh -i ~/.ssh/talentcare_key talentcare@192.168.0.78 \
 - Para outro mês: `--competencia=2026-10`. Para outro setor: `--setor=Fiscal` (nome do setor).
 
 Para cada pessoa avaliável ele mostra: **atrasos dia a dia** (com minutos), **abonados**
-(não contam), **advertências**, outras medidas, o **DISC**, a **avaliação do mês anterior**
-(níveis e **combinados** — o que se cobra agora) e se a deste mês já existe.
+(não contam), **advertências**, outras medidas, o **DISC**, **todas as avaliações anteriores**
+(níveis, textos, recado e **combinados** — os do último mês são o que se cobra agora), o que a
+pessoa respondeu (**parecer escrito na folha** e comentário da ciência) e se a deste mês já existe.
+
+⚠️ **Leia o parecer antes de redigir.** Se a pessoa contestou algo, pediu ajuda ou explicou um
+fato, responda a isso no texto ou conte ao Daniel. "Não digitado" significa que o avaliador ainda
+não transcreveu a folha, e não que ela não escreveu nada: "Sem observações" é o registro de quem
+não escreveu.
 
 O que o script **não** traz, e você pergunta ao Daniel: **o que ele observou no mês** —
 entregas, situações, elogios, problemas. Os sistemas medem presença e volume; a avaliação
@@ -176,8 +183,9 @@ Sem DISC aplicado: tom neutro, calmo e específico.
    clicar no nome → "Avaliar <mês>") e **publica**.
 6. **Gerar PDF para assinar** (cartão da pessoa, à esquerda) → imprimir → conversa →
    funcionário escreve as observações → **as duas assinaturas e datas**.
-7. **Anexar** frente e verso (fotos) **ou** um PDF único escaneado → **Concluir avaliação**
-   (trava tudo).
+7. **Anexar** a foto da folha assinada **ou** o PDF escaneado, **digitar o parecer** que a pessoa
+   escreveu → **Concluir avaliação** (trava a avaliação; só o parecer digitado segue editável,
+   porque transcreve o papel, e cada texto substituído fica guardado).
 
 Corrigiu depois de imprimir? **Gere o PDF de novo** — o papel tem de ser da versão atual.
 

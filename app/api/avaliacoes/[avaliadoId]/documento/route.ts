@@ -8,10 +8,15 @@ import { competenciaAnterior } from '@/lib/avaliacoes/criterios'
    O DOCUMENTO ASSINADO da avaliação (02/10/2026) — pedido do Daniel: "a
    avaliação só deve ser concluída sem opção de edição após eu subir a imagem de
    frente e verso do documento assinado pelo usuário".
+   04/11/2026: basta a FOLHA onde a pessoa assina e escreve o parecer. O resto já
+   está no sistema. No banco, a foto segue na coluna `frente`.
 
-   GET   ?lado=frente|verso|pdf → o arquivo (quem pode ver a avaliação, inclusive o avaliado)
-   POST  multipart lado+arquivo → guarda um lado, ou o PDF único (troca enquanto não concluída)
-   PATCH { acao: 'concluir' }  → exige frente E verso, OU o PDF único, e TRAVA a avaliação
+   GET   ?lado=frente|pdf → o arquivo (quem pode ver a avaliação, inclusive o avaliado)
+   POST  multipart lado+arquivo → guarda a foto ou o PDF (troca enquanto não concluída)
+   PATCH { acao: 'concluir' }  → exige a foto OU o PDF, e TRAVA a avaliação
+   PATCH { acao: 'parecer', parecer } → grava o que a pessoa escreveu na folha.
+     ⚠️ Vale depois de concluir: transcreve o papel e não muda a avaliação. Cada texto
+     substituído fica em `parecerHistorico`.
 
    ⚠️⚠️ Só quem AVALIA a pessoa (ou a Diretoria) sobe e conclui. O avaliado não:
    o documento é a prova de que ele assinou, e quem prova não pode ser quem
@@ -23,8 +28,9 @@ const TIPOS = ['image/jpeg', 'image/png', 'image/webp']
 const MAX = 5 * 1024 * 1024
 // PDF escaneado pesa mais que foto comprimida (não dá para reduzir no navegador).
 const MAX_PDF = 15 * 1024 * 1024
-type Lado = 'frente' | 'verso' | 'pdf'
-const ladoDe = (v: unknown): Lado => (v === 'verso' ? 'verso' : v === 'pdf' ? 'pdf' : 'frente')
+const MAX_PARECER = 5000
+type Lado = 'frente' | 'pdf'
+const ladoDe = (v: unknown): Lado => (v === 'pdf' ? 'pdf' : 'frente')
 
 async function contexto(req: NextRequest, ctx: Ctx, competenciaBody?: string) {
   const session = await auth()
@@ -38,7 +44,7 @@ async function contexto(req: NextRequest, ctx: Ctx, competenciaBody?: string) {
   if (!podeVer(quem, alvo)) return { erro: NextResponse.json({ error: 'Sem permissão' }, { status: 403 }) }
   const av = await prisma.avaliacao.findUnique({
     where: { competencia_avaliadoId: { competencia, avaliadoId } },
-    select: { id: true, status: true, versao: true, documento: { select: { concluidaEm: true, frenteTipo: true, versoTipo: true } } },
+    select: { id: true, status: true, versao: true, documento: { select: { concluidaEm: true, frenteTipo: true } } },
   })
   if (!av || av.status !== 'publicada') {
     return { erro: NextResponse.json({ error: 'O documento só existe para avaliação publicada.' }, { status: 404 }) }
@@ -58,13 +64,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const lado = ladoDe(req.nextUrl.searchParams.get('lado'))
   const doc = await prisma.avaliacaoDocumento.findUnique({
     where: { avaliacaoId: c.av.id },
-    select: lado === 'frente' ? { frente: true, frenteTipo: true } : lado === 'verso' ? { verso: true, versoTipo: true } : { pdf: true },
-  }) as { frente?: Uint8Array | null; frenteTipo?: string | null; verso?: Uint8Array | null; versoTipo?: string | null; pdf?: Uint8Array | null } | null
-  const bytes = lado === 'frente' ? doc?.frente : lado === 'verso' ? doc?.verso : doc?.pdf
+    select: lado === 'frente' ? { frente: true, frenteTipo: true } : { pdf: true },
+  }) as { frente?: Uint8Array | null; frenteTipo?: string | null; pdf?: Uint8Array | null } | null
+  const bytes = lado === 'frente' ? doc?.frente : doc?.pdf
   if (!bytes) return NextResponse.json({ error: 'sem arquivo' }, { status: 404 })
   return new NextResponse(Buffer.from(bytes), {
     headers: {
-      'Content-Type': lado === 'pdf' ? 'application/pdf' : (lado === 'frente' ? doc?.frenteTipo : doc?.versoTipo) ?? 'image/jpeg',
+      'Content-Type': lado === 'pdf' ? 'application/pdf' : doc?.frenteTipo ?? 'image/jpeg',
       'Content-Disposition': lado === 'pdf' ? 'inline; filename="avaliacao-assinada.pdf"' : 'inline',
       // ⚠️ Documento pessoal assinado: nunca em cache compartilhado.
       'Cache-Control': 'private, no-store',
@@ -100,9 +106,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const dados = lado === 'frente'
     ? { frente: bytes, frenteTipo: arq.type, enviadoPorId: c.quem.id }
-    : lado === 'verso'
-      ? { verso: bytes, versoTipo: arq.type, enviadoPorId: c.quem.id }
-      : { pdf: bytes, enviadoPorId: c.quem.id }
+    : { pdf: bytes, enviadoPorId: c.quem.id }
   await prisma.avaliacaoDocumento.upsert({
     where: { avaliacaoId: c.av.id },
     create: { avaliacaoId: c.av.id, ...dados },
@@ -113,19 +117,41 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
 // ── CONCLUIR (a trava) ────────────────────────────────────────────────────────
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const body = (await req.json().catch(() => ({}))) as { competencia?: string; acao?: string }
-  if (body.acao !== 'concluir') return NextResponse.json({ error: 'Ação desconhecida.' }, { status: 400 })
+  const body = (await req.json().catch(() => ({}))) as { competencia?: string; acao?: string; parecer?: unknown }
+  if (body.acao !== 'concluir' && body.acao !== 'parecer') return NextResponse.json({ error: 'Ação desconhecida.' }, { status: 400 })
   const c = await contexto(req, ctx, body.competencia)
   if ('erro' in c) return c.erro
   if (!(await podeAnexar(c.quem, c.alvo))) {
-    return NextResponse.json({ error: 'Só quem avalia esta pessoa conclui a avaliação.' }, { status: 403 })
+    return NextResponse.json({ error: body.acao === 'parecer' ? 'Só quem avalia esta pessoa digita o parecer.' : 'Só quem avalia esta pessoa conclui a avaliação.' }, { status: 403 })
+  }
+  if (body.acao === 'parecer') {
+    if (typeof body.parecer !== 'string') return NextResponse.json({ error: 'Falta o texto do parecer.' }, { status: 400 })
+    const parecer = body.parecer.trim() || null
+    if (parecer && parecer.length > MAX_PARECER) return NextResponse.json({ error: `O parecer passa de ${MAX_PARECER} caracteres.` }, { status: 400 })
+    const avaliacaoId = c.av.id, porId = c.quem.id
+    // ⚠️ Na mesma transação: não existe troca de texto sem o rastro do texto anterior.
+    await prisma.$transaction(async (tx) => {
+      const atual = await tx.avaliacaoDocumento.findUnique({
+        where: { avaliacaoId },
+        select: { parecer: true, parecerPorId: true, parecerEm: true, parecerHistorico: true },
+      })
+      if ((atual?.parecer ?? null) === parecer) return
+      const historico = Array.isArray(atual?.parecerHistorico) ? atual.parecerHistorico : []
+      const dados = {
+        parecer, parecerPorId: porId, parecerEm: new Date(),
+        parecerHistorico: atual?.parecer
+          ? [...historico, { texto: atual.parecer, porId: atual.parecerPorId, em: atual.parecerEm }]
+          : historico,
+      }
+      await tx.avaliacaoDocumento.upsert({ where: { avaliacaoId }, create: { avaliacaoId, ...dados }, update: dados })
+    })
+    return NextResponse.json({ ok: true })
   }
   if (c.av.documento?.concluidaEm) return NextResponse.json({ ok: true, jaConcluida: true })
   // `pdf` não vem no select de contexto (é pesado): pergunta só se existe.
   const temPdf = (await prisma.avaliacaoDocumento.count({ where: { avaliacaoId: c.av.id, pdf: { not: null } } })) > 0
-  const temFotos = !!c.av.documento?.frenteTipo && !!c.av.documento?.versoTipo
-  if (!temPdf && !temFotos) {
-    return NextResponse.json({ error: 'Anexe a frente e o verso, ou o PDF único, antes de concluir.' }, { status: 422 })
+  if (!temPdf && !c.av.documento?.frenteTipo) {
+    return NextResponse.json({ error: 'Anexe a foto da folha assinada, ou o PDF, antes de concluir.' }, { status: 422 })
   }
   // ⚠️ Condicional: duas abas concluindo ao mesmo tempo gravam uma vez só.
   await prisma.avaliacaoDocumento.updateMany({

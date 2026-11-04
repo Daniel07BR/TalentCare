@@ -391,7 +391,7 @@ export default function AvaliarPage({ params }: { params: Promise<{ id: string }
 
               {/* O ÚLTIMO PASSO: o documento assinado, que conclui e trava. */}
               {jaPublicada && (d.gestaoVisivel || concluida) && (
-                <DocumentoAssinado avaliadoId={d.pessoa.id} competencia={competencia} versao={d.avaliacao!.versao}
+                <DocumentoAssinado key={competencia} avaliadoId={d.pessoa.id} competencia={competencia} versao={d.avaliacao!.versao}
                   doc={d.avaliacao!.documento} podeAnexar={d.gestaoVisivel} onMudou={carregar} />
               )}
 
