@@ -57,8 +57,7 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
     gridTemplateColumns: n < 3 ? 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' : `repeat(auto-fit, minmax(min(${impressao ? 120 : 150}px, 100%), 1fr))`,
   }) as const
   const itens = ITENS_RECEPCAO.filter((i) => (i.valor(r.meu) ?? 0) > 0)
-  const { entrevistas: e } = r.meu
-  const tarefas = OUTRAS_TAREFAS.filter((i) => (i.chave === 'entrevistas' ? e.total + e.testes + e.acompanhadas : i.valor(r.meu)) > 0)
+  const tarefas = OUTRAS_TAREFAS.filter((i) => i.valor(r.meu) > 0)
   const detalhe = [
     ITENS_RECEPCAO[1].nota(r.meu),
     r.meu.contatos && r.meu.contatos.atualizados > 0 && `contatos do CIDE: ${r.meu.contatos.editados} editados, ${r.meu.contatos.novos} novos, ${r.meu.contatos.removidos} removidos`,
