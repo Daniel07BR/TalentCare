@@ -14,6 +14,7 @@ import { Indicadores } from './Indicadores'
 import { Sistemas } from './Sistemas'
 import { Assiduidade } from './Assiduidade'
 import { AtendimentoRecepcao } from './AtendimentoRecepcao'
+import { ChamadosAtendidos } from './ChamadosAtendidos'
 import { formCor } from './derivar'
 
 /* ============================================================
@@ -288,6 +289,7 @@ function Folha({ vm, m, periodo }: Props) {
       <div className={s.pilha}>
         <ServicosCard servicos={m.servicos} pontuacao={m.pontuacao} periodo={periodo} semPontuacao soNumeros />
         {m.recepcao && <AtendimentoRecepcao r={m.recepcao} periodo={periodo} impressao />}
+        {m.melhorias && <ChamadosAtendidos c={m.melhorias} periodo={periodo} impressao />}
         <Sistemas m={m} periodo={periodo} pessoaId={vm.id} impressao />
         <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} impressao />
       </div>

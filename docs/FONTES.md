@@ -552,3 +552,9 @@ REGISTRO e recortes por setor), `run-recepcao-sync.mjs`; contatos do CIDE nas co
 6. Decida explicitamente se a fonte entra no **score** — e, se entrar, o que dela
    entra. Mensagem do Chat e escuta de rádio **não** entram (são vitrine); km e jornada
    da Gerência também não (são a magnitude dos mesmos serviços e abafariam o resto).
+
+## Chamados atendidos (Nexus, 04/11/2026)
+
+`run-melhorias-sync.mjs` lê `GET /api/integrations/chamados/atendidos` do Nexus (o "Quem atendeu" do Quadro das Melhorias) e troca o
+histórico inteiro em `melhorias_daily`, de hora em hora. Só contagem. Card na ficha e no PDF de quem é da T.I e da Programação, só com o
+que não está zerado (`lib/melhorias.ts`). **Não pontua.** O dia é o do fechamento do chamado, em São Paulo.

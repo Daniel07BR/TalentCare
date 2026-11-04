@@ -1623,3 +1623,17 @@ model RecepcaoAreaDaily {
   @@id([day, grupo, rotulo])
   @@map("recepcao_area_daily")
 }
+
+// CHAMADOS ATENDIDOS (04/11/2026): o "Quem atendeu" do Quadro das Melhorias do Nexus, por dia de São
+// Paulo do fechamento. SÓ APARECE, não pontua. `run-melhorias-sync.mjs` troca o histórico inteiro.
+model MelhoriasDaily {
+  nexusUserId String   @map("nexus_user_id")
+  day         String   @db.VarChar(10)
+  erros       Int      @default(0)
+  melhorias   Int      @default(0)
+  criacoes    Int      @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([nexusUserId, day])
+  @@map("melhorias_daily")
+}

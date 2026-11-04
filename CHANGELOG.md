@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Chamados atendidos na ficha da T.I e da Programação
+
+Pedido do Daniel: o resumo de erros corrigidos, melhorias e criações do Quadro das Melhorias do Nexus no relatório desse pessoal. Card
+"Chamados atendidos" na ficha e no PDF, pelo período do filtro, só para quem é desses dois setores e só com o que não está zerado. Fora da
+nota. Espelho `melhorias_daily` (SQL `scripts/2026-11-04-melhorias-fonte.sql`), `run-melhorias-sync.mjs` de hora em hora.
+
 ## 2026-11-04 — Outubro do Legal pela última planilha
 
 O Legal passou ao Fluxo em novembro e por isso a tela não tem mais o envio de planilha (de propósito). Outubro ainda é do relatório

@@ -9,6 +9,7 @@ import { competenciaAtual } from '@/lib/servicos/pontuacao'
 import { coberturaDoPonto, janelaTemDado, motivoSemPonto } from '@/lib/ponto-cobertura'
 import { faltasNoPeriodo } from '@/lib/fluxo-disciplina'
 import { atendimentoDaPessoa, ehRecepcao } from '@/lib/recepcao'
+import { melhoriasDaPessoa } from '@/lib/melhorias'
 import { administradosDe, ehFolha } from '@/lib/servicos/indicadores'
 import type { Period } from '@/lib/mock/dashboard'
 
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
   /* ATENDIMENTO DA RECEPÇÃO (16/10/2026): só aparece, fora da nota. Nulo para quem não é da
      Recepção — o card some. Ver `lib/recepcao.ts`. */
   const recepcao = await atendimentoDaPessoa(prisma, user.nexusUserId, ehRecepcao(user.department?.name), fromDay, toDay)
+  const melhorias = await melhoriasDaPessoa(prisma, user.nexusUserId, user.department?.name, fromDay, toDay)
 
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
   const compFicha = fromDay.slice(0, 7) === toDay.slice(0, 7) ? fromDay.slice(0, 7) : competenciaAnterior()
@@ -398,6 +400,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     period, fromDay, toDay,
     recepcao,
+    melhorias,
     radio: { horas: Math.round(rSec / 3600), sessoes: radio?._sum.sessions ?? 0, ultimaDay: radio?._max.day ?? null },
     classroom: { videos: cVid, courses: cCur, created: cCri, total: cCur + cCri },
     whatsapp: {

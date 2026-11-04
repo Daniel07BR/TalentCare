@@ -21,6 +21,7 @@ import { AtendimentoRecepcao } from './_visao/AtendimentoRecepcao'
 import { LinhaDoTempo } from './_visao/LinhaDoTempo'
 import { AntesDeAvaliar, RadioCartao } from './_visao/Lateral'
 import { FichaImpressa } from './_visao/FichaImpressa'
+import { ChamadosAtendidos } from './_visao/ChamadosAtendidos'
 import { BotaoDisc } from '../../_visao/disc/BotaoDisc'
 import { BotaoPersonalidade } from '../../_visao/personalidade/BotaoPersonalidade'
 import { BotaoTestes } from '../../_visao/testes/BotaoTestes'
@@ -103,6 +104,7 @@ export default function FichaDaPessoa({ params }: { params: Promise<{ id: string
         <div className={s.pilha}>
           <ServicosCard servicos={m?.servicos} pontuacao={m?.pontuacao} periodo={periodo} semPontuacao />
           {m?.recepcao && <AtendimentoRecepcao r={m.recepcao} periodo={periodo} />}
+          {m?.melhorias && <ChamadosAtendidos c={m.melhorias} periodo={periodo} />}
           <Sistemas m={m} periodo={periodo} pessoaId={vm.id} />
           <Assiduidade m={m} periodo={periodo} pontoAteVm={vm.pontoAte ?? null} />
         </div>
