@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
 export type EmployeeMetrics = {
-  /** O Atendimento da Recepção (16/10/2026) — nulo para quem não atende na Recepção. */
+  /** O Atendimento da Recepção (16/10/2026) — nulo para quem não é da Recepção. */
   recepcao?: AtendimentoDaPessoa | null
   /** O intervalo que estes números cobrem — a ficha compara com a vida da pessoa. */
   fromDay: string

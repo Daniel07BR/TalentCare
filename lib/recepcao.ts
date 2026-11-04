@@ -212,14 +212,14 @@ export async function atendimentoDoSetor(prisma: PrismaClient, deptId: string, f
 export type AtendimentoDaPessoa = { meu: Numeros; setor: Numeros }
 
 /** O card da ficha: o que a pessoa fez e o total da área no mesmo período (para "N% do setor").
- *  Nulo quando não há nada — e quem não é da Recepção nem atendeu nela não ganha o card. */
+ *  Nulo quando não há nada. Só quem É da Recepção ganha o card (Daniel, 04/11/2026): quem é de outro
+ *  setor e atendeu nela segue no card do setor, não na própria ficha. */
 export async function atendimentoDaPessoa(
   prisma: PrismaClient, nexusUserId: string | null, ehDaRecepcao: boolean, fromDay: string, toDay: string,
 ): Promise<AtendimentoDaPessoa | null> {
-  if (!nexusUserId) return null
+  if (!nexusUserId || !ehDaRecepcao) return null
   const porPessoa = await somaPorPessoa(prisma, fromDay, toDay, [nexusUserId])
   const soma = porPessoa.get(nexusUserId)
-  if (!soma && !ehDaRecepcao) return null
   const contatos = await contatosPorPessoa(prisma, [nexusUserId], fromDay, toDay)
   const meu = numeros(soma ?? { ...ZERO }, contatos.get(nexusUserId) ?? null)
   if (!temAtendimento(meu)) return null

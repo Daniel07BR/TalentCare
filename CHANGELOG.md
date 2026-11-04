@@ -11,6 +11,9 @@ no papel. Soma tudo o que a Recepção registrou no lote, inclusive WhatsApp. "N
 texto com zero não saem no card Atendimento da Recepção. Fora da Recepção, só quatro pessoas ganham o card em outubro, todas com
 registro real. O card do setor segue completo.
 
+**Na ficha, o card é só de quem é da Recepção** (mesmo dia, decisão do Daniel): quem é de outro setor e registrou algo lá não tem mais o
+card na própria ficha nem no PDF. O registro continua no card do setor Recepção, nos totais e em "Quem fez".
+
 ## 2026-11-03 — Baixar os testes e puxar da entrevista, no topo da ficha
 
 Pedidos do Daniel, olhando a ficha da Beatriz Gabriela (fez os testes na entrevista, resultado parado no Fluxo):

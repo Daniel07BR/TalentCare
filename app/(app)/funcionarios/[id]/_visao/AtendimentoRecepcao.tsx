@@ -10,7 +10,7 @@ import { ITENS_RECEPCAO, OUTRAS_TAREFAS, fmt, notaDoLote, parte } from '../../..
 
    O que a pessoa fez na Recepção no período e a fatia dela no setor. Vem pronto em
    `/api/employee-metrics` (`m.recepcao`), por isso sai igual na tela e no PDF.
-   Some quando a pessoa não é da Recepção nem atendeu nela (`recepcao` nulo).
+   Some quando a pessoa não é da Recepção (`recepcao` nulo), mesmo que tenha atendido nela.
 
    ⚠️ "N% do setor" usa o MESMO total do card do setor. Nas visitas a soma das fatias passa
    de 100%: a visita com duas atendentes é das duas — por isso ali o texto é "estava em".

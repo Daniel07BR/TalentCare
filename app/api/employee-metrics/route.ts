@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   // as FALTAS lançadas pelo DP no Fluxo (14/10/2026); `null` = janela que o Fluxo não cobre
   const faltasDoFluxo = await faltasNoPeriodo(prisma, fromDay, toDay, [personKey])
   /* ATENDIMENTO DA RECEPÇÃO (16/10/2026): só aparece, fora da nota. Nulo para quem não é da
-     Recepção nem atendeu nela no período — o card some. Ver `lib/recepcao.ts`. */
+     Recepção — o card some. Ver `lib/recepcao.ts`. */
   const recepcao = await atendimentoDaPessoa(prisma, user.nexusUserId, ehRecepcao(user.department?.name), fromDay, toDay)
 
   /* A competência de que a POSIÇÃO fala — a mesma régua do relatório de setor. */
