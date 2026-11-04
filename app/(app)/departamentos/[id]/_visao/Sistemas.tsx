@@ -1,8 +1,9 @@
 'use client'
 import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useEffect, useState } from 'react'
-import { Activity, CalendarCheck, FileSpreadsheet, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
+import { Activity, CalendarCheck, FileSpreadsheet, LifeBuoy, GraduationCap, MapPinHouse, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
+import { ehImoveis } from '@/lib/imotec'
 import { precarregarDetalhe, type ChaveDetalhe } from '../../../_visao/Detalhe'
 import { Cartao, forte, suave } from '../../../_visao/ui'
 import { dur, num } from './derivar'
@@ -43,8 +44,11 @@ function sistemas(m: DeptMetrics): Sis[] {
       stats: [[num(m.helpdesk.abertos), 'Chamados abertos'], [num(m.helpdesk.resolvidos), 'Resolvidos']] },
     { chave: 'classroom', nome: 'ClassRoom', Icone: GraduationCap, tom: 'green', tem: t(m.classroom.criados, m.classroom.assistidos, m.classroom.videos), gente: r.classroom.gente,
       stats: [[num(m.classroom.criados), 'Cursos criados'], [num(m.classroom.assistidos), 'Concluídos']] },
-    { chave: 'gerencia', nome: 'Gerência · mensageria', Icone: Truck, tom: 'orange', tem: t(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km), gente: r.gerencia.gente,
-      stats: [[num(m.gerencia.servicos), 'Serviços'], [num(m.gerencia.protAbertos), 'Protocolos']] },
+    /* ⚠️ Na Imóveis, a saída de carro é visita a imóvel (pedido do Daniel, 04/11/2026). */
+    { chave: 'gerencia', nome: ehImoveis(m.setor.nome) ? 'Visita de imóveis' : 'Gerência · mensageria', Icone: ehImoveis(m.setor.nome) ? MapPinHouse : Truck, tom: ehImoveis(m.setor.nome) ? 'green' : 'orange', tem: t(m.gerencia.servicos, m.gerencia.protAbertos, m.gerencia.servCriados, m.gerencia.km), gente: r.gerencia.gente,
+      stats: ehImoveis(m.setor.nome)
+        ? [[num(m.gerencia.servicos), 'Visitas'], [num(m.gerencia.km), 'Km rodados']]
+        : [[num(m.gerencia.servicos), 'Serviços'], [num(m.gerencia.protAbertos), 'Protocolos']] },
     { chave: 'consultoria', nome: 'Consultoria Plus', Icone: MessagesSquare, tom: 'purple', tem: t(m.consultoria.estudos, m.consultoria.chamados, m.consultoria.mensagens, m.consultoria.comentarios), gente: r.consultoria.gente,
       stats: [[num(m.consultoria.estudos), 'Estudos'], [num(m.consultoria.chamados), 'Chamados']] },
     { chave: 'cide', nome: 'CIDE', Icone: Landmark, tom: 'red', tem: t(m.cide.atividades), gente: r.cide.gente,

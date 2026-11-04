@@ -1,7 +1,8 @@
 'use client'
 import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { Fragment, useEffect, useState } from 'react'
-import { Activity, CalendarCheck, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
+import { Activity, CalendarCheck, LifeBuoy, GraduationCap, MapPinHouse, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
+import { ehImoveis } from '@/lib/imotec'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
 import type { Sistema } from '@/lib/pessoa-sistema-tipos'
 import { usePainelDaPessoa } from '../../../PainelDaPessoa'
@@ -265,7 +266,21 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
     </Bloco>
   ))
 
-  add(gr.hasSaida, 'Gerência na rua', 'grs', () => (
+  /* ⚠️ Na Imóveis, a saída de carro registrada na Gerência é visita a imóvel (pedido do Daniel, 04/11/2026). */
+  if (ehImoveis(m.setorNome)) add(gr.hasSaida, 'Visita de imóveis', 'grs', () => (
+    <Bloco onClick={abrir('gerencia')} dica="Ver as visitas e saídas" fundo="linear-gradient(160deg, var(--n-green-soft), var(--n-card) 60%)">
+      <Titulo nome="Visita de imóveis" sub="saídas de carro" Icone={MapPinHouse} tom="green" />
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <Grande cor="var(--n-green)" tam={38}>{num(gr.servicos)}</Grande><span style={{ fontSize: 13, fontWeight: 700, color: 'var(--n-text-2)' }}>{gr.servicos === 1 ? 'visita' : 'visitas'}</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 22px', marginTop: 14, paddingTop: 12, borderTop: '1px dashed var(--n-border)' }}>
+        <div><Grande tam={18}>{num(gr.saidas)}</Grande><Rotulo>saídas de carro</Rotulo></div>
+        <div><Grande tam={18}>{num(gr.km)}</Grande><Rotulo>km rodados</Rotulo></div>
+        <div><Grande tam={18}>{num(Math.round(gr.jornadaMin / 60))}h</Grande><Rotulo>fora do escritório</Rotulo></div>
+      </div>
+    </Bloco>
+  ))
+  else add(gr.hasSaida, 'Gerência na rua', 'grs', () => (
     <Bloco onClick={abrir('gerencia')} dica="Ver os serviços e saídas" fundo="linear-gradient(160deg, var(--n-orange-soft), var(--n-card) 60%)">
       <Titulo nome="Gerência · na rua" sub="saídas externas" Icone={Truck} tom="orange" />
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>

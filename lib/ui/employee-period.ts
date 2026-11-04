@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { usePeriod } from '@/lib/ui/period'
 
 export type EmployeeMetrics = {
+  setorNome?: string | null
   /** O Atendimento da Recepção (16/10/2026) — nulo para quem não é da Recepção. */
   recepcao?: AtendimentoDaPessoa | null
   /** Os chamados atendidos (04/11/2026) — nulo fora da T.I e da Programação, ou sem nenhum no período. */

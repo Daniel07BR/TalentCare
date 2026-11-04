@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Visita de imóveis, no lugar da Gerência na rua
+
+Pedido do Daniel: na Imóveis, o serviço feito na saída de carro é visita a imóvel. A ficha, o PDF e o setor mostram o card **Visita de imóveis**, com as visitas em destaque. Os outros setores não mudam.
+
 ## 2026-11-04 — PDF com as fichas de todo o setor
 
 Pedido do Daniel: botão **Gerar PDF de todos** no relatório do setor (`_visao/FichasDoSetor.tsx`). Usa o período selecionado, monta a mesma folha do "Gerar PDF" da

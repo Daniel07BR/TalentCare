@@ -1,4 +1,5 @@
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
+import { ehImoveis } from '@/lib/imotec'
 import type { Tom } from '../../../_visao/tipos'
 
 /* As contas da ficha nova. São AS MESMAS da ficha atual (`../page.tsx`) — só
@@ -21,7 +22,7 @@ export function concluidas(m: EmployeeMetrics | null): { total: number | null; p
     { label: 'empresas', sys: 'CIDE', n: m.cide.atividades },
     { label: 'atividades', sys: 'Consultoria Plus', n: m.consultoria.total },
     { label: 'atendimentos finalizados', sys: 'WhatsApp', n: m.whatsapp.finalizados },
-    { label: 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
+    { label: ehImoveis(m.setorNome) ? 'visitas a imóveis' : 'serviços entregues', sys: 'Gerência', n: m.gerencia.servicos },
     { label: 'serviços criados', sys: 'Gerência', n: m.gerencia.servCriados },
     /* ⚠️ Só chamado concluído — mensagem não é entrega. E o chamado é do FLUXO
        desde 16/09/2026; no Chat ficou a conversa. */

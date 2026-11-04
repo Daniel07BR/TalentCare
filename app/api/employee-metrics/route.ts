@@ -402,6 +402,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     period, fromDay, toDay,
+    setorNome: user.department?.name ?? null,
     recepcao,
     melhorias,
     imotec,

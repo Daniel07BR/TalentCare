@@ -1,4 +1,5 @@
 'use client'
+import { ehImoveis } from '@/lib/imotec'
 import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useRouter } from 'next/navigation'
 import { ClipboardCheck, Radio } from 'lucide-react'
@@ -35,7 +36,7 @@ export function AntesDeAvaliar({ vm, m, periodo, estado }: { vm: EmployeeVM; m: 
     if (m.helpdesk.has && m.helpdesk.resolved > 0) pontos.push({ texto: `Resolveu ${m.helpdesk.resolved} ${m.helpdesk.resolved === 1 ? 'chamado' : 'chamados'} no HelpDesk. Vale reconhecer, ou foi tarefa de rotina?`, cor: 'var(--n-blue)' })
     if (m.classroom.created > 0) pontos.push({ texto: `Criou ${m.classroom.created} ${m.classroom.created === 1 ? 'curso' : 'cursos'} no ClassRoom — ensinar alguém conta como colaboração.`, cor: 'var(--n-green)' })
     if (m.whatsapp.has && m.whatsapp.finalizados > 0) pontos.push({ texto: `Finalizou ${m.whatsapp.finalizados} atendimentos no WhatsApp, em média ${m.whatsapp.tempoMedio}.`, cor: 'var(--n-whats)' })
-    if (m.gerencia.hasSaida && m.gerencia.servicos > 0) pontos.push({ texto: `Entregou ${m.gerencia.servicos} serviços na rua, ${m.gerencia.km} km rodados.`, cor: 'var(--n-orange)' })
+    if (m.gerencia.hasSaida && m.gerencia.servicos > 0) pontos.push({ texto: ehImoveis(m.setorNome) ? `Fez ${m.gerencia.servicos} ${m.gerencia.servicos === 1 ? 'visita' : 'visitas'} a imóveis, ${m.gerencia.km} km rodados.` : `Entregou ${m.gerencia.servicos} serviços na rua, ${m.gerencia.km} km rodados.`, cor: ehImoveis(m.setorNome) ? 'var(--n-green)' : 'var(--n-orange)' })
     const susp = (a.suspensoesAtraso ?? 0) + (a.suspensoes ?? 0)
     if (susp > 0) pontos.push({ texto: `${susp} ${susp === 1 ? 'suspensão' : 'suspensões'} no período. O que mudou depois dela?`, cor: 'var(--n-purple)' })
     if (a.advertencias > 0) pontos.push({ texto: `${a.advertencias} ${a.advertencias === 1 ? 'advertência' : 'advertências'} no período. Já foi conversado?`, cor: 'var(--n-red)' })
