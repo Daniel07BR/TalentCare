@@ -1,5 +1,11 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Outubro do Legal pela última planilha
+
+O Legal passou ao Fluxo em novembro e por isso a tela não tem mais o envio de planilha (de propósito). Outubro ainda é do relatório
+do Gestta: o Daniel mandou o arquivo e ele foi lançado por script, com a mesma gravação da rota de importação (lote
+`cmw20czxu0000nw03kd6vkqre`, 232 linhas, 01 a 31/10, sem data no arquivo, todas em 31/10). Pontuação gravada com `rodar-mes.ts --gravar`.
+
 ## 2026-11-04 — Contato em lote soma em Ligações feitas
 
 O Daniel pediu para conferir se o contato em lote contava como ligação e saía no relatório impresso. Não contava (era só uma
