@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { useChatPeriod } from '@/lib/ui/chat-period'
@@ -82,8 +83,8 @@ export default function ChatResumo() {
           <b>Mensagem</b> tem história desde {desde ? new Date(`${desde}T12:00:00Z`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'o Mattermost'} (o
           histórico veio no import, com a data original). Os <b>chamados entre setores</b> saíram do
           Chat em <b>16/09/2026</b> e agora vivem no <b>Fluxo</b> — os números deles estão em{' '}
-          <b>Sistemas → Fluxo</b>. ⚠️ Mensagem <b>não entra no score</b>: ela aparece aqui e na
-          ficha, e o que pontua é o pedido feito e entregue.
+          <b>Sistemas → Fluxo</b>.{NOTA_LIGADA && <> ⚠️ Mensagem <b>não entra no score</b>: ela aparece aqui e na
+          ficha, e o que pontua é o pedido feito e entregue.</>}
         </span>
       </div>
 
@@ -97,8 +98,8 @@ export default function ChatResumo() {
       <div className="tc-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Atividade por usuário</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-          {vm.conversaPessoas} pessoas escreveram no período. ⚠️ Mensagem <b>não entra</b> no score —
-          o que pontua é o chamado, e ele está no Fluxo.
+          {vm.conversaPessoas} pessoas escreveram no período.{NOTA_LIGADA && <> ⚠️ Mensagem <b>não entra</b> no score —
+          o que pontua é o chamado, e ele está no Fluxo.</>}
         </div>
         {vm.conversa.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 0' }}>Sem atividade no período.</div>

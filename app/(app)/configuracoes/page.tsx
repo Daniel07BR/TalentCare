@@ -1,3 +1,4 @@
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth/config'
@@ -60,10 +61,10 @@ export default async function Configuracoes({ searchParams }: { searchParams: Pr
   /* ⚠️ `dono` aqui quer dizer "quem administra o sistema": o dono da
      allowlist e, desde 18/09/2026, o SETOR DE T.I. */
   const dono = await podeAdministrar(session?.user?.email)
-  const visiveis = ABAS.filter((a) => dono || !a.soDono)
+  const visiveis = ABAS.filter((a) => (dono || !a.soDono) && (NOTA_LIGADA || a.chave !== 'regua'))
 
   const { aba } = await searchParams
-  const atual: Aba = visiveis.some((a) => a.chave === aba) ? (aba as Aba) : 'regua'
+  const atual: Aba = visiveis.some((a) => a.chave === aba) ? (aba as Aba) : visiveis[0].chave
   /* O que pede atenção, dito na própria aba: nomes do ponto esperando vínculo. */
   const pontoPendente = dono ? await prisma.pontoStaging.count({ where: { status: 'pending' } }) : 0
 

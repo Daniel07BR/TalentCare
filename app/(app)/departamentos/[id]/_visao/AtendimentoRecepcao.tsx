@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Headset } from 'lucide-react'
@@ -91,7 +92,7 @@ export function AtendimentoRecepcao({ m }: SecaoProps) {
   }, [m.setor.id, m.fromDay, m.toDay])
 
   const titulo = 'Atendimento da Recepção'
-  const sub = 'Ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE · só aparece, não entra na nota'
+  const sub = `Ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE${NOTA_LIGADA ? ' · só aparece, não entra na nota' : ''}`
   if (!d) {
     return (
       <Cartao titulo={titulo} Icone={Headset} sub={sub} style={{ marginBottom: 14 }}>

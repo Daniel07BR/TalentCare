@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useDeptPeriod } from '@/lib/ui/dept-period'
@@ -94,8 +95,8 @@ export default function RelatorioDoSetor({ params }: { params: Promise<{ id: str
           </>
         )}
       </div>
-      <div className={s.linha3}>
-        <RankingMes m={m} />
+      <div className={s.linha3} style={NOTA_LIGADA ? undefined : { gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
+        {NOTA_LIGADA && <RankingMes m={m} />}
         <WhatsappEChamados m={m} abrir={detalhe.abrir} />
         <Assiduidade m={m} abrir={detalhe.abrir} abrirPainel={setPainel} />
       </div>

@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { Fragment, useEffect, useState } from 'react'
 import { Activity, CalendarCheck, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, MessageCircle, MessageSquareText, type LucideIcon } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
@@ -333,7 +334,7 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
       <Titulo nome="Chat Interno" sub="conversa" Icone={MessageSquareText} tom="pink" />
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
         <Grande cor="var(--n-purple)" tam={18}>{num(ch.mensagens)}</Grande>
-        <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>mensagens · <b>não entram no score</b></span>
+        <span style={{ fontSize: 11.5, color: 'var(--n-text-2)' }}>mensagens{NOTA_LIGADA && <> · <b>não entram no score</b></>}</span>
       </div>
       <Empilhada partes={[
         { rot: 'Em canais', n: ch.msgCanais, tom: 'purple' },
@@ -369,8 +370,8 @@ export function Sistemas({ m, periodo, pessoaId, impressao = false }: {
   ))
 
   if (ac?.vinculado) add(ac.iniciados + ac.concluidos + ac.entregas + ac.solicitacoes > 0, 'Acessórias', 'acess', () => (
-    <Bloco onClick={abrir('acessorias')} dica="Ver processos e entregas no Acessórias (volume; fora da nota)">
-      <Titulo nome="Acessórias" sub="volume no período · fora da nota" Icone={CalendarCheck} tom="pink" />
+    <Bloco onClick={abrir('acessorias')} dica="Ver processos e entregas no Acessórias (volume)">
+      <Titulo nome="Acessórias" sub={NOTA_LIGADA ? 'volume no período · fora da nota' : 'volume no período'} Icone={CalendarCheck} tom="pink" />
       <Colunas colunas={[
         { rot: 'Processos concluídos', n: ac.concluidos, tom: 'pink' },
         { rot: 'Processos iniciados', n: ac.iniciados, tom: 'purple' },

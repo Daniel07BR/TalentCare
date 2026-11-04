@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useEffect, useState } from 'react'
 import { CalendarCheck, X } from 'lucide-react'
 import { usePeriod } from '@/lib/ui/period'
@@ -119,7 +120,7 @@ export default function AcessoriasResumo() {
         </div>
       )}
       <div style={{ fontSize: 12, color: 'var(--text-mute)', marginBottom: 14 }}>
-        Só volume, e fora da nota: o escritório está implantando o Acessórias.
+        Só volume{NOTA_LIGADA && ', e fora da nota'}: o escritório está implantando o Acessórias.
         {dados.atualizadoEm && <> Cópia atualizada em {new Date(dados.atualizadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</>}
         {' '}Clique na pessoa para ver as entregas dia a dia.
         {dados.pessoas.some((p) => p.lotes.length > 0) && <> <b>Baixa em lote</b> = {LOTE_MINIMO} ou mais baixas da mesma pessoa no mesmo dia, quase todas com atraso — conta no volume, mas não é produção daquele dia.</>}

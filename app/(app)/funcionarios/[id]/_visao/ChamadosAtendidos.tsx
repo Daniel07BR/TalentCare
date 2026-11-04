@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { Bug, Plus, Sparkles, Wrench, type LucideIcon } from 'lucide-react'
 import type { Melhorias } from '@/lib/melhorias'
 import { Cartao, forte, suave } from '../../../_visao/ui'
@@ -19,7 +20,7 @@ export function ChamadosAtendidos({ c, periodo, impressao = false }: { c: Melhor
   const itens = ITENS.filter((i) => c[i.chave] > 0)
   return (
     <Cartao titulo="Chamados atendidos" Icone={Wrench}
-      sub={`${periodo} · Quadro das Melhorias do Nexus · não entra na nota`}
+      sub={`${periodo} · Quadro das Melhorias do Nexus${NOTA_LIGADA ? ' · não entra na nota' : ''}`}
       style={impressao ? { breakInside: 'avoid' } : undefined}>
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(min(190px, 100%), 1fr))' }}>
         {itens.map((i) => (

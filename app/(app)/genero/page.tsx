@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useRouter } from 'next/navigation'
 import { useTalentData } from '@/lib/ui/data'
 import { genderVM } from '@/lib/mock/demographics'
@@ -37,7 +38,7 @@ export default function GeneroPage() {
               </div>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 22 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Idade média</div><div style={{ fontSize: 18, fontWeight: 700 }}>{g.age ?? '—'}</div></div>
-                <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 18, fontWeight: 700 }}>{g.score}</div></div>
+                {NOTA_LIGADA && <div><div style={{ fontSize: 11, color: 'var(--text-mute)' }}>Score médio</div><div style={{ fontSize: 18, fontWeight: 700 }}>{g.score}</div></div>}
               </div>
             </div>
           ))}

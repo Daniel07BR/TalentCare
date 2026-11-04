@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { Headset, type LucideIcon } from 'lucide-react'
 import type { AtendimentoDaPessoa } from '@/lib/recepcao'
 import { Cartao, forte, suave } from '../../../_visao/ui'
@@ -64,7 +65,7 @@ export function AtendimentoRecepcao({ r, periodo, impressao = false }: { r: Aten
   ].filter(Boolean).join(' · ')
   return (
     <Cartao titulo="Atendimento da Recepção" Icone={Headset}
-      sub={`${periodo} · ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE · não entra na nota`}
+      sub={`${periodo} · ligações, visitas, delivery e outras tarefas do Fluxo · contatos do CIDE${NOTA_LIGADA ? ' · não entra na nota' : ''}`}
       style={impressao ? { breakInside: 'avoid' } : undefined}>
       <div style={grade(itens.length)}>
         {itens.map((i) => {

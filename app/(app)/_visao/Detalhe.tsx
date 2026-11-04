@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { X } from 'lucide-react'
@@ -60,7 +61,7 @@ export const DETALHES = {
   gerencia: { titulo: 'Gerência · mensageria', C: dynamic(MODULOS.gerencia, { loading: carregando }) },
   consultoria: { titulo: 'Consultoria Plus', C: dynamic(MODULOS.consultoria, { loading: carregando }) },
   cide: { titulo: 'CIDE', C: dynamic(MODULOS.cide, { loading: carregando }) },
-  acessorias: { titulo: 'Acessórias · volume (fora da nota)', C: dynamic(MODULOS.acessorias, { loading: carregando }) },
+  acessorias: { titulo: NOTA_LIGADA ? 'Acessórias · volume (fora da nota)' : 'Acessórias · volume', C: dynamic(MODULOS.acessorias, { loading: carregando }) },
   servicos: { titulo: 'Indicadores internos', C: dynamic(MODULOS.servicos, { loading: carregando }) },
   radio: { titulo: 'Rádio Itamarathy', C: dynamic(MODULOS.radio, { loading: carregando }) },
   assiduidade: { titulo: 'Assiduidade e disciplina', C: dynamic(MODULOS.assiduidade, { loading: carregando }) },

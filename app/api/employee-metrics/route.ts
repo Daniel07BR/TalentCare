@@ -1,3 +1,4 @@
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
@@ -586,7 +587,7 @@ export async function GET(req: NextRequest) {
        diferentes, e o histórico do Legal é todo informado — 105 dos 127 valores
        passam do teto que a régua atual permite. Exibir os dois com a mesma cara
        seria inventar procedência para número de gente de verdade. */
-    pontuacao: pontuacoes.map((p) => ({ competencia: p.competencia, pontos: p.pontos, origem: p.origem, detalhe: p.detalhe })),
+    pontuacao: !NOTA_LIGADA ? [] : pontuacoes.map((p) => ({ competencia: p.competencia, pontos: p.pontos, origem: p.origem, detalhe: p.detalhe })),
     /**
      * ONDE ELA ESTÁ no setor, na competência do filtro — o número do cabeçalho.
      *
@@ -596,6 +597,7 @@ export async function GET(req: NextRequest) {
      * setor — duas telas que respondessem "qual mês?" diferente diriam posições
      * diferentes sobre a mesma pessoa no mesmo dia.
      *
+     * ⚠️ Sai nula com a nota desligada (`lib/nota-ligada.ts`): é o que tira o anel da ficha.
      * ⚠️ `posicao: null` quando ela não pontua naquele mês (chefia, sem crédito,
      * ou competência não rodada). Um "—" honesto; nunca o último lugar, que é o
      * que um `?? 0` produziria — e último lugar acusa.
@@ -603,7 +605,7 @@ export async function GET(req: NextRequest) {
      * ⚠️ `acumulado` é a soma de TODOS os meses gravados, e por isso não
      * acompanha o filtro. A tela diz isso: é o "já acumulado", não o do período.
      */
-    posicao,
+    posicao: NOTA_LIGADA ? posicao : null,
     /** Quando cada fonte viu esta pessoa pela última vez, e até quando a FONTE
      *  mediu. É o PAR que informa — ver o comentário no cálculo. */
     ultimaAtividade,

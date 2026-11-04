@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Upload, FileSpreadsheet, TriangleAlert, Check, X } from 'lucide-react'
@@ -148,7 +149,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, marginBottom: 4 }}>{doFluxo ? 'Indicadores internos · registrados no Fluxo' : 'Planilha do setor'}</div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>{doFluxo ? 'Tipos e pontuação' : 'Serviços e pontuação'}</h1>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-.6px' }}>{!NOTA_LIGADA ? 'Serviços do setor' : doFluxo ? 'Tipos e pontuação' : 'Serviços e pontuação'}</h1>
         </div>
         {/* ⚠️ Sem seletor de setor (11/09/2026): o setor é o do relatório de onde se
             veio, na URL — e fica escrito, para ninguém enviar sem ver para onde vai. */}
@@ -292,7 +293,7 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10, lineHeight: 1.55 }}>
                     Eles entram valendo o que a duração média deles medir. Isso é razoável quando há volume e
                     arriscado quando não há: um tipo com uma única ocorrência longa vira o mais caro do catálogo.
-                    Depois de importar, a lista <b>Pontos por tipo de serviço</b>, aqui embaixo, abre com eles em cima.
+                    {NOTA_LIGADA && <>Depois de importar, a lista <b>Pontos por tipo de serviço</b>, aqui embaixo, abre com eles em cima.</>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
                     {previa.tipos.novos.slice(0, 12).map((t) => (
@@ -404,10 +405,12 @@ export default function ServicosClient({ setores, lotes }: { setores: Setor[]; l
 
       </>)}
 
+      {NOTA_LIGADA && (<>
       <RegraEditor departmentId={setorId} setorNome={setor.name} />
       <TarefasEditor departmentId={setorId} setorNome={setor.name} versao={versaoCatalogo} doFluxo={doFluxo} />
       <AtividadesEditor departmentId={setorId} setorNome={setor.name} />
       <PontuacaoMes departmentId={setorId} setorNome={setor.name} />
+      </>)}
 
       {/* ── histórico de envios ───────────────────────────────────────────── */}
       {lotesDoSetor.length > 0 && (

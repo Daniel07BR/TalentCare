@@ -1,5 +1,12 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-04 — Nota desligada até segunda ordem
+
+Pedido do Daniel: *"vamos desativar até segunda ordem a nota de todo sistema TalentCare e computar apenas tarefas"*. A chave é `lib/nota-ligada.ts`
+(`NOTA_LIGADA = false`). Saíram das telas o anel de pontos e a posição da ficha, o Ranking do mês do setor, o destaque do painel, a coluna Score,
+a coluna de pontos da Entregas, a régua e os editores de pontos. As telas antigas (`anterior`, `completo`) levam às atuais. Nada foi apagado; para religar,
+`true` e publicar. A avaliação mensal do gestor e a nota do cliente no WhatsApp não mudaram.
+
 ## 2026-11-04 — Atividades no Imotec, na ficha e no setor Imóveis
 
 Pedido do Daniel: os indicadores do pessoal da Imóveis, com o que fazem dentro do Imotec. Card "Atividades no Imotec" na ficha, no PDF e na

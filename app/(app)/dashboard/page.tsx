@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useEffect, useState } from 'react'
 import { rotuloDoRetrato } from '@/lib/quadro'
 import { usePeriod } from '@/lib/ui/period'
@@ -218,10 +219,10 @@ function Conteudo() {
           vals={vm.turnoverVals} rotulos={vm.turnoverLabels} abrir={() => detalhe.abrir('turnover')} />
       </div>
 
-      <div className={p.linha3}>
+      <div className={p.linha3} style={NOTA_LIGADA ? undefined : { gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
         {/* ⚠️ Enquanto os sinais do período não chegam, a pontuação ainda não
             existe — esqueleto, e não o destaque de outra competência. */}
-        <Destaque lista={vm.deptHighlights} info={vm.pontuacaoInfo} carregando={scoreLoading && !signals} recarregando={scoreLoading && !!signals} erro={scoreErro && !signals} />
+        {NOTA_LIGADA && <Destaque lista={vm.deptHighlights} info={vm.pontuacaoInfo} carregando={scoreLoading && !signals} recarregando={scoreLoading && !!signals} erro={scoreErro && !signals} />}
         <Escolaridade total={vm.headcountTotal} grupos={gEsc} fatias={vm.escSegments} topPct={vm.escTopPct} topRotulo={vm.escTopLabel} abrir={abrirGrupo('esc')} abrirDetalhe={() => detalhe.abrir('formacao')} />
         <Geracoes retrato={rotuloDoRetrato(toDay)} media={gen.avg} grupos={gGer}
           pcts={Object.fromEntries(gen.segs.map((s) => [s.key, s.pct]))}

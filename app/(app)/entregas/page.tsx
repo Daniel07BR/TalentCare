@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Truck, AlertTriangle, Info } from 'lucide-react'
@@ -135,7 +136,7 @@ function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competenc
       className="tc-row"
       onClick={() => router.push(`/funcionarios/${p.id}`)}
       style={{
-        display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) repeat(4, 78px) 96px',
+        display: 'grid', gridTemplateColumns: NOTA_LIGADA ? 'minmax(0,1.7fr) repeat(4, 78px) 96px' : 'minmax(0,1.7fr) repeat(4, 78px)',
         alignItems: 'center', gap: 10, padding: '11px 6px',
         borderBottom: '1px solid var(--border-soft)', cursor: 'pointer',
         opacity: p.ativo ? 1 : 0.72,
@@ -171,6 +172,7 @@ function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competenc
       ))}
 
       {/* A nota do mês — mensal por natureza, não obedece ao filtro. */}
+      {NOTA_LIGADA && (
       <div style={{ textAlign: 'right' }}>
         {p.pontos != null ? (
           <>
@@ -205,6 +207,7 @@ function LinhaPessoa({ p, competencia, appFora }: { p: PessoaEntregas; competenc
           </>
         )}
       </div>
+      )}
     </div>
   )
 }
@@ -538,16 +541,18 @@ export default function EntregasPage() {
           </div>
         </div>
         <div style={{
-          display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) repeat(4, 78px) 96px',
+          display: 'grid', gridTemplateColumns: NOTA_LIGADA ? 'minmax(0,1.7fr) repeat(4, 78px) 96px' : 'minmax(0,1.7fr) repeat(4, 78px)',
           gap: 10, padding: '0 6px 8px', borderBottom: '1px solid var(--border)',
         }}>
           <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600 }}>Pessoa · cargo</div>
           {['Serviços', 'Saídas', 'Km', 'Viagens'].map((l) => (
             <div key={l} style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, textAlign: 'right' }}>{l}</div>
           ))}
+          {NOTA_LIGADA && (
           <div style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, textAlign: 'right' }}>
             {mesAno(m.competencia)}
           </div>
+          )}
         </div>
         {m.pessoas.map((p) => <LinhaPessoa key={p.id} p={p} competencia={m.competencia} appFora={appFora} />)}
         <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 10, lineHeight: 1.55 }}>

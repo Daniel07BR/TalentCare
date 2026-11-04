@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useRouter } from 'next/navigation'
 import { ClipboardCheck, Radio } from 'lucide-react'
 import type { EmployeeMetrics } from '@/lib/ui/employee-period'
@@ -94,7 +95,7 @@ export function RadioCartao({ m, periodo }: { m: EmployeeMetrics | null; periodo
         </>
       )}
       <div style={{ fontSize: 10.5, color: 'var(--n-text-3)', marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--n-border-2)' }}>
-        Escuta é contexto, não desempenho — <b>não entra no score</b>.
+        Escuta é contexto, não desempenho{NOTA_LIGADA && <> — <b>não entra no score</b></>}.
       </div>
     </Cartao>
   )

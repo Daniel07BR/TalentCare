@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
@@ -14,8 +15,8 @@ const FAIXA_CHIPS = ['Todos', '75–100', '50–74', '0–49']
 export default function FuncionariosPage() {
   const router = useRouter()
   const [f, setF] = useState<DirFilters>({ search: '', dept: 'Todos', status: 'Ativo', faixa: 'Todos' })
-  const [sortKey, setSortKey] = useState<SortKey>('score')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [sortKey, setSortKey] = useState<SortKey>(NOTA_LIGADA ? 'score' : 'nome')
+  const [sortDir, setSortDir] = useState<SortDir>(NOTA_LIGADA ? 'desc' : 'asc')
 
   const { signals } = useScoreSignals()
   const data = withRealScores(useTalentData(), signals)
@@ -25,7 +26,7 @@ export default function FuncionariosPage() {
     if (sortKey === k) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
     else { setSortKey(k); setSortDir('desc') }
   }
-  const cols = '2.4fr 2fr 1.3fr 1.3fr 1.4fr 1.2fr'
+  const cols = NOTA_LIGADA ? '2.4fr 2fr 1.3fr 1.3fr 1.4fr 1.2fr' : '2.4fr 2fr 1.3fr 1.3fr 1.2fr'
 
   return (
     <div className="tc-anim" style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -71,10 +72,12 @@ export default function FuncionariosPage() {
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.cargo}</span>
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{r.dept}</span>
             <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{r.tempo}</span>
+            {NOTA_LIGADA && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 44, height: 6, background: 'var(--surface-2)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: '100%', width: r.scorePct, background: r.scoreColor, borderRadius: 20 }} /></div>
               <span style={{ fontSize: 13, fontWeight: 700, color: r.scoreColor, fontVariantNumeric: 'tabular-nums' }}>{r.scoreLabel}</span>
             </div>
+            )}
             <span style={{ justifySelf: 'start', fontSize: 11.5, fontWeight: 600, color: r.statusColor, background: r.statusBg, padding: '3px 10px', borderRadius: 20 }}>{r.status}</span>
           </div>
         ))}

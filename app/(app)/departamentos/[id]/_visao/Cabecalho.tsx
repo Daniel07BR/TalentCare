@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Building2, ChevronRight, SlidersHorizontal, Truck, Upload } from 'lucide-react'
@@ -38,7 +39,7 @@ export function Cabecalho({ m }: SecaoProps) {
         {m.setor.id === ENTREGAS_DEPT_ID && (
           <button type="button" style={botao} onClick={() => router.push('/entregas')}><Truck size={15} /> Área da mensageria</button>
         )}
-        {m.setor.podeGerir && (
+        {m.setor.podeGerir && (NOTA_LIGADA || !m.servicos?.cobertura?.arquivo?.startsWith('Fluxo')) && (
           /* ⚠️ A ÚNICA PORTA da planilha de serviços (11/09/2026, pedido do dono): saiu
              do menu lateral, e se sobe só daqui, com o setor na URL. Só Gestta. */
           /* ⚠️ O DP NÃO USA PLANILHA NEM GESTTA (14/10/2026): os indicadores chegam do Fluxo, e o botão leva só

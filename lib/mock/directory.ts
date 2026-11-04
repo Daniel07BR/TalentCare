@@ -1,6 +1,7 @@
 /* ============================================================
    TalentCare — diretório de funcionários (filtro/ordenação). Puro em função de data.
    ============================================================ */
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { scoreColor, statusMeta, fmtTempo, type TalentData } from './data'
 import { deptName } from './employee'
 
@@ -15,7 +16,7 @@ export type DirRow = {
 
 export const DIR_COLS: { key: SortKey; label: string }[] = [
   { key: 'nome', label: 'Funcionário' }, { key: 'cargo', label: 'Cargo' }, { key: 'dept', label: 'Depto' },
-  { key: 'tempoMeses', label: 'Tempo' }, { key: 'score', label: 'Score' }, { key: 'status', label: 'Status' },
+  { key: 'tempoMeses', label: 'Tempo' }, ...(NOTA_LIGADA ? [{ key: 'score' as const, label: 'Score' }] : []), { key: 'status', label: 'Status' },
 ]
 
 export function deptOptions(data: TalentData) {

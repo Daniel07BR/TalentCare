@@ -1,4 +1,5 @@
 'use client'
+import { NOTA_LIGADA } from '@/lib/nota-ligada'
 import { useEffect, useState } from 'react'
 import { Activity, CalendarCheck, FileSpreadsheet, LifeBuoy, GraduationCap, Truck, MessagesSquare, Landmark, Radio, type LucideIcon } from 'lucide-react'
 import type { DeptMetrics, PessoaRank } from '@/lib/ui/dept-period'
@@ -125,14 +126,14 @@ export function Sistemas({ m, abrir }: ComDetalhe) {
           </button>
         ))}
         {acessTem && (
-          <button type="button" title="Abrir o resumo do Acessórias só com este setor (volume; fora da nota)"
+          <button type="button" title={`Abrir o resumo do Acessórias só com este setor (volume${NOTA_LIGADA ? '; fora da nota' : ''})`}
             onMouseEnter={() => precarregarDetalhe('acessorias')} onFocus={() => precarregarDetalhe('acessorias')}
             onClick={() => abrir('acessorias')}
             style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 10, padding: 14, background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', minWidth: 0 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 28, height: 28, borderRadius: 8, background: suave('pink'), color: forte('pink'), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><CalendarCheck size={15} /></span>
               <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Acessórias</span>
-              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'var(--n-text-3)', whiteSpace: 'nowrap' }}>fora da nota</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'var(--n-text-3)', whiteSpace: 'nowrap' }}>{NOTA_LIGADA ? 'fora da nota' : ''}</span>
             </span>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {acess!.pessoas.slice(0, 3).map((p, i) => (
