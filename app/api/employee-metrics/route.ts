@@ -544,10 +544,15 @@ export async function GET(req: NextRequest) {
          nomes de lá são fixos —, e diz a origem em vez de "da planilha" para quem não tem. */
       const lotes = [...new Set(servicos.map((x) => x.loteId))]
       const amostra = lotes.length ? lotes : (await prisma.servicoDepto.findMany({ where: { personKey }, select: { loteId: true }, take: 1 })).map((x) => x.loteId)
-      const autores = amostra.length
-        ? (await prisma.importLote.findMany({ where: { id: { in: amostra } }, select: { enviadoPor: true } })).map((l) => l.enviadoPor)
+      const dosLotes = amostra.length
+        ? await prisma.importLote.findMany({ where: { id: { in: amostra } }, select: { enviadoPor: true, hash: true } })
         : []
+      const autores = dosLotes.map((l) => l.enviadoPor)
       const origem: 'fluxo' | 'planilha' | null = !autores.length ? null : autores.every((a) => a === 'fluxo') ? 'fluxo' : 'planilha'
+      /* ⚠️ O LEGAL NÃO TEM COMPETÊNCIA (chamado 649, 05/11/2026): tudo dele conta pela data. O lote diz de qual
+         setor veio (`prefixo` em run-fluxo-servicos-sync.mjs), e assim funciona também para quem não concluiu
+         nada no período. Olhar os tipos da pessoa erraria: alguém do DP só com FGTS e DCTF não tem folha. */
+      const soPelaData = dosLotes.length > 0 && dosLotes.every((l) => l.hash.startsWith('fluxo-legal:'))
       const porMesMap = new Map<string, { concluidos: number; minutos: number }>()
       for (const x of concl) {
         const mes = x.dia.slice(0, 7)
@@ -579,6 +584,7 @@ export async function GET(req: NextRequest) {
            todos os tipos — cortar somaria menos do que "Concluídos". A tela corta a da planilha. */
         porTarefa: [...porTarefa].sort((a, b) => b[1].n - a[1].n).map(([tarefa, v]) => ({ tarefa, ...v })),
         origem,
+        soPelaData,
         administrados,
         folhasSemNumero,
         /** Concluídos na planilha INTEIRA — o contexto que faz o recorte se ler. */

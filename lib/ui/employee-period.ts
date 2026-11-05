@@ -100,6 +100,8 @@ export type EmployeeMetrics = {
     /** Folhas concluídas sem nº de funcionários no cadastro — somaram 0. */
     folhasSemNumero?: number
     origem?: 'fluxo' | 'planilha' | null
+    /** O setor não tem competência (o Legal): tudo conta pela data da conclusão. */
+    soPelaData?: boolean
     /** Concluídos na planilha inteira, sem filtro de período. */
     totalConcluidos?: number
   }

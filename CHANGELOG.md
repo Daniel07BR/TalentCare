@@ -1,5 +1,9 @@
 # CHANGELOG — TalentCare
 
+## 2026-11-05 — Ficha do Legal: a nota dos indicadores é a do Legal
+
+Chamado 649 (Joice). A ficha e o PDF da pessoa mostravam a nota das réguas do DP (folha, vale, FGTS…) também no Legal, que não tem competência. Agora quem é do Legal lê que tudo conta pela data da conclusão, com as palavras que as telas do setor já usavam. `employee-metrics` devolve `servicos.soPelaData`, lido do lote; o DP não muda.
+
 ## 2026-11-04 — Suspensão de LGPD conta desde a geração
 
 Pedido do Daniel: a suspensão que o DP gera no Fluxo conta na hora, sem esperar o escaneado. `lib/lgpd.ts` passou a gravar `aguardando_documento`; abonada ou cancelada, inclusive medida apagada no Nexus, retiram o evento. A hora da dispensa, quando vem, entra no motivo ("dispensada às 14:32").
